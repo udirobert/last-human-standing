@@ -103,9 +103,15 @@ export default function Feed({ onBack }) {
     }
   };
 
+  const [challengeToast, setChallengeToast] = useState(null);
+
   const handleChallenge = async (sub) => {
-    if (!MiniKit.isInstalled()) return;
     if (!sub?.username) return;
+    if (!MiniKit.isInstalled()) {
+      setChallengeToast(sub.id);
+      setTimeout(() => setChallengeToast(null), 2500);
+      return;
+    }
     const msg = `I’m challenging your check-in: "${sub.caption}". Reply with context / proof.`;
     await sendWorldChat({ to: sub.username, message: msg });
   };
@@ -276,10 +282,10 @@ export default function Feed({ onBack }) {
                   <div className="mt-3">
                     <button
                       onClick={() => handleChallenge(sub)}
-                      disabled={!MiniKit.isInstalled() || !sub.username}
+                      disabled={!sub.username}
                       className="w-full py-2.5 rounded-xl bg-smoke border border-ember text-dim font-mono text-xs active:scale-95 transition-transform disabled:opacity-50"
                     >
-                      Challenge in World Chat →
+                      {challengeToast === sub.id ? '🌐 Available in World App' : 'Challenge in World Chat →'}
                     </button>
                     {!sub.username && (
                       <p className="text-dim font-mono text-[10px] mt-1 opacity-70">
