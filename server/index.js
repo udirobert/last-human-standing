@@ -668,7 +668,12 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
   }
 });
 
-app.get("/api/feed", requireAuth, (req, res) => {
+app.get("/api/feed", (req, res) => {
+  // Auth is optional — unauthenticated browser demo gets empty feed (mock data is client-side)
+  const sid = req.cookies?.lhs_session;
+  const session = sid ? sessions.get(sid) : null;
+  if (!session) return res.json({ ok: true, submissions: [] });
+
   (async () => {
     if (!supabaseAdmin) return res.json({ ok: true, submissions: submissions.slice(0, 50) });
 

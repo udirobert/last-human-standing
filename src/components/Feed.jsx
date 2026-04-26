@@ -17,7 +17,7 @@ const STATUS_LABELS = {
   flagged: '⚠️ Flagged',
 };
 
-// Emoji-based photo placeholders
+// Fallback photo emojis (only used when no mediaUrl)
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
@@ -227,6 +227,15 @@ export default function Feed({ onBack }) {
                     <span className="text-8xl opacity-50">{PHOTO_EMOJIS[i % PHOTO_EMOJIS.length]}</span>
                   )}
 
+                  {/* Avatar */}
+                  {sub.avatar && (
+                    <img
+                      src={sub.avatar}
+                      alt=""
+                      className="absolute top-3 left-3 w-8 h-8 rounded-full border border-ember bg-smoke"
+                    />
+                  )}
+
                   {/* Status badge */}
                   <div
                     className="absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-mono"
@@ -242,7 +251,7 @@ export default function Feed({ onBack }) {
                   {/* World ID badge */}
                   <div className="absolute bottom-3 left-3 bg-ash/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1.5">
                     <span className="text-neon text-xs">🌐</span>
-                    <span className="font-mono text-neon text-xs">{sub.user}</span>
+                    <span className="font-mono text-neon text-xs">{sub.username ? `@${sub.username}` : sub.user}</span>
                   </div>
                 </div>
 
@@ -256,8 +265,8 @@ export default function Feed({ onBack }) {
                     {hasVoted || sub.status !== "pending" ? (
                       <>
                         <div className="flex justify-between text-xs font-mono mb-1">
-                          <span className="text-neon">✅ {sub.votes.real} real</span>
-                          <span className="text-blood">❌ {sub.votes.fake} fake</span>
+                          <span className="text-neon">✅ {sub.votes.real} human</span>
+                          <span className="text-blood">🤖 {sub.votes.fake} sus</span>
                         </div>
                         <div className="h-1.5 bg-ember rounded-full overflow-hidden">
                           <div
@@ -293,7 +302,7 @@ export default function Feed({ onBack }) {
                       <div className="flex-1 flex items-center justify-center gap-2 py-2 bg-ember rounded-xl">
                         <span className="text-dim font-mono text-xs">
                           You voted <span className={hasVoted === 'real' ? 'text-neon' : 'text-blood'}>
-                            {hasVoted === 'real' ? '✅ REAL' : '❌ FAKE'}
+                            {hasVoted === 'real' ? '✅ HUMAN' : '🤖 SUS'}
                           </span>
                         </span>
                       </div>
@@ -319,14 +328,14 @@ export default function Feed({ onBack }) {
                         disabled={requireWorldIdToVote && !worldIdVerified}
                         className="py-3 rounded-xl bg-neon/10 border border-neon/40 text-neon font-display text-xl tracking-wide active:scale-95 transition-transform"
                       >
-                        ✅ REAL
+                        ✅ HUMAN
                       </button>
                       <button
                         onClick={() => handleVote(sub.id, 'fake')}
                         disabled={requireWorldIdToVote && !worldIdVerified}
                         className="py-3 rounded-xl bg-blood/10 border border-blood/40 text-blood font-display text-xl tracking-wide active:scale-95 transition-transform"
                       >
-                        ❌ FAKE
+                        🤖 SUS
                       </button>
                     </div>
                   )}
