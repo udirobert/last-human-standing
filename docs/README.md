@@ -1,6 +1,9 @@
 # Last Human Standing (World Mini App)
 
-A mobile-first Mini App concept: **a daily survival game for verified humans**.
+**Live app: https://lasthumanstanding.thisyearnofear.com**
+Prize pool wallet: `0x7aD48187A2a4f4bF8d5aE7aD7A9Dbb58B4e27046`
+
+A mobile-first Mini App: **a daily survival game for verified humans**.
 
 Players:
 - authenticate via **World Wallet (SIWE via MiniKit)**
@@ -82,4 +85,6 @@ If you want persistence + uploads:
 
 ## Hackathon submission
 
-See `submission.md` for the write-up (problem, solution, World Stack usage, demo flow).
+See `submission.md` for the full write-up (problem, solution, World Stack usage, live backend, demo flow).
+See `ONE_PAGER.md` for the judges' 1-pager.
+See `DEMO.md` for the step-by-step demo guide.

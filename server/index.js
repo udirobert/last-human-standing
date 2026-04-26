@@ -4,7 +4,16 @@ import crypto from "crypto";
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
 import { getSupabaseAdmin } from "./supabase.js";
-import { signRequest } from "@worldcoin/idkit/signing";
+// signRequest implemented locally (idkit v2 removed ./signing export)
+function signRequest(signingKey, action, ttlSeconds = 300) {
+  const nonce = randomId(16);
+  const created_at = Math.floor(Date.now() / 1000);
+  const expires_at = created_at + ttlSeconds;
+  const payload = `${nonce}.${action}.${created_at}.${expires_at}`;
+  const key = signingKey.startsWith("0x") ? signingKey.slice(2) : signingKey;
+  const sig = crypto.createHmac("sha256", Buffer.from(key, "hex")).update(payload).digest("hex");
+  return { nonce, created_at, expires_at, sig };
+}
 import { rateLimit } from "./rateLimit.js";
 
 const PORT = Number(process.env.PORT || 8787);
@@ -196,6 +205,7 @@ app.post("/api/idkit/rp-context", requireAuth, async (req, res) => {
 });
 
 app.post("/api/idkit/verify", requireAuth, async (req, res) => {
+  const rp_id = process.env.WORLD_ID_RP_ID;
   const app_id = process.env.WORLD_ID_APP_ID;
   const action = process.env.WORLD_ID_ACTION || "last-human-standing";
   const apiKey = process.env.WORLD_DEV_PORTAL_API_KEY;
@@ -204,7 +214,7 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
   const { idkitResponse } = req.body || {};
   if (!idkitResponse) return res.status(400).json({ error: "missing_idkit_response" });
 
-  if (!app_id) {
+  if (!rp_id && !app_id) {
     if (bypass) {
       worldIdVerified.set(req.user.address.toLowerCase(), true);
       if (supabaseAdmin) {
@@ -217,25 +227,55 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
     }
     return res.status(501).json({
       error: "world_id_not_configured",
-      message: "Set WORLD_ID_APP_ID (and WORLD_DEV_PORTAL_API_KEY) to verify proofs.",
+      message: "Set WORLD_ID_RP_ID to verify proofs.",
     });
   }
 
+  // Use rp_id (v4) when available, fall back to app_id (legacy)
+  const verifyId = rp_id || app_id;
+  const isV4 = Boolean(rp_id);
+
   try {
-    const resp = await fetch(`https://developer.worldcoin.org/api/v2/verify/${app_id}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: JSON.stringify({
+    let body;
+    if (isV4) {
+      // World ID 4.0 Managed mode — POST /api/v4/verify/{rp_id}
+      body = JSON.stringify({
+        protocol_version: idkitResponse.protocol_version || "4.0",
+        nonce: idkitResponse.nonce,
+        action,
+        responses: idkitResponse.responses || [
+          {
+            identifier: idkitResponse.verification_level || "orb",
+            merkle_root: idkitResponse.merkle_root,
+            nullifier: idkitResponse.nullifier_hash,
+            proof: idkitResponse.proof,
+            signal_hash: idkitResponse.signal_hash || undefined,
+          },
+        ],
+      });
+    } else {
+      // Legacy v2
+      body = JSON.stringify({
         nullifier_hash: idkitResponse.nullifier_hash,
         merkle_root: idkitResponse.merkle_root,
         proof: idkitResponse.proof,
         verification_level: idkitResponse.verification_level || "orb",
         action,
         signal_hash: idkitResponse.signal_hash || undefined,
-      }),
+      });
+    }
+
+    const endpoint = isV4
+      ? `https://developer.worldcoin.org/api/v4/verify/${verifyId}`
+      : `https://developer.worldcoin.org/api/v2/verify/${verifyId}`;
+
+    const resp = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body,
     });
 
     const json = await resp.json().catch(() => null);
@@ -254,6 +294,70 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
       error: "verify_exception",
       message: e instanceof Error ? e.message : "unknown_error",
     });
+  }
+});
+
+// ---- Live stats (prize pool balance from World Chain + player counts from Supabase)
+const WORLD_CHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
+const WLD_CONTRACT = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003"; // WLD on World Chain
+const ERC20_BALANCE_OF_SELECTOR = "0x70a08231"; // balanceOf(address) selector
+
+async function fetchWldBalance(address) {
+  const padded = address.replace("0x", "").toLowerCase().padStart(64, "0");
+  const data = ERC20_BALANCE_OF_SELECTOR + padded;
+  const resp = await fetch(WORLD_CHAIN_RPC, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_call", params: [{ to: WLD_CONTRACT, data }, "latest"] }),
+    signal: AbortSignal.timeout(5000),
+  });
+  const json = await resp.json();
+  if (!json.result || json.result === "0x") return 0;
+  const raw = BigInt(json.result);
+  return Number(raw) / 1e18;
+}
+
+// Cache balance for 60s to avoid hammering RPC
+let balanceCache = { value: 0, fetchedAt: 0 };
+
+app.get("/api/stats", async (req, res) => {
+  try {
+    const prizePoolAddress = process.env.VITE_PRIZE_POOL_ADDRESS;
+
+    // Refresh cache every 60s
+    if (prizePoolAddress && Date.now() - balanceCache.fetchedAt > 60_000) {
+      try {
+        balanceCache.value = await fetchWldBalance(prizePoolAddress);
+        balanceCache.fetchedAt = Date.now();
+      } catch {
+        // keep stale value on RPC error
+      }
+    }
+
+    let totalPlayers = 0;
+    let activePlayers = 0;
+    if (supabaseAdmin) {
+      const [total, active] = await Promise.all([
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true),
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("eliminated", false),
+      ]);
+      totalPlayers = total.count ?? 0;
+      activePlayers = active.count ?? 0;
+    }
+
+    res.json({
+      ok: true,
+      prizePool: {
+        address: prizePoolAddress || null,
+        balanceWld: balanceCache.value,
+        explorerUrl: prizePoolAddress
+          ? `https://worldscan.org/address/${prizePoolAddress}`
+          : null,
+      },
+      players: { total: totalPlayers, active: activePlayers },
+    });
+  } catch (e) {
+    res.status(500).json({ error: "stats_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

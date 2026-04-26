@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { GAME_STATS, TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
+import { useStats } from '../hooks/useStats.js';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 6, minutes: 23, seconds: 47 });
@@ -12,6 +13,11 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const [checkedIn, setCheckedIn] = useState(false);
   const { user } = useWorld();
   const { round: roundStatus } = useRound();
+  const { stats } = useStats();
+
+  const prizePoolWld = stats?.prizePool?.balanceWld ?? null;
+  const prizePoolDisplay = prizePoolWld !== null ? `${prizePoolWld.toLocaleString(undefined, { maximumFractionDigits: 2 })} WLD` : GAME_STATS.prizePool;
+  const prizePoolExplorer = stats?.prizePool?.explorerUrl ?? null;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -202,12 +208,12 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           <p className="text-dim text-xs mt-1">Vote on real vs fake →</p>
         </button>
         <button
-          onClick={onViewLeaderboard}
+          onClick={() => prizePoolExplorer ? window.open(prizePoolExplorer, '_blank') : onViewLeaderboard()}
           className="bg-smoke border border-ember rounded-2xl p-4 text-left active:scale-95 transition-transform"
         >
           <p className="text-dim font-mono text-xs tracking-wide uppercase mb-1">Prize Pool</p>
-          <p className="font-display text-3xl text-amber">{GAME_STATS.prizePool}</p>
-          <p className="text-dim text-xs mt-1">On-chain · World Wallet →</p>
+          <p className="font-display text-3xl text-amber">{prizePoolDisplay}</p>
+          <p className="text-dim text-xs mt-1">{prizePoolExplorer ? 'On-chain · verify →' : 'On-chain · World Wallet →'}</p>
         </button>
       </div>
 
