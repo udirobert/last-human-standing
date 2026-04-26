@@ -17,17 +17,30 @@ export default function Chat({ onBack }) {
   const [messages, setMessages] = useState(CHAT_MESSAGES);
   const [input, setInput] = useState('');
   const [toUser, setToUser] = useState('andy');
-  const [onlineCount] = useState(247);
   const bottomRef = useRef();
   const inputRef = useRef();
-  const { sendWorldChat, user } = useWorld();
+  const { sendWorldChat, user, isWorldApp } = useWorld();
+  const [rosterCount, setRosterCount] = useState(0);
+  const onlineCount = isWorldApp ? rosterCount : 247;
+
+  // Fetch real roster count for mini app
+  useEffect(() => {
+    if (!isWorldApp) return;
+    const load = () => fetch('/api/cohort/roster').then(r => r.json()).then(d => {
+      if (d?.roster) setRosterCount(d.roster.length);
+    }).catch(() => {});
+    load();
+    const id = setInterval(load, 30000);
+    return () => clearInterval(id);
+  }, [isWorldApp]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Occasionally add a bot message
+  // Occasionally add a bot message (browser demo only)
   useEffect(() => {
+    if (isWorldApp) return;
     const interval = setInterval(() => {
       if (Math.random() > 0.7) {
         const users = ['0xGhost_4459', '0xHuman_7734', '0xLastOnes_8823', '0xSurvivor_2291', '0xNewbie_9001', '0xElite_0042'];
@@ -43,7 +56,7 @@ export default function Chat({ onBack }) {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [isWorldApp]);
 
   const handleSend = async () => {
     if (!input.trim()) return;
@@ -102,7 +115,7 @@ export default function Chat({ onBack }) {
               <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-dim text-xs">{onlineCount} survivors online</span>
+              <span className="font-mono text-dim text-xs">{onlineCount} {isWorldApp ? 'humans reserved' : 'survivors online'}</span>
               <span className="text-dim text-xs">·</span>
               <span className="font-mono text-dim text-xs">powered by XMTP</span>
             </div>

@@ -92,8 +92,46 @@ export default function Onboarding({ onEnter }) {
   const youReserved = Boolean(you?.isPaid) || entryPaid;
   const cohortPct = cohortSize > 0 ? Math.min(100, Math.round((reservedCount / cohortSize) * 100)) : 0;
 
+  const stepLabels = ['Welcome', 'Rules', 'Reserve'];
+
+  const clearErrorAndRetry = () => {
+    // Clear error state and retry the last failed action
+    if (!walletAuthed) {
+      handleWalletAuth();
+    } else if (!entryPaid) {
+      handlePay();
+    }
+  };
+
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body overflow-hidden">
+      {/* Step indicator */}
+      <div className="flex items-center justify-center gap-2 pt-6 px-6">
+        {stepLabels.map((label, i) => (
+          <div key={label} className="flex items-center gap-2">
+            <button
+              onClick={() => i < step && setStep(i)}
+              disabled={i >= step}
+              className={`flex items-center gap-1.5 transition-all ${
+                i === step
+                  ? 'opacity-100'
+                  : i < step
+                    ? 'opacity-60 cursor-pointer'
+                    : 'opacity-30'
+              }`}
+            >
+              <div className={`w-2 h-2 rounded-full transition-all ${
+                i === step ? 'bg-blood scale-125' : i < step ? 'bg-neon' : 'bg-ember'
+              }`} />
+              <span className="font-mono text-xs text-dim">{label}</span>
+            </button>
+            {i < stepLabels.length - 1 && (
+              <div className={`w-4 h-px ${i < step ? 'bg-neon/40' : 'bg-ember'}`} />
+            )}
+          </div>
+        ))}
+      </div>
+
       <AnimatePresence mode="wait">
         {step === 0 && (
           <motion.div
@@ -259,8 +297,16 @@ export default function Onboarding({ onEnter }) {
                   </div>
 
                   {lastError && (
-                    <div className="bg-blood/10 border border-blood/30 rounded-xl p-3">
-                      <p className="text-blood text-xs font-mono">{lastError}</p>
+                    <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 flex items-center gap-3">
+                      <div className="flex-1">
+                        <p className="text-blood text-xs font-mono">{lastError}</p>
+                      </div>
+                      <button
+                        onClick={clearErrorAndRetry}
+                        className="flex-shrink-0 bg-blood/20 text-blood text-xs font-mono px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                      >
+                        Retry
+                      </button>
                     </div>
                   )}
                 </div>

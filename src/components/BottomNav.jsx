@@ -1,4 +1,4 @@
-export default function BottomNav({ current, onChange }) {
+export default function BottomNav({ current, onChange, badges = {} }) {
   const tabs = [
     { id: 'home', label: 'Survive', icon: '🏠' },
     { id: 'feed', label: 'Vote', icon: '🗳️' },
@@ -13,11 +13,14 @@ export default function BottomNav({ current, onChange }) {
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
-            className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all active:scale-90 ${
+            className={`relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all active:scale-90 ${
               current === tab.id ? 'text-blood' : 'text-dim'
             }`}
           >
             <span className="text-xl">{tab.icon}</span>
+            {badges[tab.id] && (
+              <span className="absolute top-1 right-2 w-2.5 h-2.5 bg-blood rounded-full animate-pulse" />
+            )}
             <span className={`font-mono text-xs tracking-wide ${current === tab.id ? 'text-blood' : 'text-dim'}`}>
               {tab.label}
             </span>

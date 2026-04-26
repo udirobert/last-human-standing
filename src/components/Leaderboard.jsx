@@ -1,50 +1,70 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
+import { usePolling } from '../hooks/usePolling.js';
 import { useWorld } from '../world/WorldProvider.jsx';
+import Countdown from './Countdown.jsx';
 
 function shortAddr(addr) {
   if (!addr) return 'anon';
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`;
 }
 
+function relTime(iso) {
+  if (!iso) return '';
+  const ms = Date.now() - Date.parse(iso);
+  if (Number.isNaN(ms)) return '';
+  const s = Math.max(0, Math.floor(ms / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+// Default cap-shrink schedule for the pilot — shown as a roadmap during pre-launch.
+const ELIM_SCHEDULE = [
+  { day: 1, cap: 25, label: 'Day 1' },
+  { day: 2, cap: 12, label: 'Day 2' },
+  { day: 3, cap: 6, label: 'Day 3' },
+  { day: 4, cap: 3, label: 'Day 4' },
+  { day: 5, cap: 1, label: 'Final' },
+];
+
 export default function Leaderboard({ onBack }) {
   const [tab, setTab] = useState('today');
-  const [checkins, setCheckins] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const { phase, currentDay, round, reservedCount, cohortSize, you } = useRound();
+  const { phase, launchAt, currentDay, round, reservedCount, cohortSize, cohortFull } = useRound();
   const { stats } = useStats();
   const { user } = useWorld();
-  const myAddr = user?.address?.toLowerCase() ?? you?.address?.toLowerCase() ?? null;
+  const myAddr = user?.address?.toLowerCase() ?? null;
 
   const prizePoolWld = stats?.prizePool?.balanceWld ?? null;
   const prizePoolExplorer = stats?.prizePool?.explorerUrl ?? null;
   const totalPlayers = stats?.players?.total ?? reservedCount ?? 0;
   const activePlayers = stats?.players?.active ?? null;
+  const cohortPct = cohortSize > 0 ? Math.min(100, Math.round((reservedCount / cohortSize) * 100)) : 0;
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoading(true);
-      try {
-        const resp = await fetch('/api/checkins/today', { credentials: 'include' });
-        if (!resp.ok) return;
-        const json = await resp.json();
-        if (!cancelled) setCheckins(json.checkins ?? []);
-      } catch {
-        // silent
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
-    load();
-    const id = setInterval(load, 15_000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [currentDay]);
+  const { data: checkins, loading: ckLoading } = usePolling('/api/checkins/today', {
+    intervalMs: 15_000,
+    transform: (json) => json.checkins ?? [],
+    initial: [],
+    deps: [currentDay],
+  });
+  const { data: roster } = usePolling('/api/cohort/roster', {
+    intervalMs: 15_000,
+    transform: (json) => json.roster ?? [],
+    initial: [],
+    deps: [currentDay],
+  });
+  const loading = ckLoading;
 
   const survivors = checkins.filter((c) => c.survived);
   const tooLate = checkins.filter((c) => !c.survived);
+  const isPrelaunch = phase === 'prelaunch';
+  const isLive = phase === 'live';
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
@@ -57,19 +77,39 @@ export default function Leaderboard({ onBack }) {
           <div>
             <h2 className="font-display text-3xl text-bone tracking-wide">STANDINGS</h2>
             <p className="font-mono text-dim text-xs">
-              {phase === 'live' ? `Day ${currentDay ?? '—'} · ${survivors.length}/${round?.survivalCap ?? '—'} arrived` : 'Pre-launch'}
+              {isLive ? `Day ${currentDay ?? '—'} · ${survivors.length}/${round?.survivalCap ?? '—'} arrived` : 'Pre-launch'}
             </p>
           </div>
         </div>
 
+        {/* Pre-launch: countdown + cohort progress */}
+        {isPrelaunch && (
+          <div className="bg-smoke border border-amber/40 rounded-3xl p-5 mb-3">
+            <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Cohort #1 · Day 1 in</p>
+            {launchAt
+              ? <Countdown targetIso={launchAt} className="font-display text-4xl text-bone leading-none animate-glow" />
+              : <p className="font-display text-2xl text-dim">TBA</p>}
+            <div className="mt-3 flex items-center justify-between text-xs font-mono text-dim">
+              <span>{reservedCount.toLocaleString()} of {cohortSize} humans confirmed</span>
+              <span>{cohortPct}%</span>
+            </div>
+            <div className="mt-1 h-1.5 bg-ember rounded-full overflow-hidden">
+              <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
+            </div>
+            {cohortFull && (
+              <p className="text-neon text-xs font-mono mt-3">✓ Cohort full · waiting for launch</p>
+            )}
+          </div>
+        )}
+
         {/* Prize pool spotlight */}
-        <div className="bg-smoke border border-amber/40 rounded-3xl p-5 mb-5 relative overflow-hidden">
+        <div className="bg-smoke border border-amber/40 rounded-3xl p-5 mb-3">
           <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Prize Pool · World Chain</p>
           <div className="flex items-end gap-3 mb-1">
-            <span className="font-display text-6xl text-amber leading-none">
+            <span className="font-display text-5xl text-amber leading-none">
               {prizePoolWld != null ? prizePoolWld.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
             </span>
-            <span className="font-display text-3xl text-amber/60 mb-1">WLD</span>
+            <span className="font-display text-2xl text-amber/60 mb-1">WLD</span>
           </div>
           <p className="text-dim text-xs font-mono">On-chain · grows with each entry fee</p>
 
@@ -99,15 +139,21 @@ export default function Leaderboard({ onBack }) {
 
         {/* Tabs */}
         <div className="flex gap-2">
-          {[
-            { id: 'today', label: 'Today' },
-            { id: 'late', label: 'Too late' },
-          ].map((t) => (
+          {(isPrelaunch
+            ? [
+                { id: 'roster', label: 'Roster' },
+                { id: 'schedule', label: 'Schedule' },
+              ]
+            : [
+                { id: 'today', label: 'Today' },
+                { id: 'late', label: 'Too late' },
+              ]
+          ).map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex-1 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
-                tab === t.id ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
+                (tab === t.id || (isPrelaunch && tab === 'today' && t.id === 'roster')) ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
               }`}
             >
               {t.label}
@@ -116,15 +162,98 @@ export default function Leaderboard({ onBack }) {
         </div>
       </div>
 
-      {phase !== 'live' && (
-        <div className="px-5">
-          <div className="bg-smoke border border-ember rounded-2xl p-4 text-center">
-            <p className="text-dim text-xs font-mono">Standings populate when Day 1 opens.</p>
-          </div>
+      {/* PRE-LAUNCH: Roster */}
+      {isPrelaunch && (tab === 'roster' || tab === 'today') && (
+        <div className="px-5 space-y-2">
+          <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1">
+            Reserved humans ({roster.length})
+          </p>
+          {loading && roster.length === 0 && (
+            <div className="text-center py-6">
+              <div className="w-6 h-6 mx-auto rounded-full border-2 border-amber border-t-transparent animate-spin" />
+            </div>
+          )}
+          {!loading && roster.length === 0 && (
+            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
+              <p className="text-dim text-sm font-mono">No reservations yet.</p>
+              <p className="text-bone text-xs font-mono mt-1">Be first.</p>
+            </div>
+          )}
+          {roster.map((r, i) => {
+            const isYou = myAddr && r.address?.toLowerCase() === myAddr;
+            return (
+              <motion.div
+                key={r.address || i}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.02 }}
+                className={`flex items-center gap-3 rounded-2xl p-3 ${
+                  isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-full bg-ember flex items-center justify-center font-display text-xs text-dim">
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-mono text-sm truncate ${isYou ? 'text-blood' : 'text-bone'}`}>
+                    {r.username ? `@${r.username}` : shortAddr(r.address)}
+                    {isYou && <span className="text-blood text-xs ml-2">(you)</span>}
+                  </p>
+                  {r.reserved_at && (
+                    <p className="text-dim text-[10px] font-mono mt-0.5">{relTime(r.reserved_at)}</p>
+                  )}
+                </div>
+                <span className="text-amber text-xs font-mono">✓ in</span>
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
-      {phase === 'live' && tab === 'today' && (
+      {/* PRE-LAUNCH: Schedule */}
+      {isPrelaunch && tab === 'schedule' && (
+        <div className="px-5 space-y-2">
+          <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1">
+            Elimination curve · {cohortSize} → 1
+          </p>
+          {ELIM_SCHEDULE.map((d, i) => {
+            const prev = i === 0 ? cohortSize : ELIM_SCHEDULE[i - 1].cap;
+            const dropped = prev - d.cap;
+            return (
+              <motion.div
+                key={d.day}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className={`bg-smoke border rounded-2xl p-4 flex items-center gap-3 ${
+                  d.day === 5 ? 'border-amber/50' : 'border-ember'
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center ${
+                  d.day === 5 ? 'bg-amber/15 text-amber' : 'bg-ember text-bone'
+                }`}>
+                  <p className="font-mono text-[10px] uppercase">{d.day === 5 ? 'WIN' : 'D' + d.day}</p>
+                </div>
+                <div className="flex-1">
+                  <p className={`font-display text-2xl ${d.day === 5 ? 'text-amber' : 'text-bone'}`}>
+                    {d.cap === 1 ? 'Last human standing' : `First ${d.cap} survive`}
+                  </p>
+                  <p className="text-dim text-xs font-mono mt-0.5">
+                    {dropped > 0 ? `−${dropped} cut` : ''}
+                    {d.day === 5 ? ' · winner takes the pot' : ''}
+                  </p>
+                </div>
+              </motion.div>
+            );
+          })}
+          <p className="text-dim text-xs font-mono text-center mt-3">
+            Each day: GPS pin drops, 4-hour window, first N to arrive survive.
+          </p>
+        </div>
+      )}
+
+      {/* LIVE: today's check-ins */}
+      {isLive && tab === 'today' && (
         <div className="px-5 space-y-2">
           {loading && checkins.length === 0 && (
             <div className="text-center py-6">
@@ -154,7 +283,6 @@ export default function Leaderboard({ onBack }) {
                 }`}>
                   {c.rank <= 3 ? ['🥇', '🥈', '🥉'][c.rank - 1] : c.rank}
                 </div>
-
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <span className={`font-mono text-sm ${isYou ? 'text-blood' : 'text-bone'}`}>
@@ -166,17 +294,14 @@ export default function Leaderboard({ onBack }) {
                     {c.distance_m != null ? `${Math.round(c.distance_m)}m from target` : ''}
                   </p>
                 </div>
-
-                <div className="text-right">
-                  <p className="text-neon text-xs font-mono">✓ alive</p>
-                </div>
+                <p className="text-neon text-xs font-mono">✓ alive</p>
               </motion.div>
             );
           })}
         </div>
       )}
 
-      {phase === 'live' && tab === 'late' && (
+      {isLive && tab === 'late' && (
         <div className="px-5 space-y-2">
           {tooLate.length === 0 ? (
             <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">

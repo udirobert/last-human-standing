@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
@@ -22,6 +22,14 @@ const SCREENS = {
 export default function App() {
   const [screen, setScreen] = useState(SCREENS.ONBOARDING);
   const [navTab, setNavTab] = useState('home');
+  const [badges, setBadges] = useState({});
+
+  const markBadge = useCallback((tab) => {
+    setBadges((b) => (b[tab] ? b : { ...b, [tab]: true }));
+  }, []);
+  const clearBadge = useCallback((tab) => {
+    setBadges((b) => (b[tab] ? { ...b, [tab]: false } : b));
+  }, []);
 
   const handleEnterGame = () => {
     setScreen(SCREENS.HOME);
@@ -30,6 +38,7 @@ export default function App() {
 
   const handleNavChange = (tab) => {
     setNavTab(tab);
+    clearBadge(tab);
     if (tab === 'home') setScreen(SCREENS.HOME);
     else if (tab === 'feed') setScreen(SCREENS.FEED);
     else if (tab === 'chat') setScreen(SCREENS.CHAT);
@@ -37,6 +46,17 @@ export default function App() {
   };
 
   const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN;
+
+  // Simulate unread chat badge when user is away from chat (browser demo feel)
+  const screenRef = useRef(screen);
+  screenRef.current = screen;
+  useEffect(() => {
+    if (!isInGame) return;
+    const id = setInterval(() => {
+      if (screenRef.current !== SCREENS.CHAT) markBadge('chat');
+    }, 12_000);
+    return () => clearInterval(id);
+  }, [isInGame, markBadge]);
 
   return (
     <div className="relative">
@@ -122,7 +142,7 @@ export default function App() {
       </AnimatePresence>
 
       {isInGame && (
-        <BottomNav current={navTab} onChange={handleNavChange} />
+        <BottomNav current={navTab} onChange={handleNavChange} badges={badges} />
       )}
     </div>
   );

@@ -66,6 +66,20 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
               <p className="text-neon text-xs font-mono mt-3">✓ Cohort full · waiting for launch</p>
             )}
           </div>
+          <button
+            onClick={() => {
+              const url = 'https://lasthumanstanding.thisyearnofear.com';
+              const text = `I just reserved my spot in Last Human Standing — ${reservedCount}/${cohortSize} humans confirmed. Can you survive? 🧍`;
+              if (navigator.share) {
+                navigator.share({ title: 'Last Human Standing', text, url }).catch(() => {});
+              } else {
+                navigator.clipboard?.writeText(`${text}\n${url}`);
+              }
+            }}
+            className="mt-3 w-full py-3 rounded-2xl bg-amber/10 border border-amber/40 font-mono text-amber text-sm tracking-wide active:scale-95 transition-transform"
+          >
+            📣 Invite a friend
+          </button>
           <p className="text-dim text-xs font-mono text-center mt-3">
             Reserved players get the location pin the moment Day 1 opens.
           </p>

@@ -1105,6 +1105,32 @@ app.post(
   },
 );
 
+app.get("/api/cohort/roster", async (req, res) => {
+  try {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("users")
+        .select("address, username, reserved_at, eliminated, eliminated_at_day")
+        .eq("paid", true)
+        .order("reserved_at", { ascending: false })
+        .limit(200);
+      if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+      return res.json({ ok: true, roster: data || [] });
+    }
+    // In-memory fallback
+    const list = Array.from(paidUsers).map((address) => ({
+      address,
+      username: null,
+      reserved_at: null,
+      eliminated: false,
+      eliminated_at_day: null,
+    }));
+    return res.json({ ok: true, roster: list });
+  } catch (e) {
+    res.status(400).json({ error: "roster_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
 app.get("/api/checkins/today", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;

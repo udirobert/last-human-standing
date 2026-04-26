@@ -15,6 +15,19 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+function bearingLabel(lat1, lng1, lat2, lng2) {
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLng = toRad(lng2 - lng1);
+  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+  const deg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+  return dirs[Math.round(deg / 45) % 8];
+}
+
+const DIR_ARROWS = { N: '↑', NE: '↗', E: '→', SE: '↘', S: '↓', SW: '↙', W: '←', NW: '↖' };
+
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
   const { signCheckIn } = useWorld();
@@ -205,11 +218,15 @@ export default function CheckIn({ onBack, onSubmit }) {
                     <p className="text-dim text-xs font-mono mt-2">
                       Accuracy ±{Math.round(pos.accuracy ?? 0)}m
                     </p>
-                    {!withinRadius && (
-                      <p className="text-amber text-xs font-mono mt-3">
-                        Get closer. Need to be within {radiusM}m to check in.
-                      </p>
-                    )}
+                    {!withinRadius && (() => {
+                      const dir = bearingLabel(pos.lat, pos.lng, targetLat, targetLng);
+                      return (
+                        <p className="text-amber text-xs font-mono mt-3">
+                          <span className="text-lg mr-1">{DIR_ARROWS[dir]}</span>
+                          Head {dir}. Need to be within {radiusM}m to check in.
+                        </p>
+                      );
+                    })()}
                     {withinRadius && (
                       <p className="text-neon text-xs font-mono mt-3">✓ You're in range. Capture a photo (optional) and submit.</p>
                     )}

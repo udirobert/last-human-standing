@@ -21,43 +21,48 @@ const STATUS_LABELS = {
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
-  const { walletAuthed, entryPaid, worldIdVerified, sendWorldChat } = useWorld();
+  const { walletAuthed, entryPaid, worldIdVerified, sendWorldChat, isWorldApp } = useWorld();
   const { verification } = useRound();
-  const [submissions, setSubmissions] = useState(MOCK_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState(isWorldApp ? [] : MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
   const [filter, setFilter] = useState('all');
+  const [refreshing, setRefreshing] = useState(false);
 
   const requireWorldIdToVote = import.meta.env.VITE_REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
-  useEffect(() => {
-    const load = async () => {
-      if (!(walletAuthed && entryPaid)) return;
-      try {
-        const resp = await fetch("/api/feed", { credentials: "include" });
-        if (!resp.ok) return;
-        const data = await resp.json();
-        if (Array.isArray(data?.submissions)) {
-          // Map server submissions into the existing UI shape.
-          setSubmissions(
-            data.submissions.map((s) => ({
-              id: s.id,
-              user: s.username ? `@${s.username}` : (s.address?.slice(0, 8) + "…"),
-              username: s.username ?? null,
-              caption: s.caption || s.theme || "",
-              time: "now",
-              votes: s.votes || { real: 0, fake: 0 },
-              status: s.status || "pending",
-              mediaUrl: s.mediaUrl || null,
-              voteQuorum: s.voteQuorum || s.vote_quorum || null,
-            })),
-          );
-        }
-      } catch {
-        // keep mock feed
+  const loadFeed = async () => {
+    if (!(walletAuthed && entryPaid)) return;
+    try {
+      const resp = await fetch("/api/feed", { credentials: "include" });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (Array.isArray(data?.submissions)) {
+        setSubmissions(
+          data.submissions.map((s) => ({
+            id: s.id,
+            user: s.username ? `@${s.username}` : (s.address?.slice(0, 8) + "…"),
+            username: s.username ?? null,
+            caption: s.caption || s.theme || "",
+            time: "now",
+            votes: s.votes || { real: 0, fake: 0 },
+            status: s.status || "pending",
+            mediaUrl: s.mediaUrl || null,
+            voteQuorum: s.voteQuorum || s.vote_quorum || null,
+          })),
+        );
       }
-    };
-    load();
-  }, [walletAuthed, entryPaid]);
+    } catch {
+      // keep mock feed in browser demo; mini app stays empty
+    }
+  };
+
+  useEffect(() => { loadFeed(); }, [walletAuthed, entryPaid]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadFeed();
+    setRefreshing(false);
+  };
 
   const handleVote = async (id, type) => {
     if (requireWorldIdToVote && !worldIdVerified) return;
@@ -126,10 +131,19 @@ export default function Feed({ onBack }) {
           <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
             <span className="text-dim text-lg">←</span>
           </button>
-          <div>
+          <div className="flex-1">
             <h2 className="font-display text-3xl text-bone tracking-wide">TODAY'S FEED</h2>
             <p className="font-mono text-dim text-xs">{TODAY_THEME.theme} · {submissions.length} submissions</p>
           </div>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className={`w-10 h-10 rounded-xl bg-smoke flex items-center justify-center transition-transform ${
+              refreshing ? 'animate-spin' : 'active:scale-90'
+            }`}
+          >
+            <span className="text-dim text-lg">↻</span>
+          </button>
         </div>
 
         {/* Filter tabs */}
@@ -169,6 +183,17 @@ export default function Feed({ onBack }) {
 
       {/* Submissions */}
       <div className="px-5 space-y-4">
+        {filtered.length === 0 && isWorldApp && (
+          <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
+            <span className="text-4xl block mb-3">📋</span>
+            <p className="text-bone font-display text-lg mb-2">Audit feed opens on Day 1</p>
+            <p className="text-dim font-mono text-xs leading-relaxed">
+              Each day, survivors check in from a real-world location and submit photo proof.
+              The community votes on every submission — verified or flagged.
+              Flagged players risk elimination.
+            </p>
+          </div>
+        )}
         <AnimatePresence>
           {filtered.map((sub, i) => {
             const totalVotes = sub.votes.real + sub.votes.fake;
