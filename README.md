@@ -12,7 +12,7 @@ Players:
 
 ```bash
 npm i
-npm run dev
+npm run dev:all
 ```
 
 In a normal browser, MiniKit commands will fall back and some actions will be simulated.
@@ -24,6 +24,13 @@ Create a `.env` file (Vite style) and set:
 
 ```bash
 VITE_PRIZE_POOL_ADDRESS=0xYourPrizePoolReceiverAddress
+
+# Backend verification (optional but recommended for “serious app” points)
+WORLD_APP_ID=app_xxxxx
+WORLD_DEV_PORTAL_API_KEY=your_dev_portal_api_key
+
+# Local demo convenience (ONLY for local dev)
+DEV_BYPASS_VERIFICATION=true
 ```
 
 ## Hackathon submission

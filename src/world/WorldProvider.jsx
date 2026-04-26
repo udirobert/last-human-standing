@@ -64,7 +64,12 @@ export function WorldProvider({ children }) {
 
   async function walletAuth() {
     setLastError(null);
-    const nonce = crypto.randomUUID().replaceAll("-", "").slice(0, 16); // alphanumeric, >= 8 chars
+    const nonceResp = await fetch("/api/nonce", { method: "POST" });
+    if (!nonceResp.ok) {
+      const text = await nonceResp.text();
+      throw new Error(`Nonce request failed: ${text}`);
+    }
+    const { nonce } = await nonceResp.json();
 
     try {
       const result = await MiniKit.walletAuth({
@@ -90,8 +95,22 @@ export function WorldProvider({ children }) {
         return result;
       }
 
-      const address = result.data.address;
-      // MiniKit may cache user metadata after auth.
+      const verifyResp = await fetch("/api/complete-siwe", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          payload: result.data,
+          nonce,
+        }),
+      });
+      if (!verifyResp.ok) {
+        const text = await verifyResp.text();
+        throw new Error(`SIWE verification failed: ${text}`);
+      }
+      const { address } = await verifyResp.json();
+
+      // MiniKit may cache user metadata after auth (inside World App).
       const username = MiniKit.user?.username ?? null;
 
       setWalletAuthed(true);
@@ -113,7 +132,15 @@ export function WorldProvider({ children }) {
     description = "Entry fee to join the prize pool",
   } = {}) {
     setLastError(null);
-    const reference = crypto.randomUUID();
+    const refResp = await fetch("/api/pay/reference", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!refResp.ok) {
+      const text = await refResp.text();
+      throw new Error(`Reference request failed: ${text}`);
+    }
+    const { reference } = await refResp.json();
 
     try {
       const result = await MiniKit.pay({
@@ -133,6 +160,17 @@ export function WorldProvider({ children }) {
 
       if (result.executedWith === "fallback") return result;
 
+      const confirmResp = await fetch("/api/pay/confirm", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ payload: result.data }),
+      });
+      if (!confirmResp.ok) {
+        const text = await confirmResp.text();
+        throw new Error(`Payment verification failed: ${text}`);
+      }
+
       setEntryPaid(true);
       return result;
     } catch (e) {
@@ -141,15 +179,34 @@ export function WorldProvider({ children }) {
     }
   }
 
-  async function signCheckIn(message) {
+  async function signCheckIn(input) {
     setLastError(null);
     try {
+      const message = typeof input === "string" ? input : input.message;
       const result = await MiniKit.signMessage({
         message,
         fallback: () => {
           alert("Open this mini app inside World App to sign a check-in.");
         },
       });
+
+      if (result.executedWith !== "fallback") {
+        // Persist the signed check-in server-side (hackathon demo backend).
+        await fetch("/api/checkin", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            day: typeof input === "string" ? Math.floor(Date.now() / (1000 * 60 * 60 * 24)) : input.day,
+            theme: typeof input === "string" ? "daily" : input.theme,
+            caption: typeof input === "string" ? "" : input.caption,
+            message,
+            signature: result.data.signature,
+            address: result.data.address,
+          }),
+        });
+      }
+
       return result;
     } catch (e) {
       setLastError(e instanceof Error ? e.message : "Signing failed");
@@ -210,4 +267,3 @@ export function useWorld() {
   if (!ctx) throw new Error("useWorld must be used within <WorldProvider />");
   return ctx;
 }
-

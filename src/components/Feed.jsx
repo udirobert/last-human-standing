@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_SUBMISSIONS, TODAY_THEME } from '../data/game';
+import { useWorld } from '../world/WorldProvider.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -18,11 +19,39 @@ const STATUS_LABELS = {
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
+  const { walletAuthed, entryPaid } = useWorld();
   const [submissions, setSubmissions] = useState(MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
   const [filter, setFilter] = useState('all');
 
-  const handleVote = (id, type) => {
+  useEffect(() => {
+    const load = async () => {
+      if (!(walletAuthed && entryPaid)) return;
+      try {
+        const resp = await fetch("/api/feed", { credentials: "include" });
+        if (!resp.ok) return;
+        const data = await resp.json();
+        if (Array.isArray(data?.submissions)) {
+          // Map server submissions into the existing UI shape.
+          setSubmissions(
+            data.submissions.map((s) => ({
+              id: s.id,
+              user: s.address?.slice(0, 8) + "…",
+              caption: s.caption || s.theme || "",
+              time: "now",
+              votes: s.votes || { real: 0, fake: 0 },
+              status: s.status || "pending",
+            })),
+          );
+        }
+      } catch {
+        // keep mock feed
+      }
+    };
+    load();
+  }, [walletAuthed, entryPaid]);
+
+  const handleVote = async (id, type) => {
     if (voted[id]) return;
     setVoted(v => ({ ...v, [id]: type }));
     setSubmissions(subs =>
@@ -32,6 +61,20 @@ export default function Feed({ onBack }) {
           : s
       )
     );
+
+    // Best effort: also send to backend when authenticated.
+    if (walletAuthed && entryPaid) {
+      try {
+        await fetch("/api/vote", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ submissionId: id, vote: type }),
+        });
+      } catch {
+        // ignore
+      }
+    }
   };
 
   const filtered = filter === 'all' ? submissions : submissions.filter(s => s.status === filter);

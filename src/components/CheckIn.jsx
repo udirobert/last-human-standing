@@ -34,7 +34,12 @@ export default function CheckIn({ onBack, onSubmit }) {
     ].join("\n");
 
     try {
-      const result = await signCheckIn(msg);
+      const result = await signCheckIn({
+        message: msg,
+        day: Math.floor(Date.now() / (1000 * 60 * 60 * 24)),
+        theme: TODAY_THEME.theme,
+        caption: caption.trim(),
+      });
       if (result?.executedWith !== "fallback") {
         setSignature(result.data.signature);
       }

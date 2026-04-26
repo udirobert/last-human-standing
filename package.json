@@ -5,17 +5,22 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:api": "node --watch server/index.js",
+    "dev:all": "concurrently -n WEB,API -c cyan,magenta \"vite\" \"node --watch server/index.js\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@worldcoin/minikit-js": "^2.0.3",
+    "concurrently": "^9.2.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.1.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.11.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "viem": "^2.45.3"
+    "viem": "2.45.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
