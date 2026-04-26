@@ -122,7 +122,7 @@ export default function Feed({ onBack }) {
           </button>
           <div>
             <h2 className="font-display text-3xl text-bone tracking-wide">TODAY'S FEED</h2>
-            <p className="font-mono text-dim text-xs">{TODAY_THEME.theme} · 1,038 submissions</p>
+            <p className="font-mono text-dim text-xs">{TODAY_THEME.theme} · {submissions.length} submissions</p>
           </div>
         </div>
 
