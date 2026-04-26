@@ -226,7 +226,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           <p className="text-dim font-mono text-xs tracking-wide uppercase">World Chat</p>
           <div className="flex items-center gap-1">
             <div className="w-1.5 h-1.5 rounded-full bg-neon animate-pulse" />
-            <span className="font-mono text-neon text-xs">247 online</span>
+            <span className="font-mono text-neon text-xs">{stats?.players?.active != null ? `${stats.players.active.toLocaleString()} online` : 'online'}</span>
           </div>
         </div>
         <div className="space-y-1">
