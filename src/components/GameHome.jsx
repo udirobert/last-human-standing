@@ -230,7 +230,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           </div>
         </div>
         <div className="space-y-1">
-          <p className="text-bone text-sm"><span className="text-dim font-mono text-xs">0xHuman:</span> "the prize pool is at 2.4 ETH now. i'm not sleeping"</p>
+          <p className="text-bone text-sm"><span className="text-dim font-mono text-xs">0xHuman:</span> "the prize pool is growing. i'm not sleeping"</p>
           <p className="text-bone text-sm"><span className="text-dim font-mono text-xs">0xGhost:</span> "flagging everyone who went to starbucks 💀"</p>
         </div>
         <p className="text-blood text-xs font-mono mt-2">Open trash talk →</p>

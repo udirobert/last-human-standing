@@ -28,7 +28,7 @@ export const MOCK_SUBMISSIONS = [
     id: 2,
     user: "0xSurvivor_2291",
     avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=human2",
-    caption: "they said I wouldn't make it. day 47.",
+    caption: "they said I wouldn't make it. still here.",
     time: "31 min ago",
     votes: { real: 124, fake: 2 },
     status: "verified",
@@ -78,10 +78,10 @@ export const CHAT_MESSAGES = [
 ];
 
 export const GAME_STATS = {
-  totalPlayers: 1247,
-  eliminated: 8941,
-  prizePool: "2.4 ETH",
-  day: 47,
+  totalPlayers: 0,
+  eliminated: 0,
+  prizePool: "0 WLD",
+  day: Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1,
   hoursLeft: 6,
   minutesLeft: 23,
 };
