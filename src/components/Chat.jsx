@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CHAT_MESSAGES } from '../data/game';
+import { useWorld } from '../world/WorldProvider.jsx';
 
 const BOT_RESPONSES = [
   "day 47 and still alive, respect",
@@ -15,9 +16,11 @@ const BOT_RESPONSES = [
 export default function Chat({ onBack }) {
   const [messages, setMessages] = useState(CHAT_MESSAGES);
   const [input, setInput] = useState('');
+  const [toUser, setToUser] = useState('andy');
   const [onlineCount] = useState(247);
   const bottomRef = useRef();
   const inputRef = useRef();
+  const { sendWorldChat, user } = useWorld();
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -42,17 +45,40 @@ export default function Chat({ onBack }) {
     return () => clearInterval(interval);
   }, []);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
-    setMessages(m => [...m, {
-      id: Date.now(),
-      user: '0xHuman_7734',
-      msg: input.trim(),
-      time: 'now',
-      isSelf: true,
-    }]);
+    const text = input.trim();
+
+    // Optimistically add the local message.
+    setMessages((m) => [
+      ...m,
+      {
+        id: Date.now(),
+        user: user?.displayName ?? 'you',
+        msg: text,
+        time: 'now',
+        isSelf: true,
+      },
+    ]);
     setInput('');
-    inputRef.current?.focus();
+
+    try {
+      await sendWorldChat({ to: toUser, message: text });
+    } catch (e) {
+      // If chat fails, add a visible system note.
+      setMessages((m) => [
+        ...m,
+        {
+          id: Date.now() + 1,
+          user: 'system',
+          msg: `Could not send via World Chat: ${e instanceof Error ? e.message : 'unknown error'}`,
+          time: 'now',
+          isNew: true,
+        },
+      ]);
+    } finally {
+      inputRef.current?.focus();
+    }
   };
 
   const handleKey = (e) => {
@@ -90,7 +116,7 @@ export default function Chat({ onBack }) {
       {/* XMTP badge */}
       <div className="mx-5 mt-3 bg-smoke border border-ember rounded-xl px-4 py-2 flex items-center gap-2">
         <span className="text-lg">💬</span>
-        <p className="text-dim text-xs font-mono">End-to-end encrypted via XMTP · Only verified humans can post</p>
+        <p className="text-dim text-xs font-mono">Sends via World Chat (XMTP) · Pick a recipient username</p>
       </div>
 
       {/* Messages */}
@@ -149,28 +175,40 @@ export default function Chat({ onBack }) {
       {/* Input */}
       <div className="px-5 py-4 bg-ash border-t border-ember">
         <div className="flex gap-3 items-end">
-          <div className="flex-1 bg-smoke border border-ember rounded-2xl px-4 py-3 flex items-center gap-2">
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKey}
-              placeholder="say something to the survivors..."
-              className="flex-1 bg-transparent text-bone text-sm font-body focus:outline-none placeholder:text-dim"
-            />
+          <div className="flex-1 space-y-2">
+            <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
+              <span className="font-mono text-dim text-xs">@</span>
+              <input
+                type="text"
+                value={toUser}
+                onChange={(e) => setToUser(e.target.value.replace(/^@/, ''))}
+                placeholder="username"
+                className="flex-1 bg-transparent text-bone text-xs font-mono focus:outline-none placeholder:text-dim"
+              />
+            </div>
+            <div className="bg-smoke border border-ember rounded-2xl px-4 py-3 flex items-center gap-2">
+              <input
+                ref={inputRef}
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={handleKey}
+                placeholder="say something to the survivors..."
+                className="flex-1 bg-transparent text-bone text-sm font-body focus:outline-none placeholder:text-dim"
+              />
+            </div>
           </div>
           <button
             onClick={handleSend}
-            disabled={!input.trim()}
+            disabled={!input.trim() || !toUser.trim()}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg transition-all active:scale-90 ${
-              input.trim() ? 'bg-blood text-white' : 'bg-ember text-dim'
+              input.trim() && toUser.trim() ? 'bg-blood text-white' : 'bg-ember text-dim'
             }`}
           >
             ↑
           </button>
         </div>
-        <p className="text-dim font-mono text-xs mt-2 text-center">Messages signed with your World ID · Fully encrypted</p>
+        <p className="text-dim font-mono text-xs mt-2 text-center">Uses MiniKit.chat() to send through World Chat</p>
       </div>
     </div>
   );

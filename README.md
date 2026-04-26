@@ -1,16 +1,31 @@
-# React + Vite
+# Last Human Standing (World Mini App)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A mobile-first Mini App concept: **a daily survival game for verified humans**.
 
-Currently, two official plugins are available:
+Players:
+- authenticate via **World Wallet (SIWE via MiniKit)**
+- pay a small **entry fee** into a prize pool (via **MiniKit Pay**)
+- check in daily with proof (signed message via **MiniKit Sign Message**)
+- trash talk / coordinate via **World Chat (MiniKit Chat)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Local development
 
-## React Compiler
+```bash
+npm i
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+In a normal browser, MiniKit commands will fall back and some actions will be simulated.
+For the real flow, open the app **inside World App**.
 
-## Expanding the ESLint configuration
+## Configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Create a `.env` file (Vite style) and set:
+
+```bash
+VITE_PRIZE_POOL_ADDRESS=0xYourPrizePoolReceiverAddress
+```
+
+## Hackathon submission
+
+See `submission.md` for the write-up (problem, solution, World Stack usage, demo flow).

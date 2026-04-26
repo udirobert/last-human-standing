@@ -1,12 +1,15 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TODAY_THEME } from '../data/game';
+import { useWorld } from '../world/WorldProvider.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const [step, setStep] = useState(0); // 0=capture, 1=caption, 2=submitting, 3=done
   const [caption, setCaption] = useState('');
   const [photo, setPhoto] = useState(null);
+  const [signature, setSignature] = useState(null);
   const fileRef = useRef();
+  const { signCheckIn, user } = useWorld();
 
   const mockPhotos = [
     "☕ 📸",
@@ -20,11 +23,26 @@ export default function CheckIn({ onBack, onSubmit }) {
     setTimeout(() => setStep(1), 300);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setStep(2);
-    setTimeout(() => {
-      setStep(3);
-    }, 2500);
+    const msg = [
+      "Last Human Standing — Daily Check-in",
+      `theme=${TODAY_THEME.theme}`,
+      `caption=${caption.trim() || "(no caption)"}`,
+      `by=${user?.displayName ?? "anon"}`,
+      `ts=${new Date().toISOString()}`,
+    ].join("\n");
+
+    try {
+      const result = await signCheckIn(msg);
+      if (result?.executedWith !== "fallback") {
+        setSignature(result.data.signature);
+      }
+    } catch {
+      // signing errors are shown in UI via the "Recording on-chain" step remaining false
+    } finally {
+      setTimeout(() => setStep(3), 800);
+    }
   };
 
   return (
@@ -171,13 +189,13 @@ export default function CheckIn({ onBack, onSubmit }) {
             <div className="w-24 h-24 rounded-full border-4 border-blood border-t-transparent animate-spin" />
             <div className="text-center">
               <p className="font-display text-3xl text-bone">SUBMITTING</p>
-              <p className="text-dim font-mono text-sm mt-1">Signing with World Wallet...</p>
+              <p className="text-dim font-mono text-sm mt-1">Signing check-in with World Wallet...</p>
             </div>
             <div className="w-full space-y-2">
               {[
                 { label: "Attaching World ID proof", done: true },
                 { label: "Uploading photo", done: true },
-                { label: "Recording on-chain", done: false },
+                { label: "Recording proof (signature)", done: Boolean(signature) },
               ].map((item, i) => (
                 <div key={item.label} className="flex items-center gap-3 bg-smoke rounded-xl px-4 py-3">
                   <div className={`w-4 h-4 rounded-full ${item.done ? 'bg-neon' : 'border-2 border-dim animate-pulse'} flex-shrink-0`} />
@@ -185,6 +203,14 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               ))}
             </div>
+            {signature && (
+              <div className="w-full bg-smoke border border-ember rounded-xl px-4 py-3">
+                <p className="text-dim font-mono text-xs mb-1">Signature</p>
+                <p className="text-bone font-mono text-xs break-all">
+                  {signature.slice(0, 14)}…{signature.slice(-10)}
+                </p>
+              </div>
+            )}
           </motion.div>
         )}
 

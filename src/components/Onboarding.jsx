@@ -1,17 +1,50 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWorld } from '../world/WorldProvider.jsx';
 
 export default function Onboarding({ onEnter }) {
   const [step, setStep] = useState(0); // 0=splash, 1=rules, 2=verify
-  const [verifying, setVerifying] = useState(false);
-  const [verified, setVerified] = useState(false);
+  const [authing, setAuthing] = useState(false);
+  const [paying, setPaying] = useState(false);
+  const [entering, setEntering] = useState(false);
 
-  const handleVerify = () => {
-    setVerifying(true);
-    setTimeout(() => {
-      setVerified(true);
-      setTimeout(() => onEnter(), 1200);
-    }, 2000);
+  const {
+    isWorldApp,
+    installAttempted,
+    walletAuthed,
+    entryPaid,
+    lastError,
+    walletAuth,
+    payEntryFee,
+  } = useWorld();
+
+  const verified = walletAuthed && entryPaid;
+
+  useEffect(() => {
+    if (!verified || entering) return;
+    setEntering(true);
+    const t = setTimeout(() => onEnter(), 900);
+    return () => clearTimeout(t);
+  }, [verified, entering, onEnter]);
+
+  const handleWalletAuth = async () => {
+    if (authing || walletAuthed) return;
+    setAuthing(true);
+    try {
+      await walletAuth();
+    } finally {
+      setAuthing(false);
+    }
+  };
+
+  const handlePay = async () => {
+    if (paying || entryPaid) return;
+    setPaying(true);
+    try {
+      await payEntryFee({ amountWld: 1 });
+    } finally {
+      setPaying(false);
+    }
   };
 
   return (
@@ -128,7 +161,9 @@ export default function Onboarding({ onEnter }) {
             <div className="mt-6 space-y-3">
               <div className="bg-ember border border-blood/30 rounded-xl p-3 flex items-center gap-3">
                 <span className="text-2xl">⚠️</span>
-                <p className="text-bone text-xs leading-relaxed">Entry fee: <span className="text-amber font-mono">0.01 ETH</span> goes directly to the prize pool via World Wallet</p>
+                <p className="text-bone text-xs leading-relaxed">
+                  Entry fee: <span className="text-amber font-mono">1 WLD</span> goes directly to the prize pool via World Wallet
+                </p>
               </div>
               <button
                 onClick={() => setStep(2)}
@@ -153,39 +188,43 @@ export default function Onboarding({ onEnter }) {
             <div className="flex-1 flex flex-col items-center justify-center w-full">
               <div className="mb-8 text-center">
                 <h2 className="font-display text-5xl text-bone mb-2">PROVE YOUR<br />HUMANITY</h2>
-                <p className="text-dim text-sm font-mono">World ID · zero-knowledge proof</p>
+                <p className="text-dim text-sm font-mono">World App · wallet auth + entry fee</p>
               </div>
 
               {!verified ? (
                 <div className="w-full space-y-6">
                   <div className="bg-smoke border border-ember rounded-3xl p-8 flex flex-col items-center gap-4">
-                    <div className={`w-24 h-24 rounded-full border-2 ${verifying ? 'border-amber animate-spin' : 'border-neon'} flex items-center justify-center relative`}>
-                      {verifying ? (
-                        <div className="w-16 h-16 rounded-full border-4 border-amber border-t-transparent animate-spin" />
-                      ) : (
-                        <span className="text-5xl">🌐</span>
-                      )}
+                    <div className="w-24 h-24 rounded-full border-2 border-neon flex items-center justify-center relative">
+                      <span className="text-5xl">🌐</span>
                     </div>
 
                     <div className="text-center">
                       <p className="text-bone font-mono text-sm">
-                        {verifying ? "Verifying with World ID..." : "Tap to verify with World ID"}
+                        {installAttempted && !isWorldApp
+                          ? "Open in World App for verification"
+                          : "Authenticate and pay to join"}
                       </p>
-                      <p className="text-dim text-xs mt-1">Private · Zero-knowledge · Irreversible</p>
+                      <p className="text-dim text-xs mt-1">One human, one account · Anti-bot game</p>
                     </div>
                   </div>
 
                   <div className="space-y-2">
                     {[
-                      "✓ Proves you're a unique human",
-                      "✓ Zero personal data shared",
-                      "✓ One account per person, forever",
+                      "✓ Wallet-authenticated identity (SIWE)",
+                      "✓ Entry fee paid into the prize pool (WLD)",
+                      "✓ World Chat enabled for verified players",
                     ].map((item) => (
                       <div key={item} className="flex items-center gap-2 text-dim text-sm font-mono">
                         <span className="text-neon">{item}</span>
                       </div>
                     ))}
                   </div>
+
+                  {lastError && (
+                    <div className="bg-blood/10 border border-blood/30 rounded-xl p-3">
+                      <p className="text-blood text-xs font-mono">{lastError}</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <motion.div
@@ -197,7 +236,7 @@ export default function Onboarding({ onEnter }) {
                     <span className="text-5xl">✅</span>
                   </div>
                   <div className="text-center">
-                    <p className="text-neon font-display text-3xl">HUMAN VERIFIED</p>
+                    <p className="text-neon font-display text-3xl">READY</p>
                     <p className="text-dim font-mono text-sm mt-1">Entering game...</p>
                   </div>
                 </motion.div>
@@ -205,15 +244,37 @@ export default function Onboarding({ onEnter }) {
             </div>
 
             {!verified && (
-              <button
-                onClick={handleVerify}
-                disabled={verifying}
-                className={`w-full font-display text-3xl tracking-widest py-4 rounded-2xl active:scale-95 transition-all ${
-                  verifying ? 'bg-ember text-dim' : 'bg-neon text-ash'
-                }`}
-              >
-                {verifying ? "VERIFYING..." : "VERIFY WITH WORLD ID"}
-              </button>
+              <div className="w-full space-y-3">
+                <button
+                  onClick={handleWalletAuth}
+                  disabled={authing || walletAuthed}
+                  className={`w-full font-display text-2xl tracking-widest py-4 rounded-2xl active:scale-95 transition-all ${
+                    walletAuthed ? 'bg-neon/20 text-neon border border-neon/40' : 'bg-neon text-ash'
+                  }`}
+                >
+                  {walletAuthed ? "WALLET AUTHED ✓" : authing ? "AUTHING..." : "SIGN IN (WALLET)"}
+                </button>
+
+                <button
+                  onClick={handlePay}
+                  disabled={paying || !walletAuthed || entryPaid}
+                  className={`w-full font-display text-2xl tracking-widest py-4 rounded-2xl active:scale-95 transition-all ${
+                    !walletAuthed
+                      ? 'bg-ember text-dim'
+                      : entryPaid
+                        ? 'bg-amber/20 text-amber border border-amber/40'
+                        : 'bg-amber text-ash'
+                  }`}
+                >
+                  {entryPaid ? "ENTRY PAID ✓" : paying ? "PAYING..." : "PAY ENTRY (1 WLD)"}
+                </button>
+
+                <p className="text-dim text-xs text-center font-mono">
+                  {installAttempted && !isWorldApp
+                    ? "Running in browser mode · Open via World App for real auth + payments"
+                    : "World App detected · complete both steps to enter"}
+                </p>
+              </div>
             )}
           </motion.div>
         )}

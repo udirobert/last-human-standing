@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_STATS, TODAY_THEME } from '../data/game';
+import { useWorld } from '../world/WorldProvider.jsx';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 6, minutes: 23, seconds: 47 });
   const [playerCount, setPlayerCount] = useState(GAME_STATS.totalPlayers);
   const [showElimination, setShowElimination] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
+  const { user } = useWorld();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -45,7 +47,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
             <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             <span className="font-mono text-neon text-xs tracking-widest uppercase">Live · Day {GAME_STATS.day}</span>
           </div>
-          <div className="font-mono text-dim text-xs">0xHuman_7734</div>
+          <div className="font-mono text-dim text-xs">{user?.displayName ?? "anon"}</div>
         </div>
         <h1 className="font-display text-4xl text-bone tracking-wide animate-glow">LAST HUMAN STANDING</h1>
       </div>
