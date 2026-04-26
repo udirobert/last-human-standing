@@ -79,7 +79,23 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
 
 1. Create a Supabase project
 2. Create a storage bucket (default `checkins`)
-3. Run `supabase/schema.sql` in the SQL editor — adds `users`, `submissions`, `votes`, **`rounds`**, **`checkins`** tables (idempotent).
+3. Apply the schema (idempotent — adds `users`, `submissions`, `votes`, **`rounds`**, **`checkins`**). Two options:
+
+   **A) SQL Editor (manual, no creds needed):** paste the contents of `supabase/schema.sql` and click Run.
+
+   **B) psql (scriptable, requires DB password from `Project Settings → Database`):**
+   ```bash
+   # Export your DB password into a local env var first (do not commit it).
+   export PGPASSWORD=<paste-from-supabase-dashboard>
+   PROJECT_REF=<your-project-ref>
+
+   psql -h db.${PROJECT_REF}.supabase.co -p 5432 -U postgres -d postgres \
+     -f supabase/schema.sql
+
+   # Optional: nudge PostgREST to refresh its schema cache immediately
+   psql -h db.${PROJECT_REF}.supabase.co -p 5432 -U postgres -d postgres \
+     -c "NOTIFY pgrst, 'reload schema';"
+   ```
 
 ## Admin operations
 

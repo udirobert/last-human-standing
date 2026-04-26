@@ -6,6 +6,8 @@ This documents the **modes**, the **cohort lifecycle**, and what's left to harde
 
 ### A) Demo / Browser mode
 - MiniKit not installed → simulate wallet auth + pay (browser fallback)
+- When `DEV_BYPASS_VERIFICATION=true` on the server, the browser-fallback `walletAuth` calls **`POST /api/dev/login`** which mints a real httpOnly session cookie + marks the stub address as `paid`. This lets the demo exercise the real `/api/checkin/location` flow end-to-end.
+- The `/api/dev/login` endpoint returns `404 not_enabled` whenever `DEV_BYPASS_VERIFICATION` is anything other than `"true"` — keep this off in production.
 - Geo check-in still works (real navigator.geolocation)
 - Useful for screen-shareable walkthroughs
 
@@ -102,7 +104,24 @@ prelaunch    →    live (Day 1..N)    →    ended
 - Clear "you're eliminated" state with engagement hooks (vote, chat)
 - Prelaunch countdown survives offline (server-supplied `now` for clock skew correction)
 
-## 5) Pilot → production timeline
+## 5) Deploy notes (Hetzner / PM2)
+
+Standard deploy from local:
+```bash
+rsync -az --exclude='.git' --exclude='node_modules' --exclude='dist' --exclude='.env' \
+  ./ snel-bot:/opt/last-human-standing/
+
+ssh snel-bot 'cd /opt/last-human-standing && \
+  npm install && \                # full install — vite is a devDependency
+  npm run build && \
+  pm2 restart last-human-standing && \
+  sleep 2 && \
+  curl -s https://lasthumanstanding.thisyearnofear.com/api/health'
+```
+
+**Gotcha:** the build step (`npm run build` → `vite build`) needs vite, which is in `devDependencies`. Do **not** use `npm install --omit=dev` — the build will fail with `vite: not found`. The runtime (Express server) does not need vite, but the static client bundle does.
+
+## 6) Pilot → production timeline
 
 | Step | Status |
 |---|---|
