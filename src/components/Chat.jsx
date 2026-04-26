@@ -4,12 +4,12 @@ import { CHAT_MESSAGES } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 
 const BOT_RESPONSES = [
-  "day 47 and still alive, respect",
+  "still alive another day, respect",
   "who else is already planning what they're buying with the prize money 💀",
   "if you didn't check in yet... bro...",
   "that starbucks submission should be flagged immediately. we have standards.",
   "anyone else checking the player count every 5 minutes or just me",
-  "the prize pool hitting 2.5 ETH soon, not sleeping",
+  "the prize pool growing with every entry, not sleeping",
   "real ones check in from a local spot. show some culture.",
 ];
 
@@ -124,7 +124,7 @@ export default function Chat({ onBack }) {
         {/* Day divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />
-          <span className="font-mono text-dim text-xs">DAY 47 · TODAY</span>
+          <span className="font-mono text-dim text-xs">DAY {Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · TODAY</span>
           <div className="flex-1 h-px bg-ember" />
         </div>
 

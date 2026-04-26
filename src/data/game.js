@@ -67,10 +67,10 @@ export const MOCK_SUBMISSIONS = [
 ];
 
 export const CHAT_MESSAGES = [
-  { id: 1, user: "0xHuman_7734", msg: "day 47 let's gooo, who's still standing?", time: "2m" },
+  { id: 1, user: "0xHuman_7734", msg: "let's gooo, who's still standing?", time: "2m" },
   { id: 2, user: "0xSurvivor_2291", msg: "flagging everyone who went to starbucks. that ain't a café", time: "5m" },
   { id: 3, user: "0xGhost_4459", msg: "my submission better not get flagged i literally walked 2km for this shot", time: "8m" },
-  { id: 4, user: "0xLastOnes_8823", msg: "the prize pool is at 2.4 ETH now. i'm not sleeping", time: "11m" },
+  { id: 4, user: "0xLastOnes_8823", msg: "the prize pool is growing. i'm not sleeping", time: "11m" },
   { id: 5, user: "0xSpectre_1107", msg: "anyone else think today's theme was too easy? getting boring", time: "14m" },
   { id: 6, user: "0xHuman_7734", msg: "bro you have 31 fake votes lmaooo", time: "15m" },
   { id: 7, user: "0xSpectre_1107", msg: "those are my enemies voting. i have enemies because i'm winning", time: "16m" },
