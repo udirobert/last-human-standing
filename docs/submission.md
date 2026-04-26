@@ -17,11 +17,12 @@ Online "community games" and IRL activations get botted instantly. Captchas fail
 2. **Three-witness check-in** — players prove they're there via:
    - **GPS** (server-validated proximity in window)
    - **Photo** (camera capture matching the prompt)
-   - **Crowd** (community votes real / fake on the photo)
+   - **Crowd** (community votes HUMAN / SUS on the photo)
 3. **First-N survive** — first 25 valid arrivals (by timestamp) survive; the rest are eliminated
-4. **Audit & replace** — at audit close, any survivor whose photo is flagged as fake by the crowd is disqualified and the next-ranked candidate is promoted
-5. **Cap shrinks** — 25 → 12 → 6 → 3 → 1 over the cohort
-6. **Last human takes the on-chain pool**
+4. **Audit & replace** — at audit close, any survivor whose photo is flagged as SUS by the crowd is disqualified and the next-ranked candidate is promoted
+5. **Infiltrator Mode** — optionally submit borderline photos for immunity, gamifying the audit layer
+6. **Cap shrinks** — 25 → 12 → 6 → 3 → 1 over the cohort
+7. **Last human takes the on-chain pool**
 
 Before Day 1, the app shows a **countdown + waitlist**: "RESERVE YOUR SLOT" = wallet auth + 1 WLD entry fee, locked into the prize pool.
 

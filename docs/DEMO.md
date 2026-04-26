@@ -34,7 +34,7 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 4. **Home** — today's **location card**: name, distance from you, slots remaining (e.g., "12 / 25"), prompt, time window
 5. **Check in** → grant geolocation → app shows distance from target → take photo of the prompt → submit
 6. Server response: **"#7 of 25 surviving today"**
-7. **Audit feed** — vote on a few photos
+7. **Audit feed** — vote HUMAN / SUS on photos; check voter accuracy and infiltrator reveals
 8. **Standings** — today's survivor list (rank, distance, photo thumb)
 9. **Chat** — open World Chat with another survivor
 
@@ -49,7 +49,8 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 - **GPS gate** — distance computed server-side via haversine; validated against `round.radius_m` and `opens_at` / `closes_at`
 - **Rank assignment** — atomic on insert, unique constraint on `(day, address)`, ordered by `created_at`
 - **Photo proof** — MiniKit Sign Message wraps the check-in payload; signature stored
-- **Crowd audit** — community votes; DQ-and-replace at audit close (any top-N photo crossing the fake-vote threshold is flagged and the next-ranked candidate is promoted)
+- **Crowd audit** — community votes HUMAN / SUS; DQ-and-replace at audit close (any top-N photo crossing the SUS-vote threshold is flagged and the next-ranked candidate is promoted)
+- **Infiltrator mode** — gamified social deduction where players can opt-in to submit borderline photos for immunity
 - **World ID** — optional gate for both check-in and voting
 
 ### Admin tooling

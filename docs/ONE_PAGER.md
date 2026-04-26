@@ -12,7 +12,7 @@ A daily real-world elimination game for verified humans. Each day, a location pi
 |---|---|---|
 | **GPS** | You were at the pin during the window | GPS spoofing — easy alone |
 | **Photo** | A real human did the prompt at the spot | AI image gen — easy alone |
-| **Crowd** | Other humans confirm or flag | Sybil farming — World ID kills it |
+| **Crowd** | Other humans vote HUMAN or SUS | Sybil farming — World ID kills it |
 
 Each one is weak alone. Combined, they form a tight gate.
 
@@ -29,7 +29,8 @@ Each one is weak alone. Combined, they form a tight gate.
 - **Daily round model** — admin sets location (lat/lng), radius, time window, survival cap, prompt
 - **Geo check-in** — server validates GPS within radius and time window, ranks by arrival, marks first N as survivors (atomic, unique on day+address)
 - **Photo + signed proof** — MiniKit Sign Message stamp on every check-in
-- **Audit voting** — community can flag survivors; DQ-and-replace at audit close
+- **Audit voting** — community votes HUMAN or SUS; DQ-and-replace at audit close
+- **Infiltrator mode & Voter Accuracy** — gamified social deduction with real stakes for both submitters and voters
 - **Cap shrinks daily** — 25 → 12 → 6 → 3 → 1 (configurable per day)
 - **Live on-chain prize pool** — World Chain WLD balance shown live
 - **World Chat coordination** — challenge/message any survivor in-app
@@ -41,7 +42,7 @@ Each one is weak alone. Combined, they form a tight gate.
 1. **Pre-launch**: see countdown + cohort fill counter; tap **Reserve your slot** → wallet auth → pay 1 WLD
 2. **Day 1 opens**: location pin + prompt revealed
 3. **Check in**: app captures GPS + photo → server returns "you're rank 7 of 25"
-4. **Audit**: other players vote real / fake; chat lights up
+4. **Audit**: other players vote HUMAN / SUS; chat lights up
 5. **Day closes**: survivors locked; eliminated players still vote on next day's audit
 
 ## Enterprise value

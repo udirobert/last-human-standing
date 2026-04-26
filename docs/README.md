@@ -14,10 +14,11 @@ A cohort of N players (default 50) competes over ~5 days. Each day:
 3. Players check in with **three witnesses**:
    - **GPS** — physically within the radius during the window
    - **Photo** — capture a photo matching the prompt
-   - **Crowd** — community votes real / fake (audit layer)
+   - **Crowd** — community votes HUMAN / SUS (audit layer)
 4. The **first N arrivals** survive (e.g., first 25). Slow / no-show = eliminated.
-5. After the audit window, any survivor with too many "fake" votes is disqualified and the next-ranked candidate is promoted.
-6. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
+5. After the audit window, any survivor with too many "SUS" votes is disqualified and the next-ranked candidate is promoted.
+6. **Infiltrator Mode:** Players can optionally submit "SUS" photos for a chance at immunity (if they pass the crowd) or face double-elimination risk. Voters earn accuracy stats for catching them.
+7. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
 
 The last verified human takes the on-chain prize pool.
 
