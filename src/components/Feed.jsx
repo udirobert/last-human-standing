@@ -29,11 +29,12 @@ export default function Feed({ onBack }) {
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(isWorldApp);
 
   const requireWorldIdToVote = import.meta.env.VITE_REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
   const loadFeed = async () => {
-    if (!(walletAuthed && entryPaid)) return;
+    if (!(walletAuthed && entryPaid)) { setLoading(false); return; }
     try {
       const resp = await fetch("/api/feed", { credentials: "include" });
       if (!resp.ok) return;
@@ -60,6 +61,8 @@ export default function Feed({ onBack }) {
       }
     } catch {
       // keep mock feed in browser demo; mini app stays empty
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -191,7 +194,19 @@ export default function Feed({ onBack }) {
 
       {/* Submissions */}
       <div className="px-5 space-y-4">
-        {filtered.length === 0 && isWorldApp && (
+        {loading && (
+          [0, 1, 2].map((i) => (
+            <div key={i} className="bg-smoke border border-ember rounded-3xl overflow-hidden animate-pulse">
+              <div className="h-[200px] bg-ember/20" />
+              <div className="p-4 space-y-3">
+                <div className="h-4 bg-ember/20 rounded w-3/4" />
+                <div className="h-3 bg-ember/20 rounded w-1/3" />
+                <div className="h-8 bg-ember/20 rounded" />
+              </div>
+            </div>
+          ))
+        )}
+        {!loading && filtered.length === 0 && isWorldApp && (
           <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
             <span className="text-4xl block mb-3">📋</span>
             <p className="text-bone font-display text-lg mb-2">Audit feed opens on Day 1</p>

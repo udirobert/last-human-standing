@@ -18,6 +18,15 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const [email, setEmail] = useState('');
   const [waitlistState, setWaitlistState] = useState(null); // null | { referralCode, referralCount }
   const [submitting, setSubmitting] = useState(false);
+  const [pwaPrompt, setPwaPrompt] = useState(null);
+  const [pwaDismissed, setPwaDismissed] = useState(false);
+
+  // Capture PWA install prompt
+  useEffect(() => {
+    const handler = (e) => { e.preventDefault(); setPwaPrompt(e); };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
 
   // Read ?ref= from URL on mount
   const [referredBy] = useState(() => {
@@ -287,6 +296,36 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           <p className="font-display text-xl text-bone">Vote on today's check-ins</p>
           <p className="text-dim text-xs mt-1">Real / fake — help adjudicate the survivors →</p>
         </button>
+      )}
+
+      {/* PWA install prompt */}
+      {pwaPrompt && !pwaDismissed && !isWorldApp && (
+        <div className="mx-5 mb-3 bg-smoke border border-amber/40 rounded-2xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <p className="text-bone font-mono text-sm mb-0.5">📲 Add to Home Screen</p>
+              <p className="text-dim text-xs font-mono">Daily game — never miss a check-in window.</p>
+            </div>
+            <div className="flex gap-2 ml-3">
+              <button
+                onClick={() => setPwaDismissed(true)}
+                className="text-dim text-xs font-mono px-2 py-1"
+              >
+                Later
+              </button>
+              <button
+                onClick={async () => {
+                  pwaPrompt.prompt();
+                  const { outcome } = await pwaPrompt.userChoice;
+                  if (outcome === 'accepted') setPwaDismissed(true);
+                }}
+                className="bg-amber text-ash font-mono text-xs px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+              >
+                Install
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Chat preview */}

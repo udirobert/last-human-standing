@@ -175,9 +175,15 @@ export default function Leaderboard({ onBack }) {
             Reserved humans ({roster.length})
           </p>
           {loading && roster.length === 0 && (
-            <div className="text-center py-6">
-              <div className="w-6 h-6 mx-auto rounded-full border-2 border-amber border-t-transparent animate-spin" />
-            </div>
+            [0, 1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-2xl p-3 bg-smoke border border-ember animate-pulse">
+                <div className="w-7 h-7 rounded-full bg-ember/30" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="h-3.5 bg-ember/20 rounded w-2/3" />
+                  <div className="h-2.5 bg-ember/20 rounded w-1/4" />
+                </div>
+              </div>
+            ))
           )}
           {!loading && roster.length === 0 && (
             <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">

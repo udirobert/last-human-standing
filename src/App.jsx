@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, Component } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
@@ -9,6 +9,31 @@ import Leaderboard from './components/Leaderboard';
 import BottomNav from './components/BottomNav';
 import ModeBanner from './components/ModeBanner.jsx';
 import RoundMetaBanner from './components/RoundMetaBanner.jsx';
+
+// Error boundary — catches crashes and shows a retry screen instead of white page
+class ErrorBoundary extends Component {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err, info) { console.error('ErrorBoundary caught:', err, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-ash flex flex-col items-center justify-center p-8 text-center">
+          <p className="text-4xl mb-4">💀</p>
+          <p className="font-display text-2xl text-bone mb-2">Something broke</p>
+          <p className="text-dim font-mono text-xs mb-6">An unexpected error occurred.</p>
+          <button
+            onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+            className="px-6 py-3 rounded-xl bg-blood text-bone font-mono text-sm active:scale-95 transition-transform"
+          >
+            Reload app
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const SCREENS = {
   ONBOARDING: 'onboarding',
@@ -59,6 +84,7 @@ export default function App() {
   }, [isInGame, markBadge]);
 
   return (
+    <ErrorBoundary>
     <div className="relative">
       <ModeBanner />
       <RoundMetaBanner />
@@ -145,5 +171,6 @@ export default function App() {
         <BottomNav current={navTab} onChange={handleNavChange} badges={badges} />
       )}
     </div>
+    </ErrorBoundary>
   );
 }
