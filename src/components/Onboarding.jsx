@@ -390,8 +390,26 @@ export default function Onboarding({ onEnter }) {
                       )}
                       {myRefCode && (
                         <div className="mt-3 pt-3 border-t border-ember/30">
-                          <p className="text-dim text-xs font-mono">Your invite code: <span className="text-bone">{myRefCode}</span></p>
-                          <p className="text-dim text-xs font-mono mt-1">Referrals → priority check-in on Day 1</p>
+                          <p className="text-dim text-xs font-mono mb-2">Share your link — top referrers get priority check-in:</p>
+                          <div className="bg-ash border border-ember rounded-xl px-3 py-2 mb-2">
+                            <p className="text-bone text-xs font-mono truncate">lasthumanstanding.thisyearnofear.com/?ref={myRefCode}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const url = `https://lasthumanstanding.thisyearnofear.com/?ref=${myRefCode}`;
+                              const text = `I just reserved my spot in Last Human Standing. Can you survive? 🧍`;
+                              if (navigator.share) {
+                                navigator.share({ title: 'Last Human Standing', text, url }).catch(() => {
+                                  navigator.clipboard?.writeText(`${text}\n${url}`);
+                                });
+                              } else {
+                                navigator.clipboard?.writeText(`${text}\n${url}`);
+                              }
+                            }}
+                            className="w-full py-2 rounded-xl bg-amber/10 border border-amber/40 font-mono text-amber text-xs tracking-wide active:scale-95 transition-transform"
+                          >
+                            📣 Share your invite link
+                          </button>
                         </div>
                       )}
                     </div>

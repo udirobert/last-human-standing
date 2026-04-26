@@ -14,7 +14,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   } = useRound();
   const { stats } = useStats();
 
-  const [inviteText, setInviteText] = useState('📣 Invite a friend');
+  const [inviteText, setInviteText] = useState('📣 Share your invite link');
   const [email, setEmail] = useState('');
   const [waitlistState, setWaitlistState] = useState(null); // null | { referralCode, referralCount }
   const [submitting, setSubmitting] = useState(false);
@@ -142,19 +142,24 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
             </div>
           ) : (
             <div className="mt-4 bg-smoke border border-neon/30 rounded-2xl p-4">
-              <p className="text-neon font-mono text-sm mb-1">✓ You're on the list!</p>
-              <p className="text-dim text-xs font-mono mb-3">Your code: <span className="text-bone">{waitlistState.referralCode}</span></p>
-              <p className="text-dim text-xs font-mono mb-2">Invite friends to climb the referral leaderboard — top referrers get priority check-in on Day 1.</p>
+              <p className="text-neon font-mono text-sm mb-2">✓ You're on the list!</p>
+              <p className="text-dim text-xs font-mono mb-3">Top referrers get priority check-in on Day 1. Share your link to climb the leaderboard:</p>
+              <div className="bg-ash border border-ember rounded-xl px-3 py-2 mb-3 flex items-center gap-2">
+                <span className="text-bone text-xs font-mono truncate flex-1">lasthumanstanding.thisyearnofear.com/?ref={waitlistState.referralCode}</span>
+              </div>
               <button
                 onClick={() => {
                   const url = `https://lasthumanstanding.thisyearnofear.com/?ref=${waitlistState.referralCode}`;
                   const text = `I just reserved my spot in Last Human Standing. Can you survive? 🧍`;
                   const showSuccess = () => {
-                    setInviteText('✓ Link Copied!');
-                    setTimeout(() => setInviteText('📣 Invite a friend'), 3000);
+                    setInviteText('✓ Copied! Now share it');
+                    setTimeout(() => setInviteText('📣 Share your invite link'), 3000);
                   };
-                  if (navigator.share && isWorldApp) {
-                    navigator.share({ title: 'Last Human Standing', text, url }).then(showSuccess).catch(() => {
+                  if (navigator.share) {
+                    navigator.share({ title: 'Last Human Standing', text, url }).then(() => {
+                      setInviteText('✓ Shared!');
+                      setTimeout(() => setInviteText('📣 Share your invite link'), 3000);
+                    }).catch(() => {
                       navigator.clipboard?.writeText(`${text}\n${url}`);
                       showSuccess();
                     });

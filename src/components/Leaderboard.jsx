@@ -225,13 +225,49 @@ export default function Leaderboard({ onBack }) {
       {/* PRE-LAUNCH: Referrals */}
       {isPrelaunch && tab === 'referrals' && (
         <div className="px-5 space-y-2">
-          <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1">
+          {/* Your referral link */}
+          {(() => {
+            const saved = (() => { try { return JSON.parse(localStorage.getItem('lhs_waitlist')); } catch { return null; } })();
+            const code = saved?.referralCode;
+            if (!code) return (
+              <div className="bg-smoke border border-amber/30 rounded-2xl p-4 text-center">
+                <p className="text-bone text-sm font-mono mb-1">Sign up on the Home tab to get your invite link</p>
+                <p className="text-dim text-xs font-mono">Top referrers get priority check-in on Day 1</p>
+              </div>
+            );
+            const url = `https://lasthumanstanding.thisyearnofear.com/?ref=${code}`;
+            return (
+              <div className="bg-smoke border border-neon/30 rounded-2xl p-4">
+                <p className="text-neon font-mono text-xs tracking-widest uppercase mb-2">Your invite link</p>
+                <div className="bg-ash border border-ember rounded-xl px-3 py-2 mb-3">
+                  <p className="text-bone text-xs font-mono truncate">lasthumanstanding.thisyearnofear.com/?ref={code}</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const text = `I just reserved my spot in Last Human Standing. Can you survive? 🧍`;
+                    if (navigator.share) {
+                      navigator.share({ title: 'Last Human Standing', text, url }).catch(() => {
+                        navigator.clipboard?.writeText(`${text}\n${url}`);
+                      });
+                    } else {
+                      navigator.clipboard?.writeText(`${text}\n${url}`);
+                    }
+                  }}
+                  className="w-full py-2.5 rounded-xl bg-amber/10 border border-amber/40 font-mono text-amber text-sm tracking-wide active:scale-95 transition-transform"
+                >
+                  📣 Share your invite link
+                </button>
+              </div>
+            );
+          })()}
+
+          <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1 mt-3">
             🏆 Top referrers — priority check-in on Day 1
           </p>
           {refBoard.length === 0 ? (
             <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
               <p className="text-dim text-sm font-mono">No referrals yet.</p>
-              <p className="text-bone text-xs font-mono mt-1">Share your invite link to climb the board.</p>
+              <p className="text-bone text-xs font-mono mt-1">Be the first — share your link above!</p>
             </div>
           ) : (
             refBoard.map((r, i) => (
