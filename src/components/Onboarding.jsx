@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState, useRef } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
@@ -13,6 +13,7 @@ export default function Onboarding({ onEnter }) {
   const { phase, launchAt, cohortSize, reservedCount, currentDay, round, you, refresh: refreshRound } = useRound();
 
   const {
+    user,
     isWorldApp,
     installAttempted,
     walletAuthed,
@@ -62,7 +63,7 @@ export default function Onboarding({ onEnter }) {
     if (paying || entryPaid) return;
     setPaying(true);
     try {
-      await payEntryFee({ amountWld: 1 });
+      await payEntryFee({ amountWld: 1, referredBy: referredBy.current });
     } finally {
       setPaying(false);
     }
@@ -93,6 +94,41 @@ export default function Onboarding({ onEnter }) {
   const cohortPct = cohortSize > 0 ? Math.min(100, Math.round((reservedCount / cohortSize) * 100)) : 0;
 
   const stepLabels = ['Welcome', 'Rules', 'Reserve'];
+
+  // Email + referral state for the "YOU'RE IN" screen
+  const [emailInput, setEmailInput] = useState('');
+  const [emailSaved, setEmailSaved] = useState(false);
+  const [myRefCode, setMyRefCode] = useState(null);
+
+  // Read ?ref= from URL
+  const referredBy = useRef((() => {
+    try { return new URLSearchParams(window.location.search).get('ref') || null; } catch { return null; }
+  })());
+
+  // Once verified, fetch the user's referral code from roster
+  useEffect(() => {
+    if (!verified || !user?.address) return;
+    fetch('/api/cohort/roster').then(r => r.json()).then(json => {
+      const me = (json.roster || []).find(r => r.address?.toLowerCase() === user.address.toLowerCase());
+      if (me?.referral_code) setMyRefCode(me.referral_code);
+    }).catch(() => {});
+  }, [verified, user?.address]);
+
+  const handleSaveEmail = useCallback(async () => {
+    if (!emailInput || emailSaved) return;
+    try {
+      const resp = await fetch('/api/waitlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailInput, referredBy: referredBy.current }),
+      });
+      const json = await resp.json();
+      if (json.ok) {
+        setEmailSaved(true);
+        if (json.referralCode) setMyRefCode(json.referralCode);
+      }
+    } catch {}
+  }, [emailInput, emailSaved]);
 
   const clearErrorAndRetry = () => {
     // Clear error state and retry the last failed action
@@ -331,6 +367,36 @@ export default function Onboarding({ onEnter }) {
                       <p className="text-dim font-mono text-sm mt-1">Entering arena…</p>
                     )}
                   </div>
+
+                  {/* Email + referral code */}
+                  {isPrelaunch && (
+                    <div className="w-full bg-smoke border border-ember rounded-2xl p-4 mt-2">
+                      {!emailSaved ? (
+                        <>
+                          <p className="text-dim text-xs font-mono mb-2">Add your email for updates:</p>
+                          <div className="flex gap-2">
+                            <input
+                              type="email"
+                              value={emailInput}
+                              onChange={(e) => setEmailInput(e.target.value)}
+                              placeholder="your@email.com"
+                              className="flex-1 bg-ash border border-ember rounded-xl px-3 py-2 text-bone text-sm font-mono placeholder:text-dim/50 outline-none focus:border-amber transition-colors"
+                            />
+                            <button onClick={handleSaveEmail} className="bg-amber text-ash font-mono text-sm px-3 py-2 rounded-xl active:scale-95 transition-transform">Save</button>
+                          </div>
+                        </>
+                      ) : (
+                        <p className="text-neon text-xs font-mono">✓ Email saved</p>
+                      )}
+                      {myRefCode && (
+                        <div className="mt-3 pt-3 border-t border-ember/30">
+                          <p className="text-dim text-xs font-mono">Your invite code: <span className="text-bone">{myRefCode}</span></p>
+                          <p className="text-dim text-xs font-mono mt-1">Referrals → priority check-in on Day 1</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {isPrelaunch && (
                     <button
                       onClick={() => onEnter()}

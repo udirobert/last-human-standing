@@ -39,10 +39,12 @@ export default function Feed({ onBack }) {
       if (!resp.ok) return;
       const data = await resp.json();
       if (Array.isArray(data?.submissions)) {
+        if (!isWorldApp && data.submissions.length === 0) return; // Keep mock data in demo
         setSubmissions(
           data.submissions.map((s) => ({
             id: s.id,
             user: s.username ? `@${s.username}` : (s.address?.slice(0, 8) + "…"),
+            avatar: s.avatar || null,
             username: s.username ?? null,
             caption: s.caption || s.theme || "",
             time: "now",

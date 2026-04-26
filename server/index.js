@@ -65,6 +65,11 @@ function makeNonce() {
   return randomId(12).replaceAll(/[^a-z0-9]/gi, "").slice(0, 16);
 }
 
+function makeReferralCode(hint) {
+  const slug = (hint || 'anon').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
+  return `LHS-${slug}-${randomId(3)}`;
+}
+
 function cleanup() {
   const ttlMs = 1000 * 60 * 30; // 30 minutes
   for (const [nonce, meta] of siweNonces) {
@@ -495,10 +500,15 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
     if (bypass) {
       paidUsers.add(req.user.address.toLowerCase());
       if (supabaseAdmin) {
+        const refCode = makeReferralCode(req.user.address.slice(0, 6));
+        const referredBy = req.body?.referredBy || null;
         await supabaseAdmin.from("users").upsert(
-          { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString() },
-          { onConflict: "address" },
+          { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), referral_code: refCode, referred_by: referredBy },
+          { onConflict: "address", ignoreDuplicates: false },
         );
+        if (referredBy) {
+          await supabaseAdmin.rpc('increment_referral', { ref_code: referredBy }).catch(() => {});
+        }
       }
       return res.json({ ok: true, verified: true, mode: "bypass" });
     }
@@ -524,10 +534,15 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
     // tx structure may evolve; for hackathon we only return it and let UI treat response as verified.
     paidUsers.add(req.user.address.toLowerCase());
     if (supabaseAdmin) {
+      const refCode = makeReferralCode(req.user.address.slice(0, 6));
+      const referredBy = req.body?.referredBy || null;
       await supabaseAdmin.from("users").upsert(
-        { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString() },
-        { onConflict: "address" },
+        { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), referral_code: refCode, referred_by: referredBy },
+        { onConflict: "address", ignoreDuplicates: false },
       );
+      if (referredBy) {
+        await supabaseAdmin.rpc('increment_referral', { ref_code: referredBy }).catch(() => {});
+      }
     }
     res.json({ ok: true, verified: true, tx });
   } catch (e) {
@@ -1172,7 +1187,7 @@ app.get("/api/cohort/roster", async (req, res) => {
     if (supabaseAdmin) {
       const { data, error } = await supabaseAdmin
         .from("users")
-        .select("address, username, reserved_at, eliminated, eliminated_at_day")
+        .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count")
         .eq("paid", true)
         .order("reserved_at", { ascending: false })
         .limit(200);
@@ -1321,8 +1336,69 @@ app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
   }
 });
 
-// On successful pay, mark reserved_at (alongside the existing paid=true upsert)
-// (The /api/pay/confirm above already sets paid=true; we layer reserved_at here when missing.)
+// ---- Waitlist + Referral system
+app.post("/api/waitlist", async (req, res) => {
+  try {
+    const { email, referredBy } = req.body || {};
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ error: "invalid_email" });
+    }
+    const refCode = makeReferralCode(email.split('@')[0]);
+
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("waitlist")
+        .upsert({ email, referral_code: refCode, referred_by: referredBy || null }, { onConflict: "email", ignoreDuplicates: false })
+        .select("referral_code, referral_count")
+        .single();
+      if (error) return res.status(400).json({ error: "waitlist_failed", message: error.message });
+      if (referredBy) {
+        await supabaseAdmin.rpc('increment_referral', { ref_code: referredBy }).catch(() => {});
+      }
+      return res.json({ ok: true, referralCode: data.referral_code, referralCount: data.referral_count });
+    }
+    return res.json({ ok: true, referralCode: refCode, referralCount: 0 });
+  } catch (e) {
+    res.status(400).json({ error: "waitlist_error", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.get("/api/referral-board", async (req, res) => {
+  try {
+    if (supabaseAdmin) {
+      // Merge users + waitlist referral counts into one leaderboard
+      const [{ data: users }, { data: wl }] = await Promise.all([
+        supabaseAdmin.from("users").select("username, address, referral_code, referral_count").gt("referral_count", 0).order("referral_count", { ascending: false }).limit(50),
+        supabaseAdmin.from("waitlist").select("email, referral_code, referral_count").gt("referral_count", 0).order("referral_count", { ascending: false }).limit(50),
+      ]);
+      const board = [
+        ...(users || []).map(u => ({ name: u.username || u.address?.slice(0, 8) || 'anon', referralCode: u.referral_code, count: u.referral_count, source: 'user' })),
+        ...(wl || []).map(w => ({ name: w.email?.split('@')[0] || 'anon', referralCode: w.referral_code, count: w.referral_count, source: 'waitlist' })),
+      ].sort((a, b) => b.count - a.count).slice(0, 20);
+      return res.json({ ok: true, board });
+    }
+    return res.json({ ok: true, board: [] });
+  } catch (e) {
+    res.status(400).json({ error: "referral_board_error", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.get("/api/referral/:code", async (req, res) => {
+  try {
+    const code = req.params.code;
+    if (supabaseAdmin) {
+      const { data: u } = await supabaseAdmin.from("users").select("referral_count").eq("referral_code", code).single();
+      if (u) return res.json({ ok: true, count: u.referral_count });
+      const { data: w } = await supabaseAdmin.from("waitlist").select("referral_count").eq("referral_code", code).single();
+      if (w) return res.json({ ok: true, count: w.referral_count });
+    }
+    return res.json({ ok: true, count: 0 });
+  } catch (e) {
+    res.status(400).json({ error: "referral_lookup_error", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Also return referral_code when fetching user profile (enhance existing roster endpoint)
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console

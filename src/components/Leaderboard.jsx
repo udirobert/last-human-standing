@@ -59,6 +59,11 @@ export default function Leaderboard({ onBack }) {
     initial: [],
     deps: [currentDay],
   });
+  const { data: refBoard } = usePolling('/api/referral-board', {
+    intervalMs: 30_000,
+    transform: (json) => json.board ?? [],
+    initial: [],
+  });
   const loading = ckLoading;
 
   const survivors = checkins.filter((c) => c.survived);
@@ -142,6 +147,7 @@ export default function Leaderboard({ onBack }) {
           {(isPrelaunch
             ? [
                 { id: 'roster', label: 'Roster' },
+                { id: 'referrals', label: 'Referrals' },
                 { id: 'schedule', label: 'Schedule' },
               ]
             : [
@@ -207,6 +213,47 @@ export default function Leaderboard({ onBack }) {
               </motion.div>
             );
           })}
+        </div>
+      )}
+
+      {/* PRE-LAUNCH: Referrals */}
+      {isPrelaunch && tab === 'referrals' && (
+        <div className="px-5 space-y-2">
+          <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1">
+            🏆 Top referrers — priority check-in on Day 1
+          </p>
+          {refBoard.length === 0 ? (
+            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
+              <p className="text-dim text-sm font-mono">No referrals yet.</p>
+              <p className="text-bone text-xs font-mono mt-1">Share your invite link to climb the board.</p>
+            </div>
+          ) : (
+            refBoard.map((r, i) => (
+              <motion.div
+                key={r.referralCode}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.03 }}
+                className={`flex items-center gap-3 rounded-2xl p-3 ${
+                  i === 0 ? 'bg-amber/10 border border-amber/40' : 'bg-smoke border border-ember'
+                }`}
+              >
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-display text-xs ${
+                  i === 0 ? 'bg-amber/20 text-amber' : 'bg-ember text-dim'
+                }`}>
+                  {i + 1}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className={`font-mono text-sm truncate ${i === 0 ? 'text-amber' : 'text-bone'}`}>
+                    {r.name}
+                  </p>
+                </div>
+                <span className={`text-xs font-mono ${i === 0 ? 'text-amber' : 'text-dim'}`}>
+                  {r.count} invite{r.count !== 1 ? 's' : ''}
+                </span>
+              </motion.div>
+            ))
+          )}
         </div>
       )}
 

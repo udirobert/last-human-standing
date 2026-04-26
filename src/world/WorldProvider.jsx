@@ -146,6 +146,7 @@ export function WorldProvider({ children }) {
   async function payEntryFee({
     amountWld = 1,
     description = "Entry fee to join the prize pool",
+    referredBy = null,
   } = {}) {
     setLastError(null);
 
@@ -187,7 +188,7 @@ export function WorldProvider({ children }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ payload: result.data }),
+        body: JSON.stringify({ payload: result.data, referredBy }),
       });
       if (!confirmResp.ok) {
         const text = await confirmResp.text();

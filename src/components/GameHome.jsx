@@ -1,16 +1,43 @@
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
+import { usePolling } from '../hooks/usePolling.js';
 import Countdown from './Countdown.jsx';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
-  const { user } = useWorld();
+  const { user, isWorldApp } = useWorld();
   const {
     phase, launchAt, currentDay, round, you,
     cohortSize, reservedCount, cohortFull,
   } = useRound();
   const { stats } = useStats();
+
+  const [inviteText, setInviteText] = useState('📣 Invite a friend');
+  const [email, setEmail] = useState('');
+  const [waitlistState, setWaitlistState] = useState(null); // null | { referralCode, referralCount }
+  const [submitting, setSubmitting] = useState(false);
+
+  // Read ?ref= from URL on mount
+  const [referredBy] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('ref') || null; } catch { return null; }
+  });
+
+  // Referral leaderboard
+  const { data: refBoard } = usePolling('/api/referral-board', {
+    intervalMs: 30_000,
+    transform: (json) => json.board ?? [],
+    initial: [],
+  });
+
+  // Restore waitlist state from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('lhs_waitlist');
+      if (saved) setWaitlistState(JSON.parse(saved));
+    } catch {}
+  }, []);
 
   const totalPlayers = stats?.players?.total ?? reservedCount ?? 0;
   const activePlayers = stats?.players?.active ?? null;
@@ -66,20 +93,90 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
               <p className="text-neon text-xs font-mono mt-3">✓ Cohort full · waiting for launch</p>
             )}
           </div>
-          <button
-            onClick={() => {
-              const url = 'https://lasthumanstanding.thisyearnofear.com';
-              const text = `I just reserved my spot in Last Human Standing — ${reservedCount}/${cohortSize} humans confirmed. Can you survive? 🧍`;
-              if (navigator.share) {
-                navigator.share({ title: 'Last Human Standing', text, url }).catch(() => {});
-              } else {
-                navigator.clipboard?.writeText(`${text}\n${url}`);
-              }
-            }}
-            className="mt-3 w-full py-3 rounded-2xl bg-amber/10 border border-amber/40 font-mono text-amber text-sm tracking-wide active:scale-95 transition-transform"
-          >
-            📣 Invite a friend
-          </button>
+          {/* Email capture + referral */}
+          {!waitlistState ? (
+            <div className="mt-4 bg-smoke border border-ember rounded-2xl p-4">
+              <p className="font-mono text-bone text-sm mb-1">🧍 Want in on Cohort #1?</p>
+              <p className="text-dim text-xs font-mono mb-3">We'll notify you when Day 1 opens. {!isWorldApp && 'Download World App to play for real.'}</p>
+              <div className="flex gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className="flex-1 bg-ash border border-ember rounded-xl px-3 py-2.5 text-bone text-sm font-mono placeholder:text-dim/50 outline-none focus:border-amber transition-colors"
+                />
+                <button
+                  disabled={submitting}
+                  onClick={async () => {
+                    if (!email) return;
+                    setSubmitting(true);
+                    try {
+                      const resp = await fetch('/api/waitlist', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, referredBy }),
+                      });
+                      const json = await resp.json();
+                      if (json.ok) {
+                        const state = { referralCode: json.referralCode, referralCount: json.referralCount || 0 };
+                        setWaitlistState(state);
+                        localStorage.setItem('lhs_waitlist', JSON.stringify(state));
+                      }
+                    } catch {} finally { setSubmitting(false); }
+                  }}
+                  className="bg-amber text-ash font-mono text-sm px-4 py-2.5 rounded-xl active:scale-95 transition-transform"
+                >
+                  {submitting ? '...' : 'Reserve →'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 bg-smoke border border-neon/30 rounded-2xl p-4">
+              <p className="text-neon font-mono text-sm mb-1">✓ You're on the list!</p>
+              <p className="text-dim text-xs font-mono mb-3">Your code: <span className="text-bone">{waitlistState.referralCode}</span></p>
+              <p className="text-dim text-xs font-mono mb-2">Invite friends to climb the referral leaderboard — top referrers get priority check-in on Day 1.</p>
+              <button
+                onClick={() => {
+                  const url = `https://lasthumanstanding.thisyearnofear.com/?ref=${waitlistState.referralCode}`;
+                  const text = `I just reserved my spot in Last Human Standing. Can you survive? 🧍`;
+                  const showSuccess = () => {
+                    setInviteText('✓ Link Copied!');
+                    setTimeout(() => setInviteText('📣 Invite a friend'), 3000);
+                  };
+                  if (navigator.share && isWorldApp) {
+                    navigator.share({ title: 'Last Human Standing', text, url }).then(showSuccess).catch(() => {
+                      navigator.clipboard?.writeText(`${text}\n${url}`);
+                      showSuccess();
+                    });
+                  } else {
+                    navigator.clipboard?.writeText(`${text}\n${url}`);
+                    showSuccess();
+                  }
+                }}
+                className="w-full py-2.5 rounded-xl bg-amber/10 border border-amber/40 font-mono text-amber text-sm tracking-wide active:scale-95 transition-transform"
+              >
+                {inviteText}
+              </button>
+            </div>
+          )}
+
+          {/* Referral leaderboard */}
+          {refBoard.length > 0 && (
+            <div className="mt-3 bg-smoke border border-ember rounded-2xl p-4">
+              <p className="font-mono text-dim text-xs tracking-widest uppercase mb-2">🏆 Referral Leaderboard</p>
+              {refBoard.slice(0, 5).map((r, i) => (
+                <div key={r.referralCode} className="flex items-center justify-between py-1.5 border-b border-ember/30 last:border-0">
+                  <span className="text-bone text-sm font-mono">{i + 1}. {r.name}</span>
+                  <span className="text-amber text-xs font-mono">{r.count} invite{r.count !== 1 ? 's' : ''}</span>
+                </div>
+              ))}
+              {waitlistState && (
+                <p className="text-dim text-xs font-mono mt-2">You: {waitlistState.referralCount} invite{waitlistState.referralCount !== 1 ? 's' : ''}</p>
+              )}
+            </div>
+          )}
+
           <p className="text-dim text-xs font-mono text-center mt-3">
             Reserved players get the location pin the moment Day 1 opens.
           </p>
