@@ -46,7 +46,8 @@ export function WorldProvider({ children }) {
     // MiniKit must be installed before using commands. This only becomes “installed”
     // when running inside World App.
     try {
-      MiniKit.install();
+      const appId = import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
+      MiniKit.install(appId ? { appId } : undefined);
     } catch (e) {
       // MiniKit.install() can throw in non-browser contexts; ignore.
       console.warn("MiniKit.install failed", e);

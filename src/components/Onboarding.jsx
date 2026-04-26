@@ -41,12 +41,12 @@ export default function Onboarding({ onEnter }) {
   useEffect(() => { onEnterRef.current = onEnter; }, [onEnter]);
 
   useEffect(() => {
-    if (!verified || entering || enteredRef.current) return;
+    if (!verified || enteredRef.current) return;
     enteredRef.current = true;
     setEntering(true);
     const t = setTimeout(() => onEnterRef.current(), 900);
     return () => clearTimeout(t);
-  }, [verified, entering]);
+  }, [verified]);
 
   const handleWalletAuth = async () => {
     if (authing || walletAuthed) return;
@@ -67,6 +67,27 @@ export default function Onboarding({ onEnter }) {
       setPaying(false);
     }
   };
+
+  // In browser demo mode, auto-complete auth + pay when user reaches step 2
+  useEffect(() => {
+    if (step !== 2 || isWorldApp || !installAttempted) return;
+    // Small delay so the user sees the screen before it auto-completes
+    const t = setTimeout(async () => {
+      if (!walletAuthed) {
+        try { await walletAuth(); } catch { /* ignore */ }
+      }
+    }, 400);
+    return () => clearTimeout(t);
+  }, [step, isWorldApp, installAttempted, walletAuthed]);
+
+  useEffect(() => {
+    if (step !== 2 || isWorldApp || !installAttempted) return;
+    if (!walletAuthed || entryPaid) return;
+    const t = setTimeout(async () => {
+      try { await payEntryFee({ amountWld: 1 }); } catch { /* ignore */ }
+    }, 800);
+    return () => clearTimeout(t);
+  }, [step, isWorldApp, installAttempted, walletAuthed, entryPaid]);
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body overflow-hidden">
