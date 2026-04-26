@@ -1,30 +1,58 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
+import { createClient } from "@supabase/supabase-js";
+import { useRound } from '../world/RoundProvider.jsx';
+import RoundMetaNotice from './RoundMetaNotice.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const [step, setStep] = useState(0); // 0=capture, 1=caption, 2=submitting, 3=done
   const [caption, setCaption] = useState('');
-  const [photo, setPhoto] = useState(null);
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
   const [signature, setSignature] = useState(null);
   const fileRef = useRef();
-  const { signCheckIn, user } = useWorld();
-
-  const mockPhotos = [
-    "☕ 📸",
-    "🌳 📸",
-    "🏋️ 📸",
-  ];
+  const { signCheckIn, user, worldIdVerified } = useWorld();
+  const { verification } = useRound();
 
   const handlePhotoSelect = () => {
-    // Mock photo capture — simulate selecting a photo
-    setPhoto(true);
-    setTimeout(() => setStep(1), 300);
+    fileRef.current?.click();
   };
 
   const handleSubmit = async () => {
     setStep(2);
+
+    let mediaPath = null;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+    if (photoFile && supabaseUrl && supabaseAnon) {
+      try {
+        const resp = await fetch("/api/upload-url", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            fileName: photoFile.name,
+            contentType: photoFile.type,
+          }),
+        });
+        const json = await resp.json();
+        if (!resp.ok) throw new Error(json?.message || "Could not create upload URL");
+
+        const supabase = createClient(supabaseUrl, supabaseAnon);
+        const { error: uploadError } = await supabase.storage
+          .from(json.bucket)
+          .uploadToSignedUrl(json.path, json.token, photoFile);
+        if (uploadError) throw uploadError;
+        mediaPath = json.path;
+      } catch (e) {
+        // Non-fatal for demo: we can still submit a signed check-in without media.
+        console.warn("Upload failed", e);
+      }
+    }
+
     const msg = [
       "Last Human Standing — Daily Check-in",
       `theme=${TODAY_THEME.theme}`,
@@ -39,6 +67,7 @@ export default function CheckIn({ onBack, onSubmit }) {
         day: Math.floor(Date.now() / (1000 * 60 * 60 * 24)),
         theme: TODAY_THEME.theme,
         caption: caption.trim(),
+        mediaPath,
       });
       if (result?.executedWith !== "fallback") {
         setSignature(result.data.signature);
@@ -52,6 +81,20 @@ export default function CheckIn({ onBack, onSubmit }) {
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body">
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          setPhotoFile(f);
+          setPhotoPreview(URL.createObjectURL(f));
+          setTimeout(() => setStep(1), 150);
+        }}
+      />
       {/* Header */}
       <div className="px-5 pt-12 pb-6 flex items-center gap-4">
         <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
@@ -72,6 +115,9 @@ export default function CheckIn({ onBack, onSubmit }) {
             exit={{ opacity: 0, x: -30 }}
             className="flex-1 flex flex-col px-5 pb-8"
           >
+            <div className="mb-4">
+              <RoundMetaNotice />
+            </div>
             {/* Theme reminder */}
             <div
               className="rounded-2xl p-4 mb-6 flex items-center gap-3"
@@ -132,14 +178,23 @@ export default function CheckIn({ onBack, onSubmit }) {
             {/* Mock photo preview */}
             <div
               className="rounded-3xl mb-5 overflow-hidden relative"
-              style={{ height: '240px', background: `linear-gradient(135deg, ${TODAY_THEME.color}30, #1A1A1A)` }}
+              style={{
+                height: '240px',
+                background: photoPreview
+                  ? `url(${photoPreview}) center/cover no-repeat`
+                  : `linear-gradient(135deg, ${TODAY_THEME.color}30, #1A1A1A)`,
+              }}
             >
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-8xl opacity-60">{TODAY_THEME.emoji}</span>
-              </div>
+              {!photoPreview && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-8xl opacity-60">{TODAY_THEME.emoji}</span>
+                </div>
+              )}
               <div className="absolute bottom-3 left-3 bg-ash/80 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
                 <div className="w-1.5 h-1.5 rounded-full bg-neon animate-pulse" />
-                <span className="font-mono text-neon text-xs">World ID verified</span>
+                <span className={`font-mono text-xs ${worldIdVerified ? 'text-neon' : 'text-amber'}`}>
+                  {worldIdVerified ? 'World ID verified' : 'World ID pending'}
+                </span>
               </div>
               <div className="absolute top-3 right-3 bg-blood/90 rounded-lg px-2 py-1">
                 <span className="font-mono text-white text-xs">DAY 47</span>
@@ -165,8 +220,8 @@ export default function CheckIn({ onBack, onSubmit }) {
               {[
                 { icon: "👁️", text: "1,247 humans will see your submission" },
                 { icon: "🗳️", text: "Community votes real ✅ or fake ❌" },
-                { icon: "⚡", text: "Auto-verified after 50+ real votes" },
-                { icon: "💀", text: "Eliminated if fake votes exceed 30%" },
+                  { icon: "⚡", text: `Finalizes after ${verification.voteQuorum}+ votes` },
+                { icon: "💀", text: "Flagged if fake votes exceed 30%" },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-2">
                   <span>{item.icon}</span>

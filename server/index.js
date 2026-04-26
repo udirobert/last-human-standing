@@ -3,16 +3,31 @@ import cookieParser from "cookie-parser";
 import crypto from "crypto";
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
+import { getSupabaseAdmin } from "./supabase.js";
+import { signRequest } from "@worldcoin/idkit/signing";
 
 const PORT = Number(process.env.PORT || 8787);
 const IS_PROD = process.env.NODE_ENV === "production";
+const supabaseAdmin = getSupabaseAdmin();
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
 
-// ---- In-memory stores (hackathon-friendly)
-// In production: replace with Postgres + Redis (or Supabase).
+// ---- Game parameters (tunable)
+const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200); // paid players required to activate prize round
+const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 25); // normal votes required to finalize a check-in
+const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 10); // low-activity votes required
+const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 60);
+const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30); // if votes in window < threshold -> low activity
+const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
+const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
+
+// ---- In-memory stores (hackathon-friendly fallback)
+// If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, we write to Supabase instead.
 const siweNonces = new Map(); // nonce -> { createdAt }
 const sessions = new Map(); // sessionId -> { address, createdAt }
 const payReferences = new Map(); // reference -> { address, createdAt }
 const submissions = []; // { id, address, day, theme, caption, message, signature, createdAt, votes }
+const worldIdVerified = new Map(); // address -> true
+const paidUsers = new Set(); // address
 
 function now() {
   return Date.now();
@@ -57,7 +72,11 @@ app.use((req, res, next) => {
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString() });
+  res.json({
+    ok: true,
+    time: new Date().toISOString(),
+    supabase: Boolean(supabaseAdmin),
+  });
 });
 
 function requireAuth(req, res, next) {
@@ -89,6 +108,13 @@ app.post("/api/complete-siwe", async (req, res) => {
     sessions.set(sessionId, { address, createdAt: now() });
     siweNonces.delete(nonce);
 
+    if (supabaseAdmin) {
+      await supabaseAdmin.from("users").upsert(
+        { address, last_seen_at: new Date().toISOString() },
+        { onConflict: "address" },
+      );
+    }
+
     res.cookie("lhs_session", sessionId, {
       httpOnly: true,
       sameSite: "lax",
@@ -113,6 +139,169 @@ app.post("/api/logout", (req, res) => {
   if (sid) sessions.delete(sid);
   res.clearCookie("lhs_session");
   res.json({ ok: true });
+});
+
+// ---- World ID (IDKit)
+// This uses RP signatures (never expose the signing key to the client).
+app.post("/api/idkit/rp-context", requireAuth, async (req, res) => {
+  const rp_id = process.env.WORLD_ID_RP_ID;
+  const signing_key = process.env.WORLD_ID_SIGNING_KEY;
+  const action = process.env.WORLD_ID_ACTION || "last-human-standing";
+
+  if (!rp_id || !signing_key) {
+    return res.status(501).json({
+      error: "world_id_not_configured",
+      message: "Set WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY to enable World ID.",
+    });
+  }
+
+  try {
+    const signed = signRequest(signing_key, action, 5 * 60);
+    // rp_context shape expected by @worldcoin/idkit request widget
+    return res.json({
+      rp_context: {
+        rp_id,
+        nonce: signed.nonce,
+        created_at: signed.created_at,
+        expires_at: signed.expires_at,
+        signature: signed.sig,
+      },
+      action,
+    });
+  } catch (e) {
+    return res.status(400).json({
+      error: "rp_context_failed",
+      message: e instanceof Error ? e.message : "unknown_error",
+    });
+  }
+});
+
+app.post("/api/idkit/verify", requireAuth, async (req, res) => {
+  const app_id = process.env.WORLD_ID_APP_ID;
+  const action = process.env.WORLD_ID_ACTION || "last-human-standing";
+  const apiKey = process.env.WORLD_DEV_PORTAL_API_KEY;
+  const bypass = process.env.DEV_BYPASS_VERIFICATION === "true";
+
+  const { idkitResponse } = req.body || {};
+  if (!idkitResponse) return res.status(400).json({ error: "missing_idkit_response" });
+
+  if (!app_id) {
+    if (bypass) {
+      worldIdVerified.set(req.user.address.toLowerCase(), true);
+      if (supabaseAdmin) {
+        await supabaseAdmin.from("users").upsert(
+          { address: req.user.address, world_id_verified: true, last_seen_at: new Date().toISOString() },
+          { onConflict: "address" },
+        );
+      }
+      return res.json({ ok: true, verified: true, mode: "bypass" });
+    }
+    return res.status(501).json({
+      error: "world_id_not_configured",
+      message: "Set WORLD_ID_APP_ID (and WORLD_DEV_PORTAL_API_KEY) to verify proofs.",
+    });
+  }
+
+  try {
+    const resp = await fetch(`https://developer.worldcoin.org/api/v2/verify/${app_id}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify({
+        nullifier_hash: idkitResponse.nullifier_hash,
+        merkle_root: idkitResponse.merkle_root,
+        proof: idkitResponse.proof,
+        verification_level: idkitResponse.verification_level || "orb",
+        action,
+        signal_hash: idkitResponse.signal_hash || undefined,
+      }),
+    });
+
+    const json = await resp.json().catch(() => null);
+    if (!resp.ok) return res.status(400).json({ error: "verify_failed", details: json });
+
+    worldIdVerified.set(req.user.address.toLowerCase(), true);
+    if (supabaseAdmin) {
+      await supabaseAdmin.from("users").upsert(
+        { address: req.user.address, world_id_verified: true, last_seen_at: new Date().toISOString() },
+        { onConflict: "address" },
+      );
+    }
+    return res.json({ ok: true, verified: true, details: json });
+  } catch (e) {
+    return res.status(400).json({
+      error: "verify_exception",
+      message: e instanceof Error ? e.message : "unknown_error",
+    });
+  }
+});
+
+function computeVoteStatus(votes, quorum) {
+  const total = votes.real + votes.fake;
+  if (total < quorum) return { status: "pending", total };
+  const realPct = total > 0 ? votes.real / total : 0;
+  const fakePct = total > 0 ? votes.fake / total : 0;
+  if (realPct >= REAL_PCT_TO_VERIFY) return { status: "verified", total, realPct, fakePct };
+  if (fakePct >= FAKE_PCT_TO_FLAG) return { status: "flagged", total, realPct, fakePct };
+  // Ambiguous outcome: keep pending; in prod you might add "needs_review"
+  return { status: "pending", total, realPct, fakePct };
+}
+
+async function getDynamicVoteQuorum() {
+  // Default: normal quorum.
+  let effective = VOTE_QUORUM;
+  let reason = "normal";
+
+  if (!supabaseAdmin) return { effective, reason };
+
+  const windowStart = new Date(Date.now() - VOTE_ACTIVITY_WINDOW_MIN * 60_000).toISOString();
+  const { count, error } = await supabaseAdmin
+    .from("votes")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", windowStart);
+
+  if (!error && typeof count === "number" && count < VOTE_ACTIVITY_THRESHOLD) {
+    effective = VOTE_QUORUM_LOW;
+    reason = `low_activity_${count}_votes_in_${VOTE_ACTIVITY_WINDOW_MIN}m`;
+  }
+
+  return { effective, reason };
+}
+
+app.get("/api/round-status", async (req, res) => {
+  try {
+    let paidCount = paidUsers.size;
+    if (supabaseAdmin) {
+      const { count, error } = await supabaseAdmin
+        .from("users")
+        .select("address", { count: "exact", head: true })
+        .eq("paid", true);
+      if (!error && typeof count === "number") paidCount = count;
+    }
+
+    const quorum = await getDynamicVoteQuorum();
+
+    res.json({
+      ok: true,
+      round: {
+        state: paidCount >= ROUND_JOIN_QUORUM ? "active" : "warmup",
+        paidCount,
+        joinQuorum: ROUND_JOIN_QUORUM,
+      },
+      verification: {
+        voteQuorum: quorum.effective,
+        voteQuorumNormal: VOTE_QUORUM,
+        voteQuorumLow: VOTE_QUORUM_LOW,
+        voteQuorumReason: quorum.reason,
+        realPctToVerify: REAL_PCT_TO_VERIFY,
+        fakePctToFlag: FAKE_PCT_TO_FLAG,
+      },
+    });
+  } catch (e) {
+    res.status(400).json({ error: "round_status_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
 });
 
 // ---- Payments (MiniKit Pay)
@@ -141,6 +330,13 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
 
   if (!appId || !apiKey) {
     if (bypass) {
+      paidUsers.add(req.user.address.toLowerCase());
+      if (supabaseAdmin) {
+        await supabaseAdmin.from("users").upsert(
+          { address: req.user.address, paid: true, last_seen_at: new Date().toISOString() },
+          { onConflict: "address" },
+        );
+      }
       return res.json({ ok: true, verified: true, mode: "bypass" });
     }
     return res.status(501).json({
@@ -163,6 +359,13 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
 
     const tx = await resp.json();
     // tx structure may evolve; for hackathon we only return it and let UI treat response as verified.
+    paidUsers.add(req.user.address.toLowerCase());
+    if (supabaseAdmin) {
+      await supabaseAdmin.from("users").upsert(
+        { address: req.user.address, paid: true, last_seen_at: new Date().toISOString() },
+        { onConflict: "address" },
+      );
+    }
     res.json({ ok: true, verified: true, tx });
   } catch (e) {
     res.status(400).json({
@@ -172,9 +375,46 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
   }
 });
 
+// ---- Media uploads (Supabase Storage)
+app.post("/api/upload-url", requireAuth, async (req, res) => {
+  if (!supabaseAdmin) {
+    return res.status(501).json({
+      error: "supabase_not_configured",
+      message: "Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable uploads.",
+    });
+  }
+
+  const { fileName, contentType } = req.body || {};
+  if (!fileName) return res.status(400).json({ error: "missing_fileName" });
+
+  const safeName = String(fileName).replaceAll(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+  const path = `${req.user.address}/${Date.now()}_${safeName}`;
+
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from(SUPABASE_BUCKET)
+      .createSignedUploadUrl(path, 60);
+    if (error) return res.status(400).json({ error: "signed_upload_failed", message: error.message });
+
+    res.json({
+      ok: true,
+      bucket: SUPABASE_BUCKET,
+      path,
+      token: data.token,
+      signedUrl: data.signedUrl,
+      contentType: contentType || "application/octet-stream",
+    });
+  } catch (e) {
+    res.status(400).json({
+      error: "signed_upload_exception",
+      message: e instanceof Error ? e.message : "unknown_error",
+    });
+  }
+});
+
 // ---- Check-ins + votes
 app.post("/api/checkin", requireAuth, async (req, res) => {
-  const { day, theme, caption, message, signature, address } = req.body || {};
+  const { day, theme, caption, message, signature, address, mediaPath } = req.body || {};
   if (!message || !signature || !address) return res.status(400).json({ error: "missing_signature_payload" });
 
   try {
@@ -185,20 +425,50 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
     });
     if (!ok) return res.status(401).json({ error: "invalid_signature" });
 
-    const submission = {
-      id: submissions.length + 1,
+    const { effective: dynamicVoteQuorum } = await getDynamicVoteQuorum();
+
+    const payloadToStore = {
       address: req.user.address,
       day: Number(day ?? 0),
       theme: String(theme ?? ""),
       caption: String(caption ?? ""),
       message,
       signature,
-      createdAt: new Date().toISOString(),
-      votes: { real: 0, fake: 0 },
+      media_path: mediaPath ? String(mediaPath) : null,
+      vote_quorum: dynamicVoteQuorum,
       status: "pending",
     };
+
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("submissions")
+        .insert(payloadToStore)
+        .select("*")
+        .single();
+      if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
+
+      const mediaUrl = data.media_path
+        ? supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(data.media_path).data.publicUrl
+        : null;
+      return res.json({
+        ok: true,
+        submission: {
+          ...data,
+          mediaUrl,
+          votes: { real: 0, fake: 0 },
+          voteQuorum: data.vote_quorum ?? dynamicVoteQuorum,
+        },
+      });
+    }
+
+    const submission = {
+      id: submissions.length + 1,
+      ...payloadToStore,
+      createdAt: new Date().toISOString(),
+      votes: { real: 0, fake: 0 },
+    };
     submissions.unshift(submission);
-    res.json({ ok: true, submission });
+    return res.json({ ok: true, submission });
   } catch (e) {
     res.status(400).json({
       error: "checkin_failed",
@@ -208,23 +478,108 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
 });
 
 app.get("/api/feed", requireAuth, (req, res) => {
-  res.json({ ok: true, submissions: submissions.slice(0, 50) });
+  (async () => {
+    if (!supabaseAdmin) return res.json({ ok: true, submissions: submissions.slice(0, 50) });
+
+    const { data: subs, error } = await supabaseAdmin
+      .from("submissions")
+      .select("id,created_at,address,day,theme,caption,media_path,status,vote_quorum")
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+
+    const ids = subs.map((s) => s.id);
+    const voteCounts = new Map(); // id -> { real, fake }
+    if (ids.length > 0) {
+      const { data: agg, error: aggErr } = await supabaseAdmin
+        .from("votes")
+        .select("submission_id,vote")
+        .in("submission_id", ids);
+      if (!aggErr && Array.isArray(agg)) {
+        for (const row of agg) {
+          const cur = voteCounts.get(row.submission_id) || { real: 0, fake: 0 };
+          if (row.vote === "real") cur.real += 1;
+          if (row.vote === "fake") cur.fake += 1;
+          voteCounts.set(row.submission_id, cur);
+        }
+      }
+    }
+
+    const withVotes = subs.map((s) => ({
+      ...s,
+      votes: voteCounts.get(s.id) || { real: 0, fake: 0 },
+      mediaUrl: s.media_path
+        ? supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(s.media_path).data.publicUrl
+        : null,
+      voteQuorum: s.vote_quorum ?? VOTE_QUORUM,
+    }));
+
+    return res.json({ ok: true, submissions: withVotes });
+  })().catch((e) => {
+    res.status(400).json({ error: "feed_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  });
 });
 
 app.post("/api/vote", requireAuth, (req, res) => {
   const { submissionId, vote } = req.body || {};
   if (!submissionId || !["real", "fake"].includes(vote)) return res.status(400).json({ error: "invalid_vote" });
 
-  const sub = submissions.find((s) => s.id === Number(submissionId));
-  if (!sub) return res.status(404).json({ error: "submission_not_found" });
+  (async () => {
+    if (supabaseAdmin) {
+      const { error } = await supabaseAdmin.from("votes").insert({
+        submission_id: Number(submissionId),
+        voter_address: req.user.address,
+        vote,
+      });
+      if (error) {
+        if (String(error.message || "").includes("duplicate")) {
+          return res.status(409).json({ error: "already_voted" });
+        }
+        return res.status(400).json({ error: "db_vote_failed", message: error.message });
+      }
 
-  // Minimal anti-abuse for now (no per-user vote tracking).
-  sub.votes[vote] += 1;
-  res.json({ ok: true, votes: sub.votes });
+      const { data: allVotes } = await supabaseAdmin
+        .from("votes")
+        .select("vote")
+        .eq("submission_id", Number(submissionId));
+
+      const votes = { real: 0, fake: 0 };
+      for (const v of allVotes || []) {
+        if (v.vote === "real") votes.real += 1;
+        if (v.vote === "fake") votes.fake += 1;
+      }
+
+      const { data: subRow } = await supabaseAdmin
+        .from("submissions")
+        .select("vote_quorum")
+        .eq("id", Number(submissionId))
+        .single();
+      const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
+
+      const computed = computeVoteStatus(votes, quorum);
+      if (computed.status !== "pending") {
+        await supabaseAdmin
+          .from("submissions")
+          .update({ status: computed.status })
+          .eq("id", Number(submissionId));
+      }
+
+      return res.json({ ok: true, votes, status: computed.status, voteQuorum: quorum });
+    }
+
+    const sub = submissions.find((s) => s.id === Number(submissionId));
+    if (!sub) return res.status(404).json({ error: "submission_not_found" });
+    sub.votes[vote] += 1;
+    const quorum = sub.vote_quorum ?? VOTE_QUORUM;
+    const computed = computeVoteStatus(sub.votes, quorum);
+    sub.status = computed.status;
+    return res.json({ ok: true, votes: sub.votes, status: sub.status, voteQuorum: quorum });
+  })().catch((e) => {
+    res.status(400).json({ error: "vote_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  });
 });
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console
   console.log(`API listening on http://localhost:${PORT}`);
 });
-

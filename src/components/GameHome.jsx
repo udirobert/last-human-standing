@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_STATS, TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
+import { useRound } from '../world/RoundProvider.jsx';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 6, minutes: 23, seconds: 47 });
@@ -9,6 +10,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const [showElimination, setShowElimination] = useState(false);
   const [checkedIn, setCheckedIn] = useState(false);
   const { user } = useWorld();
+  const { round: roundStatus } = useRound();
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -107,6 +109,34 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           <span className="text-lg">💀</span>
           <span className="font-mono text-blood text-xs">Someone just missed their check-in</span>
         </motion.div>
+      )}
+
+      {/* Round activation (warmup vs active) */}
+      {roundStatus?.state === "warmup" && (
+        <div className="mx-5 mb-3 bg-amber/10 border border-amber/30 rounded-2xl px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="font-mono text-amber text-xs uppercase tracking-widest">Warmup round</span>
+            <span className="font-mono text-amber text-xs">
+              {roundStatus.paidCount}/{roundStatus.joinQuorum}
+            </span>
+          </div>
+          <div className="h-1.5 bg-ember rounded-full overflow-hidden">
+            <div
+              className="h-full bg-amber rounded-full"
+              style={{ width: `${Math.min(100, (roundStatus.paidCount / roundStatus.joinQuorum) * 100)}%` }}
+            />
+          </div>
+          <p className="text-dim text-xs mt-2">
+            Prize round activates when enough humans join. You can still explore and check in.
+          </p>
+        </div>
+      )}
+
+      {roundStatus?.state === "active" && (
+        <div className="mx-5 mb-3 bg-neon/10 border border-neon/30 rounded-2xl px-4 py-2 flex items-center gap-2">
+          <span className="text-neon text-sm">⚡</span>
+          <span className="font-mono text-neon text-xs uppercase tracking-widest">Prize round active</span>
+        </div>
       )}
 
       {/* Today's Challenge */}

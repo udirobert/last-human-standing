@@ -1,24 +1,29 @@
-import { useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
+import { useRound } from '../world/RoundProvider.jsx';
+const WorldIdVerify = lazy(() => import('../world/WorldIdVerify.jsx'));
 
 export default function Onboarding({ onEnter }) {
   const [step, setStep] = useState(0); // 0=splash, 1=rules, 2=verify
   const [authing, setAuthing] = useState(false);
   const [paying, setPaying] = useState(false);
   const [entering, setEntering] = useState(false);
+  const { round, verification } = useRound();
 
   const {
     isWorldApp,
     installAttempted,
     walletAuthed,
     entryPaid,
+    worldIdVerified,
     lastError,
     walletAuth,
     payEntryFee,
   } = useWorld();
 
-  const verified = walletAuthed && entryPaid;
+  const requireWorldId = import.meta.env.VITE_ENABLE_IDKIT === "true";
+  const verified = walletAuthed && entryPaid && (!requireWorldId || worldIdVerified);
 
   useEffect(() => {
     if (!verified || entering) return;
@@ -269,11 +274,31 @@ export default function Onboarding({ onEnter }) {
                   {entryPaid ? "ENTRY PAID ✓" : paying ? "PAYING..." : "PAY ENTRY (1 WLD)"}
                 </button>
 
+                {walletAuthed && entryPaid && requireWorldId && !worldIdVerified && (
+                  <Suspense fallback={<p className="text-dim text-xs font-mono text-center">Loading World ID…</p>}>
+                    <WorldIdVerify />
+                  </Suspense>
+                )}
+
                 <p className="text-dim text-xs text-center font-mono">
                   {installAttempted && !isWorldApp
                     ? "Running in browser mode · Open via World App for real auth + payments"
                     : "World App detected · complete both steps to enter"}
                 </p>
+
+                {round && (
+                  <div className="bg-smoke border border-ember rounded-xl p-3">
+                    <p className="text-dim text-xs font-mono text-center">
+                      {round.state === "active"
+                        ? "Prize round is active."
+                        : `Warmup: ${round.paidCount}/${round.joinQuorum} joined · prize activates at quorum.`}
+                    </p>
+                    <p className="text-dim text-xs font-mono text-center mt-1">
+                      Check-ins finalize at {verification.voteQuorum} votes
+                      {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </motion.div>

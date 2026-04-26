@@ -37,6 +37,7 @@ export function WorldProvider({ children }) {
 
   const [walletAuthed, setWalletAuthed] = useState(Boolean(persisted?.walletAuthed));
   const [entryPaid, setEntryPaid] = useState(Boolean(persisted?.entryPaid));
+  const [worldIdVerified, setWorldIdVerified] = useState(Boolean(persisted?.worldIdVerified));
   const [user, setUser] = useState(persisted?.user ?? null);
 
   const [lastError, setLastError] = useState(null);
@@ -56,8 +57,8 @@ export function WorldProvider({ children }) {
   }, []);
 
   useEffect(() => {
-    persist({ walletAuthed, entryPaid, user });
-  }, [walletAuthed, entryPaid, user]);
+    persist({ walletAuthed, entryPaid, worldIdVerified, user });
+  }, [walletAuthed, entryPaid, worldIdVerified, user]);
 
   const prizePoolAddress =
     import.meta.env.VITE_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
@@ -132,6 +133,13 @@ export function WorldProvider({ children }) {
     description = "Entry fee to join the prize pool",
   } = {}) {
     setLastError(null);
+
+    // Browser/demo mode: don't block the product loop on backend auth/payment.
+    if (!MiniKit.isInstalled()) {
+      setEntryPaid(true);
+      return { executedWith: "fallback", data: null };
+    }
+
     const refResp = await fetch("/api/pay/reference", {
       method: "POST",
       credentials: "include",
@@ -200,6 +208,7 @@ export function WorldProvider({ children }) {
             day: typeof input === "string" ? Math.floor(Date.now() / (1000 * 60 * 60 * 24)) : input.day,
             theme: typeof input === "string" ? "daily" : input.theme,
             caption: typeof input === "string" ? "" : input.caption,
+            mediaPath: typeof input === "string" ? null : (input.mediaPath ?? null),
             message,
             signature: result.data.signature,
             address: result.data.address,
@@ -241,6 +250,7 @@ export function WorldProvider({ children }) {
       installAttempted,
       walletAuthed,
       entryPaid,
+      worldIdVerified,
       user,
       lastError,
       prizePoolAddress,
@@ -251,12 +261,14 @@ export function WorldProvider({ children }) {
       resetProgress: () => {
         setWalletAuthed(false);
         setEntryPaid(false);
+        setWorldIdVerified(false);
         setUser(null);
         setLastError(null);
-        persist({ walletAuthed: false, entryPaid: false, user: null });
+        persist({ walletAuthed: false, entryPaid: false, worldIdVerified: false, user: null });
       },
+      setWorldIdVerified: (val) => setWorldIdVerified(Boolean(val)),
     }),
-    [isWorldApp, installAttempted, walletAuthed, entryPaid, user, lastError, prizePoolAddress],
+    [isWorldApp, installAttempted, walletAuthed, entryPaid, worldIdVerified, user, lastError, prizePoolAddress],
   );
 
   return <WorldContext.Provider value={value}>{children}</WorldContext.Provider>;

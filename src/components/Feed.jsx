@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_SUBMISSIONS, TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
+import { useRound } from '../world/RoundProvider.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -20,6 +21,7 @@ const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
   const { walletAuthed, entryPaid } = useWorld();
+  const { verification } = useRound();
   const [submissions, setSubmissions] = useState(MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
   const [filter, setFilter] = useState('all');
@@ -41,6 +43,8 @@ export default function Feed({ onBack }) {
               time: "now",
               votes: s.votes || { real: 0, fake: 0 },
               status: s.status || "pending",
+              mediaUrl: s.mediaUrl || null,
+              voteQuorum: s.voteQuorum || s.vote_quorum || null,
             })),
           );
         }
@@ -65,12 +69,29 @@ export default function Feed({ onBack }) {
     // Best effort: also send to backend when authenticated.
     if (walletAuthed && entryPaid) {
       try {
-        await fetch("/api/vote", {
+        const resp = await fetch("/api/vote", {
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "include",
           body: JSON.stringify({ submissionId: id, vote: type }),
         });
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data?.status || data?.voteQuorum) {
+            setSubmissions((subs) =>
+              subs.map((s) =>
+                s.id === id
+                  ? {
+                      ...s,
+                      status: data.status || s.status,
+                      voteQuorum: data.voteQuorum || s.voteQuorum,
+                      votes: data.votes || s.votes,
+                    }
+                  : s,
+              ),
+            );
+          }
+        }
       } catch {
         // ignore
       }
@@ -114,7 +135,10 @@ export default function Feed({ onBack }) {
       {/* Instructions */}
       <div className="mx-5 mb-4 bg-amber/10 border border-amber/30 rounded-2xl px-4 py-3 flex items-center gap-3">
         <span className="text-xl">🗳️</span>
-        <p className="text-amber text-xs font-mono">Vote on submissions. Your verified vote counts. Help keep bots out.</p>
+        <p className="text-amber text-xs font-mono">
+          Vote on submissions. Finalizes at {verification.voteQuorum} votes
+          {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}.
+        </p>
       </div>
 
       {/* Submissions */}
@@ -124,6 +148,8 @@ export default function Feed({ onBack }) {
             const totalVotes = sub.votes.real + sub.votes.fake;
             const realPct = totalVotes > 0 ? (sub.votes.real / totalVotes) * 100 : 0;
             const hasVoted = voted[sub.id];
+            const quorum = sub.voteQuorum ?? verification.voteQuorum ?? 25;
+            const needsVotes = Math.max(0, quorum - totalVotes);
 
             return (
               <motion.div
@@ -138,10 +164,14 @@ export default function Feed({ onBack }) {
                   className="relative flex items-center justify-center"
                   style={{
                     height: '200px',
-                    background: `linear-gradient(135deg, ${TODAY_THEME.color}20, #1A1A1A 60%)`
+                    background: sub.mediaUrl
+                      ? `url(${sub.mediaUrl}) center/cover no-repeat`
+                      : `linear-gradient(135deg, ${TODAY_THEME.color}20, #1A1A1A 60%)`,
                   }}
                 >
-                  <span className="text-8xl opacity-50">{PHOTO_EMOJIS[i % PHOTO_EMOJIS.length]}</span>
+                  {!sub.mediaUrl && (
+                    <span className="text-8xl opacity-50">{PHOTO_EMOJIS[i % PHOTO_EMOJIS.length]}</span>
+                  )}
 
                   {/* Status badge */}
                   <div
@@ -181,6 +211,16 @@ export default function Feed({ onBack }) {
                           background: realPct > 70 ? '#00FF94' : realPct > 40 ? '#FFB800' : '#FF1A1A'
                         }}
                       />
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-dim font-mono text-xs">
+                        {sub.status === "pending"
+                          ? `${needsVotes} more votes to finalize (${totalVotes}/${quorum})`
+                          : `Finalized at ${totalVotes} votes`}
+                      </span>
+                      <span className="text-dim font-mono text-xs">
+                        {sub.status === "verified" ? "✅ verified" : sub.status === "flagged" ? "⚠️ flagged" : "⏳ pending"}
+                      </span>
                     </div>
                   </div>
 

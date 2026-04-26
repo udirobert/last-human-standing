@@ -5,16 +5,19 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "node --watch server/index.js",
-    "dev:all": "concurrently -n WEB,API -c cyan,magenta \"vite\" \"node --watch server/index.js\"",
+    "dev:api": "node --watch --import dotenv/config server/index.js",
+    "dev:all": "concurrently -n WEB,API -c cyan,magenta \"vite\" \"node --watch --import dotenv/config server/index.js\"",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
     "@worldcoin/minikit-js": "^2.0.3",
+    "@worldcoin/idkit": "^2.1.0",
+    "@supabase/supabase-js": "^2.49.1",
     "concurrently": "^9.2.1",
     "cookie-parser": "^1.4.7",
+    "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.11.0",

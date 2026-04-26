@@ -7,6 +7,8 @@ import Feed from './components/Feed';
 import Chat from './components/Chat';
 import Leaderboard from './components/Leaderboard';
 import BottomNav from './components/BottomNav';
+import ModeBanner from './components/ModeBanner.jsx';
+import RoundMetaBanner from './components/RoundMetaBanner.jsx';
 
 const SCREENS = {
   ONBOARDING: 'onboarding',
@@ -38,6 +40,8 @@ export default function App() {
 
   return (
     <div className="relative">
+      <ModeBanner />
+      <RoundMetaBanner />
       <AnimatePresence mode="wait">
         {screen === SCREENS.ONBOARDING && (
           <motion.div

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { GAME_STATS } from '../data/game';
+import { useRound } from '../world/RoundProvider.jsx';
 
 const SURVIVORS = [
   { rank: 1, user: "0xHuman_7734", streak: 47, status: "verified", badge: "🔥", days: "47 days", you: true },
@@ -23,6 +24,7 @@ const RECENTLY_ELIMINATED = [
 export default function Leaderboard({ onBack }) {
   const [tab, setTab] = useState('survivors');
   const [prizePool] = useState(2.4);
+  const { round, verification } = useRound();
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
@@ -39,6 +41,40 @@ export default function Leaderboard({ onBack }) {
         </div>
 
         {/* Prize pool spotlight */}
+        {round && (
+          <div
+            className={`border rounded-2xl p-4 mb-3 ${
+              round.state === "active"
+                ? "bg-neon/10 border-neon/30"
+                : "bg-amber/10 border-amber/30"
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <p
+                className={`font-mono text-xs tracking-widest uppercase ${
+                  round.state === "active" ? "text-neon" : "text-amber"
+                }`}
+              >
+                {round.state === "active" ? "Prize round active" : "Warmup round"}
+              </p>
+              <p className="font-mono text-dim text-xs">
+                {round.paidCount}/{round.joinQuorum} joined
+              </p>
+            </div>
+            {round.state !== "active" && (
+              <div className="h-1.5 bg-ember rounded-full overflow-hidden mt-2">
+                <div
+                  className="h-full bg-amber rounded-full"
+                  style={{ width: `${Math.min(100, (round.paidCount / round.joinQuorum) * 100)}%` }}
+                />
+              </div>
+            )}
+            <p className="text-dim text-xs mt-2">
+              Check-ins finalize at <span className="font-mono text-bone">{verification.voteQuorum}</span> votes
+              {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}.
+            </p>
+          </div>
+        )}
         <div className="bg-smoke border border-amber/40 rounded-3xl p-5 mb-5 relative overflow-hidden">
           <div className="absolute inset-0 opacity-5 pointer-events-none"
             style={{ background: 'radial-gradient(circle at 50% 0%, #FFB800, transparent 70%)' }} />
