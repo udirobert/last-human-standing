@@ -1,0 +1,233 @@
+import { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TODAY_THEME } from '../data/game';
+
+export default function CheckIn({ onBack, onSubmit }) {
+  const [step, setStep] = useState(0); // 0=capture, 1=caption, 2=submitting, 3=done
+  const [caption, setCaption] = useState('');
+  const [photo, setPhoto] = useState(null);
+  const fileRef = useRef();
+
+  const mockPhotos = [
+    "☕ 📸",
+    "🌳 📸",
+    "🏋️ 📸",
+  ];
+
+  const handlePhotoSelect = () => {
+    // Mock photo capture — simulate selecting a photo
+    setPhoto(true);
+    setTimeout(() => setStep(1), 300);
+  };
+
+  const handleSubmit = () => {
+    setStep(2);
+    setTimeout(() => {
+      setStep(3);
+    }, 2500);
+  };
+
+  return (
+    <div className="min-h-screen bg-ash flex flex-col font-body">
+      {/* Header */}
+      <div className="px-5 pt-12 pb-6 flex items-center gap-4">
+        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
+          <span className="text-dim text-lg">←</span>
+        </button>
+        <div>
+          <h2 className="font-display text-3xl text-bone tracking-wide">CHECK IN</h2>
+          <p className="font-mono text-dim text-xs">Day 47 · {TODAY_THEME.theme}</p>
+        </div>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {step === 0 && (
+          <motion.div
+            key="capture"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex-1 flex flex-col px-5 pb-8"
+          >
+            {/* Theme reminder */}
+            <div
+              className="rounded-2xl p-4 mb-6 flex items-center gap-3"
+              style={{ background: `${TODAY_THEME.color}15`, border: `1px solid ${TODAY_THEME.color}40` }}
+            >
+              <span className="text-4xl">{TODAY_THEME.emoji}</span>
+              <div>
+                <p className="font-display text-2xl text-bone">{TODAY_THEME.theme}</p>
+                <p className="text-dim text-xs">{TODAY_THEME.description}</p>
+              </div>
+            </div>
+
+            {/* Photo area */}
+            <div
+              onClick={handlePhotoSelect}
+              className="flex-1 bg-smoke border-2 border-dashed border-ember rounded-3xl flex flex-col items-center justify-center gap-4 min-h-64 mb-6 active:scale-98 transition-transform cursor-pointer"
+              style={{ minHeight: '280px' }}
+            >
+              <div className="w-20 h-20 rounded-full bg-ember flex items-center justify-center">
+                <span className="text-4xl">📸</span>
+              </div>
+              <div className="text-center">
+                <p className="font-display text-2xl text-bone">TAP TO CAPTURE</p>
+                <p className="text-dim text-sm mt-1">Photo proof of your check-in</p>
+              </div>
+              <div className="bg-blood/10 border border-blood/20 rounded-xl px-4 py-2">
+                <p className="text-blood text-xs font-mono">📍 Location will be embedded in metadata</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-dim text-xs font-mono text-center">Your photo will be voted on by other verified humans</p>
+              <button
+                onClick={handlePhotoSelect}
+                className="w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform text-ash"
+                style={{ background: TODAY_THEME.color }}
+              >
+                TAKE PHOTO
+              </button>
+              <button
+                onClick={handlePhotoSelect}
+                className="w-full py-3 rounded-2xl font-body text-dim text-sm border border-ember active:scale-95 transition-transform"
+              >
+                Upload from camera roll
+              </button>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 1 && (
+          <motion.div
+            key="caption"
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            className="flex-1 flex flex-col px-5 pb-8"
+          >
+            {/* Mock photo preview */}
+            <div
+              className="rounded-3xl mb-5 overflow-hidden relative"
+              style={{ height: '240px', background: `linear-gradient(135deg, ${TODAY_THEME.color}30, #1A1A1A)` }}
+            >
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-8xl opacity-60">{TODAY_THEME.emoji}</span>
+              </div>
+              <div className="absolute bottom-3 left-3 bg-ash/80 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
+                <div className="w-1.5 h-1.5 rounded-full bg-neon animate-pulse" />
+                <span className="font-mono text-neon text-xs">World ID verified</span>
+              </div>
+              <div className="absolute top-3 right-3 bg-blood/90 rounded-lg px-2 py-1">
+                <span className="font-mono text-white text-xs">DAY 47</span>
+              </div>
+            </div>
+
+            <div className="mb-5">
+              <label className="font-mono text-dim text-xs tracking-widest uppercase block mb-2">Add a caption</label>
+              <textarea
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="say something about surviving today..."
+                className="w-full bg-smoke border border-ember rounded-2xl p-4 text-bone font-body text-sm resize-none focus:outline-none focus:border-blood transition-colors"
+                rows={3}
+                maxLength={100}
+              />
+              <p className="text-dim font-mono text-xs text-right mt-1">{caption.length}/100</p>
+            </div>
+
+            {/* What happens next */}
+            <div className="bg-smoke rounded-2xl p-4 mb-5 space-y-2">
+              <p className="font-mono text-dim text-xs uppercase tracking-widest">What happens after</p>
+              {[
+                { icon: "👁️", text: "1,247 humans will see your submission" },
+                { icon: "🗳️", text: "Community votes real ✅ or fake ❌" },
+                { icon: "⚡", text: "Auto-verified after 50+ real votes" },
+                { icon: "💀", text: "Eliminated if fake votes exceed 30%" },
+              ].map((item) => (
+                <div key={item.text} className="flex items-center gap-2">
+                  <span>{item.icon}</span>
+                  <p className="text-dim text-xs">{item.text}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleSubmit}
+              className="w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform text-ash bg-blood"
+            >
+              SUBMIT CHECK-IN
+            </button>
+          </motion.div>
+        )}
+
+        {step === 2 && (
+          <motion.div
+            key="submitting"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
+          >
+            <div className="w-24 h-24 rounded-full border-4 border-blood border-t-transparent animate-spin" />
+            <div className="text-center">
+              <p className="font-display text-3xl text-bone">SUBMITTING</p>
+              <p className="text-dim font-mono text-sm mt-1">Signing with World Wallet...</p>
+            </div>
+            <div className="w-full space-y-2">
+              {[
+                { label: "Attaching World ID proof", done: true },
+                { label: "Uploading photo", done: true },
+                { label: "Recording on-chain", done: false },
+              ].map((item, i) => (
+                <div key={item.label} className="flex items-center gap-3 bg-smoke rounded-xl px-4 py-3">
+                  <div className={`w-4 h-4 rounded-full ${item.done ? 'bg-neon' : 'border-2 border-dim animate-pulse'} flex-shrink-0`} />
+                  <span className={`font-mono text-xs ${item.done ? 'text-neon' : 'text-dim'}`}>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+
+        {step === 3 && (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
+          >
+            <div className="w-28 h-28 rounded-full bg-neon/10 border-2 border-neon flex items-center justify-center animate-pulse-blood">
+              <span className="text-6xl">✅</span>
+            </div>
+            <div className="text-center">
+              <p className="font-display text-5xl text-neon mb-1">YOU SURVIVED</p>
+              <p className="text-bone font-mono text-sm">Day 47 check-in confirmed</p>
+              <p className="text-dim font-mono text-xs mt-1">Awaiting community verification</p>
+            </div>
+
+            <div className="w-full bg-smoke rounded-2xl p-5 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-dim font-mono text-xs">Your position</span>
+                <span className="text-bone font-display text-xl">Still Alive</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-dim font-mono text-xs">Survival streak</span>
+                <span className="text-amber font-display text-xl">47 days 🔥</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-dim font-mono text-xs">Share of prize pool</span>
+                <span className="text-neon font-mono text-sm">0.00193 ETH</span>
+              </div>
+            </div>
+
+            <button
+              onClick={onBack}
+              className="w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform text-bone bg-smoke border border-ember"
+            >
+              BACK TO GAME
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
