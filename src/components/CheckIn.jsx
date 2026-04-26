@@ -4,6 +4,7 @@ import { TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { createClient } from "@supabase/supabase-js";
 import { useRound } from '../world/RoundProvider.jsx';
+import { useStats } from '../hooks/useStats.js';
 
 export default function CheckIn({ onBack }) {
   const [step, setStep] = useState(0); // 0=capture, 1=caption, 2=submitting, 3=done
@@ -14,6 +15,10 @@ export default function CheckIn({ onBack }) {
   const fileRef = useRef();
   const { signCheckIn, user, worldIdVerified } = useWorld();
   const { verification } = useRound();
+  const { stats } = useStats();
+  const DAY = Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1;
+  const activePlayers = stats?.players?.active ?? null;
+  const prizePoolWld = stats?.prizePool?.balanceWld ?? null;
 
   const handlePhotoSelect = () => {
     fileRef.current?.click();
@@ -101,7 +106,7 @@ export default function CheckIn({ onBack }) {
         </button>
         <div>
           <h2 className="font-display text-3xl text-bone tracking-wide">CHECK IN</h2>
-          <p className="font-mono text-dim text-xs">Day 47 · {TODAY_THEME.theme}</p>
+          <p className="font-mono text-dim text-xs">Day {DAY} · {TODAY_THEME.theme}</p>
         </div>
       </div>
 
@@ -193,7 +198,7 @@ export default function CheckIn({ onBack }) {
                 </span>
               </div>
               <div className="absolute top-3 right-3 bg-blood/90 rounded-lg px-2 py-1">
-                <span className="font-mono text-white text-xs">DAY 47</span>
+                <span className="font-mono text-white text-xs">DAY {DAY}</span>
               </div>
             </div>
 
@@ -214,7 +219,7 @@ export default function CheckIn({ onBack }) {
             <div className="bg-smoke rounded-2xl p-4 mb-5 space-y-2">
               <p className="font-mono text-dim text-xs uppercase tracking-widest">What happens after</p>
               {[
-                { icon: "👁️", text: "1,247 humans will see your submission" },
+                { icon: "👁️", text: `${activePlayers != null ? activePlayers.toLocaleString() : 'Other'} humans will see your submission` },
                 { icon: "🗳️", text: "Community votes real ✅ or fake ❌" },
                   { icon: "⚡", text: `Finalizes after ${verification.voteQuorum}+ votes` },
                 { icon: "💀", text: "Flagged if fake votes exceed 30%" },
@@ -282,7 +287,7 @@ export default function CheckIn({ onBack }) {
             </div>
             <div className="text-center">
               <p className="font-display text-5xl text-neon mb-1">YOU SURVIVED</p>
-              <p className="text-bone font-mono text-sm">Day 47 check-in confirmed</p>
+              <p className="text-bone font-mono text-sm">Day {DAY} check-in confirmed</p>
               <p className="text-dim font-mono text-xs mt-1">Awaiting community verification</p>
             </div>
 
@@ -293,11 +298,13 @@ export default function CheckIn({ onBack }) {
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dim font-mono text-xs">Survival streak</span>
-                <span className="text-amber font-display text-xl">47 days 🔥</span>
+                <span className="text-amber font-display text-xl">Day {DAY} 🔥</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-dim font-mono text-xs">Share of prize pool</span>
-                <span className="text-neon font-mono text-sm">0.00193 ETH</span>
+                <span className="text-neon font-mono text-sm">
+                  {prizePoolWld != null && activePlayers ? `${(prizePoolWld / activePlayers).toFixed(3)} WLD` : '— WLD'}
+                </span>
               </div>
             </div>
 
