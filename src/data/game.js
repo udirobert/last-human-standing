@@ -21,6 +21,7 @@ export const MOCK_SUBMISSIONS = [
     caption: "Double espresso, no mercy ☕",
     time: "14 min ago",
     votes: { real: 89, fake: 3 },
+    fires: 24,
     status: "verified",
     image: "café"
   },
@@ -31,6 +32,7 @@ export const MOCK_SUBMISSIONS = [
     caption: "they said I wouldn't make it. still here.",
     time: "31 min ago",
     votes: { real: 124, fake: 2 },
+    fires: 67,
     status: "verified",
     image: "café"
   },
@@ -38,9 +40,10 @@ export const MOCK_SUBMISSIONS = [
     id: 3,
     user: "0xGhost_4459",
     avatar: "https://api.dicebear.com/7.x/identicon/svg?seed=human3",
-    caption: "cold brew, warm soul, still breathing",
+    caption: "Is this even a café? Looks like someone's garage 🤔",
     time: "52 min ago",
-    votes: { real: 67, fake: 18 },
+    votes: { real: 38, fake: 41 },
+    fires: 3,
     status: "pending",
     image: "café"
   },
@@ -51,6 +54,7 @@ export const MOCK_SUBMISSIONS = [
     caption: "Matcha latte while eliminating competition 🍵",
     time: "1h ago",
     votes: { real: 201, fake: 1 },
+    fires: 112,
     status: "verified",
     image: "café"
   },
@@ -61,6 +65,7 @@ export const MOCK_SUBMISSIONS = [
     caption: "This is my 3rd café today. I am built different.",
     time: "2h ago",
     votes: { real: 44, fake: 31 },
+    fires: 8,
     status: "flagged",
     image: "café"
   },

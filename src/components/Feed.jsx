@@ -25,6 +25,7 @@ export default function Feed({ onBack }) {
   const { verification } = useRound();
   const [submissions, setSubmissions] = useState(isWorldApp ? [] : MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
+  const [fired, setFired] = useState({});
   const [filter, setFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -47,6 +48,7 @@ export default function Feed({ onBack }) {
             votes: s.votes || { real: 0, fake: 0 },
             status: s.status || "pending",
             mediaUrl: s.mediaUrl || null,
+            fires: s.fires || 0,
             voteQuorum: s.voteQuorum || s.vote_quorum || null,
           })),
         );
@@ -168,8 +170,8 @@ export default function Feed({ onBack }) {
       <div className="mx-5 mb-4 bg-amber/10 border border-amber/30 rounded-2xl px-4 py-3 flex items-center gap-3">
         <span className="text-xl">🗳️</span>
         <p className="text-amber text-xs font-mono">
-          Vote on submissions. Finalizes at {verification.voteQuorum} votes
-          {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}.
+          Vote blind — tallies reveal after you vote. Finalizes at {verification.voteQuorum} votes
+          {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}. Hit 🔥 for style.
         </p>
       </div>
 
@@ -199,6 +201,7 @@ export default function Feed({ onBack }) {
             const totalVotes = sub.votes.real + sub.votes.fake;
             const realPct = totalVotes > 0 ? (sub.votes.real / totalVotes) * 100 : 0;
             const hasVoted = voted[sub.id];
+            const hasFired = fired[sub.id];
             const quorum = sub.voteQuorum ?? verification.voteQuorum ?? 25;
             const needsVotes = Math.max(0, quorum - totalVotes);
 
@@ -248,41 +251,66 @@ export default function Feed({ onBack }) {
                   <p className="text-bone text-sm mb-1">"{sub.caption}"</p>
                   <p className="text-dim font-mono text-xs mb-4">{sub.time}</p>
 
-                  {/* Vote bar */}
+                  {/* Vote bar — hidden until you vote (blind voting) */}
                   <div className="mb-3">
-                    <div className="flex justify-between text-xs font-mono mb-1">
-                      <span className="text-neon">✅ {sub.votes.real} real</span>
-                      <span className="text-blood">❌ {sub.votes.fake} fake</span>
-                    </div>
-                    <div className="h-1.5 bg-ember rounded-full overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${realPct}%`,
-                          background: realPct > 70 ? '#00FF94' : realPct > 40 ? '#FFB800' : '#FF1A1A'
-                        }}
-                      />
-                    </div>
-                    <div className="flex justify-between mt-2">
-                      <span className="text-dim font-mono text-xs">
-                        {sub.status === "pending"
-                          ? `${needsVotes} more votes to finalize (${totalVotes}/${quorum})`
-                          : `Finalized at ${totalVotes} votes`}
-                      </span>
-                      <span className="text-dim font-mono text-xs">
-                        {sub.status === "verified" ? "✅ verified" : sub.status === "flagged" ? "⚠️ flagged" : "⏳ pending"}
-                      </span>
-                    </div>
+                    {hasVoted || sub.status !== "pending" ? (
+                      <>
+                        <div className="flex justify-between text-xs font-mono mb-1">
+                          <span className="text-neon">✅ {sub.votes.real} real</span>
+                          <span className="text-blood">❌ {sub.votes.fake} fake</span>
+                        </div>
+                        <div className="h-1.5 bg-ember rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{
+                              width: `${realPct}%`,
+                              background: realPct > 70 ? '#00FF94' : realPct > 40 ? '#FFB800' : '#FF1A1A'
+                            }}
+                          />
+                        </div>
+                        <div className="flex justify-between mt-2">
+                          <span className="text-dim font-mono text-xs">
+                            {sub.status === "pending"
+                              ? `${needsVotes} more votes to finalize (${totalVotes}/${quorum})`
+                              : `Finalized at ${totalVotes} votes`}
+                          </span>
+                          <span className="text-dim font-mono text-xs">
+                            {sub.status === "verified" ? "✅ verified" : sub.status === "flagged" ? "⚠️ flagged" : "⏳ pending"}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 py-2">
+                        <span className="text-dim font-mono text-xs">👁️ Vote to reveal the tally</span>
+                        <span className="text-dim font-mono text-xs ml-auto">{totalVotes} vote{totalVotes !== 1 ? 's' : ''} so far</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Vote buttons */}
                   {hasVoted ? (
-                    <div className="flex items-center justify-center gap-2 py-2 bg-ember rounded-xl">
-                      <span className="text-dim font-mono text-xs">
-                        You voted <span className={hasVoted === 'real' ? 'text-neon' : 'text-blood'}>
-                          {hasVoted === 'real' ? '✅ REAL' : '❌ FAKE'}
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 flex items-center justify-center gap-2 py-2 bg-ember rounded-xl">
+                        <span className="text-dim font-mono text-xs">
+                          You voted <span className={hasVoted === 'real' ? 'text-neon' : 'text-blood'}>
+                            {hasVoted === 'real' ? '✅ REAL' : '❌ FAKE'}
+                          </span>
                         </span>
-                      </span>
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (hasFired) return;
+                          setFired(f => ({ ...f, [sub.id]: true }));
+                          setSubmissions(subs => subs.map(s => s.id === sub.id ? { ...s, fires: (s.fires || 0) + 1 } : s));
+                        }}
+                        className={`px-4 py-2 rounded-xl border font-mono text-sm transition-all active:scale-90 ${
+                          hasFired
+                            ? 'bg-amber/20 border-amber/60 text-amber'
+                            : 'bg-smoke border-ember text-dim hover:border-amber/40'
+                        }`}
+                      >
+                        🔥 {sub.fires || 0}
+                      </button>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 gap-2">
