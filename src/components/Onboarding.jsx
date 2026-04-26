@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
+import { useStats } from '../hooks/useStats.js';
 const WorldIdVerify = lazy(() => import('../world/WorldIdVerify.jsx'));
 
 export default function Onboarding({ onEnter }) {
@@ -11,6 +12,7 @@ export default function Onboarding({ onEnter }) {
   const [entering, setEntering] = useState(false);
   const enteredRef = useRef(false);
   const { round, verification } = useRound();
+  const { stats } = useStats();
 
   const {
     isWorldApp,
@@ -104,16 +106,18 @@ export default function Onboarding({ onEnter }) {
 
               <div className="mt-4 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
-                <span className="text-neon font-mono text-xs tracking-widest uppercase">1,247 humans alive</span>
+                <span className="text-neon font-mono text-xs tracking-widest uppercase">
+                  {stats?.players?.active != null ? `${stats.players.active.toLocaleString()} humans alive` : 'Loading...'}
+                </span>
               </div>
             </div>
 
             <div className="w-full space-y-3">
               <div className="grid grid-cols-3 gap-2 mb-6">
                 {[
-                  { label: "DAY", val: "47" },
-                  { label: "PRIZE", val: "2.4 ETH" },
-                  { label: "ELIMINATED", val: "8,941" },
+                  { label: "DAY", val: String(Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1) },
+                  { label: "PRIZE", val: stats?.prizePool?.balanceWld != null ? `${stats.prizePool.balanceWld.toLocaleString(undefined, { maximumFractionDigits: 1 })} WLD` : '— WLD' },
+                  { label: "PLAYERS", val: stats?.players?.total != null ? stats.players.total.toLocaleString() : '—' },
                 ].map((s) => (
                   <div key={s.label} className="bg-smoke rounded-xl p-3 text-center border border-ember">
                     <div className="text-dim font-mono text-xs tracking-widest">{s.label}</div>
