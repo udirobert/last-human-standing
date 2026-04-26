@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { GAME_STATS, TODAY_THEME } from '../data/game';
+import { GAME_STATS, TODAY_THEME, DEMO_STATS } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
@@ -12,12 +12,20 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const { round: roundStatus } = useRound();
   const { stats } = useStats();
 
-  const prizePoolWld = stats?.prizePool?.balanceWld ?? null;
+  // Use demo values in browser when no real players exist yet
+  const isDemo = typeof window !== 'undefined' && !window.MiniKit?.isInstalled?.();
+  const rawActive = stats?.players?.active ?? null;
+  const rawTotal = stats?.players?.total ?? null;
+  const hasRealData = rawTotal != null && rawTotal > 0;
+
+  const activePlayers = hasRealData ? rawActive : (isDemo ? DEMO_STATS.activePlayers : rawActive);
+  const totalPlayers = hasRealData ? rawTotal : (isDemo ? DEMO_STATS.totalPlayers : rawTotal);
+  const eliminated = totalPlayers != null && activePlayers != null ? totalPlayers - activePlayers : 0;
+
+  const rawPrizeWld = stats?.prizePool?.balanceWld ?? null;
+  const prizePoolWld = (rawPrizeWld != null && rawPrizeWld > 0) ? rawPrizeWld : (isDemo ? DEMO_STATS.prizePoolWld : rawPrizeWld);
   const prizePoolDisplay = prizePoolWld !== null ? `${prizePoolWld.toLocaleString(undefined, { maximumFractionDigits: 2 })} WLD` : GAME_STATS.prizePool;
   const prizePoolExplorer = stats?.prizePool?.explorerUrl ?? null;
-  const activePlayers = stats?.players?.active ?? null;
-  const totalPlayers = stats?.players?.total ?? null;
-  const eliminated = totalPlayers != null && activePlayers != null ? totalPlayers - activePlayers : 0;
 
   useEffect(() => {
     const timer = setInterval(() => {

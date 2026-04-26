@@ -85,3 +85,12 @@ export const GAME_STATS = {
   hoursLeft: 6,
   minutesLeft: 23,
 };
+
+// Demo values shown in browser mode when no real players exist yet
+export const DEMO_STATS = {
+  totalPlayers: 1247,
+  activePlayers: 892,
+  eliminated: 355,
+  prizePool: "4,200 WLD",
+  prizePoolWld: 4200,
+};

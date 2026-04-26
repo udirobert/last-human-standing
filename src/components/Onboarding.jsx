@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
+import { DEMO_STATS } from '../data/game';
 const WorldIdVerify = lazy(() => import('../world/WorldIdVerify.jsx'));
 
 export default function Onboarding({ onEnter }) {
@@ -107,7 +108,11 @@ export default function Onboarding({ onEnter }) {
               <div className="mt-4 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
                 <span className="text-neon font-mono text-xs tracking-widest uppercase">
-                  {stats?.players?.active != null ? `${stats.players.active.toLocaleString()} humans alive` : 'Loading...'}
+                  {(() => {
+                    const raw = stats?.players?.active;
+                    const count = (raw != null && raw > 0) ? raw : DEMO_STATS.activePlayers;
+                    return `${count.toLocaleString()} humans alive`;
+                  })()}
                 </span>
               </div>
             </div>
@@ -116,8 +121,8 @@ export default function Onboarding({ onEnter }) {
               <div className="grid grid-cols-3 gap-2 mb-6">
                 {[
                   { label: "DAY", val: String(Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1) },
-                  { label: "PRIZE", val: stats?.prizePool?.balanceWld != null ? `${stats.prizePool.balanceWld.toLocaleString(undefined, { maximumFractionDigits: 1 })} WLD` : '— WLD' },
-                  { label: "PLAYERS", val: stats?.players?.total != null ? stats.players.total.toLocaleString() : '—' },
+                  { label: "PRIZE", val: (() => { const v = stats?.prizePool?.balanceWld; return (v != null && v > 0) ? `${v.toLocaleString(undefined, { maximumFractionDigits: 1 })} WLD` : `${DEMO_STATS.prizePoolWld.toLocaleString()} WLD`; })() },
+                  { label: "PLAYERS", val: (() => { const v = stats?.players?.total; return (v != null && v > 0) ? v.toLocaleString() : DEMO_STATS.totalPlayers.toLocaleString(); })() },
                 ].map((s) => (
                   <div key={s.label} className="bg-smoke rounded-xl p-3 text-center border border-ember">
                     <div className="text-dim font-mono text-xs tracking-widest">{s.label}</div>

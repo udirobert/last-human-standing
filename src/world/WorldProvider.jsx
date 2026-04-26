@@ -65,6 +65,14 @@ export function WorldProvider({ children }) {
 
   async function walletAuth() {
     setLastError(null);
+
+    // Browser/demo mode: skip real auth entirely
+    if (!MiniKit.isInstalled()) {
+      setWalletAuthed(true);
+      setUser((u) => u ?? { address: null, username: null, displayName: "Demo Human" });
+      return { executedWith: "fallback", data: null };
+    }
+
     const nonceResp = await fetch("/api/nonce", { method: "POST" });
     if (!nonceResp.ok) {
       const text = await nonceResp.text();
@@ -77,17 +85,6 @@ export function WorldProvider({ children }) {
         nonce,
         statement: "Sign in to Last Human Standing",
         expirationTime: new Date(Date.now() + 1000 * 60 * 30),
-        fallback: async () => {
-          // Browser fallback: simulate a login for local dev.
-          return {
-            executedWith: "fallback",
-            data: {
-              address: "0x0000000000000000000000000000000000000000",
-              message: "",
-              signature: "",
-            },
-          };
-        },
       });
 
       if (result.executedWith === "fallback") {
