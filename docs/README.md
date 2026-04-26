@@ -3,13 +3,49 @@
 **Live app: https://lasthumanstanding.thisyearnofear.com**
 Prize pool wallet: `0x7aD48187A2a4f4bF8d5aE7aD7A9Dbb58B4e27046`
 
-A mobile-first Mini App: **a daily survival game for verified humans**.
+A mobile-first World Mini App: **a daily real-world elimination game for verified humans**.
 
-Players:
-- authenticate via **World Wallet (SIWE via MiniKit)**
-- pay a small **entry fee** into a prize pool (via **MiniKit Pay**)
-- check in daily with proof (signed message via **MiniKit Sign Message**)
-- trash talk / coordinate via **World Chat (MiniKit Chat)**
+## How it works
+
+A cohort of N players (default 50) competes over ~5 days. Each day:
+
+1. Admin reveals the day's **location** (GPS pin + radius) and **prompt** (e.g., "selfie at the carousel")
+2. The check-in window opens (e.g., 4 hours)
+3. Players check in with **three witnesses**:
+   - **GPS** — physically within the radius during the window
+   - **Photo** — capture a photo matching the prompt
+   - **Crowd** — community votes real / fake (audit layer)
+4. The **first N arrivals** survive (e.g., first 25). Slow / no-show = eliminated.
+5. After the audit window, any survivor with too many "fake" votes is disqualified and the next-ranked candidate is promoted.
+6. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
+
+The last verified human takes the on-chain prize pool.
+
+### Why three witnesses
+
+Each witness is weak alone:
+- GPS spoofers exist
+- AI image generators exist
+- Sybil voting exists (mitigated separately by World ID)
+
+Combined, the cheating cost is high — you'd have to spoof location **and** generate a convincing live-prompt photo **and** survive the crowd audit.
+
+## Pre-launch (waitlist)
+
+Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLOT"** CTA:
+
+- Wallet auth + 1 WLD entry fee locks your spot.
+- The pot grows on World Chain as players reserve.
+- Cohort caps at `COHORT_SIZE` (default 50).
+- When the cohort fills or the countdown hits zero, **Day 1** begins.
+
+## World Stack usage
+
+- **World ID** — sybil-resistant identity (one human, one slot)
+- **World Wallet (SIWE via MiniKit)** — server-verified login
+- **MiniKit Pay** — 1 WLD entry fee directly into the on-chain pool
+- **MiniKit Sign Message** — cryptographic stamp on every check-in
+- **World Chat (XMTP)** — coordination, trash talk, audit chatter
 
 ## Local development
 
@@ -18,73 +54,72 @@ npm i
 npm run dev:all
 ```
 
-In a normal browser, MiniKit commands will fall back and some actions will be simulated.
-For the real flow, open the app **inside World App**.
+In a normal browser, MiniKit commands fall back. Demo / browser mode auto-completes wallet auth + pay so you can walk through the UI without World App.
 
 ## Configuration
 
-Copy `.env.example` → `.env` and set:
+Copy `.env.example` → `.env`. New values for the cohort/geo model:
 
 ```bash
-VITE_PRIZE_POOL_ADDRESS=0xYourPrizePoolReceiverAddress
+# Pre-launch / cohort
+GAME_LAUNCH_AT=2026-05-01T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
+COHORT_SIZE=50                         # max reservations before pre-launch closes early
 
-# -------- Modes --------
-# DEMO MODE (Browser): no credentials needed.
-# - Wallet auth + pay will be simulated for demo iteration.
-# - Feed shows mock data unless you're signed in and paid.
-#
-# REAL MODE (World App): requires credentials below to truly verify + persist.
+# Daily round defaults
+DAILY_SURVIVAL_CAP=25                  # default first-N survivors per day
+CHECKIN_RADIUS_M=100                   # default GPS radius (meters)
 
-# -------- Supabase (Real Mode: persistence + photo uploads) --------
-# Frontend uses anon key to upload using a signed upload URL from our backend.
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=YOUR_ANON_KEY
-#
-# Backend uses service role to:
-# - create signed upload URLs
-# - write/read submissions + votes
-SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_ANON_KEY=YOUR_ANON_KEY
-SUPABASE_SERVICE_ROLE_KEY=YOUR_SERVICE_ROLE_KEY
-SUPABASE_BUCKET=checkins
-
-# -------- World Developer Portal (Real Mode: verify payments + World ID proofs) --------
-WORLD_APP_ID=app_xxxxx
-WORLD_DEV_PORTAL_API_KEY=YOUR_DEV_PORTAL_API_KEY
-
-# -------- World ID (Optional, Real Mode: Proof of Humanity) --------
-# Turn on gating in the UI:
-VITE_ENABLE_IDKIT=false
-VITE_WORLD_ID_APP_ID=app_xxxxx
-VITE_WORLD_ID_ACTION=last-human-standing
-VITE_WORLD_ID_ENV=production
-
-# Recommended: require World ID for voting power (anti-bot brigading)
-VITE_REQUIRE_WORLD_ID_FOR_VOTING=false
-#
-# Server-side verification + RP signatures (NEVER expose signing key in frontend):
-WORLD_ID_APP_ID=app_xxxxx
-WORLD_ID_ACTION=last-human-standing
-WORLD_ID_RP_ID=rp_xxxxx
-WORLD_ID_SIGNING_KEY=0xYOUR_SIGNING_KEY
-
-# Enforce the above gate in the backend as well
-REQUIRE_WORLD_ID_FOR_VOTING=false
-
-# -------- Local dev convenience --------
-# ONLY for local demo/dev when you don't have World Dev Portal keys wired yet.
-DEV_BYPASS_VERIFICATION=true
+# Admin tooling
+ADMIN_TOKEN=<random-long-secret>       # required header on /api/admin/* endpoints
 ```
 
-## Supabase setup (optional)
+Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.env.example`.
 
-If you want persistence + uploads:
+## Supabase setup
+
 1. Create a Supabase project
-2. Create a storage bucket named `checkins` (or change `SUPABASE_BUCKET`)
-3. Run `supabase/schema.sql` in the SQL editor
+2. Create a storage bucket (default `checkins`)
+3. Run `supabase/schema.sql` in the SQL editor — adds `users`, `submissions`, `votes`, **`rounds`**, **`checkins`** tables (idempotent).
+
+## Admin operations
+
+The admin endpoints are gated by the `x-admin-token` header. Examples:
+
+```bash
+# Reveal today's round
+curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{
+    "day": 1,
+    "name": "DUMBO Brooklyn",
+    "lat": 40.7033,
+    "lng": -73.9881,
+    "radius_m": 100,
+    "survival_cap": 25,
+    "opens_at": "2026-05-02T15:00:00Z",
+    "closes_at": "2026-05-02T19:00:00Z",
+    "prompt": "Selfie at the carousel"
+  }'
+
+# Close a day → marks non-survivors as eliminated
+curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"day": 1}'
+
+# Inspect game state (no auth)
+curl https://lasthumanstanding.thisyearnofear.com/api/game/state
+```
+
+## Pilot playbook (50-user test)
+
+1. Set `GAME_LAUNCH_AT` ~3 days out, `COHORT_SIZE=50`, `DAILY_SURVIVAL_CAP=25`
+2. Share the live URL → players reserve slots
+3. At launch time, run `/api/admin/round` with Day 1 location
+4. After the window closes, run `/api/admin/close-day`
+5. Repeat with shrinking caps (25 → 12 → 6 → 3 → 1) until one survivor
 
 ## Hackathon submission
 
-See `submission.md` for the full write-up (problem, solution, World Stack usage, live backend, demo flow).
-See `ONE_PAGER.md` for the judges' 1-pager.
-See `DEMO.md` for the step-by-step demo guide.
+See `submission.md`, `ONE_PAGER.md`, `DEMO.md`.

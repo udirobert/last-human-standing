@@ -67,8 +67,25 @@ export function WorldProvider({ children }) {
   async function walletAuth() {
     setLastError(null);
 
-    // Browser/demo mode: skip real auth entirely
+    // Browser/demo mode: try to acquire a real server session via the dev shim
+    // (only available when DEV_BYPASS_VERIFICATION=true on the server). If that
+    // fails (prod), keep the local-only demo state so the UI still progresses.
     if (!MiniKit.isInstalled()) {
+      try {
+        const resp = await fetch("/api/dev/login", { method: "POST", credentials: "include" });
+        if (resp.ok) {
+          const json = await resp.json();
+          setWalletAuthed(true);
+          setUser({
+            address: json.address,
+            username: null,
+            displayName: "Demo Human",
+          });
+          return { executedWith: "fallback", data: null };
+        }
+      } catch {
+        // ignore — fall through to UI-only demo state
+      }
       setWalletAuthed(true);
       setUser((u) => u ?? { address: null, username: null, displayName: "Demo Human" });
       return { executedWith: "fallback", data: null };

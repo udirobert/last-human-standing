@@ -2,54 +2,103 @@
 
 **Live app: https://lasthumanstanding.thisyearnofear.com**
 
-## 0) Setup checklist (before judges)
-- Open the mini app **inside World App** for real MiniKit flows (wallet auth, pay, sign, chat).
-- In a browser, demo mode simulates wallet auth + pay so the full UI flow is visible without World App.
-- Ensure the test wallet has enough WLD balance to pay the entry fee (1 WLD).
-- Backend is live: `https://lasthumanstanding.thisyearnofear.com/api/health` returns `{"ok":true,"supabase":true}`.
+**Mechanic:** A real-world elimination game. Each day a location drops; first 25 people physically there with photo + community audit survive; cap shrinks until one human takes the pot.
 
-## 1) The 2-minute "judge path" demo
-**Goal:** show World-native identity + payment + social + verification loop.
+## 0) Pre-flight checks
 
-1. **Onboarding**
-   - Tap **Sign in (Wallet)** — SIWE via MiniKit — server verifies — session set
-   - Tap **Pay entry** — MiniKit Pay — server verifies against World Dev Portal — prize pool grows
-   - (Optional) Tap **Verify World ID** (World ID 4.0 Managed mode, if enabled)
-2. **Home**
-   - Show **live prize pool balance** (WLD on World Chain, tappable — opens worldscan.org)
-   - Show **Warmup vs Prize round active** indicator
-   - Show today's theme + countdown
-3. **Check-in**
-   - Capture/upload a photo
-   - Submit — show **signed proof** and "finalizes at X votes"
-4. **Feed**
-   - Vote "REAL" on a submission
-   - Highlight quorum progress: "X more votes to finalize"
-   - Tap **Challenge** — opens **World Chat** prefilled message to submitter
-5. **Leaderboard**
-   - Show prize pool + "joined / quorum" progress
+```bash
+# Backend healthy?
+curl https://lasthumanstanding.thisyearnofear.com/api/health
+#  → {"ok":true,"supabase":true}
 
-## 2) The 5-minute "deep path" demo
-**Goal:** prove production readiness + anti-bot design.
+# What phase is the game in?
+curl https://lasthumanstanding.thisyearnofear.com/api/game/state
+#  → { "phase": "prelaunch" | "live" | "ended", ... }
+```
 
-1. Show live health endpoint: `curl https://lasthumanstanding.thisyearnofear.com/api/health`
-2. Show backend guarantees:
-   - SIWE verified server-side (`verifySiweMessage` from `@worldcoin/minikit-js`)
-   - Payments verified via World Dev Portal API
-   - Uploads are signed URLs (no public write access to Supabase storage)
-   - Rate limiting on nonce, SIWE, vote, and verify endpoints
-   - httpOnly session cookies; all secrets server-side only
-3. Show dynamic quorum:
-   - Low activity day reduces quorum (server decides)
-   - Per-submission quorum is persisted for fairness
-4. Show live prize pool stats: `curl https://lasthumanstanding.thisyearnofear.com/api/stats`
-5. Explain roadmap:
-   - Private bucket signed reads + RLS
-   - On-chain check-in receipts (World Chain attestation)
-   - Reputation + staking for challenges
+- For real flow: open inside World App with WLD balance ≥ 1.
+- For UI demos: any browser — demo mode auto-completes wallet auth + pay.
+
+## 1) The 2-minute "judge path"
+
+### A) Pre-launch state (`phase = "prelaunch"`)
+
+1. Open the app — see **countdown to launch** + **cohort fill counter** ("34 of 50 reserved")
+2. Tap **RESERVE YOUR SLOT** → wallet auth (SIWE) → pay 1 WLD
+3. Confirmation: **"You're in. Day 1 starts in T-…"**
+
+### B) Live state (`phase = "live"`)
+
+For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
+
+4. **Home** — today's **location card**: name, distance from you, slots remaining (e.g., "12 / 25"), prompt, time window
+5. **Check in** → grant geolocation → app shows distance from target → take photo of the prompt → submit
+6. Server response: **"#7 of 25 surviving today"**
+7. **Audit feed** — vote on a few photos
+8. **Standings** — today's survivor list (rank, distance, photo thumb)
+9. **Chat** — open World Chat with another survivor
+
+### C) Eliminated state
+
+10. After cap fills or window closes, eliminated players see a clear **"OUT"** screen with the day they fell + their final rank, and stay engaged via voting/chat for the rest of the cohort.
+
+## 2) The 5-minute "deep path" — show the design
+
+### Verification model
+
+- **GPS gate** — distance computed server-side via haversine; validated against `round.radius_m` and `opens_at` / `closes_at`
+- **Rank assignment** — atomic on insert, unique constraint on `(day, address)`, ordered by `created_at`
+- **Photo proof** — MiniKit Sign Message wraps the check-in payload; signature stored
+- **Crowd audit** — community votes; DQ-and-replace at audit close (any top-N photo crossing the fake-vote threshold is flagged and the next-ranked candidate is promoted)
+- **World ID** — optional gate for both check-in and voting
+
+### Admin tooling
+
+```bash
+# Reveal Day 1
+curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{
+    "day": 1,
+    "name": "DUMBO Brooklyn",
+    "lat": 40.7033,
+    "lng": -73.9881,
+    "radius_m": 100,
+    "survival_cap": 25,
+    "opens_at": "2026-05-02T15:00:00Z",
+    "closes_at": "2026-05-02T19:00:00Z",
+    "prompt": "Selfie at the carousel"
+  }'
+
+# Close a day → marks non-survivors as eliminated
+curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"day": 1}'
+```
+
+### Backend guarantees
+
+- SIWE verified server-side (`verifySiweMessage` from `@worldcoin/minikit-js`)
+- Payments verified via World Dev Portal API
+- Photo uploads via signed URLs (no public write to Supabase)
+- httpOnly session cookies; secrets never client-side
+- Rate limiting on `/api/nonce`, `/api/complete-siwe`, `/api/vote`, `/api/checkin/location`
+- Per-day uniqueness enforced at DB layer
 
 ## 3) If something fails live (backup plan)
-- If payment verification keys aren't available, demo in "preview mode" and narrate the real verification path.
-- If World ID verification is flaky, keep it optional and emphasize:
-  - SIWE + paid entry + one-vote-per-user constraint + quorum.
-- Browser demo mode always works without World App — use it as fallback.
+
+- **GPS denied** → app shows clear instruction; admin can manually verify after-the-fact
+- **World App keys missing** → `DEV_BYPASS_VERIFICATION=true` keeps the demo flowing
+- **Browser demo mode** is the always-works path for UI walkthroughs
+- **Stale `/api/game/state`** → tap retry banner; falls back to last-known state
+
+## 4) Pilot script (50-user test)
+
+1. Day 0: open reservations (`GAME_LAUNCH_AT` ~3 days out)
+2. Share the URL; reach `COHORT_SIZE` reservations OR wait for countdown
+3. Day 1: `POST /api/admin/round` with the day's location/window/cap=25
+4. After window closes: `POST /api/admin/close-day { day: 1 }`
+5. Repeat with shrinking caps: 25 → 12 → 6 → 3 → 1
+6. Final survivor takes the pool; announce in chat

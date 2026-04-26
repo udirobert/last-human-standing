@@ -23,7 +23,7 @@ const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
 const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE === "true";
 
 // ---- Game parameters (tunable)
-const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200); // paid players required to activate prize round
+const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200); // paid players required to activate prize round (legacy)
 const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 25); // normal votes required to finalize a check-in
 const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 10); // low-activity votes required
 const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 60);
@@ -31,6 +31,17 @@ const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
+
+// ---- Cohort / geo game lifecycle
+const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null; // ISO timestamp
+const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
+const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
+const CHECKIN_RADIUS_M = Number(process.env.CHECKIN_RADIUS_M || 100);
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || null;
+
+// In-memory rounds fallback (used when Supabase isn't configured)
+const memRounds = new Map(); // day -> round
+const memCheckins = []; // { id, day, address, lat, lng, distance_m, rank, survived, created_at }
 
 // ---- In-memory stores (hackathon-friendly fallback)
 // If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, we write to Supabase instead.
@@ -161,6 +172,35 @@ app.post(
   }
   },
 );
+
+// Demo / dev convenience: create a session without real SIWE.
+// Only available when DEV_BYPASS_VERIFICATION=true. Frontend calls this from
+// the browser fallback walletAuth path so the demo can actually exercise the
+// check-in API (which requires an auth session).
+app.post("/api/dev/login", async (req, res) => {
+  if (process.env.DEV_BYPASS_VERIFICATION !== "true") {
+    return res.status(404).json({ error: "not_enabled" });
+  }
+  const stubAddress = `0xDEMO${randomId(8).slice(0, 36).padEnd(36, '0')}`;
+  const sessionId = randomId(18);
+  sessions.set(sessionId, { address: stubAddress, createdAt: now() });
+  paidUsers.add(stubAddress.toLowerCase()); // demo: also mark "paid" so check-in works
+
+  if (supabaseAdmin) {
+    await supabaseAdmin.from("users").upsert(
+      { address: stubAddress, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString() },
+      { onConflict: "address" },
+    );
+  }
+
+  res.cookie("lhs_session", sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: IS_PROD,
+    maxAge: 1000 * 60 * 60 * 24 * 7,
+  });
+  res.json({ ok: true, address: stubAddress, mode: "dev" });
+});
 
 app.post("/api/logout", (req, res) => {
   const sid = req.cookies?.lhs_session;
@@ -456,7 +496,7 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
       paidUsers.add(req.user.address.toLowerCase());
       if (supabaseAdmin) {
         await supabaseAdmin.from("users").upsert(
-          { address: req.user.address, paid: true, last_seen_at: new Date().toISOString() },
+          { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString() },
           { onConflict: "address" },
         );
       }
@@ -485,7 +525,7 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
     paidUsers.add(req.user.address.toLowerCase());
     if (supabaseAdmin) {
       await supabaseAdmin.from("users").upsert(
-        { address: req.user.address, paid: true, last_seen_at: new Date().toISOString() },
+        { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString() },
         { onConflict: "address" },
       );
     }
@@ -757,6 +797,444 @@ app.post(
   });
   },
 );
+
+// =====================================================================
+// Cohort + geo game state (new mechanic: first-N-to-location)
+// =====================================================================
+
+function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000; // earth radius (m)
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+function requireAdmin(req, res, next) {
+  const token = req.headers["x-admin-token"];
+  if (!ADMIN_TOKEN) return res.status(501).json({ error: "admin_not_configured" });
+  if (!token || token !== ADMIN_TOKEN) return res.status(401).json({ error: "unauthorized" });
+  next();
+}
+
+function currentDayNumber(launchAtMs) {
+  if (!launchAtMs) return null;
+  const elapsed = Date.now() - launchAtMs;
+  if (elapsed < 0) return null;
+  return Math.floor(elapsed / (1000 * 60 * 60 * 24)) + 1;
+}
+
+async function loadRound(day) {
+  if (day == null) return null;
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from("rounds")
+      .select("*")
+      .eq("day", day)
+      .maybeSingle();
+    return data || null;
+  }
+  return memRounds.get(day) || null;
+}
+
+async function checkinCountForDay(day) {
+  if (supabaseAdmin) {
+    const { count } = await supabaseAdmin
+      .from("checkins")
+      .select("id", { count: "exact", head: true })
+      .eq("day", day);
+    return count ?? 0;
+  }
+  return memCheckins.filter((c) => c.day === day).length;
+}
+
+async function userCheckinForDay(day, address) {
+  if (!address) return null;
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from("checkins")
+      .select("*")
+      .eq("day", day)
+      .eq("address", address)
+      .maybeSingle();
+    return data || null;
+  }
+  return memCheckins.find((c) => c.day === day && c.address === address) || null;
+}
+
+async function getUserRecord(address) {
+  if (!address) return null;
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from("users")
+      .select("*")
+      .eq("address", address)
+      .maybeSingle();
+    return data || null;
+  }
+  // In-memory fallback uses paidUsers + worldIdVerified maps
+  const lower = address.toLowerCase();
+  return {
+    address,
+    paid: paidUsers.has(lower),
+    eliminated: false,
+    eliminated_at_day: null,
+    world_id_verified: worldIdVerified.get(lower) === true,
+  };
+}
+
+async function reservedCount() {
+  if (supabaseAdmin) {
+    const { count } = await supabaseAdmin
+      .from("users")
+      .select("address", { count: "exact", head: true })
+      .eq("paid", true);
+    return count ?? 0;
+  }
+  return paidUsers.size;
+}
+
+app.get("/api/game/state", async (req, res) => {
+  try {
+    const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+    const reserved = await reservedCount();
+
+    let phase = "prelaunch";
+    let currentDay = null;
+    if (launchAtMs && Date.now() >= launchAtMs) {
+      phase = "live";
+      currentDay = currentDayNumber(launchAtMs);
+    }
+
+    let round = null;
+    let checkinCount = 0;
+    if (phase === "live" && currentDay != null) {
+      round = await loadRound(currentDay);
+      if (round) checkinCount = await checkinCountForDay(currentDay);
+    }
+
+    // Identify the requesting user (optional — endpoint is public)
+    const sid = req.cookies?.lhs_session;
+    const session = sid ? sessions.get(sid) : null;
+    const address = session?.address ?? null;
+
+    let you = {
+      isAuthed: false,
+      isPaid: false,
+      isEliminated: false,
+      eliminatedAtDay: null,
+      checkedInToday: false,
+      rankToday: null,
+      survivedToday: null,
+      distanceToday: null,
+    };
+    if (address) {
+      const u = await getUserRecord(address);
+      const ci = currentDay != null ? await userCheckinForDay(currentDay, address) : null;
+      you = {
+        address,
+        isAuthed: true,
+        isPaid: Boolean(u?.paid),
+        isEliminated: Boolean(u?.eliminated),
+        eliminatedAtDay: u?.eliminated_at_day ?? null,
+        checkedInToday: Boolean(ci),
+        rankToday: ci?.rank ?? null,
+        survivedToday: ci?.survived ?? null,
+        distanceToday: ci?.distance_m ?? null,
+      };
+    }
+
+    // Has the cohort filled (closes pre-launch early)?
+    const cohortFull = reserved >= COHORT_SIZE;
+    if (phase === "prelaunch" && cohortFull) {
+      // Pre-launch effectively closed; UI can show "cohort full, waiting for start"
+    }
+
+    res.json({
+      ok: true,
+      now: new Date().toISOString(),
+      phase,
+      launchAt: GAME_LAUNCH_AT,
+      cohortSize: COHORT_SIZE,
+      reservedCount: reserved,
+      cohortFull,
+      currentDay,
+      round: round
+        ? {
+            day: round.day,
+            name: round.name,
+            prompt: round.prompt ?? "",
+            lat: Number(round.lat),
+            lng: Number(round.lng),
+            radiusM: round.radius_m ?? CHECKIN_RADIUS_M,
+            survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP,
+            opensAt: round.opens_at,
+            closesAt: round.closes_at,
+            status: round.status,
+            checkinCount,
+            slotsRemaining: Math.max(0, (round.survival_cap ?? DAILY_SURVIVAL_CAP) - checkinCount),
+          }
+        : null,
+      you,
+      defaults: {
+        survivalCap: DAILY_SURVIVAL_CAP,
+        radiusM: CHECKIN_RADIUS_M,
+      },
+    });
+  } catch (e) {
+    res.status(500).json({ error: "game_state_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.post(
+  "/api/checkin/location",
+  requireAuth,
+  rateLimit({
+    keyFn: (req) => `geo:${req.user?.address || req.ip}`,
+    limit: 20,
+    windowMs: 60_000,
+  }),
+  async (req, res) => {
+    const { lat, lng, accuracy } = req.body || {};
+    if (typeof lat !== "number" || typeof lng !== "number") {
+      return res.status(400).json({ error: "missing_coordinates" });
+    }
+
+    try {
+      const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+      if (!launchAtMs || Date.now() < launchAtMs) {
+        return res.status(400).json({ error: "game_not_live" });
+      }
+      const day = currentDayNumber(launchAtMs);
+      const round = await loadRound(day);
+      if (!round) return res.status(400).json({ error: "round_not_set", day });
+
+      const opensAtMs = Date.parse(round.opens_at);
+      const closesAtMs = Date.parse(round.closes_at);
+      const nowMs = Date.now();
+      if (nowMs < opensAtMs) return res.status(400).json({ error: "round_not_open", opensAt: round.opens_at });
+      if (nowMs > closesAtMs) return res.status(400).json({ error: "round_closed", closesAt: round.closes_at });
+
+      const distance = haversineMeters(lat, lng, Number(round.lat), Number(round.lng));
+      const radiusM = round.radius_m ?? CHECKIN_RADIUS_M;
+      if (distance > radiusM) {
+        return res.status(400).json({
+          error: "out_of_range",
+          distanceM: Math.round(distance),
+          radiusM,
+        });
+      }
+
+      // Check eligibility — must be paid + not already eliminated
+      const userRec = await getUserRecord(req.user.address);
+      if (!userRec?.paid) return res.status(403).json({ error: "not_reserved" });
+      if (userRec?.eliminated) return res.status(403).json({ error: "already_eliminated", day: userRec.eliminated_at_day });
+
+      // Already checked in?
+      const existing = await userCheckinForDay(day, req.user.address);
+      if (existing) {
+        return res.json({
+          ok: true,
+          alreadyCheckedIn: true,
+          rank: existing.rank,
+          survived: existing.survived,
+          distanceM: Math.round(existing.distance_m),
+          survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP,
+        });
+      }
+
+      const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
+      const currentCount = await checkinCountForDay(day);
+      const rank = currentCount + 1;
+      const survived = rank <= cap;
+
+      const row = {
+        day,
+        address: req.user.address,
+        lat,
+        lng,
+        accuracy_m: typeof accuracy === "number" ? accuracy : null,
+        distance_m: distance,
+        rank,
+        survived,
+      };
+
+      if (supabaseAdmin) {
+        const { data, error } = await supabaseAdmin
+          .from("checkins")
+          .insert(row)
+          .select("*")
+          .single();
+        if (error) {
+          if (String(error.message || "").includes("duplicate")) {
+            return res.status(409).json({ error: "already_checked_in" });
+          }
+          return res.status(400).json({ error: "db_insert_failed", message: error.message });
+        }
+        // If they didn't survive, mark eliminated
+        if (!survived) {
+          await supabaseAdmin
+            .from("users")
+            .update({ eliminated: true, eliminated_at_day: day })
+            .eq("address", req.user.address);
+        }
+        return res.json({
+          ok: true,
+          rank: data.rank,
+          survived: data.survived,
+          distanceM: Math.round(data.distance_m),
+          survivalCap: cap,
+        });
+      }
+
+      // In-memory fallback
+      memCheckins.push({ id: memCheckins.length + 1, ...row, created_at: new Date().toISOString() });
+      return res.json({
+        ok: true,
+        rank,
+        survived,
+        distanceM: Math.round(distance),
+        survivalCap: cap,
+      });
+    } catch (e) {
+      res.status(400).json({ error: "checkin_location_failed", message: e instanceof Error ? e.message : "unknown_error" });
+    }
+  },
+);
+
+app.get("/api/checkins/today", async (req, res) => {
+  try {
+    const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+    const day = currentDayNumber(launchAtMs);
+    if (day == null) return res.json({ ok: true, day: null, checkins: [] });
+
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("checkins")
+        .select("rank, address, username, distance_m, survived, created_at")
+        .eq("day", day)
+        .order("rank", { ascending: true })
+        .limit(100);
+      if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+      return res.json({ ok: true, day, checkins: data || [] });
+    }
+
+    const list = memCheckins
+      .filter((c) => c.day === day)
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 100);
+    return res.json({ ok: true, day, checkins: list });
+  } catch (e) {
+    res.status(400).json({ error: "checkins_today_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// ---- Admin endpoints (token-gated)
+app.post("/api/admin/round", requireAdmin, async (req, res) => {
+  const { day, name, prompt, lat, lng, radius_m, survival_cap, opens_at, closes_at, status } = req.body || {};
+  if (typeof day !== "number" || typeof lat !== "number" || typeof lng !== "number" || !name || !opens_at || !closes_at) {
+    return res.status(400).json({ error: "missing_fields", required: ["day", "name", "lat", "lng", "opens_at", "closes_at"] });
+  }
+  const row = {
+    day,
+    name,
+    prompt: prompt ?? "",
+    lat,
+    lng,
+    radius_m: typeof radius_m === "number" ? radius_m : CHECKIN_RADIUS_M,
+    survival_cap: typeof survival_cap === "number" ? survival_cap : DAILY_SURVIVAL_CAP,
+    opens_at,
+    closes_at,
+    status: status ?? "scheduled",
+    updated_at: new Date().toISOString(),
+  };
+
+  try {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("rounds")
+        .upsert(row, { onConflict: "day" })
+        .select("*")
+        .single();
+      if (error) return res.status(400).json({ error: "db_upsert_failed", message: error.message });
+      return res.json({ ok: true, round: data });
+    }
+    memRounds.set(day, row);
+    return res.json({ ok: true, round: row });
+  } catch (e) {
+    res.status(400).json({ error: "admin_round_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
+  const { day } = req.body || {};
+  if (typeof day !== "number") return res.status(400).json({ error: "missing_day" });
+
+  try {
+    const round = await loadRound(day);
+    if (!round) return res.status(404).json({ error: "round_not_found" });
+    const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
+
+    if (supabaseAdmin) {
+      // Mark non-survivors (rank > cap) as not-survived in checkins
+      await supabaseAdmin
+        .from("checkins")
+        .update({ survived: false })
+        .eq("day", day)
+        .gt("rank", cap);
+
+      // Mark all reserved users who have NO checkin for this day OR rank > cap as eliminated
+      const { data: ck } = await supabaseAdmin
+        .from("checkins")
+        .select("address, rank")
+        .eq("day", day);
+      const survivorAddrs = new Set((ck || []).filter((r) => r.rank <= cap).map((r) => r.address.toLowerCase()));
+
+      const { data: paidUsersRows } = await supabaseAdmin
+        .from("users")
+        .select("address, eliminated")
+        .eq("paid", true);
+
+      const toEliminate = (paidUsersRows || [])
+        .filter((u) => !u.eliminated && !survivorAddrs.has(u.address.toLowerCase()))
+        .map((u) => u.address);
+
+      if (toEliminate.length > 0) {
+        await supabaseAdmin
+          .from("users")
+          .update({ eliminated: true, eliminated_at_day: day })
+          .in("address", toEliminate);
+      }
+
+      await supabaseAdmin
+        .from("rounds")
+        .update({ status: "closed", updated_at: new Date().toISOString() })
+        .eq("day", day);
+
+      return res.json({ ok: true, day, survivors: survivorAddrs.size, eliminated: toEliminate.length });
+    }
+
+    // In-memory: mark non-survivors
+    let survivors = 0;
+    for (const c of memCheckins) {
+      if (c.day === day) {
+        c.survived = c.rank <= cap;
+        if (c.survived) survivors += 1;
+      }
+    }
+    const r = memRounds.get(day);
+    if (r) r.status = "closed";
+    return res.json({ ok: true, day, survivors, eliminated: null, mode: "memory" });
+  } catch (e) {
+    res.status(400).json({ error: "close_day_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// On successful pay, mark reserved_at (alongside the existing paid=true upsert)
+// (The /api/pay/confirm above already sets paid=true; we layer reserved_at here when missing.)
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console

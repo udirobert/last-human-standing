@@ -1,61 +1,88 @@
 # Last Human Standing
 
 ## Tagline
-A daily survival game for real humans: check in, get verified by the crowd, and split a prize pool—no bots allowed.
+A daily real-world elimination game for verified humans: be one of the first 25 at the location, prove it three ways, and split the prize pool — no bots allowed.
 
 ## Live app
 **https://lasthumanstanding.thisyearnofear.com**
 Prize pool wallet: `0x7aD48187A2a4f4bF8d5aE7aD7A9Dbb58B4e27046` ([view on worldscan.org](https://worldscan.org/address/0x7aD48187A2a4f4bF8d5aE7aD7A9Dbb58B4e27046))
 
 ## The problem
-Online "community games" and raffles get botted instantly. Even when you add captchas, motivated attackers and sybil farms still dominate, killing engagement and fairness.
+Online "community games" and IRL activations get botted instantly. Captchas fail; even World ID alone can't tell whether someone actually showed up to a place. Without a robust proof-of-presence layer, brand activations and civic engagement campaigns devolve into farms.
 
 ## The solution
-**Last Human Standing** is a mobile-first elimination game built for World App:
-1. **One human, one account**: players authenticate via World Wallet (SIWE via MiniKit) — verified server-side.
-2. **Daily check-ins**: each day has a theme (café, park, gym…). Players submit a proof-of-life post with a signed message.
-3. **Community verification**: other players vote real vs fake; quorum-based finalization with dynamic low-activity fallback.
-4. **Live prize pool**: players pay a 1 WLD entry fee that grows the on-chain pool; the last remaining verified human wins.
-5. **World Chat-native social layer**: messaging is a core mechanic (trash talk, coordination, "verify me", reminders).
+**Last Human Standing** is a mobile-first elimination game built for World App. A cohort of N humans (default 50) competes over ~5 days. Each day:
+
+1. **Location reveal** — admin drops a GPS pin + radius + time window + photo prompt
+2. **Three-witness check-in** — players prove they're there via:
+   - **GPS** (server-validated proximity in window)
+   - **Photo** (camera capture matching the prompt)
+   - **Crowd** (community votes real / fake on the photo)
+3. **First-N survive** — first 25 valid arrivals (by timestamp) survive; the rest are eliminated
+4. **Audit & replace** — at audit close, any survivor whose photo is flagged as fake by the crowd is disqualified and the next-ranked candidate is promoted
+5. **Cap shrinks** — 25 → 12 → 6 → 3 → 1 over the cohort
+6. **Last human takes the on-chain pool**
+
+Before Day 1, the app shows a **countdown + waitlist**: "RESERVE YOUR SLOT" = wallet auth + 1 WLD entry fee, locked into the prize pool.
 
 ## Why this needs World
 This product only works at scale when:
-- identity is **sybil-resistant** (World ID / World ecosystem)
-- payments are **simple and mobile-native** (World Wallet + MiniKit)
-- social interaction is **in-app and encrypted** (World Chat / XMTP)
+- **Identity is sybil-resistant** — World ID + SIWE for one human, one slot
+- **Payments are mobile-native** — World Wallet + MiniKit Pay (the user is on their phone, going to the spot)
+- **Social is in-app and encrypted** — World Chat / XMTP turns the audit into a spectator sport
 
-## World Stack usage (what we integrated)
-All implemented with MiniKit commands + server-side verification:
-- **Wallet Authentication** (`MiniKit.walletAuth`) — SIWE verified server-side via `verifySiweMessage`
-- **Pay** (`MiniKit.pay`) — entry fee verified against World Dev Portal API; funds go to dedicated prize pool wallet on World Chain
-- **World Chat** (`MiniKit.chat`) — in-app messaging/engagement; "Challenge" action in Feed opens prefilled chat to submitter
-- **Sign Message** (`MiniKit.signMessage`) — cryptographically stamps daily check-ins; signature stored + verifiable
-- **World ID via IDKit** — backend RP-signature flow wired (World ID 4.0 Managed mode); optional gate for voting
+## Three-witness verification (the core innovation)
+
+Each witness is weak alone:
+- GPS spoofers exist
+- AI image generators exist
+- Sybil voting exists (mitigated by World ID)
+
+Combined, the cheating cost is high — you'd have to spoof location **and** generate a photo matching a live, never-seen-before prompt **and** survive the crowd vote.
+
+## World Stack usage
+
+| Capability | Implementation |
+|---|---|
+| Wallet Authentication | `MiniKit.walletAuth` → server `verifySiweMessage` → httpOnly session cookie |
+| Pay | `MiniKit.pay` → server-verified against World Dev Portal API → on-chain pot on World Chain |
+| World Chat | `MiniKit.chat` — challenge / coordinate / trash-talk in-app |
+| Sign Message | `MiniKit.signMessage` — cryptographic stamp on every check-in payload |
+| World ID | IDKit v4 Managed mode (RP-signature flow); optional gate for check-in & voting |
 
 ## Core user flow (demo script)
-1. Open Mini App in World App (or browser for demo mode)
-2. Tap **Enter the Game**
-3. **Sign in (Wallet)** — SIWE — server verifies — session cookie set
-4. **Pay entry (1 WLD)** — MiniKit Pay — server verifies with World Dev Portal — prize pool grows
-5. Land on Home: see live prize pool balance + humans remaining + today's theme
-6. **Check in**: add caption, submit, sign check-in proof via MiniKit
-7. Go to **Feed**: vote real vs fake; quorum progress shown
-8. Go to **Chat**: send a message via **World Chat** to another player
-9. Go to **Leaderboard**: see standings + live pool balance
+
+1. Open the Mini App → see **prelaunch countdown + cohort fill counter**
+2. Tap **Reserve your slot** → SIWE → pay 1 WLD → "You're in. Day 1 starts in T-…"
+3. **Day 1 opens** → Home shows the location card (name, distance, slots remaining, prompt, time window)
+4. **Check in** → grant geolocation → take photo → submit → "**#7 of 25 surviving today**"
+5. **Audit feed** → vote on other players' photos
+6. **Standings** → today's survivor list with ranks and distances
+7. **Chat** → message a fellow survivor via World Chat
+8. **Day closes** → cap shrinks, next round revealed
 
 ## Backend (fully deployed)
-- Express API on Hetzner, served at `https://lasthumanstanding.thisyearnofear.com/api/`
-- Supabase (Postgres + Storage) for persistence: submissions, votes, users, signed upload URLs
-- PM2 process manager + Nginx reverse proxy + Let's Encrypt TLS
-- Rate limiting on all sensitive endpoints; httpOnly session cookies; secrets never exposed client-side
+- Express API on Hetzner: `https://lasthumanstanding.thisyearnofear.com/api/`
+- Endpoints: `/api/game/state`, `/api/checkin/location`, `/api/admin/round`, `/api/admin/close-day`, `/api/stats`, plus auth/pay/vote endpoints
+- Supabase (Postgres + Storage): `users`, `rounds`, `checkins`, `submissions`, `votes`
+- PM2 + Nginx + Let's Encrypt TLS
+- httpOnly session cookies, rate limiting on sensitive endpoints, secrets server-side only
 
 ## Tech stack
-- Frontend: React + Vite + Tailwind, deployed as static files via Nginx
-- Mini App plumbing: `@worldcoin/minikit-js` v2, `@worldcoin/idkit` v2
-- Backend: Node.js + Express v5, Supabase JS v2, viem
-- Infrastructure: Hetzner VPS, PM2, Nginx, Let's Encrypt
+- Frontend: React + Vite + Tailwind + Framer Motion
+- Mini App SDK: `@worldcoin/minikit-js` v2, `@worldcoin/idkit` v2
+- Backend: Node.js + Express v5, `@supabase/supabase-js` v2, viem
+- Geo: server-side haversine; navigator.geolocation in client
+- Infra: Hetzner VPS, PM2, Nginx, Let's Encrypt
 
-## What's next
-- Private Supabase storage bucket + signed read URLs for feed images
-- On-chain contract (World Chain) for transparent check-in receipts and elimination
-- Streak rewards, reputation staking for challenges, push reminders
+## Enterprise value
+A reusable **proof-of-presence** layer: brand activations, IRL events, retail loyalty, civic engagement, conferences — anywhere you need cryptographic evidence that a real human was at a real place at a real time, with a crowd-audit fallback.
+
+## Roadmap
+- Audit DQ-and-replace turned ON in production (currently non-binding in pilot)
+- Multi-cohort scheduling (cohort #2 spawns when #1 ends)
+- AI-image-detection signal in the audit
+- Anti-spoof: reject low-accuracy GPS, detect impossible velocity, EXIF stripping + perceptual photo hashing
+- Sponsor-funded "Photo of the Day" bonus pool
+- World Chain attestations for check-in receipts
+- Multi-city cohorts
