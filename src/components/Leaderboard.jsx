@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { GAME_STATS } from '../data/game';
 import { useRound } from '../world/RoundProvider.jsx';
+import { useStats } from '../hooks/useStats.js';
 
 const SURVIVORS = [
   { rank: 1, user: "0xHuman_7734", streak: 47, status: "verified", badge: "🔥", days: "47 days", you: true },
@@ -23,8 +23,12 @@ const RECENTLY_ELIMINATED = [
 
 export default function Leaderboard({ onBack }) {
   const [tab, setTab] = useState('survivors');
-  const [prizePool] = useState(2.4);
   const { round, verification } = useRound();
+  const { stats } = useStats();
+  const prizePoolWld = stats?.prizePool?.balanceWld ?? null;
+  const prizePoolExplorer = stats?.prizePool?.explorerUrl ?? null;
+  const totalPlayers = stats?.players?.total ?? null;
+  const activePlayers = stats?.players?.active ?? null;
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
@@ -36,7 +40,7 @@ export default function Leaderboard({ onBack }) {
           </button>
           <div>
             <h2 className="font-display text-3xl text-bone tracking-wide">STANDINGS</h2>
-            <p className="font-mono text-dim text-xs">Day 47 · {GAME_STATS.totalPlayers.toLocaleString()} alive</p>
+            <p className="font-mono text-dim text-xs">Day {Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · {activePlayers != null ? activePlayers.toLocaleString() : '—'} alive</p>
           </div>
         </div>
 
@@ -78,18 +82,19 @@ export default function Leaderboard({ onBack }) {
         <div className="bg-smoke border border-amber/40 rounded-3xl p-5 mb-5 relative overflow-hidden">
           <div className="absolute inset-0 opacity-5 pointer-events-none"
             style={{ background: 'radial-gradient(circle at 50% 0%, #FFB800, transparent 70%)' }} />
-          <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Prize Pool · World Wallet</p>
+          <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Prize Pool · World Chain</p>
           <div className="flex items-end gap-3 mb-1">
-            <span className="font-display text-6xl text-amber leading-none">{prizePool}</span>
-            <span className="font-display text-3xl text-amber/60 mb-1">ETH</span>
+            <span className="font-display text-6xl text-amber leading-none">
+              {prizePoolWld != null ? prizePoolWld.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
+            </span>
+            <span className="font-display text-3xl text-amber/60 mb-1">WLD</span>
           </div>
-          <p className="text-dim text-xs font-mono">~${(prizePool * 2800).toLocaleString()} USD · Locked on-chain until last human remains</p>
+          <p className="text-dim text-xs font-mono">On-chain · grows with each entry fee paid</p>
 
-          <div className="mt-3 grid grid-cols-3 gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             {[
-              { label: "Your share", val: "0.00193 ETH" },
-              { label: "Entry fees", val: "12.47 ETH" },
-              { label: "Sponsors", val: "+ coming" },
+              { label: "Total players", val: totalPlayers != null ? totalPlayers.toLocaleString() : '—' },
+              { label: "Still alive", val: activePlayers != null ? activePlayers.toLocaleString() : '—' },
             ].map((item) => (
               <div key={item.label} className="text-center">
                 <p className="font-mono text-dim text-xs">{item.label}</p>
@@ -97,6 +102,14 @@ export default function Leaderboard({ onBack }) {
               </div>
             ))}
           </div>
+          {prizePoolExplorer && (
+            <button
+              onClick={() => window.open(prizePoolExplorer, '_blank')}
+              className="mt-3 w-full text-center font-mono text-amber/60 text-xs underline"
+            >
+              Verify on-chain →
+            </button>
+          )}
         </div>
 
         {/* Tabs */}
@@ -153,20 +166,22 @@ export default function Leaderboard({ onBack }) {
 
               <div className="text-right">
                 <p className="font-mono text-dim text-xs">share</p>
-                <p className="font-mono text-neon text-xs">{(prizePool / GAME_STATS.totalPlayers).toFixed(5)} ETH</p>
+                <p className="font-mono text-neon text-xs">
+                  {prizePoolWld != null && totalPlayers ? `${(prizePoolWld / totalPlayers).toFixed(3)} WLD` : '— WLD'}
+                </p>
               </div>
             </motion.div>
           ))}
 
           <div className="py-4 text-center">
-            <p className="text-dim font-mono text-xs">+ {(GAME_STATS.totalPlayers - SURVIVORS.length).toLocaleString()} more survivors</p>
+            <p className="text-dim font-mono text-xs">Demo data · real leaderboard populates as players join</p>
           </div>
         </div>
       ) : (
         <div className="px-5 space-y-2">
           <div className="bg-blood/5 border border-blood/20 rounded-2xl p-3 mb-2">
             <p className="text-blood font-mono text-xs text-center">
-              💀 {GAME_STATS.eliminated.toLocaleString()} humans eliminated so far
+              💀 {totalPlayers != null && activePlayers != null ? (totalPlayers - activePlayers).toLocaleString() : '—'} humans eliminated so far
             </p>
           </div>
           {RECENTLY_ELIMINATED.map((e, i) => (
