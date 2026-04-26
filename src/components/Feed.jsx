@@ -27,6 +27,7 @@ export default function Feed({ onBack }) {
   const [voted, setVoted] = useState({});
   const [fired, setFired] = useState({});
   const [filter, setFilter] = useState('all');
+  const [expandedId, setExpandedId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
   const requireWorldIdToVote = import.meta.env.VITE_REQUIRE_WORLD_ID_FOR_VOTING === "true";
@@ -49,6 +50,8 @@ export default function Feed({ onBack }) {
             status: s.status || "pending",
             mediaUrl: s.mediaUrl || null,
             fires: s.fires || 0,
+            infiltrator: s.is_infiltrator || false,
+            accuracy: s.accuracy ?? null,
             voteQuorum: s.voteQuorum || s.vote_quorum || null,
           })),
         );
@@ -172,6 +175,7 @@ export default function Feed({ onBack }) {
         <p className="text-amber text-xs font-mono">
           Vote blind — tallies reveal after you vote. Finalizes at {verification.voteQuorum} votes
           {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}. Hit 🔥 for style.
+          {' '}Watch for 🎭 Infiltrators — catch them for Detective points!
         </p>
       </div>
 
@@ -252,7 +256,19 @@ export default function Feed({ onBack }) {
                   <div className="absolute bottom-3 left-3 bg-ash/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1.5">
                     <span className="text-neon text-xs">🌐</span>
                     <span className="font-mono text-neon text-xs">{sub.username ? `@${sub.username}` : sub.user}</span>
+                    {sub.accuracy != null && (
+                      <span className={`font-mono text-[10px] ml-1 ${sub.accuracy >= 80 ? 'text-neon' : sub.accuracy >= 60 ? 'text-amber' : 'text-blood'}`}>
+                        🎯{sub.accuracy}%
+                      </span>
+                    )}
                   </div>
+
+                  {/* Infiltrator reveal — only shown after finalization */}
+                  {sub.infiltrator && sub.status !== 'pending' && (
+                    <div className="absolute bottom-3 right-3 bg-purple-500/20 backdrop-blur-sm border border-purple-400/40 rounded-full px-2 py-1">
+                      <span className="font-mono text-purple-300 text-xs">🎭 Infiltrator</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Content */}
@@ -287,6 +303,19 @@ export default function Feed({ onBack }) {
                             {sub.status === "verified" ? "✅ verified" : sub.status === "flagged" ? "⚠️ flagged" : "⏳ pending"}
                           </span>
                         </div>
+
+                        {/* Infiltrator outcome — shown after finalization */}
+                        {sub.infiltrator && sub.status !== 'pending' && (
+                          <div className={`mt-2 rounded-lg px-3 py-2 text-xs font-mono ${
+                            sub.status === 'verified'
+                              ? 'bg-purple-500/10 border border-purple-400/30 text-purple-300'
+                              : 'bg-neon/10 border border-neon/30 text-neon'
+                          }`}>
+                            {sub.status === 'verified'
+                              ? '🎭 Infiltrator got away with it! Earned immunity.'
+                              : '🎭 Infiltrator CAUGHT! Double elimination risk.'}
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="flex items-center gap-2 py-2">
@@ -340,21 +369,56 @@ export default function Feed({ onBack }) {
                     </div>
                   )}
 
-                  {/* World Chat challenge */}
-                  <div className="mt-3">
-                    <button
-                      onClick={() => handleChallenge(sub)}
-                      disabled={!sub.username}
-                      className="w-full py-2.5 rounded-xl bg-smoke border border-ember text-dim font-mono text-xs active:scale-95 transition-transform disabled:opacity-50"
+                  {/* Expanded details */}
+                  {expandedId === sub.id && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="border-t border-ember pt-3 mt-3 space-y-2"
                     >
-                      {challengeToast === sub.id ? '🌐 Available in World App' : 'Challenge in World Chat →'}
-                    </button>
-                    {!sub.username && (
-                      <p className="text-dim font-mono text-[10px] mt-1 opacity-70">
-                        Challenge requires a World username (captured on check-in).
-                      </p>
-                    )}
-                  </div>
+                      {/* Voter accuracy breakdown */}
+                      {sub.accuracy != null && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-dim font-mono text-xs">Voter accuracy:</span>
+                          <div className="flex-1 h-1.5 bg-ember rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${sub.accuracy}%`,
+                                background: sub.accuracy >= 80 ? '#00FF94' : sub.accuracy >= 60 ? '#FFB800' : '#FF1A1A',
+                              }}
+                            />
+                          </div>
+                          <span className={`font-mono text-xs ${sub.accuracy >= 80 ? 'text-neon' : sub.accuracy >= 60 ? 'text-amber' : 'text-blood'}`}>
+                            {sub.accuracy}%
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Challenge button */}
+                      <button
+                        onClick={() => handleChallenge(sub)}
+                        disabled={!sub.username}
+                        className="w-full py-2.5 rounded-xl bg-smoke border border-ember text-dim font-mono text-xs active:scale-95 transition-transform disabled:opacity-50"
+                      >
+                        {challengeToast === sub.id ? '🌐 Available in World App' : 'Challenge in World Chat →'}
+                      </button>
+                      {!sub.username && (
+                        <p className="text-dim font-mono text-[10px] opacity-70">
+                          Challenge requires a World username (captured on check-in).
+                        </p>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* Expand/collapse toggle */}
+                  <button
+                    onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
+                    className="w-full mt-3 py-1.5 text-dim font-mono text-xs opacity-60 hover:opacity-100 transition-opacity"
+                  >
+                    {expandedId === sub.id ? '▲ Less' : '▼ Details'}
+                  </button>
                 </div>
               </motion.div>
             );

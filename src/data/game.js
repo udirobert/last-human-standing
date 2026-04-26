@@ -23,6 +23,7 @@ export const MOCK_SUBMISSIONS = [
     votes: { real: 89, fake: 3 },
     fires: 24,
     status: "verified",
+    accuracy: 91,
     mediaUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=400&fit=crop",
   },
   {
@@ -34,6 +35,8 @@ export const MOCK_SUBMISSIONS = [
     votes: { real: 124, fake: 2 },
     fires: 67,
     status: "verified",
+    accuracy: 84,
+    infiltrator: true,
     mediaUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop",
   },
   {
@@ -45,6 +48,7 @@ export const MOCK_SUBMISSIONS = [
     votes: { real: 38, fake: 41 },
     fires: 3,
     status: "pending",
+    accuracy: 72,
     mediaUrl: "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&h=400&fit=crop",
   },
   {
@@ -56,6 +60,7 @@ export const MOCK_SUBMISSIONS = [
     votes: { real: 201, fake: 1 },
     fires: 112,
     status: "verified",
+    accuracy: 95,
     mediaUrl: "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=600&h=400&fit=crop",
   },
   {
@@ -67,6 +72,8 @@ export const MOCK_SUBMISSIONS = [
     votes: { real: 44, fake: 31 },
     fires: 8,
     status: "flagged",
+    accuracy: 58,
+    infiltrator: true,
     mediaUrl: "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=600&h=400&fit=crop",
   },
 ];

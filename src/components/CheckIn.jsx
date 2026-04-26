@@ -42,6 +42,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [photoPreview, setPhotoPreview] = useState(null);
   const [result, setResult] = useState(null); // { rank, survived, distanceM, survivalCap }
   const [submitError, setSubmitError] = useState(null);
+  const [infiltratorMode, setInfiltratorMode] = useState(false);
   const fileRef = useRef();
 
   const targetLat = round?.lat;
@@ -110,11 +111,13 @@ export default function CheckIn({ onBack, onSubmit }) {
           `lat=${pos.lat}`,
           `lng=${pos.lng}`,
           `ts=${new Date().toISOString()}`,
-        ].join('\n'),
+          infiltratorMode ? 'infiltrator=true' : '',
+        ].filter(Boolean).join('\n'),
         day: currentDay ?? 0,
         theme: round?.name ?? '',
         caption: '',
         mediaPath,
+        isInfiltrator: infiltratorMode,
       });
     } catch {
       // signature is bonus, not required for survival
@@ -261,14 +264,38 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               )}
 
+              {/* Infiltrator toggle */}
+              {withinRadius && (
+                <button
+                  onClick={() => setInfiltratorMode(!infiltratorMode)}
+                  className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
+                    infiltratorMode
+                      ? 'bg-purple-500/20 border-purple-400/40 text-purple-300'
+                      : 'bg-smoke border-ember text-dim'
+                  }`}
+                >
+                  {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity)'}
+                </button>
+              )}
+              {infiltratorMode && withinRadius && (
+                <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-3 mb-3">
+                  <p className="text-purple-300 text-xs font-mono">
+                    ⚡ If the crowd votes you HUMAN, you earn immunity tomorrow.
+                    If they vote you SUS, you get double elimination risk. Choose wisely.
+                  </p>
+                </div>
+              )}
+
               <button
                 onClick={handleSubmit}
                 disabled={!withinRadius}
                 className={`w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform ${
-                  withinRadius ? 'bg-blood text-bone animate-pulse-blood' : 'bg-ember text-dim'
+                  infiltratorMode && withinRadius
+                    ? 'bg-purple-600 text-bone animate-pulse-blood'
+                    : withinRadius ? 'bg-blood text-bone animate-pulse-blood' : 'bg-ember text-dim'
                 }`}
               >
-                CONFIRM I'M HERE
+                {infiltratorMode ? '🎭 SUBMIT AS INFILTRATOR' : 'CONFIRM I\'M HERE'}
               </button>
             </motion.div>
           )}

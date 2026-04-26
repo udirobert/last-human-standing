@@ -598,7 +598,7 @@ app.post("/api/media-url", requireAuth, async (req, res) => {
 
 // ---- Check-ins + votes
 app.post("/api/checkin", requireAuth, async (req, res) => {
-  const { day, theme, caption, message, signature, address, mediaPath, username } = req.body || {};
+  const { day, theme, caption, message, signature, address, mediaPath, username, isInfiltrator } = req.body || {};
   if (!message || !signature || !address) return res.status(400).json({ error: "missing_signature_payload" });
 
   try {
@@ -622,6 +622,7 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
       media_path: mediaPath ? String(mediaPath) : null,
       vote_quorum: dynamicVoteQuorum,
       status: "pending",
+      is_infiltrator: Boolean(isInfiltrator),
     };
 
     if (supabaseAdmin) {
@@ -679,7 +680,7 @@ app.get("/api/feed", (req, res) => {
 
     const { data: subs, error } = await supabaseAdmin
       .from("submissions")
-      .select("id,created_at,address,username,day,theme,caption,media_path,status,vote_quorum")
+      .select("id,created_at,address,username,day,theme,caption,media_path,status,vote_quorum,is_infiltrator")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
@@ -785,6 +786,9 @@ app.post(
           .from("submissions")
           .update({ status: computed.status })
           .eq("id", Number(submissionId));
+
+        // Update voter accuracy for all voters on this submission
+        updateVoterAccuracy(Number(submissionId), computed.status).catch(() => {});
       }
 
       return res.json({ ok: true, votes, status: computed.status, voteQuorum: quorum });
@@ -802,6 +806,59 @@ app.post(
   });
   },
 );
+
+// =====================================================================
+// Voter accuracy tracking
+// =====================================================================
+
+async function updateVoterAccuracy(submissionId, finalStatus) {
+  if (!supabaseAdmin) return;
+  // "verified" means the correct vote was "real"; "flagged" means "fake" was correct
+  const correctVote = finalStatus === "verified" ? "real" : "fake";
+
+  const { data: allVotes } = await supabaseAdmin
+    .from("votes")
+    .select("voter_address, vote")
+    .eq("submission_id", submissionId);
+  if (!allVotes?.length) return;
+
+  for (const v of allVotes) {
+    const isCorrect = v.vote === correctVote;
+    // Upsert voter_stats: increment total_votes and correct_votes
+    const { data: existing } = await supabaseAdmin
+      .from("voter_stats")
+      .select("total_votes, correct_votes")
+      .eq("address", v.voter_address)
+      .maybeSingle();
+
+    const total = (existing?.total_votes ?? 0) + 1;
+    const correct = (existing?.correct_votes ?? 0) + (isCorrect ? 1 : 0);
+    const accuracy = Math.round((correct / total) * 100);
+
+    await supabaseAdmin.from("voter_stats").upsert(
+      { address: v.voter_address, total_votes: total, correct_votes: correct, accuracy_pct: accuracy },
+      { onConflict: "address" },
+    );
+  }
+}
+
+app.get("/api/voter-stats/:address", async (req, res) => {
+  try {
+    const addr = req.params.address;
+    if (!addr) return res.status(400).json({ error: "missing_address" });
+    if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("voter_stats")
+        .select("total_votes, correct_votes, accuracy_pct")
+        .eq("address", addr)
+        .maybeSingle();
+      return res.json({ ok: true, stats: data || { total_votes: 0, correct_votes: 0, accuracy_pct: 0 } });
+    }
+    return res.json({ ok: true, stats: { total_votes: 0, correct_votes: 0, accuracy_pct: 0 } });
+  } catch (e) {
+    res.status(400).json({ error: "voter_stats_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
 
 // =====================================================================
 // Cohort + geo game state (new mechanic: first-N-to-location)
