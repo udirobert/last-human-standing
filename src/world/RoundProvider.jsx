@@ -65,6 +65,7 @@ export function RoundProvider({ children }) {
           round: data.round ?? null,
           you: { ...DEFAULT_STATE.you, ...(data.you ?? {}) },
           defaults: { ...DEFAULT_STATE.defaults, ...(data.defaults ?? {}) },
+          verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },
         });
         setStatus("ready");
         setLastUpdatedAt(Date.now());
