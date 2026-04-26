@@ -37,13 +37,16 @@ export default function Onboarding({ onEnter }) {
     marginLeft: DRIP_MARGINS[i],
   }));
 
+  const onEnterRef = useRef(onEnter);
+  useEffect(() => { onEnterRef.current = onEnter; }, [onEnter]);
+
   useEffect(() => {
     if (!verified || entering || enteredRef.current) return;
     enteredRef.current = true;
     setEntering(true);
-    const t = setTimeout(() => onEnter(), 900);
+    const t = setTimeout(() => onEnterRef.current(), 900);
     return () => clearTimeout(t);
-  }, [verified, entering, onEnter]);
+  }, [verified, entering]);
 
   const handleWalletAuth = async () => {
     if (authing || walletAuthed) return;
