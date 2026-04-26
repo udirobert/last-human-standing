@@ -7,9 +7,6 @@ import { useStats } from '../hooks/useStats.js';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
   const [timeLeft, setTimeLeft] = useState({ hours: 6, minutes: 23, seconds: 47 });
-  const [playerCount, setPlayerCount] = useState(GAME_STATS.totalPlayers);
-  const [showElimination, setShowElimination] = useState(false);
-  const [eliminationCount, setEliminationCount] = useState(0);
   const [checkedIn, setCheckedIn] = useState(false);
   const { user } = useWorld();
   const { round: roundStatus } = useRound();
@@ -18,6 +15,9 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const prizePoolWld = stats?.prizePool?.balanceWld ?? null;
   const prizePoolDisplay = prizePoolWld !== null ? `${prizePoolWld.toLocaleString(undefined, { maximumFractionDigits: 2 })} WLD` : GAME_STATS.prizePool;
   const prizePoolExplorer = stats?.prizePool?.explorerUrl ?? null;
+  const activePlayers = stats?.players?.active ?? null;
+  const totalPlayers = stats?.players?.total ?? null;
+  const eliminated = totalPlayers != null && activePlayers != null ? totalPlayers - activePlayers : 0;
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -32,20 +32,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
     return () => clearInterval(timer);
   }, []);
 
-  // Occasionally drop player count
-  useEffect(() => {
-    const drop = setInterval(() => {
-      if (Math.random() > 0.6) {
-        const dropAmount = Math.floor(Math.random() * 3) + 1;
-        setPlayerCount(p => Math.max(p - dropAmount, 1));
-        setEliminationCount(dropAmount);
-        setShowElimination(true);
-        setTimeout(() => setShowElimination(false), 2500);
-      }
-    }, 4000);
-    return () => clearInterval(drop);
-  }, []);
-
   const pad = (n) => String(n).padStart(2, '0');
 
   return (
@@ -55,7 +41,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
-            <span className="font-mono text-neon text-xs tracking-widest uppercase">Live · Day {GAME_STATS.day}</span>
+            <span className="font-mono text-neon text-xs tracking-widest uppercase">Live · Day {Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1}</span>
           </div>
           <div className="font-mono text-dim text-xs">{user?.displayName ?? "anon"}</div>
         </div>
@@ -64,7 +50,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
 
       {/* Main count — the drama */}
       <motion.div
-        key={playerCount}
+        key={activePlayers}
         initial={{ scale: 1.05 }}
         animate={{ scale: 1 }}
         className="relative mx-5 mb-4"
@@ -80,44 +66,21 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           <p className="font-mono text-dim text-xs tracking-widest uppercase mb-1">Humans Remaining</p>
           <div className="flex items-end gap-3">
             <span className="font-display text-7xl text-blood leading-none animate-glow">
-              {playerCount.toLocaleString()}
+              {activePlayers != null ? activePlayers.toLocaleString() : '—'}
             </span>
-            {showElimination && (
-              <motion.span
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-dim font-mono text-sm mb-2 text-blood"
-              >
-                -{eliminationCount} eliminated
-              </motion.span>
-            )}
           </div>
 
           <div className="flex items-center gap-4 mt-3">
             <div className="flex-1 bg-ember rounded-full h-1.5 overflow-hidden">
               <div
                 className="h-full bg-blood rounded-full transition-all duration-1000"
-                style={{ width: `${(playerCount / (playerCount + GAME_STATS.eliminated)) * 100}%` }}
+                style={{ width: totalPlayers ? `${(activePlayers / totalPlayers) * 100}%` : '100%' }}
               />
             </div>
-            <span className="font-mono text-dim text-xs">{GAME_STATS.eliminated.toLocaleString()} out</span>
+            <span className="font-mono text-dim text-xs">{eliminated.toLocaleString()} out</span>
           </div>
         </div>
       </motion.div>
-
-      {/* Elimination alert */}
-      {showElimination && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0 }}
-          className="mx-5 mb-3 bg-blood/10 border border-blood/40 rounded-2xl px-4 py-2 flex items-center gap-2"
-        >
-          <span className="text-lg">💀</span>
-          <span className="font-mono text-blood text-xs">Someone just missed their check-in</span>
-        </motion.div>
-      )}
 
       {/* Round activation (warmup vs active) */}
       {roundStatus?.state === "warmup" && (
