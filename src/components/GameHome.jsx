@@ -8,6 +8,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const [timeLeft, setTimeLeft] = useState({ hours: 6, minutes: 23, seconds: 47 });
   const [playerCount, setPlayerCount] = useState(GAME_STATS.totalPlayers);
   const [showElimination, setShowElimination] = useState(false);
+  const [eliminationCount, setEliminationCount] = useState(0);
   const [checkedIn, setCheckedIn] = useState(false);
   const { user } = useWorld();
   const { round: roundStatus } = useRound();
@@ -31,6 +32,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
       if (Math.random() > 0.6) {
         const dropAmount = Math.floor(Math.random() * 3) + 1;
         setPlayerCount(p => Math.max(p - dropAmount, 1));
+        setEliminationCount(dropAmount);
         setShowElimination(true);
         setTimeout(() => setShowElimination(false), 2500);
       }
@@ -81,7 +83,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
                 exit={{ opacity: 0 }}
                 className="text-dim font-mono text-sm mb-2 text-blood"
               >
-                -{Math.floor(Math.random() * 3) + 1} eliminated
+                -{eliminationCount} eliminated
               </motion.span>
             )}
           </div>

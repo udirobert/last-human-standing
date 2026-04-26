@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRound } from "../world/RoundProvider.jsx";
 
 function formatAge(ms) {
@@ -10,21 +10,16 @@ function formatAge(ms) {
 
 export default function RoundMetaBanner() {
   const { isLoading, isError, error, refresh, lastUpdatedAt } = useRound();
-  const [tick, setTick] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
 
-  // Update "last updated" text while visible.
+  // Update time every 5 seconds while visible.
   useEffect(() => {
     if (!lastUpdatedAt) return;
-    const t = setInterval(() => setTick((x) => x + 1), 5_000);
+    const t = setInterval(() => setNow(Date.now()), 5_000);
     return () => clearInterval(t);
   }, [lastUpdatedAt]);
 
-  const ageText = useMemo(() => {
-    if (!lastUpdatedAt) return null;
-    // eslint-disable-next-line no-unused-vars
-    const _ = tick; // re-render cadence
-    return `Last updated ${formatAge(Date.now() - lastUpdatedAt)} ago`;
-  }, [lastUpdatedAt, tick]);
+  const ageText = !lastUpdatedAt ? null : `Last updated ${formatAge(now - lastUpdatedAt)} ago`;
 
   if (!isLoading && !isError) return null;
 

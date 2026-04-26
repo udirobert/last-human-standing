@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
@@ -9,6 +9,7 @@ export default function Onboarding({ onEnter }) {
   const [authing, setAuthing] = useState(false);
   const [paying, setPaying] = useState(false);
   const [entering, setEntering] = useState(false);
+  const enteredRef = useRef(false);
   const { round, verification } = useRound();
 
   const {
@@ -25,8 +26,17 @@ export default function Onboarding({ onEnter }) {
   const requireWorldId = import.meta.env.VITE_ENABLE_IDKIT === "true";
   const verified = walletAuthed && entryPaid && (!requireWorldId || worldIdVerified);
 
+  // Pre-compute random values for drip marks to avoid impure functions during render
+  const DRIP_HEIGHTS = [45, 28, 52, 35, 60, 42, 38, 55];
+  const DRIP_MARGINS = [12, 5, 18, 8, 3, 15, 20, 10];
+  const dripMarks = DRIP_HEIGHTS.map((height, i) => ({
+    height,
+    marginLeft: DRIP_MARGINS[i],
+  }));
+
   useEffect(() => {
-    if (!verified || entering) return;
+    if (!verified || entering || enteredRef.current) return;
+    enteredRef.current = true;
     setEntering(true);
     const t = setTimeout(() => onEnter(), 900);
     return () => clearTimeout(t);
@@ -65,14 +75,14 @@ export default function Onboarding({ onEnter }) {
           >
             {/* Drip marks */}
             <div className="absolute top-0 left-0 right-0 flex justify-around pointer-events-none">
-              {[...Array(8)].map((_, i) => (
+              {dripMarks.map((mark, i) => (
                 <div
                   key={i}
                   className="w-0.5 bg-blood rounded-b-full opacity-60"
                   style={{
-                    height: `${20 + Math.random() * 40}px`,
+                    height: `${mark.height}px`,
                     animationDelay: `${i * 0.3}s`,
-                    marginLeft: `${Math.random() * 20}px`,
+                    marginLeft: `${mark.marginLeft}px`,
                   }}
                 />
               ))}

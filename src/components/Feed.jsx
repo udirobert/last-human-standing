@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_SUBMISSIONS, TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
+import { MiniKit } from "@worldcoin/minikit-js";
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -20,11 +21,13 @@ const STATUS_LABELS = {
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
-  const { walletAuthed, entryPaid } = useWorld();
+  const { walletAuthed, entryPaid, worldIdVerified, sendWorldChat } = useWorld();
   const { verification } = useRound();
   const [submissions, setSubmissions] = useState(MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
   const [filter, setFilter] = useState('all');
+
+  const requireWorldIdToVote = import.meta.env.VITE_REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +41,8 @@ export default function Feed({ onBack }) {
           setSubmissions(
             data.submissions.map((s) => ({
               id: s.id,
-              user: s.address?.slice(0, 8) + "…",
+              user: s.username ? `@${s.username}` : (s.address?.slice(0, 8) + "…"),
+              username: s.username ?? null,
               caption: s.caption || s.theme || "",
               time: "now",
               votes: s.votes || { real: 0, fake: 0 },
@@ -56,6 +60,7 @@ export default function Feed({ onBack }) {
   }, [walletAuthed, entryPaid]);
 
   const handleVote = async (id, type) => {
+    if (requireWorldIdToVote && !worldIdVerified) return;
     if (voted[id]) return;
     setVoted(v => ({ ...v, [id]: type }));
     setSubmissions(subs =>
@@ -96,6 +101,13 @@ export default function Feed({ onBack }) {
         // ignore
       }
     }
+  };
+
+  const handleChallenge = async (sub) => {
+    if (!MiniKit.isInstalled()) return;
+    if (!sub?.username) return;
+    const msg = `I’m challenging your check-in: "${sub.caption}". Reply with context / proof.`;
+    await sendWorldChat({ to: sub.username, message: msg });
   };
 
   const filtered = filter === 'all' ? submissions : submissions.filter(s => s.status === filter);
@@ -140,6 +152,14 @@ export default function Feed({ onBack }) {
           {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}.
         </p>
       </div>
+
+      {requireWorldIdToVote && !worldIdVerified && (
+        <div className="mx-5 mb-4 bg-smoke border border-ember rounded-2xl px-4 py-3">
+          <p className="text-dim text-xs font-mono text-center">
+            Verify World ID to vote (prevents bot brigading).
+          </p>
+        </div>
+      )}
 
       {/* Submissions */}
       <div className="px-5 space-y-4">
@@ -237,18 +257,36 @@ export default function Feed({ onBack }) {
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => handleVote(sub.id, 'real')}
+                        disabled={requireWorldIdToVote && !worldIdVerified}
                         className="py-3 rounded-xl bg-neon/10 border border-neon/40 text-neon font-display text-xl tracking-wide active:scale-95 transition-transform"
                       >
                         ✅ REAL
                       </button>
                       <button
                         onClick={() => handleVote(sub.id, 'fake')}
+                        disabled={requireWorldIdToVote && !worldIdVerified}
                         className="py-3 rounded-xl bg-blood/10 border border-blood/40 text-blood font-display text-xl tracking-wide active:scale-95 transition-transform"
                       >
                         ❌ FAKE
                       </button>
                     </div>
                   )}
+
+                  {/* World Chat challenge */}
+                  <div className="mt-3">
+                    <button
+                      onClick={() => handleChallenge(sub)}
+                      disabled={!MiniKit.isInstalled() || !sub.username}
+                      className="w-full py-2.5 rounded-xl bg-smoke border border-ember text-dim font-mono text-xs active:scale-95 transition-transform disabled:opacity-50"
+                    >
+                      Challenge in World Chat →
+                    </button>
+                    {!sub.username && (
+                      <p className="text-dim font-mono text-[10px] mt-1 opacity-70">
+                        Challenge requires a World username (captured on check-in).
+                      </p>
+                    )}
+                  </div>
                 </div>
               </motion.div>
             );

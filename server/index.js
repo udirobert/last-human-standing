@@ -5,11 +5,13 @@ import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
 import { getSupabaseAdmin } from "./supabase.js";
 import { signRequest } from "@worldcoin/idkit/signing";
+import { rateLimit } from "./rateLimit.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const IS_PROD = process.env.NODE_ENV === "production";
 const supabaseAdmin = getSupabaseAdmin();
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
+const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE === "true";
 
 // ---- Game parameters (tunable)
 const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200); // paid players required to activate prize round
@@ -19,6 +21,7 @@ const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 
 const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30); // if votes in window < threshold -> low activity
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
+const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
 // ---- In-memory stores (hackathon-friendly fallback)
 // If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, we write to Supabase instead.
@@ -88,13 +91,28 @@ function requireAuth(req, res, next) {
 }
 
 // ---- Auth (SIWE via MiniKit)
-app.post("/api/nonce", (req, res) => {
+app.post(
+  "/api/nonce",
+  rateLimit({
+    keyFn: (req) => `nonce:${req.ip}`,
+    limit: 30,
+    windowMs: 60_000,
+  }),
+  (req, res) => {
   const nonce = makeNonce();
   siweNonces.set(nonce, { createdAt: now() });
   res.json({ nonce });
-});
+  },
+);
 
-app.post("/api/complete-siwe", async (req, res) => {
+app.post(
+  "/api/complete-siwe",
+  rateLimit({
+    keyFn: (req) => `siwe:${req.ip}`,
+    limit: 30,
+    windowMs: 60_000,
+  }),
+  async (req, res) => {
   const { payload, nonce } = req.body || {};
   if (!payload || !nonce) return res.status(400).json({ error: "missing_payload_or_nonce" });
   if (!siweNonces.has(nonce)) return res.status(400).json({ error: "invalid_or_expired_nonce" });
@@ -132,7 +150,8 @@ app.post("/api/complete-siwe", async (req, res) => {
       message: e instanceof Error ? e.message : "unknown_error",
     });
   }
-});
+  },
+);
 
 app.post("/api/logout", (req, res) => {
   const sid = req.cookies?.lhs_session;
@@ -412,9 +431,30 @@ app.post("/api/upload-url", requireAuth, async (req, res) => {
   }
 });
 
+app.post("/api/media-url", requireAuth, async (req, res) => {
+  if (!supabaseAdmin) {
+    return res.status(501).json({ error: "supabase_not_configured" });
+  }
+  const { path } = req.body || {};
+  if (!path) return res.status(400).json({ error: "missing_path" });
+
+  try {
+    if (!SUPABASE_BUCKET_PRIVATE) {
+      const publicUrl = supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(path).data.publicUrl;
+      return res.json({ ok: true, url: publicUrl, kind: "public" });
+    }
+
+    const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(path, 60 * 5);
+    if (error) return res.status(400).json({ error: "signed_url_failed", message: error.message });
+    return res.json({ ok: true, url: data.signedUrl, kind: "signed" });
+  } catch (e) {
+    return res.status(400).json({ error: "media_url_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
 // ---- Check-ins + votes
 app.post("/api/checkin", requireAuth, async (req, res) => {
-  const { day, theme, caption, message, signature, address, mediaPath } = req.body || {};
+  const { day, theme, caption, message, signature, address, mediaPath, username } = req.body || {};
   if (!message || !signature || !address) return res.status(400).json({ error: "missing_signature_payload" });
 
   try {
@@ -429,6 +469,7 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
 
     const payloadToStore = {
       address: req.user.address,
+      username: username ? String(username) : null,
       day: Number(day ?? 0),
       theme: String(theme ?? ""),
       caption: String(caption ?? ""),
@@ -447,9 +488,15 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
         .single();
       if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
 
-      const mediaUrl = data.media_path
-        ? supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(data.media_path).data.publicUrl
-        : null;
+      let mediaUrl = null;
+      if (data.media_path) {
+        if (SUPABASE_BUCKET_PRIVATE) {
+          const { data: signed } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(data.media_path, 60 * 5);
+          mediaUrl = signed?.signedUrl ?? null;
+        } else {
+          mediaUrl = supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(data.media_path).data.publicUrl;
+        }
+      }
       return res.json({
         ok: true,
         submission: {
@@ -483,7 +530,7 @@ app.get("/api/feed", requireAuth, (req, res) => {
 
     const { data: subs, error } = await supabaseAdmin
       .from("submissions")
-      .select("id,created_at,address,day,theme,caption,media_path,status,vote_quorum")
+      .select("id,created_at,address,username,day,theme,caption,media_path,status,vote_quorum")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
@@ -508,11 +555,20 @@ app.get("/api/feed", requireAuth, (req, res) => {
     const withVotes = subs.map((s) => ({
       ...s,
       votes: voteCounts.get(s.id) || { real: 0, fake: 0 },
-      mediaUrl: s.media_path
-        ? supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(s.media_path).data.publicUrl
-        : null,
+      mediaUrl: null,
       voteQuorum: s.vote_quorum ?? VOTE_QUORUM,
     }));
+
+    // Add media URLs (public or signed depending on bucket config)
+    for (const item of withVotes) {
+      if (!item.media_path) continue;
+      if (!SUPABASE_BUCKET_PRIVATE) {
+        item.mediaUrl = supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(item.media_path).data.publicUrl;
+      } else {
+        const { data: signed } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(item.media_path, 60 * 5);
+        item.mediaUrl = signed?.signedUrl ?? null;
+      }
+    }
 
     return res.json({ ok: true, submissions: withVotes });
   })().catch((e) => {
@@ -520,11 +576,29 @@ app.get("/api/feed", requireAuth, (req, res) => {
   });
 });
 
-app.post("/api/vote", requireAuth, (req, res) => {
+app.post(
+  "/api/vote",
+  requireAuth,
+  rateLimit({
+    keyFn: (req) => `vote:${req.user?.address || req.ip}`,
+    limit: 30,
+    windowMs: 60_000,
+  }),
+  (req, res) => {
   const { submissionId, vote } = req.body || {};
   if (!submissionId || !["real", "fake"].includes(vote)) return res.status(400).json({ error: "invalid_vote" });
 
   (async () => {
+    if (REQUIRE_WORLD_ID_FOR_VOTING) {
+      const addr = req.user.address.toLowerCase();
+      let verified = worldIdVerified.get(addr) === true;
+      if (supabaseAdmin && !verified) {
+        const { data } = await supabaseAdmin.from("users").select("world_id_verified").eq("address", req.user.address).single();
+        verified = Boolean(data?.world_id_verified);
+      }
+      if (!verified) return res.status(403).json({ error: "world_id_required" });
+    }
+
     if (supabaseAdmin) {
       const { error } = await supabaseAdmin.from("votes").insert({
         submission_id: Number(submissionId),
@@ -577,7 +651,8 @@ app.post("/api/vote", requireAuth, (req, res) => {
   })().catch((e) => {
     res.status(400).json({ error: "vote_failed", message: e instanceof Error ? e.message : "unknown_error" });
   });
-});
+  },
+);
 
 app.listen(PORT, () => {
   // eslint-disable-next-line no-console

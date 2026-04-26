@@ -55,12 +55,18 @@ VITE_ENABLE_IDKIT=false
 VITE_WORLD_ID_APP_ID=app_xxxxx
 VITE_WORLD_ID_ACTION=last-human-standing
 VITE_WORLD_ID_ENV=production
+
+# Recommended: require World ID for voting power (anti-bot brigading)
+VITE_REQUIRE_WORLD_ID_FOR_VOTING=false
 #
 # Server-side verification + RP signatures (NEVER expose signing key in frontend):
 WORLD_ID_APP_ID=app_xxxxx
 WORLD_ID_ACTION=last-human-standing
 WORLD_ID_RP_ID=rp_xxxxx
 WORLD_ID_SIGNING_KEY=0xYOUR_SIGNING_KEY
+
+# Enforce the above gate in the backend as well
+REQUIRE_WORLD_ID_FOR_VOTING=false
 
 # -------- Local dev convenience --------
 # ONLY for local demo/dev when you don't have World Dev Portal keys wired yet.

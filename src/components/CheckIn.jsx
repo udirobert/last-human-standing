@@ -1,12 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { createClient } from "@supabase/supabase-js";
 import { useRound } from '../world/RoundProvider.jsx';
-import RoundMetaNotice from './RoundMetaNotice.jsx';
 
-export default function CheckIn({ onBack, onSubmit }) {
+export default function CheckIn({ onBack }) {
   const [step, setStep] = useState(0); // 0=capture, 1=caption, 2=submitting, 3=done
   const [caption, setCaption] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
@@ -115,9 +114,6 @@ export default function CheckIn({ onBack, onSubmit }) {
             exit={{ opacity: 0, x: -30 }}
             className="flex-1 flex flex-col px-5 pb-8"
           >
-            <div className="mb-4">
-              <RoundMetaNotice />
-            </div>
             {/* Theme reminder */}
             <div
               className="rounded-2xl p-4 mb-6 flex items-center gap-3"
@@ -256,7 +252,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                 { label: "Attaching World ID proof", done: true },
                 { label: "Uploading photo", done: true },
                 { label: "Recording proof (signature)", done: Boolean(signature) },
-              ].map((item, i) => (
+              ].map((item) => (
                 <div key={item.label} className="flex items-center gap-3 bg-smoke rounded-xl px-4 py-3">
                   <div className={`w-4 h-4 rounded-full ${item.done ? 'bg-neon' : 'border-2 border-dim animate-pulse'} flex-shrink-0`} />
                   <span className={`font-mono text-xs ${item.done ? 'text-neon' : 'text-dim'}`}>{item.label}</span>

@@ -209,6 +209,7 @@ export function WorldProvider({ children }) {
             theme: typeof input === "string" ? "daily" : input.theme,
             caption: typeof input === "string" ? "" : input.caption,
             mediaPath: typeof input === "string" ? null : (input.mediaPath ?? null),
+            username: MiniKit.user?.username ?? user?.username ?? null,
             message,
             signature: result.data.signature,
             address: result.data.address,

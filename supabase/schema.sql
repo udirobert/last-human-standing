@@ -13,6 +13,7 @@ create table if not exists public.submissions (
   id bigserial primary key,
   created_at timestamptz not null default now(),
   address text not null,
+  username text,
   day int not null,
   theme text not null,
   caption text not null default '',
