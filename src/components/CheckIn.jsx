@@ -3,80 +3,64 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
-
-function haversineMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000;
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * R * Math.asin(Math.sqrt(a));
-}
-
-function bearingLabel(lat1, lng1, lat2, lng2) {
-  const toRad = (d) => (d * Math.PI) / 180;
-  const dLng = toRad(lng2 - lng1);
-  const y = Math.sin(dLng) * Math.cos(toRad(lat2));
-  const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
-    Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
-  const deg = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
-  const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-  return dirs[Math.round(deg / 45) % 8];
-}
-
-const DIR_ARROWS = { N: '↑', NE: '↗', E: '→', SE: '↘', S: '↓', SW: '↙', W: '←', NW: '↖' };
+import { DAILY_THEMES, TODAY_THEME } from '../data/game';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
   const { signCheckIn } = useWorld();
-  const [step, setStep] = useState(0); // 0=locate, 1=photo (optional), 2=submitting, 3=done
+  const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
-  const [posError, setPosError] = useState(() =>
-    typeof navigator !== 'undefined' && 'geolocation' in navigator
-      ? null
-      : 'Geolocation not available in this browser'
-  );
+  const [gpsEnabled, setGpsEnabled] = useState(false);
+  const [gpsLoading, setGpsLoading] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [result, setResult] = useState(null); // { rank, survived, distanceM, survivalCap }
+  const [caption, setCaption] = useState('');
+  const [result, setResult] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const [infiltratorMode, setInfiltratorMode] = useState(false);
   const fileRef = useRef();
+  const watchRef = useRef(null);
 
-  const targetLat = round?.lat;
-  const targetLng = round?.lng;
-  const radiusM = round?.radiusM ?? 100;
+  const theme = round?.placeType || round?.name || TODAY_THEME.theme;
+  const themeData = DAILY_THEMES.find(t => t.theme === theme) || TODAY_THEME;
 
-  // Live distance (recomputed client-side as GPS updates)
-  const distance = pos && targetLat != null && targetLng != null
-    ? haversineMeters(pos.lat, pos.lng, targetLat, targetLng)
-    : null;
-  const withinRadius = distance != null && distance <= radiusM;
-
-  // Watch position while we're on this screen
-  useEffect(() => {
+  // GPS toggle — start/stop watching
+  const toggleGps = () => {
+    if (gpsEnabled) {
+      if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current);
+      watchRef.current = null;
+      setPos(null);
+      setGpsEnabled(false);
+      return;
+    }
     if (typeof navigator === 'undefined' || !('geolocation' in navigator)) return;
-    const id = navigator.geolocation.watchPosition(
+    setGpsLoading(true);
+    watchRef.current = navigator.geolocation.watchPosition(
       (p) => {
         setPos({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy });
-        setPosError(null);
+        setGpsLoading(false);
+        setGpsEnabled(true);
       },
-      (err) => setPosError(err.message || 'Could not read location'),
+      () => setGpsLoading(false),
       { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 },
     );
-    return () => navigator.geolocation.clearWatch(id);
+    setGpsEnabled(true);
+  };
+
+  useEffect(() => {
+    return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
+
+  const canSubmit = photoFile != null; // photo is the primary proof
 
   const handlePhotoSelect = () => fileRef.current?.click();
 
   const handleSubmit = async () => {
-    if (!pos || !withinRadius) return;
-    setStep(2);
+    if (!canSubmit) return;
+    setStep(1);
     setSubmitError(null);
 
-    // Upload photo (best-effort; non-blocking for survival)
+    // Upload photo
     let mediaPath = null;
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -101,35 +85,37 @@ export default function CheckIn({ onBack, onSubmit }) {
       }
     }
 
-    // Sign + record check-in (best-effort signature; real survival decided by /api/checkin/location)
+    // Sign + record check-in
     try {
       await signCheckIn({
         message: [
-          'Last Human Standing — Geo check-in',
+          'Last Human Standing — Check-in',
           `day=${currentDay}`,
-          `location=${round?.name ?? ''}`,
-          `lat=${pos.lat}`,
-          `lng=${pos.lng}`,
+          `theme=${theme}`,
+          pos ? `lat=${pos.lat}` : '',
+          pos ? `lng=${pos.lng}` : '',
           `ts=${new Date().toISOString()}`,
           infiltratorMode ? 'infiltrator=true' : '',
         ].filter(Boolean).join('\n'),
         day: currentDay ?? 0,
-        theme: round?.name ?? '',
-        caption: '',
+        theme,
+        caption,
         mediaPath,
         isInfiltrator: infiltratorMode,
       });
     } catch {
-      // signature is bonus, not required for survival
+      // signature is bonus
     }
 
-    // The actual survival call
+    // The actual survival call — GPS is optional metadata
     try {
+      const body = {};
+      if (pos) { body.lat = pos.lat; body.lng = pos.lng; body.accuracy = pos.accuracy; }
       const resp = await fetch('/api/checkin/location', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ lat: pos.lat, lng: pos.lng, accuracy: pos.accuracy }),
+        body: JSON.stringify(body),
       });
       const json = await resp.json();
       if (!resp.ok) {
@@ -139,7 +125,7 @@ export default function CheckIn({ onBack, onSubmit }) {
       }
       setResult(json);
       refreshRound();
-      setStep(3);
+      setStep(2);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'check-in failed');
       setStep(0);
@@ -169,7 +155,7 @@ export default function CheckIn({ onBack, onSubmit }) {
         </button>
         <div>
           <h2 className="font-display text-3xl text-bone tracking-wide">CHECK IN</h2>
-          <p className="font-mono text-dim text-xs">Day {currentDay ?? '—'} · {round?.name ?? 'No round set'}</p>
+          <p className="font-mono text-dim text-xs">Day {currentDay ?? '—'} · {theme || 'No round set'}</p>
         </div>
       </div>
 
@@ -182,64 +168,30 @@ export default function CheckIn({ onBack, onSubmit }) {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div
-              key="locate"
+              key="checkin"
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
               className="flex-1 flex flex-col px-5 pb-8"
             >
+              {/* Theme card */}
               <div className="bg-smoke border border-ember rounded-3xl p-6 mb-5">
-                <p className="font-mono text-dim text-xs tracking-widest uppercase mb-1">Target</p>
-                <p className="font-display text-2xl text-bone mb-2">{round.name}</p>
-                {round.prompt && <p className="text-dim text-xs font-mono">📸 {round.prompt}</p>}
+                <p className="font-mono text-dim text-xs tracking-widest uppercase mb-1">Today's challenge</p>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="text-4xl">{themeData.emoji}</span>
+                  <p className="font-display text-2xl text-bone">{theme}</p>
+                </div>
+                <p className="text-dim text-sm font-mono">{themeData.description}</p>
+                {round.prompt && <p className="text-dim text-xs font-mono mt-2">📸 {round.prompt}</p>}
                 <div className="mt-3 flex justify-between text-xs font-mono text-dim">
-                  <span>Radius: {radiusM}m</span>
                   <span>Slots: {round.slotsRemaining}/{round.survivalCap}</span>
+                  <span>Anywhere on Earth 🌍</span>
                 </div>
               </div>
 
-              {/* GPS readout */}
-              <div className={`rounded-3xl p-6 mb-5 border ${withinRadius ? 'bg-neon/10 border-neon/40' : 'bg-smoke border-ember'}`}>
-                {!pos && !posError && (
-                  <div className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full border-2 border-amber border-t-transparent animate-spin" />
-                    <p className="text-bone font-mono text-sm">Getting your location…</p>
-                  </div>
-                )}
-                {posError && (
-                  <div>
-                    <p className="text-blood font-mono text-sm mb-1">📵 {posError}</p>
-                    <p className="text-dim text-xs">Enable location access to check in.</p>
-                  </div>
-                )}
-                {pos && distance != null && (
-                  <div>
-                    <p className="font-mono text-dim text-xs tracking-widest uppercase mb-1">Distance to target</p>
-                    <p className={`font-display text-5xl leading-none ${withinRadius ? 'text-neon' : 'text-amber'}`}>
-                      {distance < 1000 ? `${Math.round(distance)} m` : `${(distance / 1000).toFixed(2)} km`}
-                    </p>
-                    <p className="text-dim text-xs font-mono mt-2">
-                      Accuracy ±{Math.round(pos.accuracy ?? 0)}m
-                    </p>
-                    {!withinRadius && (() => {
-                      const dir = bearingLabel(pos.lat, pos.lng, targetLat, targetLng);
-                      return (
-                        <p className="text-amber text-xs font-mono mt-3">
-                          <span className="text-lg mr-1">{DIR_ARROWS[dir]}</span>
-                          Head {dir}. Need to be within {radiusM}m to check in.
-                        </p>
-                      );
-                    })()}
-                    {withinRadius && (
-                      <p className="text-neon text-xs font-mono mt-3">✓ You're in range. Capture a photo (optional) and submit.</p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Optional photo */}
+              {/* Photo capture — primary proof */}
               {photoPreview ? (
-                <div className="mb-5 rounded-2xl overflow-hidden border border-ember relative" style={{ height: 180 }}>
+                <div className="mb-5 rounded-2xl overflow-hidden border border-neon/40 relative" style={{ height: 200 }}>
                   <img src={photoPreview} alt="check-in" className="w-full h-full object-cover" />
                   <button
                     onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
@@ -251,12 +203,44 @@ export default function CheckIn({ onBack, onSubmit }) {
               ) : (
                 <button
                   onClick={handlePhotoSelect}
-                  className="mb-5 w-full bg-smoke border-2 border-dashed border-ember rounded-2xl py-6 flex items-center justify-center gap-3 active:scale-98 transition-transform"
+                  className="mb-5 w-full bg-smoke border-2 border-dashed border-neon/40 rounded-2xl py-8 flex flex-col items-center justify-center gap-2 active:scale-98 transition-transform"
                 >
-                  <span className="text-2xl">📸</span>
-                  <span className="text-bone font-mono text-sm">Take a photo (optional · helps audit)</span>
+                  <span className="text-4xl">📸</span>
+                  <span className="text-bone font-mono text-sm">Take a photo — this is your proof</span>
+                  <span className="text-dim font-mono text-xs">The community will vote on it</span>
                 </button>
               )}
+
+              {/* Caption */}
+              <input
+                type="text"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Add a caption (optional)"
+                maxLength={140}
+                className="mb-4 w-full bg-smoke border border-ember rounded-xl px-4 py-3 text-bone font-mono text-sm placeholder:text-dim focus:outline-none focus:border-neon/40"
+              />
+
+              {/* GPS toggle — optional credibility boost */}
+              <button
+                onClick={toggleGps}
+                className={`w-full mb-4 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border flex items-center justify-center gap-2 ${
+                  gpsEnabled
+                    ? 'bg-neon/10 border-neon/40 text-neon'
+                    : 'bg-smoke border-ember text-dim'
+                }`}
+              >
+                {gpsLoading ? (
+                  <>
+                    <div className="w-4 h-4 rounded-full border-2 border-amber border-t-transparent animate-spin" />
+                    Getting location…
+                  </>
+                ) : gpsEnabled && pos ? (
+                  <>📍 Location shared · ±{Math.round(pos.accuracy ?? 0)}m — bonus credibility</>
+                ) : (
+                  <>📍 Share location (optional · adds credibility for voters)</>
+                )}
+              </button>
 
               {submitError && (
                 <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 mb-3">
@@ -265,19 +249,17 @@ export default function CheckIn({ onBack, onSubmit }) {
               )}
 
               {/* Infiltrator toggle */}
-              {withinRadius && (
-                <button
-                  onClick={() => setInfiltratorMode(!infiltratorMode)}
-                  className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
-                    infiltratorMode
-                      ? 'bg-purple-500/20 border-purple-400/40 text-purple-300'
-                      : 'bg-smoke border-ember text-dim'
-                  }`}
-                >
-                  {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity)'}
-                </button>
-              )}
-              {infiltratorMode && withinRadius && (
+              <button
+                onClick={() => setInfiltratorMode(!infiltratorMode)}
+                className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
+                  infiltratorMode
+                    ? 'bg-purple-500/20 border-purple-400/40 text-purple-300'
+                    : 'bg-smoke border-ember text-dim'
+                }`}
+              >
+                {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity)'}
+              </button>
+              {infiltratorMode && (
                 <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-3 mb-3">
                   <p className="text-purple-300 text-xs font-mono">
                     ⚡ If the crowd votes you HUMAN, you earn immunity tomorrow.
@@ -288,19 +270,24 @@ export default function CheckIn({ onBack, onSubmit }) {
 
               <button
                 onClick={handleSubmit}
-                disabled={!withinRadius}
+                disabled={!canSubmit}
                 className={`w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform ${
-                  infiltratorMode && withinRadius
+                  infiltratorMode && canSubmit
                     ? 'bg-purple-600 text-bone animate-pulse-blood'
-                    : withinRadius ? 'bg-blood text-bone animate-pulse-blood' : 'bg-ember text-dim'
+                    : canSubmit ? 'bg-blood text-bone animate-pulse-blood' : 'bg-ember text-dim'
                 }`}
               >
-                {infiltratorMode ? '🎭 SUBMIT AS INFILTRATOR' : 'CONFIRM I\'M HERE'}
+                {!canSubmit ? 'TAKE A PHOTO FIRST' : infiltratorMode ? '🎭 SUBMIT AS INFILTRATOR' : 'SUBMIT CHECK-IN'}
               </button>
+              {!canSubmit && (
+                <p className="text-dim text-xs font-mono text-center mt-2">
+                  Photo is required — the community votes on your proof
+                </p>
+              )}
             </motion.div>
           )}
 
-          {step === 2 && (
+          {step === 1 && (
             <motion.div
               key="submitting"
               initial={{ opacity: 0 }}
@@ -315,7 +302,7 @@ export default function CheckIn({ onBack, onSubmit }) {
             </motion.div>
           )}
 
-          {step === 3 && result && (
+          {step === 2 && result && (
             <motion.div
               key="done"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -330,7 +317,12 @@ export default function CheckIn({ onBack, onSubmit }) {
                   <div className="text-center">
                     <p className="font-display text-5xl text-neon mb-1">RANK #{result.rank}</p>
                     <p className="text-bone font-mono text-sm">of {result.survivalCap} surviving today</p>
-                    <p className="text-dim font-mono text-xs mt-2">Distance: {result.distanceM}m · Day {currentDay}</p>
+                    {result.gpsShared && (
+                      <p className="text-dim font-mono text-xs mt-2">📍 GPS shared · Day {currentDay}</p>
+                    )}
+                    {!result.gpsShared && (
+                      <p className="text-dim font-mono text-xs mt-2">No GPS · community votes decide · Day {currentDay}</p>
+                    )}
                   </div>
                 </>
               ) : (

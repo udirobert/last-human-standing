@@ -1,6 +1,6 @@
 export const DAILY_THEMES = [
-  { id: 1, theme: "AT A CAFÉ", emoji: "☕", description: "Find a café, grab a seat, take the shot", color: "#FFB800" },
-  { id: 2, theme: "AT A PARK", emoji: "🌳", description: "Touch grass. Literally.", color: "#00FF94" },
+  { id: 1, theme: "AT A CAFÉ", emoji: "☕", description: "Find a café anywhere in the world. Snap your proof.", color: "#FFB800" },
+  { id: 2, theme: "AT A PARK", emoji: "🌳", description: "Touch grass. Literally. Any park, any country.", color: "#00FF94" },
   { id: 3, theme: "AT A GYM", emoji: "🏋️", description: "No pain, no staying in the game", color: "#FF6B00" },
   { id: 4, theme: "WITH A FRIEND", emoji: "🤝", description: "Prove you have at least one", color: "#FF1A1A" },
   { id: 5, theme: "OUTSIDE AT SUNRISE", emoji: "🌅", description: "Early humans get the prize pool", color: "#FFB800" },
@@ -24,6 +24,8 @@ export const MOCK_SUBMISSIONS = [
     fires: 24,
     status: "verified",
     accuracy: 91,
+    location: "Lisbon, Portugal",
+    gpsShared: true,
     mediaUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=400&fit=crop",
   },
   {
@@ -37,6 +39,8 @@ export const MOCK_SUBMISSIONS = [
     status: "verified",
     accuracy: 84,
     infiltrator: true,
+    location: "Tokyo, Japan",
+    gpsShared: true,
     mediaUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop",
   },
   {
@@ -49,6 +53,8 @@ export const MOCK_SUBMISSIONS = [
     fires: 3,
     status: "pending",
     accuracy: 72,
+    location: null,
+    gpsShared: false,
     mediaUrl: "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&h=400&fit=crop",
   },
   {
@@ -61,6 +67,8 @@ export const MOCK_SUBMISSIONS = [
     fires: 112,
     status: "verified",
     accuracy: 95,
+    location: "Nairobi, Kenya",
+    gpsShared: true,
     mediaUrl: "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=600&h=400&fit=crop",
   },
   {
@@ -74,6 +82,8 @@ export const MOCK_SUBMISSIONS = [
     status: "flagged",
     accuracy: 58,
     infiltrator: true,
+    location: "Berlin, Germany",
+    gpsShared: false,
     mediaUrl: "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=600&h=400&fit=crop",
   },
 ];

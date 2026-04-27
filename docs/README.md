@@ -9,11 +9,11 @@ A mobile-first World Mini App: **a daily real-world elimination game for verifie
 
 A cohort of N players (default 50) competes over ~5 days. Each day:
 
-1. Admin reveals the day's **location** (GPS pin + radius) and **prompt** (e.g., "selfie at the carousel")
+1. Admin reveals the day's **theme** (e.g., "AT A CAFÉ", "AT A PARK") and **prompt**
 2. The check-in window opens (e.g., 4 hours)
-3. Players check in with **three witnesses**:
-   - **GPS** — physically within the radius during the window
-   - **Photo** — capture a photo matching the prompt
+3. Players check in from **anywhere on Earth** with:
+   - **Photo** (required) — capture a photo matching the theme
+   - **GPS** (optional) — share your location for bonus credibility metadata
    - **Crowd** — community votes HUMAN / SUS (audit layer)
 4. The **first N arrivals** survive (e.g., first 25). Slow / no-show = eliminated.
 5. After the audit window, any survivor with too many "SUS" votes is disqualified and the next-ranked candidate is promoted.
@@ -24,12 +24,13 @@ The last verified human takes the on-chain prize pool.
 
 ### Why three witnesses
 
-Each witness is weak alone:
-- GPS spoofers exist
-- AI image generators exist
-- Sybil voting exists (mitigated separately by World ID)
+Photo + crowd voting is the primary trust layer. GPS is optional bonus credibility — shown as metadata on submission cards so voters can factor it in.
 
-Combined, the cheating cost is high — you'd have to spoof location **and** generate a convincing live-prompt photo **and** survive the crowd audit.
+- AI image generators exist → but the crowd catches them
+- Sybil voting exists → mitigated by World ID (one human, one vote)
+- GPS spoofing exists → but it's just metadata, not a gate
+
+The social deduction layer (HUMAN/SUS voting + Infiltrator mode) is what makes cheating costly.
 
 ## Pre-launch (waitlist)
 
@@ -68,7 +69,7 @@ COHORT_SIZE=50                         # max reservations before pre-launch clos
 
 # Daily round defaults
 DAILY_SURVIVAL_CAP=25                  # default first-N survivors per day
-CHECKIN_RADIUS_M=100                   # default GPS radius (meters)
+CHECKIN_RADIUS_M=100                   # default GPS radius (meters, only used when round has coords)
 
 # Admin tooling
 ADMIN_TOKEN=<random-long-secret>       # required header on /api/admin/* endpoints
@@ -103,7 +104,21 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
 The admin endpoints are gated by the `x-admin-token` header. Examples:
 
 ```bash
-# Reveal today's round
+# Reveal today's round (global — no GPS pin)
+curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
+  -H "x-admin-token: $ADMIN_TOKEN" \
+  -H "content-type: application/json" \
+  -d '{
+    "day": 1,
+    "name": "AT A CAFÉ",
+    "place_type": "AT A CAFÉ",
+    "survival_cap": 25,
+    "opens_at": "2026-05-02T15:00:00Z",
+    "closes_at": "2026-05-02T19:00:00Z",
+    "prompt": "Show us your café — anywhere in the world"
+  }'
+
+# Or with optional GPS pin for a local event
 curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
   -H "x-admin-token: $ADMIN_TOKEN" \
   -H "content-type: application/json" \
@@ -133,7 +148,7 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 
 1. Set `GAME_LAUNCH_AT` ~3 days out, `COHORT_SIZE=50`, `DAILY_SURVIVAL_CAP=25`
 2. Share the live URL → players reserve slots
-3. At launch time, run `/api/admin/round` with Day 1 location
+3. At launch time, run `/api/admin/round` with Day 1 theme (GPS coords optional)
 4. After the window closes, run `/api/admin/close-day`
 5. Repeat with shrinking caps (25 → 12 → 6 → 3 → 1) until one survivor
 

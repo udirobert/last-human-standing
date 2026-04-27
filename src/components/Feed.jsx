@@ -291,7 +291,14 @@ export default function Feed({ onBack }) {
                 {/* Content */}
                 <div className="p-4">
                   <p className="text-bone text-sm mb-1">"{sub.caption}"</p>
-                  <p className="text-dim font-mono text-xs mb-4">{sub.time}</p>
+                  <div className="flex items-center gap-2 mb-4">
+                    <p className="text-dim font-mono text-xs">{sub.time}</p>
+                    {sub.location ? (
+                      <span className="text-dim font-mono text-xs">· 📍 {sub.location}</span>
+                    ) : sub.gpsShared === false ? (
+                      <span className="text-dim font-mono text-xs">· 📍 Location not shared</span>
+                    ) : null}
+                  </div>
 
                   {/* Vote bar — hidden until you vote (blind voting) */}
                   <div className="mb-3">

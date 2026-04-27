@@ -876,7 +876,7 @@ app.get("/api/voter-stats/:address", async (req, res) => {
 });
 
 // =====================================================================
-// Cohort + geo game state (new mechanic: first-N-to-location)
+// Cohort + game state (theme-based check-ins, GPS optional)
 // =====================================================================
 
 function haversineMeters(lat1, lng1, lat2, lng2) {
@@ -1044,9 +1044,11 @@ app.get("/api/game/state", async (req, res) => {
             day: round.day,
             name: round.name,
             prompt: round.prompt ?? "",
-            lat: Number(round.lat),
-            lng: Number(round.lng),
+            placeType: round.place_type ?? round.name ?? "",
+            lat: round.lat != null ? Number(round.lat) : null,
+            lng: round.lng != null ? Number(round.lng) : null,
             radiusM: round.radius_m ?? CHECKIN_RADIUS_M,
+            gpsRequired: round.lat != null && round.lng != null,
             survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP,
             opensAt: round.opens_at,
             closesAt: round.closes_at,
@@ -1076,9 +1078,6 @@ app.post(
   }),
   async (req, res) => {
     const { lat, lng, accuracy } = req.body || {};
-    if (typeof lat !== "number" || typeof lng !== "number") {
-      return res.status(400).json({ error: "missing_coordinates" });
-    }
 
     try {
       const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
@@ -1095,14 +1094,12 @@ app.post(
       if (nowMs < opensAtMs) return res.status(400).json({ error: "round_not_open", opensAt: round.opens_at });
       if (nowMs > closesAtMs) return res.status(400).json({ error: "round_closed", closesAt: round.closes_at });
 
-      const distance = haversineMeters(lat, lng, Number(round.lat), Number(round.lng));
-      const radiusM = round.radius_m ?? CHECKIN_RADIUS_M;
-      if (distance > radiusM) {
-        return res.status(400).json({
-          error: "out_of_range",
-          distanceM: Math.round(distance),
-          radiusM,
-        });
+      // GPS is optional metadata — compute distance only when both user and round have coords
+      const hasUserGps = typeof lat === "number" && typeof lng === "number";
+      const hasRoundGps = round.lat != null && round.lng != null;
+      let distance = null;
+      if (hasUserGps && hasRoundGps) {
+        distance = haversineMeters(lat, lng, Number(round.lat), Number(round.lng));
       }
 
       // Check eligibility — must be paid + not already eliminated
@@ -1118,7 +1115,7 @@ app.post(
           alreadyCheckedIn: true,
           rank: existing.rank,
           survived: existing.survived,
-          distanceM: Math.round(existing.distance_m),
+          distanceM: existing.distance_m != null ? Math.round(existing.distance_m) : null,
           survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP,
         });
       }
@@ -1131,8 +1128,8 @@ app.post(
       const row = {
         day,
         address: req.user.address,
-        lat,
-        lng,
+        lat: hasUserGps ? lat : null,
+        lng: hasUserGps ? lng : null,
         accuracy_m: typeof accuracy === "number" ? accuracy : null,
         distance_m: distance,
         rank,
@@ -1162,8 +1159,9 @@ app.post(
           ok: true,
           rank: data.rank,
           survived: data.survived,
-          distanceM: Math.round(data.distance_m),
+          distanceM: data.distance_m != null ? Math.round(data.distance_m) : null,
           survivalCap: cap,
+          gpsShared: hasUserGps,
         });
       }
 
@@ -1173,8 +1171,9 @@ app.post(
         ok: true,
         rank,
         survived,
-        distanceM: Math.round(distance),
+        distanceM: distance != null ? Math.round(distance) : null,
         survivalCap: cap,
+        gpsShared: hasUserGps,
       });
     } catch (e) {
       res.status(400).json({ error: "checkin_location_failed", message: e instanceof Error ? e.message : "unknown_error" });
@@ -1237,16 +1236,17 @@ app.get("/api/checkins/today", async (req, res) => {
 
 // ---- Admin endpoints (token-gated)
 app.post("/api/admin/round", requireAdmin, async (req, res) => {
-  const { day, name, prompt, lat, lng, radius_m, survival_cap, opens_at, closes_at, status } = req.body || {};
-  if (typeof day !== "number" || typeof lat !== "number" || typeof lng !== "number" || !name || !opens_at || !closes_at) {
-    return res.status(400).json({ error: "missing_fields", required: ["day", "name", "lat", "lng", "opens_at", "closes_at"] });
+  const { day, name, prompt, place_type, lat, lng, radius_m, survival_cap, opens_at, closes_at, status } = req.body || {};
+  if (typeof day !== "number" || !name || !opens_at || !closes_at) {
+    return res.status(400).json({ error: "missing_fields", required: ["day", "name", "opens_at", "closes_at"] });
   }
   const row = {
     day,
     name,
     prompt: prompt ?? "",
-    lat,
-    lng,
+    place_type: place_type ?? name,
+    lat: typeof lat === "number" ? lat : null,
+    lng: typeof lng === "number" ? lng : null,
     radius_m: typeof radius_m === "number" ? radius_m : CHECKIN_RADIUS_M,
     survival_cap: typeof survival_cap === "number" ? survival_cap : DAILY_SURVIVAL_CAP,
     opens_at,

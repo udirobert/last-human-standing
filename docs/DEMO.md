@@ -2,7 +2,7 @@
 
 **Live app: https://lasthumanstanding.thisyearnofear.com**
 
-**Mechanic:** A real-world elimination game. Each day a location drops; first 25 people physically there with photo + community audit survive; cap shrinks until one human takes the pot.
+**Mechanic:** A real-world elimination game. Each day a **theme drops** (e.g. "AT A CAFÉ"); players anywhere on Earth snap a photo as proof. The community votes HUMAN or SUS. First 25 to check in survive; cap shrinks until one human takes the pot.
 
 ## 0) Pre-flight checks
 
@@ -31,8 +31,8 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 
 For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 
-4. **Home** — today's **location card**: name, distance from you, slots remaining (e.g., "12 / 25"), prompt, time window
-5. **Check in** → grant geolocation → app shows distance from target → take photo of the prompt → submit
+4. **Home** — today's **theme card**: challenge name, slots remaining (e.g., "12 / 25"), prompt, time window
+5. **Check in** → take a photo matching the theme → optionally share GPS for credibility → submit
 6. Server response: **"#7 of 25 surviving today"**
 7. **Audit feed** — vote HUMAN / SUS on photos; check voter accuracy and infiltrator reveals
 8. **Standings** — today's survivor list (rank, distance, photo thumb)
@@ -46,9 +46,9 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 
 ### Verification model
 
-- **GPS gate** — distance computed server-side via haversine; validated against `round.radius_m` and `opens_at` / `closes_at`
+- **Photo proof** (required) — primary verification; MiniKit Sign Message wraps the check-in payload; signature stored
+- **GPS metadata** (optional) — shown on submission cards as credibility signal; not a gate
 - **Rank assignment** — atomic on insert, unique constraint on `(day, address)`, ordered by `created_at`
-- **Photo proof** — MiniKit Sign Message wraps the check-in payload; signature stored
 - **Crowd audit** — community votes HUMAN / SUS; DQ-and-replace at audit close (any top-N photo crossing the SUS-vote threshold is flagged and the next-ranked candidate is promoted)
 - **Infiltrator mode** — gamified social deduction where players can opt-in to submit borderline photos for immunity
 - **World ID** — optional gate for both check-in and voting
@@ -56,20 +56,18 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 ### Admin tooling
 
 ```bash
-# Reveal Day 1
+# Reveal Day 1 (global theme — no GPS pin)
 curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
   -H "x-admin-token: $ADMIN_TOKEN" \
   -H "content-type: application/json" \
   -d '{
     "day": 1,
-    "name": "DUMBO Brooklyn",
-    "lat": 40.7033,
-    "lng": -73.9881,
-    "radius_m": 100,
+    "name": "AT A CAFÉ",
+    "place_type": "AT A CAFÉ",
     "survival_cap": 25,
     "opens_at": "2026-05-02T15:00:00Z",
     "closes_at": "2026-05-02T19:00:00Z",
-    "prompt": "Selfie at the carousel"
+    "prompt": "Show us your café — anywhere in the world"
   }'
 
 # Close a day → marks non-survivors as eliminated
@@ -90,7 +88,7 @@ curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
 
 ## 3) If something fails live (backup plan)
 
-- **GPS denied** → app shows clear instruction; admin can manually verify after-the-fact
+- **GPS denied** → no problem — GPS is optional; photo + community voting is the primary trust layer
 - **World App keys missing** → `DEV_BYPASS_VERIFICATION=true` keeps the demo flowing
 - **Browser demo mode** is the always-works path for UI walkthroughs
 - **Stale `/api/game/state`** → tap retry banner; falls back to last-known state
@@ -99,7 +97,7 @@ curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
 
 1. Day 0: open reservations (`GAME_LAUNCH_AT` ~3 days out)
 2. Share the URL; reach `COHORT_SIZE` reservations OR wait for countdown
-3. Day 1: `POST /api/admin/round` with the day's location/window/cap=25
+3. Day 1: `POST /api/admin/round` with the day's theme/window/cap=25 (GPS coords optional for local events)
 4. After window closes: `POST /api/admin/close-day { day: 1 }`
 5. Repeat with shrinking caps: 25 → 12 → 6 → 3 → 1
 6. Final survivor takes the pool; announce in chat

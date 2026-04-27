@@ -1,7 +1,7 @@
 # Last Human Standing
 
 ## Tagline
-A daily real-world elimination game for verified humans: be one of the first 25 at the location, prove it three ways, and split the prize pool — no bots allowed.
+A daily real-world elimination game for verified humans: snap a photo matching today's theme from anywhere on Earth, survive the community vote, and split the prize pool — no bots allowed.
 
 ## Live app
 **https://lasthumanstanding.thisyearnofear.com**
@@ -13,10 +13,10 @@ Online "community games" and IRL activations get botted instantly. Captchas fail
 ## The solution
 **Last Human Standing** is a mobile-first elimination game built for World App. A cohort of N humans (default 50) competes over ~5 days. Each day:
 
-1. **Location reveal** — admin drops a GPS pin + radius + time window + photo prompt
-2. **Three-witness check-in** — players prove they're there via:
-   - **GPS** (server-validated proximity in window)
-   - **Photo** (camera capture matching the prompt)
+1. **Theme reveal** — admin drops a theme/place type (e.g. "AT A CAFÉ") + time window + photo prompt
+2. **Three-witness check-in** — players prove they did the challenge via:
+   - **Photo** (required — camera capture matching the theme)
+   - **GPS** (optional — adds location credibility metadata for voters)
    - **Crowd** (community votes HUMAN / SUS on the photo)
 3. **First-N survive** — first 25 valid arrivals (by timestamp) survive; the rest are eliminated
 4. **Audit & replace** — at audit close, any survivor whose photo is flagged as SUS by the crowd is disqualified and the next-ranked candidate is promoted
@@ -34,12 +34,13 @@ This product only works at scale when:
 
 ## Three-witness verification (the core innovation)
 
-Each witness is weak alone:
-- GPS spoofers exist
-- AI image generators exist
-- Sybil voting exists (mitigated by World ID)
+Photo + crowd voting is the primary trust layer. GPS is optional bonus credibility — shown as metadata on submission cards so voters can factor it in.
 
-Combined, the cheating cost is high — you'd have to spoof location **and** generate a photo matching a live, never-seen-before prompt **and** survive the crowd vote.
+- AI image generators exist → but the crowd catches them
+- Sybil voting exists → mitigated by World ID (one human, one vote)
+- GPS spoofing exists → but it's just metadata, not a gate
+
+The social deduction layer (HUMAN/SUS voting + Infiltrator mode) makes cheating costly.
 
 ## World Stack usage
 
@@ -55,10 +56,10 @@ Combined, the cheating cost is high — you'd have to spoof location **and** gen
 
 1. Open the Mini App → see **prelaunch countdown + cohort fill counter**
 2. Tap **Reserve your slot** → SIWE → pay 1 WLD → "You're in. Day 1 starts in T-…"
-3. **Day 1 opens** → Home shows the location card (name, distance, slots remaining, prompt, time window)
-4. **Check in** → grant geolocation → take photo → submit → "**#7 of 25 surviving today**"
+3. **Day 1 opens** → Home shows the theme card (challenge, slots remaining, prompt, time window)
+4. **Check in** → take a photo matching the theme → optionally share GPS → submit → "**#7 of 25 surviving today**"
 5. **Audit feed** → vote on other players' photos
-6. **Standings** → today's survivor list with ranks and distances
+6. **Standings** → today's survivor list with ranks
 7. **Chat** → message a fellow survivor via World Chat
 8. **Day closes** → cap shrinks, next round revealed
 
@@ -73,7 +74,7 @@ Combined, the cheating cost is high — you'd have to spoof location **and** gen
 - Frontend: React + Vite + Tailwind + Framer Motion
 - Mini App SDK: `@worldcoin/minikit-js` v2, `@worldcoin/idkit` v2
 - Backend: Node.js + Express v5, `@supabase/supabase-js` v2, viem
-- Geo: server-side haversine; navigator.geolocation in client
+- Geo: server-side haversine (optional GPS metadata); navigator.geolocation in client (opt-in)
 - Infra: Hetzner VPS, PM2, Nginx, Let's Encrypt
 
 ## Enterprise value
@@ -83,7 +84,8 @@ A reusable **proof-of-presence** layer: brand activations, IRL events, retail lo
 - Audit DQ-and-replace turned ON in production (currently non-binding in pilot)
 - Multi-cohort scheduling (cohort #2 spawns when #1 ends)
 - AI-image-detection signal in the audit
-- Anti-spoof: reject low-accuracy GPS, detect impossible velocity, EXIF stripping + perceptual photo hashing
+- GeoGuesser-style "Guess the city" bonus vote on submissions
+- Anti-spoof: EXIF stripping + perceptual photo hashing
 - Sponsor-funded "Photo of the Day" bonus pool
 - World Chain attestations for check-in receipts
 - Multi-city cohorts
