@@ -48,7 +48,7 @@ The social deduction layer (HUMAN/SUS voting + Infiltrator mode) makes cheating 
 |---|---|
 | Wallet Authentication | `MiniKit.walletAuth` → server `verifySiweMessage` → httpOnly session cookie |
 | Pay | `MiniKit.pay` → server-verified against World Dev Portal API → on-chain pot on World Chain |
-| World Chat | `MiniKit.chat` — challenge / coordinate / trash-talk in-app |
+| World Chat | `MiniKit.chat` — Survivors Lobby (real-time broadcast chat in mini app), challenge DMs, infiltrator reveal announcements |
 | Sign Message | `MiniKit.signMessage` — cryptographic stamp on every check-in payload |
 | World ID | IDKit v4 Managed mode (RP-signature flow); optional gate for check-in & voting |
 
@@ -65,8 +65,8 @@ The social deduction layer (HUMAN/SUS voting + Infiltrator mode) makes cheating 
 
 ## Backend (fully deployed)
 - Express API on Hetzner: `https://lasthumanstanding.thisyearnofear.com/api/`
-- Endpoints: `/api/game/state`, `/api/checkin/location`, `/api/admin/round`, `/api/admin/close-day`, `/api/stats`, plus auth/pay/vote endpoints
-- Supabase (Postgres + Storage): `users`, `rounds`, `checkins`, `submissions`, `votes`
+- Endpoints: `/api/game/state`, `/api/checkin/location`, `/api/admin/round`, `/api/admin/close-day`, `/api/stats`, `/api/feed`, `/api/chat`, `/api/chat/messages`, `/api/cohort/roster`, `/api/referral-board`, `/api/waitlist`, `/api/voter-stats/:address`, plus auth/pay/vote endpoints
+- Supabase (Postgres + Storage): `users`, `rounds`, `checkins`, `submissions`, `votes`, `voter_stats`, `chat_messages`, `waitlist`
 - PM2 + Nginx + Let's Encrypt TLS
 - httpOnly session cookies, rate limiting on sensitive endpoints, secrets server-side only
 
@@ -79,6 +79,17 @@ The social deduction layer (HUMAN/SUS voting + Infiltrator mode) makes cheating 
 
 ## Enterprise value
 A reusable **proof-of-presence** layer: brand activations, IRL events, retail loyalty, civic engagement, conferences — anywhere you need cryptographic evidence that a real human was at a real place at a real time, with a crowd-audit fallback.
+
+## Key features built during hackathon
+- **Blind voting** — tallies hidden until you vote, removing anchoring bias
+- **🔥 Fire reactions** — non-binding style points on submissions
+- **🎭 Infiltrator Mode** — opt-in social deduction: submit borderline photos for immunity or double elimination risk
+- **Voter accuracy tracking** — `voter_stats` table tracks correct/incorrect votes, accuracy % displayed as badges
+- **Email collection + referral leaderboard** — viral growth loop with priority check-in rewards for top referrers
+- **Real lobby chat** — Survivors Lobby in World App with real messages (browser demo keeps fake bot messages)
+- **PWA support** — manifest + install prompt for daily game retention
+- **Error boundary + loading skeletons** — production-grade UX
+- **Global theme-based check-ins** — GPS optional, photo + community voting is the trust layer
 
 ## Roadmap
 - Audit DQ-and-replace turned ON in production (currently non-binding in pilot)
