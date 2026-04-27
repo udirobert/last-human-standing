@@ -1207,6 +1207,54 @@ app.get("/api/cohort/roster", async (req, res) => {
   }
 });
 
+// ---- Lobby Chat (persistent messages for mini app)
+const memChatMessages = []; // fallback: { id, address, username, message, created_at }
+
+app.post("/api/chat", requireAuth, async (req, res) => {
+  const { message } = req.body || {};
+  if (!message || typeof message !== "string" || message.trim().length === 0) {
+    return res.status(400).json({ error: "missing_message" });
+  }
+  const text = message.trim().slice(0, 500);
+  const address = req.user.address;
+
+  try {
+    if (supabaseAdmin) {
+      // Look up username
+      const { data: u } = await supabaseAdmin.from("users").select("username").eq("address", address).single();
+      const row = { address, username: u?.username || null, message: text };
+      const { data, error } = await supabaseAdmin.from("chat_messages").insert(row).select("*").single();
+      if (error) return res.status(400).json({ error: "chat_insert_failed", message: error.message });
+      return res.json({ ok: true, msg: data });
+    }
+    // In-memory fallback
+    const msg = { id: randomId(8), address, username: null, message: text, created_at: new Date().toISOString() };
+    memChatMessages.push(msg);
+    if (memChatMessages.length > 200) memChatMessages.shift();
+    return res.json({ ok: true, msg });
+  } catch (e) {
+    res.status(400).json({ error: "chat_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.get("/api/chat/messages", async (req, res) => {
+  const limit = Math.min(Number(req.query.limit) || 50, 100);
+  try {
+    if (supabaseAdmin) {
+      const { data, error } = await supabaseAdmin
+        .from("chat_messages")
+        .select("id, address, username, message, created_at")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) return res.status(400).json({ error: "chat_read_failed", message: error.message });
+      return res.json({ ok: true, messages: (data || []).reverse() });
+    }
+    return res.json({ ok: true, messages: memChatMessages.slice(-limit) });
+  } catch (e) {
+    res.status(400).json({ error: "chat_messages_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
 app.get("/api/checkins/today", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;

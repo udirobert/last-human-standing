@@ -260,8 +260,8 @@ export default function Onboarding({ onEnter }) {
             <div className="space-y-4 flex-1">
               {[
                 { n: "01", title: "ONE HUMAN, ONE SLOT", body: "World ID + wallet auth. No bots. No alts. Cohort caps at " + cohortSize + ".", icon: "🫂" },
-                { n: "02", title: "GO TO THE LOCATION", body: "Each day a GPS pin drops. Be one of the first " + (round?.survivalCap ?? 25) + " physically there in the time window.", icon: "📍" },
-                { n: "03", title: "PROVE YOU'RE THERE", body: "GPS proximity + a photo of the daily prompt. Other humans audit your check-in.", icon: "📸" },
+                { n: "02", title: "FIND THE DAILY THEME", body: "Each day a place type drops — a café, a park, a beach. Find one anywhere in the world. Be one of the first " + (round?.survivalCap ?? 25) + " to check in.", icon: "🌍" },
+                { n: "03", title: "PROVE YOU'RE HUMAN", body: "Snap a photo of the daily prompt. Other humans vote HUMAN or SUS on your check-in. Optional GPS adds credibility.", icon: "📸" },
                 { n: "04", title: "LAST ONE WINS", body: "Cap shrinks each day until one human remains. Survivor takes the on-chain pot.", icon: "🏆" },
               ].map((rule) => (
                 <motion.div

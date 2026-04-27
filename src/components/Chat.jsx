@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CHAT_MESSAGES } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
@@ -14,31 +14,22 @@ const BOT_RESPONSES = [
 ];
 
 export default function Chat({ onBack }) {
-  const [messages, setMessages] = useState(CHAT_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [toUser, setToUser] = useState('andy');
   const bottomRef = useRef();
   const inputRef = useRef();
-  const { sendWorldChat, user, isWorldApp } = useWorld();
+  const { sendWorldChat, user, isWorldApp, walletAuthed } = useWorld();
   const [rosterCount, setRosterCount] = useState(0);
+  const [sending, setSending] = useState(false);
   const onlineCount = isWorldApp ? rosterCount : 247;
 
-  // Fetch real roster count for mini app
+  // ---- Browser demo: seed fake messages + bot interval ----
   useEffect(() => {
-    if (!isWorldApp) return;
-    const load = () => fetch('/api/cohort/roster').then(r => r.json()).then(d => {
-      if (d?.roster) setRosterCount(d.roster.length);
-    }).catch(() => {});
-    load();
-    const id = setInterval(load, 30000);
-    return () => clearInterval(id);
+    if (isWorldApp) return;
+    setMessages(CHAT_MESSAGES);
   }, [isWorldApp]);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Occasionally add a bot message (browser demo only)
   useEffect(() => {
     if (isWorldApp) return;
     const interval = setInterval(() => {
@@ -58,39 +49,112 @@ export default function Chat({ onBack }) {
     return () => clearInterval(interval);
   }, [isWorldApp]);
 
+  // ---- Mini app: fetch real lobby messages ----
+  const loadMessages = useCallback(async () => {
+    if (!isWorldApp) return;
+    try {
+      const resp = await fetch('/api/chat/messages?limit=50');
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (Array.isArray(data?.messages)) {
+        setMessages(data.messages.map(m => ({
+          id: m.id,
+          user: m.username ? `@${m.username}` : (m.address?.slice(0, 10) + '…'),
+          msg: m.message,
+          time: timeAgo(m.created_at),
+          isSelf: user?.address && m.address?.toLowerCase() === user.address.toLowerCase(),
+          isVerified: true,
+        })));
+      }
+    } catch { /* ignore */ }
+  }, [isWorldApp, user?.address]);
+
+  useEffect(() => {
+    loadMessages();
+    if (!isWorldApp) return;
+    const id = setInterval(loadMessages, 5000);
+    return () => clearInterval(id);
+  }, [loadMessages, isWorldApp]);
+
+  // Fetch real roster count for mini app
+  useEffect(() => {
+    if (!isWorldApp) return;
+    const load = () => fetch('/api/cohort/roster').then(r => r.json()).then(d => {
+      if (d?.roster) setRosterCount(d.roster.length);
+    }).catch(() => {});
+    load();
+    const id = setInterval(load, 30000);
+    return () => clearInterval(id);
+  }, [isWorldApp]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   const handleSend = async () => {
     if (!input.trim()) return;
     const text = input.trim();
 
-    // Optimistically add the local message.
-    setMessages((m) => [
-      ...m,
-      {
+    if (isWorldApp && walletAuthed) {
+      // Real lobby message — post to server
+      setSending(true);
+      setMessages(m => [...m, {
         id: Date.now(),
         user: user?.displayName ?? 'you',
         msg: text,
         time: 'now',
         isSelf: true,
-      },
-    ]);
-    setInput('');
+      }]);
+      setInput('');
 
-    try {
-      await sendWorldChat({ to: toUser, message: text });
-    } catch (e) {
-      // If chat fails, add a visible system note.
-      setMessages((m) => [
-        ...m,
-        {
+      try {
+        await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ message: text }),
+        });
+        await loadMessages();
+      } catch (e) {
+        setMessages(m => [...m, {
+          id: Date.now() + 1,
+          user: 'system',
+          msg: `Failed to send: ${e instanceof Error ? e.message : 'unknown'}`,
+          time: 'now',
+        }]);
+      } finally {
+        setSending(false);
+        inputRef.current?.focus();
+      }
+
+      // Also send via World Chat DM if a recipient is specified
+      if (toUser.trim()) {
+        try { await sendWorldChat({ to: toUser, message: text }); } catch { /* optional */ }
+      }
+    } else {
+      // Browser demo: local-only message + World Chat attempt
+      setMessages(m => [...m, {
+        id: Date.now(),
+        user: user?.displayName ?? 'you',
+        msg: text,
+        time: 'now',
+        isSelf: true,
+      }]);
+      setInput('');
+
+      try {
+        await sendWorldChat({ to: toUser, message: text });
+      } catch (e) {
+        setMessages(m => [...m, {
           id: Date.now() + 1,
           user: 'system',
           msg: `Could not send via World Chat: ${e instanceof Error ? e.message : 'unknown error'}`,
           time: 'now',
           isNew: true,
-        },
-      ]);
-    } finally {
-      inputRef.current?.focus();
+        }]);
+      } finally {
+        inputRef.current?.focus();
+      }
     }
   };
 
@@ -100,6 +164,10 @@ export default function Chat({ onBack }) {
       handleSend();
     }
   };
+
+  const canSend = isWorldApp
+    ? input.trim().length > 0 && walletAuthed
+    : input.trim().length > 0 && toUser.trim().length > 0;
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body">
@@ -111,7 +179,9 @@ export default function Chat({ onBack }) {
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-3xl text-bone tracking-wide">WORLD CHAT</h2>
+              <h2 className="font-display text-3xl text-bone tracking-wide">
+                {isWorldApp ? 'SURVIVORS LOBBY' : 'WORLD CHAT'}
+              </h2>
               <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             </div>
             <div className="flex items-center gap-2">
@@ -126,10 +196,14 @@ export default function Chat({ onBack }) {
         </div>
       </div>
 
-      {/* XMTP badge */}
+      {/* Context banner */}
       <div className="mx-5 mt-3 bg-smoke border border-ember rounded-xl px-4 py-2 flex items-center gap-2">
         <span className="text-lg">💬</span>
-        <p className="text-dim text-xs font-mono">Sends via World Chat (XMTP) · Pick a recipient username</p>
+        <p className="text-dim text-xs font-mono">
+          {isWorldApp
+            ? 'Lobby chat — all survivors can see your messages. Tap send to broadcast.'
+            : 'Sends via World Chat (XMTP) · Pick a recipient username'}
+        </p>
       </div>
 
       {/* Messages */}
@@ -137,9 +211,20 @@ export default function Chat({ onBack }) {
         {/* Day divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />
-          <span className="font-mono text-dim text-xs">DAY {Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · TODAY</span>
+          <span className="font-mono text-dim text-xs">
+            {isWorldApp ? 'LOBBY · TODAY' : `DAY ${Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · TODAY`}
+          </span>
           <div className="flex-1 h-px bg-ember" />
         </div>
+
+        {/* Empty state for mini app */}
+        {isWorldApp && messages.length === 0 && (
+          <div className="text-center py-8">
+            <span className="text-4xl block mb-3">🫂</span>
+            <p className="text-bone font-mono text-sm mb-1">No messages yet</p>
+            <p className="text-dim font-mono text-xs">Be the first to say something to the survivors.</p>
+          </div>
+        )}
 
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -151,9 +236,10 @@ export default function Chat({ onBack }) {
             >
               {/* Avatar */}
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-mono ${
-                msg.isSelf ? 'bg-blood text-white' : 'bg-ember text-dim'
+                msg.user === 'system' ? 'bg-blood/30 text-blood'
+                : msg.isSelf ? 'bg-blood text-white' : 'bg-ember text-dim'
               }`}>
-                {msg.user.slice(2, 4).toUpperCase()}
+                {msg.user === 'system' ? '⚠' : (msg.user.startsWith('@') ? msg.user.slice(1, 3).toUpperCase() : msg.user.slice(2, 4).toUpperCase())}
               </div>
 
               <div className={`flex flex-col gap-0.5 max-w-xs ${msg.isSelf ? 'items-end' : ''}`}>
@@ -166,13 +252,15 @@ export default function Chat({ onBack }) {
                   <span className="font-mono text-dim text-xs">{msg.time}</span>
                 </div>
                 <div className={`rounded-2xl px-4 py-2.5 ${
-                  msg.isSelf
-                    ? 'bg-blood text-white rounded-tr-sm'
-                    : 'bg-smoke border border-ember text-bone rounded-tl-sm'
+                  msg.user === 'system'
+                    ? 'bg-blood/10 border border-blood/30 text-blood rounded-tl-sm'
+                    : msg.isSelf
+                      ? 'bg-blood text-white rounded-tr-sm'
+                      : 'bg-smoke border border-ember text-bone rounded-tl-sm'
                 }`}>
                   <p className="text-sm leading-relaxed">{msg.msg}</p>
                 </div>
-                {msg.isNew && !msg.isSelf && (
+                {(msg.isVerified || msg.isNew) && !msg.isSelf && msg.user !== 'system' && (
                   <div className="flex items-center gap-1">
                     <div className="w-1 h-1 rounded-full bg-neon animate-pulse" />
                     <span className="font-mono text-neon text-xs">World ID verified</span>
@@ -189,16 +277,19 @@ export default function Chat({ onBack }) {
       <div className="px-5 py-4 bg-ash border-t border-ember">
         <div className="flex gap-3 items-end">
           <div className="flex-1 space-y-2">
-            <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
-              <span className="font-mono text-dim text-xs">@</span>
-              <input
-                type="text"
-                value={toUser}
-                onChange={(e) => setToUser(e.target.value.replace(/^@/, ''))}
-                placeholder="username"
-                className="flex-1 bg-transparent text-bone text-xs font-mono focus:outline-none placeholder:text-dim"
-              />
-            </div>
+            {/* Recipient field — only for browser demo (1:1 DM) */}
+            {!isWorldApp && (
+              <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
+                <span className="font-mono text-dim text-xs">@</span>
+                <input
+                  type="text"
+                  value={toUser}
+                  onChange={(e) => setToUser(e.target.value.replace(/^@/, ''))}
+                  placeholder="username"
+                  className="flex-1 bg-transparent text-bone text-xs font-mono focus:outline-none placeholder:text-dim"
+                />
+              </div>
+            )}
             <div className="bg-smoke border border-ember rounded-2xl px-4 py-3 flex items-center gap-2">
               <input
                 ref={inputRef}
@@ -206,25 +297,38 @@ export default function Chat({ onBack }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="say something to the survivors..."
+                placeholder={isWorldApp ? 'message the lobby...' : 'say something to the survivors...'}
                 className="flex-1 bg-transparent text-bone text-sm font-body focus:outline-none placeholder:text-dim"
               />
             </div>
           </div>
           <button
             onClick={handleSend}
-            disabled={!input.trim() || !toUser.trim()}
+            disabled={!canSend || sending}
             className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg transition-all active:scale-90 ${
-              input.trim() && toUser.trim() ? 'bg-blood text-white' : 'bg-ember text-dim'
+              canSend && !sending ? 'bg-blood text-white' : 'bg-ember text-dim'
             }`}
           >
-            ↑
+            {sending ? '…' : '↑'}
           </button>
         </div>
-        <p className="text-dim font-mono text-xs mt-2 text-center">Uses MiniKit.chat() to send through World Chat</p>
+        <p className="text-dim font-mono text-xs mt-2 text-center">
+          {isWorldApp
+            ? 'Messages visible to all survivors · also sends via World Chat'
+            : 'Uses MiniKit.chat() to send through World Chat'}
+        </p>
       </div>
     </div>
   );
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return 'now';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  if (diff < 60000) return 'now';
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
 }
 
 function stringToColor(str) {

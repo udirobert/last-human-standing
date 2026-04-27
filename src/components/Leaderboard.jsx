@@ -336,7 +336,7 @@ export default function Leaderboard({ onBack }) {
             );
           })}
           <p className="text-dim text-xs font-mono text-center mt-3">
-            Each day: GPS pin drops, 4-hour window, first N to arrive survive.
+            Each day: a place type drops, 4-hour window, first N to check in survive.
           </p>
         </div>
       )}
