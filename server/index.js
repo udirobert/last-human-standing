@@ -56,6 +56,11 @@ function now() {
   return Date.now();
 }
 
+function log(event, data = {}) {
+  const entry = { time: new Date().toISOString(), event, ...data };
+  console.log(JSON.stringify(entry));
+}
+
 function randomId(bytes = 16) {
   return crypto.randomBytes(bytes).toString("hex");
 }
@@ -318,6 +323,19 @@ async function requireAuth(req, res, next) {
   req.user = { address: session.address };
   next();
 }
+
+app.get("/api/me", requireAuth, async (req, res) => {
+  log("me", { address: req.user.address });
+  const userRecord = await getUserRecord(req.user.address);
+  res.json({
+    ok: true,
+    address: req.user.address,
+    isPaid: Boolean(userRecord?.paid),
+    worldIdVerified: Boolean(userRecord?.world_id_verified),
+    username: userRecord?.username ?? null,
+    referralCode: userRecord?.referral_code ?? null,
+  });
+});
 
 app.post(
   "/api/nonce",

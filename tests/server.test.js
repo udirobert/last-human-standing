@@ -91,4 +91,53 @@ describe("server hardening", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toBe("invalid_json_body");
   });
+
+  it("GET /api/me returns 401 without a session", async () => {
+    const res = await request(app).get("/api/me");
+    expect(res.status).toBe(401);
+    expect(res.body.error).toBe("not_authenticated");
+  });
+
+  it("GET /api/game/state includes server-authoritative user state", async () => {
+    const res = await request(app).get("/api/game/state");
+    expect(res.status).toBe(200);
+    expect(res.body.you).toBeDefined();
+    expect(res.body.you.isAuthed).toBe(false);
+    expect(res.body.you.isPaid).toBe(false);
+    expect(res.body.you.isEliminated).toBe(false);
+    expect(typeof res.body.you.checkedInToday).toBe("boolean");
+  });
+
+  it("GET /api/health returns ok and supabase status", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(typeof res.body.supabase).toBe("boolean");
+    expect(typeof res.body.time).toBe("string");
+  });
+
+  it("POST /api/waitlist accepts valid email and returns referral code", async () => {
+    const res = await request(app)
+      .post("/api/waitlist")
+      .send({ email: `test-${Date.now()}@example.com` });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(typeof res.body.referralCode).toBe("string");
+    expect(res.body.referralCode).toMatch(/^LHS-/i);
+  });
+
+  it("POST /api/pay/browser-confirm accepts valid referral code", async () => {
+    const res = await request(app)
+      .post("/api/pay/browser-confirm")
+      .send({
+        address: "0x1234567890abcdef1234567890ABCDEF12345678",
+        txHash: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        referredBy: "LHS-user123-abc",
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.paid).toBe(true);
+  });
 });

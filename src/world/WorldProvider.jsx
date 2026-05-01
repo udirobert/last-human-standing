@@ -1,4 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/set-state-in-effect */
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
@@ -55,6 +56,33 @@ export function WorldProvider({ children }) {
 
   const prizePoolAddress = import.meta.env.VITE_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
 
+  const syncAuth = useCallback(async () => {
+    try {
+      const resp = await fetch("/api/me", { credentials: "include" });
+      if (!resp.ok) {
+        if (resp.status === 401) {
+          setWalletAuthed(false);
+          setEntryPaid(false);
+          setWorldIdVerified(false);
+          setUser(null);
+        }
+        return;
+      }
+      const json = await resp.json();
+      if (json.isPaid) setEntryPaid(true);
+      if (json.worldIdVerified) setWorldIdVerified(true);
+      if (json.username || json.address) {
+        setUser((u) => ({
+          address: json.address,
+          username: json.username ?? u?.username ?? null,
+          displayName: json.username ? `@${json.username}` : safeTruncateAddress(json.address),
+        }));
+      }
+    } catch {
+      // network error — keep local state
+    }
+  }, []);
+
   const walletAuth = useCallback(async () => {
     setLastError(null);
 
@@ -99,6 +127,7 @@ export function WorldProvider({ children }) {
 
       setWalletAuthed(true);
       setUser({ address, username, displayName: username ? `@${username}` : safeTruncateAddress(address) });
+      await syncAuth();
       return result;
     } catch (e) {
       setLastError(e instanceof Error ? e.message : "Wallet auth failed");
@@ -224,6 +253,11 @@ export function WorldProvider({ children }) {
     }
   }, []);
 
+  // Reconcile client state with server on mount; clears stale local flags
+  useEffect(() => {
+    syncAuth();
+  }, [syncAuth]);
+
   useEffect(() => {
     if (!isFarcaster) return;
     import("@farcaster/miniapp-sdk").then(({ sdk }) => {
@@ -292,6 +326,7 @@ export function WorldProvider({ children }) {
       sendWorldChat,
       markBrowserPaid,
       resetProgress,
+      syncAuth,
     ],
   );
 
