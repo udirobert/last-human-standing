@@ -1,8 +1,9 @@
-import { Suspense, lazy, useCallback, useEffect, useState, useRef } from 'react';
+import { Suspense, lazy, useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import Countdown from './Countdown.jsx';
+import BrowserWalletPay from '../wallet/BrowserWalletPay.jsx';
 const WorldIdVerify = lazy(() => import('../world/WorldIdVerify.jsx'));
 
 export default function Onboarding({ onEnter }) {
@@ -22,6 +23,8 @@ export default function Onboarding({ onEnter }) {
     lastError,
     walletAuth,
     payEntryFee,
+    markBrowserPaid,
+    prizePoolAddress,
   } = useWorld();
 
   const requireWorldId = import.meta.env.VITE_ENABLE_IDKIT === "true";
@@ -63,31 +66,13 @@ export default function Onboarding({ onEnter }) {
     if (paying || entryPaid) return;
     setPaying(true);
     try {
-      await payEntryFee({ amountWld: 1, referredBy: referredBy.current });
+      await payEntryFee({ amountWld: 1, referredBy });
     } finally {
       setPaying(false);
     }
   };
 
-  // In browser demo mode, auto-complete auth + pay when user reaches step 2
-  useEffect(() => {
-    if (step !== 2 || isWorldApp || !installAttempted) return;
-    const t = setTimeout(async () => {
-      if (!walletAuthed) {
-        try { await walletAuth(); } catch { /* ignore */ }
-      }
-    }, 400);
-    return () => clearTimeout(t);
-  }, [step, isWorldApp, installAttempted, walletAuthed]);
 
-  useEffect(() => {
-    if (step !== 2 || isWorldApp || !installAttempted) return;
-    if (!walletAuthed || entryPaid) return;
-    const t = setTimeout(async () => {
-      try { await payEntryFee({ amountWld: 1 }); } catch { /* ignore */ }
-    }, 800);
-    return () => clearTimeout(t);
-  }, [step, isWorldApp, installAttempted, walletAuthed, entryPaid]);
 
   // Splash CTA varies by phase + reservation status
   const youReserved = Boolean(you?.isPaid) || entryPaid;
@@ -100,10 +85,9 @@ export default function Onboarding({ onEnter }) {
   const [emailSaved, setEmailSaved] = useState(false);
   const [myRefCode, setMyRefCode] = useState(null);
 
-  // Read ?ref= from URL
-  const referredBy = useRef((() => {
+  const [referredBy] = useState(() => {
     try { return new URLSearchParams(window.location.search).get('ref') || null; } catch { return null; }
-  })());
+  });
 
   // Once verified, fetch the user's referral code from roster
   useEffect(() => {
@@ -114,21 +98,23 @@ export default function Onboarding({ onEnter }) {
     }).catch(() => {});
   }, [verified, user?.address]);
 
-  const handleSaveEmail = useCallback(async () => {
+  const handleSaveEmail = async () => {
     if (!emailInput || emailSaved) return;
     try {
       const resp = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailInput, referredBy: referredBy.current }),
+        body: JSON.stringify({ email: emailInput, referredBy }),
       });
       const json = await resp.json();
       if (json.ok) {
         setEmailSaved(true);
         if (json.referralCode) setMyRefCode(json.referralCode);
       }
-    } catch {}
-  }, [emailInput, emailSaved]);
+    } catch (error) {
+      void error;
+    }
+  };
 
   const clearErrorAndRetry = () => {
     // Clear error state and retry the last failed action
@@ -318,19 +304,36 @@ export default function Onboarding({ onEnter }) {
 
               {!verified ? (
                 <div className="w-full space-y-6">
-                  <div className="bg-smoke border border-ember rounded-3xl p-8 flex flex-col items-center gap-4">
-                    <div className="w-24 h-24 rounded-full border-2 border-neon flex items-center justify-center relative">
-                      <span className="text-5xl">🌐</span>
+                  {isWorldApp ? (
+                    <div className="bg-smoke border border-ember rounded-3xl p-8 flex flex-col items-center gap-4">
+                      <div className="w-24 h-24 rounded-full border-2 border-neon flex items-center justify-center relative">
+                        <span className="text-5xl">🌐</span>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-bone font-mono text-sm">Authenticate and pay to lock in your slot</p>
+                        <p className="text-dim text-xs mt-1">One human, one slot</p>
+                      </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-bone font-mono text-sm">
-                        {installAttempted && !isWorldApp
-                          ? "Open in World App for real auth + pay"
-                          : "Authenticate and pay to lock in your slot"}
-                      </p>
-                      <p className="text-dim text-xs mt-1">One human, one slot</p>
+                  ) : (
+                    <div className="bg-smoke border border-ember rounded-3xl p-6 space-y-4">
+                      <div className="text-center">
+                        <p className="text-bone font-display text-2xl tracking-wide mb-1">RESERVE YOUR SPOT</p>
+                        <p className="text-dim text-xs font-mono">Connect a wallet to pay 1 WLD on World Chain</p>
+                      </div>
+                      <BrowserWalletPay
+                        prizePoolAddress={prizePoolAddress}
+                        referredBy={referredBy}
+                        onPaid={(addr) => markBrowserPaid(addr)}
+                      />
+                      <div className="border-t border-ember/30 pt-3 text-center">
+                        <p className="text-dim text-[10px] font-mono">
+                          For full trust level, open in{' '}
+                          <a href="https://worldcoin.org/download" target="_blank" rel="noopener" className="text-amber underline">World App</a>
+                          {' '}and verify with World ID
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {lastError && (
                     <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 flex items-center gap-3">

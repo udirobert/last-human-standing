@@ -19,19 +19,19 @@ export default function Chat({ onBack }) {
   const [toUser, setToUser] = useState('andy');
   const bottomRef = useRef();
   const inputRef = useRef();
-  const { sendWorldChat, user, isWorldApp, walletAuthed } = useWorld();
+  const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
   const [rosterCount, setRosterCount] = useState(0);
   const [sending, setSending] = useState(false);
-  const onlineCount = isWorldApp ? rosterCount : 247;
+  const onlineCount = isMiniApp ? rosterCount : 247;
 
   // ---- Browser demo: seed fake messages + bot interval ----
   useEffect(() => {
-    if (isWorldApp) return;
+    if (isMiniApp) return;
     setMessages(CHAT_MESSAGES);
-  }, [isWorldApp]);
+  }, [isMiniApp]);
 
   useEffect(() => {
-    if (isWorldApp) return;
+    if (isMiniApp) return;
     const interval = setInterval(() => {
       if (Math.random() > 0.7) {
         const users = ['0xGhost_4459', '0xHuman_7734', '0xLastOnes_8823', '0xSurvivor_2291', '0xNewbie_9001', '0xElite_0042'];
@@ -47,11 +47,11 @@ export default function Chat({ onBack }) {
       }
     }, 5000);
     return () => clearInterval(interval);
-  }, [isWorldApp]);
+  }, [isMiniApp]);
 
   // ---- Mini app: fetch real lobby messages ----
   const loadMessages = useCallback(async () => {
-    if (!isWorldApp) return;
+    if (!isMiniApp) return;
     try {
       const resp = await fetch('/api/chat/messages?limit=50');
       if (!resp.ok) return;
@@ -67,25 +67,25 @@ export default function Chat({ onBack }) {
         })));
       }
     } catch { /* ignore */ }
-  }, [isWorldApp, user?.address]);
+  }, [isMiniApp, user?.address]);
 
   useEffect(() => {
     loadMessages();
-    if (!isWorldApp) return;
+    if (!isMiniApp) return;
     const id = setInterval(loadMessages, 5000);
     return () => clearInterval(id);
-  }, [loadMessages, isWorldApp]);
+  }, [loadMessages, isMiniApp]);
 
   // Fetch real roster count for mini app
   useEffect(() => {
-    if (!isWorldApp) return;
+    if (!isMiniApp) return;
     const load = () => fetch('/api/cohort/roster').then(r => r.json()).then(d => {
       if (d?.roster) setRosterCount(d.roster.length);
     }).catch(() => {});
     load();
     const id = setInterval(load, 30000);
     return () => clearInterval(id);
-  }, [isWorldApp]);
+  }, [isMiniApp]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -95,7 +95,7 @@ export default function Chat({ onBack }) {
     if (!input.trim()) return;
     const text = input.trim();
 
-    if (isWorldApp && walletAuthed) {
+    if (isMiniApp && walletAuthed) {
       // Real lobby message — post to server
       setSending(true);
       setMessages(m => [...m, {
@@ -165,7 +165,7 @@ export default function Chat({ onBack }) {
     }
   };
 
-  const canSend = isWorldApp
+  const canSend = isMiniApp
     ? input.trim().length > 0 && walletAuthed
     : input.trim().length > 0 && toUser.trim().length > 0;
 
@@ -180,12 +180,12 @@ export default function Chat({ onBack }) {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h2 className="font-display text-3xl text-bone tracking-wide">
-                {isWorldApp ? 'SURVIVORS LOBBY' : 'WORLD CHAT'}
+                {isMiniApp ? 'SURVIVORS LOBBY' : 'WORLD CHAT'}
               </h2>
               <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-mono text-dim text-xs">{onlineCount} {isWorldApp ? 'humans reserved' : 'survivors online'}</span>
+              <span className="font-mono text-dim text-xs">{onlineCount} {isMiniApp ? 'humans reserved' : 'survivors online'}</span>
               <span className="text-dim text-xs">·</span>
               <span className="font-mono text-dim text-xs">powered by XMTP</span>
             </div>
@@ -200,7 +200,7 @@ export default function Chat({ onBack }) {
       <div className="mx-5 mt-3 bg-smoke border border-ember rounded-xl px-4 py-2 flex items-center gap-2">
         <span className="text-lg">💬</span>
         <p className="text-dim text-xs font-mono">
-          {isWorldApp
+          {isMiniApp
             ? 'Lobby chat — all survivors can see your messages. Tap send to broadcast.'
             : 'Sends via World Chat (XMTP) · Pick a recipient username'}
         </p>
@@ -212,13 +212,13 @@ export default function Chat({ onBack }) {
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />
           <span className="font-mono text-dim text-xs">
-            {isWorldApp ? 'LOBBY · TODAY' : `DAY ${Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · TODAY`}
+            {isMiniApp ? 'LOBBY · TODAY' : `DAY ${Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · TODAY`}
           </span>
           <div className="flex-1 h-px bg-ember" />
         </div>
 
         {/* Empty state for mini app */}
-        {isWorldApp && messages.length === 0 && (
+        {isMiniApp && messages.length === 0 && (
           <div className="text-center py-8">
             <span className="text-4xl block mb-3">🫂</span>
             <p className="text-bone font-mono text-sm mb-1">No messages yet</p>
@@ -278,7 +278,7 @@ export default function Chat({ onBack }) {
         <div className="flex gap-3 items-end">
           <div className="flex-1 space-y-2">
             {/* Recipient field — only for browser demo (1:1 DM) */}
-            {!isWorldApp && (
+            {!isMiniApp && (
               <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
                 <span className="font-mono text-dim text-xs">@</span>
                 <input
@@ -297,7 +297,7 @@ export default function Chat({ onBack }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder={isWorldApp ? 'message the lobby...' : 'say something to the survivors...'}
+                placeholder={isMiniApp ? 'message the lobby...' : 'say something to the survivors...'}
                 className="flex-1 bg-transparent text-bone text-sm font-body focus:outline-none placeholder:text-dim"
               />
             </div>
@@ -313,7 +313,7 @@ export default function Chat({ onBack }) {
           </button>
         </div>
         <p className="text-dim font-mono text-xs mt-2 text-center">
-          {isWorldApp
+          {isMiniApp
             ? 'Messages visible to all survivors · also sends via World Chat'
             : 'Uses MiniKit.chat() to send through World Chat'}
         </p>

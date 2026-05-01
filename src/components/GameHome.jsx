@@ -9,44 +9,44 @@ import Countdown from './Countdown.jsx';
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
   const { user, isWorldApp } = useWorld();
   const {
-    phase, launchAt, currentDay, round, you,
+    phase, launchAt, currentDay, you,
     cohortSize, reservedCount, cohortFull,
   } = useRound();
   const { stats } = useStats();
 
   const [inviteText, setInviteText] = useState('📣 Share your invite link');
   const [email, setEmail] = useState('');
-  const [waitlistState, setWaitlistState] = useState(null); // null | { referralCode, referralCount }
   const [submitting, setSubmitting] = useState(false);
   const [pwaPrompt, setPwaPrompt] = useState(null);
   const [pwaDismissed, setPwaDismissed] = useState(false);
+  const [waitlistState, setWaitlistState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('lhs_waitlist');
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      void error;
+      return null;
+    }
+  });
 
-  // Capture PWA install prompt
   useEffect(() => {
-    const handler = (e) => { e.preventDefault(); setPwaPrompt(e); };
+    const handler = (e) => {
+      e.preventDefault();
+      setPwaPrompt(e);
+    };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
-  // Read ?ref= from URL on mount
   const [referredBy] = useState(() => {
     try { return new URLSearchParams(window.location.search).get('ref') || null; } catch { return null; }
   });
 
-  // Referral leaderboard
   const { data: refBoard } = usePolling('/api/referral-board', {
     intervalMs: 30_000,
     transform: (json) => json.board ?? [],
     initial: [],
   });
-
-  // Restore waitlist state from localStorage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem('lhs_waitlist');
-      if (saved) setWaitlistState(JSON.parse(saved));
-    } catch {}
-  }, []);
 
   const totalPlayers = stats?.players?.total ?? reservedCount ?? 0;
   const activePlayers = stats?.players?.active ?? null;
@@ -69,7 +69,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
-      {/* Header */}
       <div className="px-5 pt-12 pb-4">
         <div className="flex items-center justify-between mb-1">
           <div className="flex items-center gap-2">
@@ -83,7 +82,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
         <h1 className="font-display text-4xl text-bone tracking-wide animate-glow">LAST HUMAN STANDING</h1>
       </div>
 
-      {/* Pre-launch lobby */}
       {isPrelaunch && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mb-4">
           <div className="bg-smoke border border-amber/40 rounded-3xl p-6 relative overflow-hidden">
@@ -102,7 +100,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
               <p className="text-neon text-xs font-mono mt-3">✓ Cohort full · waiting for launch</p>
             )}
           </div>
-          {/* Email capture + referral */}
           {!waitlistState ? (
             <div className="mt-4 bg-smoke border border-ember rounded-2xl p-4">
               <p className="font-mono text-bone text-sm mb-1">🧍 Want in on Cohort #1?</p>
@@ -132,7 +129,11 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
                         setWaitlistState(state);
                         localStorage.setItem('lhs_waitlist', JSON.stringify(state));
                       }
-                    } catch {} finally { setSubmitting(false); }
+                    } catch (error) {
+                      void error;
+                    } finally {
+                      setSubmitting(false);
+                    }
                   }}
                   className="bg-amber text-ash font-mono text-sm px-4 py-2.5 rounded-xl active:scale-95 transition-transform"
                 >
@@ -175,178 +176,89 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
             </div>
           )}
 
-          {/* Referral leaderboard */}
           {refBoard.length > 0 && (
             <div className="mt-3 bg-smoke border border-ember rounded-2xl p-4">
-              <p className="font-mono text-dim text-xs tracking-widest uppercase mb-2">🏆 Referral Leaderboard</p>
-              {refBoard.slice(0, 5).map((r, i) => (
-                <div key={r.referralCode} className="flex items-center justify-between py-1.5 border-b border-ember/30 last:border-0">
-                  <span className="text-bone text-sm font-mono">{i + 1}. {r.name}</span>
-                  <span className="text-amber text-xs font-mono">{r.count} invite{r.count !== 1 ? 's' : ''}</span>
-                </div>
-              ))}
-              {waitlistState && (
-                <p className="text-dim text-xs font-mono mt-2">You: {waitlistState.referralCount} invite{waitlistState.referralCount !== 1 ? 's' : ''}</p>
-              )}
+              <div className="flex items-center justify-between mb-2">
+                <p className="font-display text-bone text-xl">REFERRAL BOARD</p>
+                <p className="font-mono text-dim text-xs">Top 5</p>
+              </div>
+              <div className="space-y-2">
+                {refBoard.slice(0, 5).map((row, i) => (
+                  <div key={`${row.referralCode}-${i}`} className="flex items-center justify-between bg-ash rounded-xl px-3 py-2">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="font-mono text-dim text-xs w-5">#{i + 1}</span>
+                      <span className="text-bone text-sm truncate">{row.name}</span>
+                    </div>
+                    <span className="font-mono text-amber text-xs">{row.count}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-
-          <p className="text-dim text-xs font-mono text-center mt-3">
-            Reserved players get the location pin the moment Day 1 opens.
-          </p>
         </motion.div>
       )}
 
-      {/* Live: eliminated banner */}
-      {isLive && isEliminated && (
-        <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mx-5 mb-4">
-          <div className="bg-blood/10 border border-blood/40 rounded-3xl p-6 text-center">
-            <p className="text-5xl mb-2">💀</p>
-            <p className="font-display text-4xl text-blood">YOU'RE OUT</p>
-            <p className="text-dim text-sm font-mono mt-1">
-              Eliminated on Day {you.eliminatedAtDay ?? '—'}
-            </p>
-            <p className="text-dim text-xs font-mono mt-3">
-              Stay engaged — vote in audit, chat with survivors.
-            </p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Live: today's round */}
-      {isLive && !isEliminated && (
-        <div className="mx-5 mb-4">
-          {!round ? (
-            <div className="bg-smoke border border-ember rounded-3xl p-6 text-center">
-              <p className="text-3xl mb-2">⏳</p>
-              <p className="font-display text-2xl text-bone">Day {currentDay} location not set</p>
-              <p className="text-dim text-xs font-mono mt-1">Admin will reveal soon. Check back.</p>
-            </div>
-          ) : (
-            <div className="bg-smoke border border-blood/40 rounded-3xl p-6 relative overflow-hidden">
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="font-mono text-blood text-xs tracking-widest uppercase mb-1">Day {round.day} · location</p>
-                  <h2 className="font-display text-3xl text-bone">{round.name}</h2>
-                </div>
-                <div className="bg-blood/20 border border-blood/40 rounded-xl px-3 py-2 text-right">
-                  <p className="text-dim text-[10px] font-mono uppercase">Slots</p>
-                  <p className="font-display text-2xl text-blood leading-none">
-                    {round.slotsRemaining}<span className="text-dim text-base">/{round.survivalCap}</span>
-                  </p>
-                </div>
-              </div>
-
-              {round.prompt && (
-                <p className="text-bone text-sm leading-relaxed mb-3">📸 <span className="text-dim">Prompt:</span> {round.prompt}</p>
-              )}
-
-              <div className="flex items-center gap-3 mb-4 text-xs font-mono text-dim">
-                <span>Window closes in</span>
-                <Countdown targetIso={round.closesAt} className="text-amber font-display text-base" />
-              </div>
-
-              {checkedInToday ? (
-                survivedToday === false ? (
-                  <div className="bg-blood/10 border border-blood/30 rounded-xl px-4 py-3 text-center">
-                    <p className="text-blood font-display text-xl">TOO LATE — RANK #{rankToday}</p>
-                    <p className="text-dim text-xs font-mono mt-1">Cap was {round.survivalCap}. You're out.</p>
-                  </div>
-                ) : (
-                  <div className="bg-neon/10 border border-neon/40 rounded-xl px-4 py-3 text-center">
-                    <p className="text-neon font-display text-2xl">✓ RANK #{rankToday} OF {round.survivalCap}</p>
-                    <p className="text-dim text-xs font-mono mt-1">You survived Day {round.day}. Locks at window close.</p>
-                  </div>
-                )
-              ) : (
-                <button
-                  onClick={onCheckIn}
-                  className="w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform text-ash bg-blood animate-pulse-blood"
-                >
-                  CHECK IN HERE
-                </button>
-              )}
-            </div>
-          )}
+      <div className="px-5 grid grid-cols-2 gap-3 mb-4">
+        <div className="bg-smoke rounded-2xl p-4 border border-ember">
+          <p className="text-dim text-xs font-mono mb-1">Prize Pool</p>
+          <p className="font-display text-2xl text-amber leading-none">{prizeDisplay}</p>
+          {prizeExplorer && <a href={prizeExplorer} target="_blank" rel="noopener" className="text-[10px] font-mono text-dim underline">view on chain</a>}
         </div>
-      )}
-
-      {/* Stats row */}
-      <div className="mx-5 grid grid-cols-2 gap-3 mb-4">
-        <button
-          onClick={onViewLeaderboard}
-          className="bg-smoke border border-ember rounded-2xl p-4 text-left active:scale-95 transition-transform"
-        >
-          <p className="text-dim font-mono text-xs tracking-wide uppercase mb-1">Humans Alive</p>
-          <p className="font-display text-3xl text-bone">{(activePlayers ?? reservedCount).toLocaleString()}</p>
-          <p className="text-dim text-xs mt-1">{eliminated.toLocaleString()} eliminated · standings →</p>
-        </button>
-        <button
-          onClick={() => prizeExplorer ? window.open(prizeExplorer, '_blank') : onViewLeaderboard()}
-          className="bg-smoke border border-ember rounded-2xl p-4 text-left active:scale-95 transition-transform"
-        >
-          <p className="text-dim font-mono text-xs tracking-wide uppercase mb-1">Prize Pool</p>
-          <p className="font-display text-3xl text-amber">{prizeDisplay}</p>
-          <p className="text-dim text-xs mt-1">{prizeExplorer ? 'On-chain · verify →' : 'World Chain · WLD'}</p>
-        </button>
+        <div className="bg-smoke rounded-2xl p-4 border border-ember">
+          <p className="text-dim text-xs font-mono mb-1">Humans Left</p>
+          <p className="font-display text-2xl text-bone leading-none">{activePlayers ?? '—'}</p>
+          <p className="text-[10px] font-mono text-dim mt-1">{eliminated} eliminated</p>
+        </div>
       </div>
 
-      {/* Audit / vote callout */}
-      {isLive && (
-        <button
-          onClick={onViewFeed}
-          className="mx-5 mb-3 bg-smoke border border-ember rounded-2xl p-4 text-left active:scale-95 transition-transform"
-        >
-          <p className="text-dim font-mono text-xs tracking-wide uppercase mb-1">Audit feed</p>
-          <p className="font-display text-xl text-bone">Vote on today's check-ins</p>
-          <p className="text-dim text-xs mt-1">Real / fake — help adjudicate the survivors →</p>
-        </button>
-      )}
+      <div className="px-5 space-y-3">
+        {isLive && !isEliminated && !checkedInToday && (
+          <button onClick={onCheckIn} className="w-full bg-blood text-bone font-display text-3xl tracking-widest py-4 rounded-2xl active:scale-95 transition-transform animate-pulse-blood">
+            CHECK IN NOW
+          </button>
+        )}
+        {isLive && checkedInToday && (
+          <div className="bg-smoke rounded-2xl p-4 border border-neon/30">
+            <p className="font-display text-2xl text-neon">YOU'RE IN</p>
+            <p className="text-dim font-mono text-xs mt-1">Rank #{rankToday ?? '—'} · {survivedToday ? 'Survived today' : 'At risk'}</p>
+          </div>
+        )}
+        {isEliminated && (
+          <div className="bg-smoke rounded-2xl p-4 border border-blood/30">
+            <p className="font-display text-2xl text-blood">ELIMINATED</p>
+            <p className="text-dim font-mono text-xs mt-1">You can still vote, spectate, and chat.</p>
+          </div>
+        )}
 
-      {/* PWA install prompt */}
-      {pwaPrompt && !pwaDismissed && !isWorldApp && (
-        <div className="mx-5 mb-3 bg-smoke border border-amber/40 rounded-2xl p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <p className="text-bone font-mono text-sm mb-0.5">📲 Add to Home Screen</p>
-              <p className="text-dim text-xs font-mono">Daily game — never miss a check-in window.</p>
-            </div>
-            <div className="flex gap-2 ml-3">
-              <button
-                onClick={() => setPwaDismissed(true)}
-                className="text-dim text-xs font-mono px-2 py-1"
-              >
-                Later
-              </button>
+        <div className="grid grid-cols-3 gap-3">
+          <button onClick={onViewFeed} className="bg-smoke border border-ember rounded-2xl py-4 text-bone font-mono text-sm">Feed</button>
+          <button onClick={onViewChat} className="bg-smoke border border-ember rounded-2xl py-4 text-bone font-mono text-sm">Chat</button>
+          <button onClick={onViewLeaderboard} className="bg-smoke border border-ember rounded-2xl py-4 text-bone font-mono text-sm">Board</button>
+        </div>
+
+        {pwaPrompt && !pwaDismissed && (
+          <div className="bg-smoke border border-amber/30 rounded-2xl p-4">
+            <p className="font-mono text-bone text-sm mb-2">Install this app for faster daily check-ins</p>
+            <div className="flex gap-2">
               <button
                 onClick={async () => {
-                  pwaPrompt.prompt();
-                  const { outcome } = await pwaPrompt.userChoice;
-                  if (outcome === 'accepted') setPwaDismissed(true);
+                  await pwaPrompt.prompt();
+                  setPwaPrompt(null);
                 }}
-                className="bg-amber text-ash font-mono text-xs px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+                className="flex-1 bg-amber text-ash font-mono text-sm py-2.5 rounded-xl"
               >
                 Install
               </button>
+              <button
+                onClick={() => setPwaDismissed(true)}
+                className="px-4 py-2.5 rounded-xl border border-ember text-dim font-mono text-sm"
+              >
+                Later
+              </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Chat preview */}
-      <button
-        onClick={onViewChat}
-        className="mx-5 bg-smoke border border-ember rounded-2xl p-4 text-left active:scale-95 transition-transform"
-      >
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-dim font-mono text-xs tracking-wide uppercase">World Chat</p>
-          <div className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full bg-neon animate-pulse" />
-            <span className="font-mono text-neon text-xs">{(activePlayers ?? reservedCount).toLocaleString()} reachable</span>
-          </div>
-        </div>
-        <p className="text-bone text-sm">Open coordination + trash talk →</p>
-      </button>
+        )}
+      </div>
     </div>
   );
 }

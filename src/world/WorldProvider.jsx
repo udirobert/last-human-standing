@@ -1,9 +1,20 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
 
-const WorldContext = createContext(null);
+function detectFarcaster() {
+  try {
+    if (typeof window !== "undefined" && (window.farcaster || window.parent !== window)) {
+      return Boolean(window.farcaster);
+    }
+  } catch (error) {
+    void error;
+  }
+  return false;
+}
 
+const WorldContext = createContext(null);
 const STORAGE_KEY = "lhs_world_state_v1";
 
 function safeTruncateAddress(address) {
@@ -16,7 +27,8 @@ function loadPersisted() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     return JSON.parse(raw);
-  } catch {
+  } catch (error) {
+    void error;
     return null;
   }
 }
@@ -24,8 +36,8 @@ function loadPersisted() {
 function persist(state) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {
-    // ignore
+  } catch (error) {
+    void error;
   }
 }
 
@@ -33,62 +45,23 @@ export function WorldProvider({ children }) {
   const persisted = loadPersisted();
 
   const [isWorldApp, setIsWorldApp] = useState(false);
+  const [isFarcaster, setIsFarcaster] = useState(false);
   const [installAttempted, setInstallAttempted] = useState(false);
-
   const [walletAuthed, setWalletAuthed] = useState(Boolean(persisted?.walletAuthed));
   const [entryPaid, setEntryPaid] = useState(Boolean(persisted?.entryPaid));
   const [worldIdVerified, setWorldIdVerified] = useState(Boolean(persisted?.worldIdVerified));
   const [user, setUser] = useState(persisted?.user ?? null);
-
   const [lastError, setLastError] = useState(null);
 
-  useEffect(() => {
-    // MiniKit must be installed before using commands. This only becomes “installed”
-    // when running inside World App.
-    try {
-      const appId = import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
-      MiniKit.install(appId ? { appId } : undefined);
-    } catch (e) {
-      // MiniKit.install() can throw in non-browser contexts; ignore.
-      console.warn("MiniKit.install failed", e);
-    } finally {
-      setInstallAttempted(true);
-      setIsWorldApp(MiniKit.isInstalled());
-    }
-  }, []);
+  const prizePoolAddress = import.meta.env.VITE_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
 
-  useEffect(() => {
-    persist({ walletAuthed, entryPaid, worldIdVerified, user });
-  }, [walletAuthed, entryPaid, worldIdVerified, user]);
-
-  const prizePoolAddress =
-    import.meta.env.VITE_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
-
-  async function walletAuth() {
+  const walletAuth = useCallback(async () => {
     setLastError(null);
 
-    // Browser/demo mode: try to acquire a real server session via the dev shim
-    // (only available when DEV_BYPASS_VERIFICATION=true on the server). If that
-    // fails (prod), keep the local-only demo state so the UI still progresses.
     if (!MiniKit.isInstalled()) {
-      try {
-        const resp = await fetch("/api/dev/login", { method: "POST", credentials: "include" });
-        if (resp.ok) {
-          const json = await resp.json();
-          setWalletAuthed(true);
-          setUser({
-            address: json.address,
-            username: null,
-            displayName: "Demo Human",
-          });
-          return { executedWith: "fallback", data: null };
-        }
-      } catch {
-        // ignore — fall through to UI-only demo state
-      }
-      setWalletAuthed(true);
-      setUser((u) => u ?? { address: null, username: null, displayName: "Demo Human" });
-      return { executedWith: "fallback", data: null };
+      const err = "Wallet auth requires World App in production mode.";
+      setLastError(err);
+      throw new Error(err);
     }
 
     const nonceResp = await fetch("/api/nonce", { method: "POST" });
@@ -106,60 +79,43 @@ export function WorldProvider({ children }) {
       });
 
       if (result.executedWith === "fallback") {
-        setWalletAuthed(true);
-        setUser((u) => u ?? { address: null, username: null, displayName: "Browser Dev" });
-        return result;
+        const err = "Open this mini app inside World App to sign in.";
+        setLastError(err);
+        throw new Error(err);
       }
 
       const verifyResp = await fetch("/api/complete-siwe", {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({
-          payload: result.data,
-          nonce,
-        }),
+        body: JSON.stringify({ payload: result.data, nonce }),
       });
       if (!verifyResp.ok) {
         const text = await verifyResp.text();
         throw new Error(`SIWE verification failed: ${text}`);
       }
       const { address } = await verifyResp.json();
-
-      // MiniKit may cache user metadata after auth (inside World App).
       const username = MiniKit.user?.username ?? null;
 
       setWalletAuthed(true);
-      setUser({
-        address,
-        username,
-        displayName: username ? `@${username}` : safeTruncateAddress(address),
-      });
-
+      setUser({ address, username, displayName: username ? `@${username}` : safeTruncateAddress(address) });
       return result;
     } catch (e) {
       setLastError(e instanceof Error ? e.message : "Wallet auth failed");
       throw e;
     }
-  }
+  }, []);
 
-  async function payEntryFee({
-    amountWld = 1,
-    description = "Entry fee to join the prize pool",
-    referredBy = null,
-  } = {}) {
+  const payEntryFee = useCallback(async ({ amountWld = 1, description = "Entry fee to join the prize pool", referredBy = null } = {}) => {
     setLastError(null);
 
-    // Browser/demo mode: don't block the product loop on backend auth/payment.
     if (!MiniKit.isInstalled()) {
-      setEntryPaid(true);
-      return { executedWith: "fallback", data: null };
+      const err = "Payment in this flow requires World App. Use browser wallet checkout below.";
+      setLastError(err);
+      throw new Error(err);
     }
 
-    const refResp = await fetch("/api/pay/reference", {
-      method: "POST",
-      credentials: "include",
-    });
+    const refResp = await fetch("/api/pay/reference", { method: "POST", credentials: "include" });
     if (!refResp.ok) {
       const text = await refResp.text();
       throw new Error(`Reference request failed: ${text}`);
@@ -170,12 +126,7 @@ export function WorldProvider({ children }) {
       const result = await MiniKit.pay({
         reference,
         to: prizePoolAddress,
-        tokens: [
-          {
-            symbol: Tokens.WLD,
-            token_amount: tokenToDecimals(amountWld, Tokens.WLD).toString(),
-          },
-        ],
+        tokens: [{ symbol: Tokens.WLD, token_amount: tokenToDecimals(amountWld, Tokens.WLD).toString() }],
         description,
         fallback: () => {
           alert("Open this mini app inside World App to complete payment.");
@@ -201,9 +152,9 @@ export function WorldProvider({ children }) {
       setLastError(e instanceof Error ? e.message : "Payment failed");
       throw e;
     }
-  }
+  }, [prizePoolAddress]);
 
-  async function signCheckIn(input) {
+  const signCheckIn = useCallback(async (input) => {
     setLastError(null);
     try {
       const message = typeof input === "string" ? input : input.message;
@@ -215,7 +166,6 @@ export function WorldProvider({ children }) {
       });
 
       if (result.executedWith !== "fallback") {
-        // Persist the signed check-in server-side (hackathon demo backend).
         await fetch("/api/checkin", {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -239,11 +189,10 @@ export function WorldProvider({ children }) {
       setLastError(e instanceof Error ? e.message : "Signing failed");
       throw e;
     }
-  }
+  }, [user]);
 
-  async function sendWorldChat({ to, message }) {
+  const sendWorldChat = useCallback(async ({ to, message }) => {
     setLastError(null);
-
     const recipients = Array.isArray(to) ? to : [to].filter(Boolean);
     if (recipients.length === 0) throw new Error("Missing recipient username");
 
@@ -260,11 +209,56 @@ export function WorldProvider({ children }) {
       setLastError(e instanceof Error ? e.message : "Chat failed");
       throw e;
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const appId = import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
+      MiniKit.install(appId ? { appId } : undefined);
+    } catch (e) {
+      console.warn("MiniKit.install failed", e);
+    } finally {
+      setInstallAttempted(true);
+      setIsWorldApp(MiniKit.isInstalled());
+      setIsFarcaster(detectFarcaster());
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isFarcaster) return;
+    import("@farcaster/miniapp-sdk").then(({ sdk }) => {
+      sdk.actions.ready();
+    }).catch(() => {});
+  }, [isFarcaster]);
+
+  useEffect(() => {
+    persist({ walletAuthed, entryPaid, worldIdVerified, user });
+  }, [walletAuthed, entryPaid, worldIdVerified, user]);
+
+  const platform = isWorldApp ? "world" : isFarcaster ? "farcaster" : "browser";
+  const isMiniApp = isWorldApp || isFarcaster;
+
+  const markBrowserPaid = useCallback((address) => {
+    setWalletAuthed(true);
+    setEntryPaid(true);
+    if (address) setUser((u) => u ?? { address, username: null, displayName: safeTruncateAddress(address) });
+  }, []);
+
+  const resetProgress = useCallback(() => {
+    setWalletAuthed(false);
+    setEntryPaid(false);
+    setWorldIdVerified(false);
+    setUser(null);
+    setLastError(null);
+    persist({ walletAuthed: false, entryPaid: false, worldIdVerified: false, user: null });
+  }, []);
 
   const value = useMemo(
     () => ({
       isWorldApp,
+      isFarcaster,
+      isMiniApp,
+      platform,
       installAttempted,
       walletAuthed,
       entryPaid,
@@ -276,17 +270,29 @@ export function WorldProvider({ children }) {
       payEntryFee,
       signCheckIn,
       sendWorldChat,
-      resetProgress: () => {
-        setWalletAuthed(false);
-        setEntryPaid(false);
-        setWorldIdVerified(false);
-        setUser(null);
-        setLastError(null);
-        persist({ walletAuthed: false, entryPaid: false, worldIdVerified: false, user: null });
-      },
+      markBrowserPaid,
+      resetProgress,
       setWorldIdVerified: (val) => setWorldIdVerified(Boolean(val)),
     }),
-    [isWorldApp, installAttempted, walletAuthed, entryPaid, worldIdVerified, user, lastError, prizePoolAddress],
+    [
+      isWorldApp,
+      isFarcaster,
+      isMiniApp,
+      platform,
+      installAttempted,
+      walletAuthed,
+      entryPaid,
+      worldIdVerified,
+      user,
+      lastError,
+      prizePoolAddress,
+      walletAuth,
+      payEntryFee,
+      signCheckIn,
+      sendWorldChat,
+      markBrowserPaid,
+      resetProgress,
+    ],
   );
 
   return <WorldContext.Provider value={value}>{children}</WorldContext.Provider>;

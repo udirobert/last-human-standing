@@ -1,28 +1,28 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useWorld } from "./WorldProvider.jsx";
 
 const RoundContext = createContext(null);
-
+const DEFAULT_YOU = {
+  isAuthed: false,
+  isPaid: false,
+  isEliminated: false,
+  eliminatedAtDay: null,
+  checkedInToday: false,
+  rankToday: null,
+  survivedToday: null,
+  distanceToday: null,
+};
 const DEFAULT_STATE = {
-  phase: "prelaunch",          // 'prelaunch' | 'live' | 'ended'
+  phase: "prelaunch",
   launchAt: null,
   cohortSize: 50,
   reservedCount: 0,
   cohortFull: false,
   currentDay: null,
-  round: null,                 // { day, name, prompt, lat, lng, radiusM, survivalCap, opensAt, closesAt, status, checkinCount, slotsRemaining }
-  you: {
-    isAuthed: false,
-    isPaid: false,
-    isEliminated: false,
-    eliminatedAtDay: null,
-    checkedInToday: false,
-    rankToday: null,
-    survivedToday: null,
-    distanceToday: null,
-  },
+  round: null,
+  you: DEFAULT_YOU,
   defaults: { survivalCap: 25, radiusM: 100 },
-  // Audit defaults (non-binding in pilot — kept for Feed UI compatibility)
   verification: {
     voteQuorum: 25,
     voteQuorumNormal: 25,
@@ -35,9 +35,8 @@ const DEFAULT_STATE = {
 
 export function RoundProvider({ children }) {
   const { installAttempted } = useWorld();
-
   const [state, setState] = useState(DEFAULT_STATE);
-  const [status, setStatus] = useState("idle"); // idle | loading | ready | error
+  const [status, setStatus] = useState("idle");
   const [error, setError] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -63,7 +62,7 @@ export function RoundProvider({ children }) {
           cohortFull: Boolean(data.cohortFull),
           currentDay: data.currentDay ?? null,
           round: data.round ?? null,
-          you: { ...DEFAULT_STATE.you, ...(data.you ?? {}) },
+          you: { ...DEFAULT_YOU, ...(data.you ?? {}) },
           defaults: { ...DEFAULT_STATE.defaults, ...(data.defaults ?? {}) },
           verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },
         });
@@ -85,7 +84,6 @@ export function RoundProvider({ children }) {
   }, [installAttempted, refreshKey]);
 
   const refresh = useCallback(() => setRefreshKey((k) => k + 1), []);
-
   const value = useMemo(
     () => ({
       ...state,

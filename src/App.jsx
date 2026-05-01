@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef, Component } from 'react';
+import { useState, useCallback, useEffect, Component } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
@@ -73,15 +73,13 @@ export default function App() {
   const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN;
 
   // Simulate unread chat badge when user is away from chat (browser demo feel)
-  const screenRef = useRef(screen);
-  screenRef.current = screen;
   useEffect(() => {
-    if (!isInGame) return;
+    if (!isInGame || screen === SCREENS.CHAT) return;
     const id = setInterval(() => {
-      if (screenRef.current !== SCREENS.CHAT) markBadge('chat');
+      if (screen !== SCREENS.CHAT) markBadge('chat');
     }, 12_000);
     return () => clearInterval(id);
-  }, [isInGame, markBadge]);
+  }, [isInGame, markBadge, screen]);
 
   return (
     <ErrorBoundary>

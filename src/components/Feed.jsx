@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_SUBMISSIONS, TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
@@ -17,30 +17,33 @@ const STATUS_LABELS = {
   flagged: '⚠️ Flagged',
 };
 
-// Fallback photo emojis (only used when no mediaUrl)
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
-  const { walletAuthed, entryPaid, worldIdVerified, sendWorldChat, isWorldApp } = useWorld();
+  const { walletAuthed, entryPaid, worldIdVerified, sendWorldChat, isMiniApp } = useWorld();
   const { verification } = useRound();
-  const [submissions, setSubmissions] = useState(isWorldApp ? [] : MOCK_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState(isMiniApp ? [] : MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
   const [fired, setFired] = useState({});
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(isWorldApp);
+  const [loading, setLoading] = useState(isMiniApp);
+  const [challengeToast, setChallengeToast] = useState(null);
 
   const requireWorldIdToVote = import.meta.env.VITE_REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
-  const loadFeed = async () => {
-    if (!(walletAuthed && entryPaid)) { setLoading(false); return; }
+  const loadFeed = useCallback(async () => {
+    if (!(walletAuthed && entryPaid)) {
+      setLoading(false);
+      return;
+    }
     try {
       const resp = await fetch("/api/feed", { credentials: "include" });
       if (!resp.ok) return;
       const data = await resp.json();
       if (Array.isArray(data?.submissions)) {
-        if (!isWorldApp && data.submissions.length === 0) return; // Keep mock data in demo
+        if (!isMiniApp && data.submissions.length === 0) return;
         setSubmissions(
           data.submissions.map((s) => ({
             id: s.id,
@@ -59,14 +62,19 @@ export default function Feed({ onBack }) {
           })),
         );
       }
-    } catch {
-      // keep mock feed in browser demo; mini app stays empty
+    } catch (error) {
+      void error;
     } finally {
       setLoading(false);
     }
-  };
+  }, [walletAuthed, entryPaid, isMiniApp]);
 
-  useEffect(() => { loadFeed(); }, [walletAuthed, entryPaid]);
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      loadFeed();
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [loadFeed]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -77,16 +85,15 @@ export default function Feed({ onBack }) {
   const handleVote = async (id, type) => {
     if (requireWorldIdToVote && !worldIdVerified) return;
     if (voted[id]) return;
-    setVoted(v => ({ ...v, [id]: type }));
-    setSubmissions(subs =>
-      subs.map(s =>
+    setVoted((v) => ({ ...v, [id]: type }));
+    setSubmissions((subs) =>
+      subs.map((s) =>
         s.id === id
           ? { ...s, votes: { ...s.votes, [type]: s.votes[type] + 1 } }
-          : s
-      )
+          : s,
+      ),
     );
 
-    // Best effort: also send to backend when authenticated.
     if (walletAuthed && entryPaid) {
       try {
         const resp = await fetch("/api/vote", {
@@ -112,13 +119,11 @@ export default function Feed({ onBack }) {
             );
           }
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        void error;
       }
     }
   };
-
-  const [challengeToast, setChallengeToast] = useState(null);
 
   const handleChallenge = async (sub) => {
     if (!sub?.username) return;
@@ -131,318 +136,125 @@ export default function Feed({ onBack }) {
     await sendWorldChat({ to: sub.username, message: msg });
   };
 
-  const filtered = filter === 'all' ? submissions : submissions.filter(s => s.status === filter);
+  const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
-      {/* Header */}
       <div className="px-5 pt-12 pb-4 sticky top-0 bg-ash z-10">
         <div className="flex items-center gap-4 mb-4">
           <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
             <span className="text-dim text-lg">←</span>
           </button>
-          <div className="flex-1">
-            <h2 className="font-display text-3xl text-bone tracking-wide">TODAY'S FEED</h2>
-            <p className="font-mono text-dim text-xs">{TODAY_THEME.theme} · {submissions.length} submissions</p>
+          <div>
+            <h2 className="font-display text-3xl text-bone tracking-wide">AUDIT FEED</h2>
+            <p className="font-mono text-dim text-xs">Vote HUMAN or SUS</p>
           </div>
-          <button
-            onClick={handleRefresh}
-            disabled={refreshing}
-            className={`w-10 h-10 rounded-xl bg-smoke flex items-center justify-center transition-transform ${
-              refreshing ? 'animate-spin' : 'active:scale-90'
-            }`}
-          >
-            <span className="text-dim text-lg">↻</span>
-          </button>
         </div>
 
-        {/* Filter tabs */}
-        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-          {['all', 'pending', 'verified', 'flagged'].map(f => (
+        <div className="flex gap-2 mb-3">
+          {['all', 'pending', 'verified', 'flagged'].map((key) => (
             <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`flex-shrink-0 px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wider transition-all ${
-                filter === f
-                  ? 'bg-blood text-bone'
-                  : 'bg-smoke text-dim border border-ember'
-              }`}
+              key={key}
+              onClick={() => setFilter(key)}
+              className={`px-3 py-1.5 rounded-full text-xs font-mono border ${filter === key ? 'border-bone text-bone' : 'border-ember text-dim'}`}
             >
-              {f}
+              {key.toUpperCase()}
             </button>
           ))}
+          <button onClick={handleRefresh} className="ml-auto px-3 py-1.5 rounded-full text-xs font-mono border border-ember text-dim">
+            {refreshing ? '...' : 'REFRESH'}
+          </button>
         </div>
       </div>
 
-      {/* Instructions */}
-      <div className="mx-5 mb-4 bg-amber/10 border border-amber/30 rounded-2xl px-4 py-3 flex items-center gap-3">
-        <span className="text-xl">🗳️</span>
-        <p className="text-amber text-xs font-mono">
-          Vote blind — tallies reveal after you vote. Finalizes at {verification.voteQuorum} votes
-          {verification.voteQuorum !== verification.voteQuorumNormal ? " (low activity today)" : ""}. Hit 🔥 for style.
-          {' '}Watch for 🎭 Infiltrators — catch them for Detective points!
-        </p>
-      </div>
-
-      {requireWorldIdToVote && !worldIdVerified && (
-        <div className="mx-5 mb-4 bg-smoke border border-ember rounded-2xl px-4 py-3">
-          <p className="text-dim text-xs font-mono text-center">
-            Verify World ID to vote (prevents bot brigading).
-          </p>
-        </div>
-      )}
-
-      {/* Submissions */}
       <div className="px-5 space-y-4">
-        {loading && (
-          [0, 1, 2].map((i) => (
-            <div key={i} className="bg-smoke border border-ember rounded-3xl overflow-hidden animate-pulse">
-              <div className="h-[200px] bg-ember/20" />
-              <div className="p-4 space-y-3">
-                <div className="h-4 bg-ember/20 rounded w-3/4" />
-                <div className="h-3 bg-ember/20 rounded w-1/3" />
-                <div className="h-8 bg-ember/20 rounded" />
-              </div>
-            </div>
-          ))
+        {loading && submissions.length === 0 && (
+          <div className="text-dim font-mono text-sm text-center py-12">Loading feed…</div>
         )}
-        {!loading && filtered.length === 0 && isWorldApp && (
-          <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
-            <span className="text-4xl block mb-3">📋</span>
-            <p className="text-bone font-display text-lg mb-2">Audit feed opens on Day 1</p>
-            <p className="text-dim font-mono text-xs leading-relaxed">
-              Each day, survivors check in from a real-world location and submit photo proof.
-              The community votes on every submission — verified or flagged.
-              Flagged players risk elimination.
-            </p>
-          </div>
+
+        {!loading && filtered.length === 0 && (
+          <div className="text-dim font-mono text-sm text-center py-12">No submissions yet for {TODAY_THEME.theme}.</div>
         )}
+
         <AnimatePresence>
-          {filtered.map((sub, i) => {
-            const totalVotes = sub.votes.real + sub.votes.fake;
-            const realPct = totalVotes > 0 ? (sub.votes.real / totalVotes) * 100 : 0;
-            const hasVoted = voted[sub.id];
-            const hasFired = fired[sub.id];
-            const quorum = sub.voteQuorum ?? verification.voteQuorum ?? 25;
-            const needsVotes = Math.max(0, quorum - totalVotes);
+          {filtered.map((sub, idx) => {
+            const totalVotes = (sub.votes?.real || 0) + (sub.votes?.fake || 0);
+            const quorum = sub.voteQuorum || verification.voteQuorum;
+            const progress = Math.min(100, Math.round((totalVotes / quorum) * 100));
+            const emoji = PHOTO_EMOJIS[idx % PHOTO_EMOJIS.length];
+            const isExpanded = expandedId === sub.id;
 
             return (
               <motion.div
                 key={sub.id}
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.07 }}
+                exit={{ opacity: 0, y: -12 }}
                 className="bg-smoke border border-ember rounded-3xl overflow-hidden"
               >
-                {/* Photo area */}
-                <div
-                  className="relative flex items-center justify-center"
-                  style={{
-                    height: '200px',
-                    background: sub.mediaUrl
-                      ? `url(${sub.mediaUrl}) center/cover no-repeat`
-                      : `linear-gradient(135deg, ${TODAY_THEME.color}20, #1A1A1A 60%)`,
-                  }}
-                >
-                  {!sub.mediaUrl && (
-                    <span className="text-8xl opacity-50">{PHOTO_EMOJIS[i % PHOTO_EMOJIS.length]}</span>
-                  )}
-
-                  {/* Avatar */}
-                  {sub.avatar && (
-                    <img
-                      src={sub.avatar}
-                      alt=""
-                      className="absolute top-3 left-3 w-8 h-8 rounded-full border border-ember bg-smoke"
-                    />
-                  )}
-
-                  {/* Status badge */}
-                  <div
-                    className="absolute top-3 right-3 rounded-full px-3 py-1 text-xs font-mono"
-                    style={{
-                      background: `${STATUS_COLORS[sub.status]}20`,
-                      border: `1px solid ${STATUS_COLORS[sub.status]}60`,
-                      color: STATUS_COLORS[sub.status]
-                    }}
-                  >
-                    {STATUS_LABELS[sub.status]}
-                  </div>
-
-                  {/* World ID badge */}
-                  <div className="absolute bottom-3 left-3 bg-ash/80 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1.5">
-                    <span className="text-neon text-xs">🌐</span>
-                    <span className="font-mono text-neon text-xs">{sub.username ? `@${sub.username}` : sub.user}</span>
-                    {sub.accuracy != null && (
-                      <span className={`font-mono text-[10px] ml-1 ${sub.accuracy >= 80 ? 'text-neon' : sub.accuracy >= 60 ? 'text-amber' : 'text-blood'}`}>
-                        🎯{sub.accuracy}%
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Infiltrator reveal — only shown after finalization */}
-                  {sub.infiltrator && sub.status !== 'pending' && (
-                    <div className="absolute bottom-3 right-3 bg-purple-500/20 backdrop-blur-sm border border-purple-400/40 rounded-full px-2 py-1">
-                      <span className="font-mono text-purple-300 text-xs">🎭 Infiltrator</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Content */}
-                <div className="p-4">
-                  <p className="text-bone text-sm mb-1">"{sub.caption}"</p>
-                  <div className="flex items-center gap-2 mb-4">
-                    <p className="text-dim font-mono text-xs">{sub.time}</p>
-                    {sub.location ? (
-                      <span className="text-dim font-mono text-xs">· 📍 {sub.location}</span>
-                    ) : sub.gpsShared === false ? (
-                      <span className="text-dim font-mono text-xs">· 📍 Location not shared</span>
-                    ) : null}
-                  </div>
-
-                  {/* Vote bar — hidden until you vote (blind voting) */}
-                  <div className="mb-3">
-                    {hasVoted || sub.status !== "pending" ? (
-                      <>
-                        <div className="flex justify-between text-xs font-mono mb-1">
-                          <span className="text-neon">✅ {sub.votes.real} human</span>
-                          <span className="text-blood">🤖 {sub.votes.fake} sus</span>
-                        </div>
-                        <div className="h-1.5 bg-ember rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-500"
-                            style={{
-                              width: `${realPct}%`,
-                              background: realPct > 70 ? '#00FF94' : realPct > 40 ? '#FFB800' : '#FF1A1A'
-                            }}
-                          />
-                        </div>
-                        <div className="flex justify-between mt-2">
-                          <span className="text-dim font-mono text-xs">
-                            {sub.status === "pending"
-                              ? `${needsVotes} more votes to finalize (${totalVotes}/${quorum})`
-                              : `Finalized at ${totalVotes} votes`}
-                          </span>
-                          <span className="text-dim font-mono text-xs">
-                            {sub.status === "verified" ? "✅ verified" : sub.status === "flagged" ? "⚠️ flagged" : "⏳ pending"}
-                          </span>
-                        </div>
-
-                        {/* Infiltrator outcome — shown after finalization */}
-                        {sub.infiltrator && sub.status !== 'pending' && (
-                          <div className={`mt-2 rounded-lg px-3 py-2 text-xs font-mono ${
-                            sub.status === 'verified'
-                              ? 'bg-purple-500/10 border border-purple-400/30 text-purple-300'
-                              : 'bg-neon/10 border border-neon/30 text-neon'
-                          }`}>
-                            {sub.status === 'verified'
-                              ? '🎭 Infiltrator got away with it! Earned immunity.'
-                              : '🎭 Infiltrator CAUGHT! Double elimination risk.'}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="flex items-center gap-2 py-2">
-                        <span className="text-dim font-mono text-xs">👁️ Vote to reveal the tally</span>
-                        <span className="text-dim font-mono text-xs ml-auto">{totalVotes} vote{totalVotes !== 1 ? 's' : ''} so far</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Vote buttons */}
-                  {hasVoted ? (
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 flex items-center justify-center gap-2 py-2 bg-ember rounded-xl">
-                        <span className="text-dim font-mono text-xs">
-                          You voted <span className={hasVoted === 'real' ? 'text-neon' : 'text-blood'}>
-                            {hasVoted === 'real' ? '✅ HUMAN' : '🤖 SUS'}
-                          </span>
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => {
-                          if (hasFired) return;
-                          setFired(f => ({ ...f, [sub.id]: true }));
-                          setSubmissions(subs => subs.map(s => s.id === sub.id ? { ...s, fires: (s.fires || 0) + 1 } : s));
-                        }}
-                        className={`px-4 py-2 rounded-xl border font-mono text-sm transition-all active:scale-90 ${
-                          hasFired
-                            ? 'bg-amber/20 border-amber/60 text-amber'
-                            : 'bg-smoke border-ember text-dim hover:border-amber/40'
-                        }`}
-                      >
-                        🔥 {sub.fires || 0}
-                      </button>
-                    </div>
+                <button onClick={() => setExpandedId(isExpanded ? null : sub.id)} className="w-full text-left">
+                  {sub.mediaUrl ? (
+                    <img src={sub.mediaUrl} alt={sub.caption} className="w-full h-64 object-cover" />
                   ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => handleVote(sub.id, 'real')}
-                        disabled={requireWorldIdToVote && !worldIdVerified}
-                        className="py-3 rounded-xl bg-neon/10 border border-neon/40 text-neon font-display text-xl tracking-wide active:scale-95 transition-transform"
-                      >
-                        ✅ HUMAN
-                      </button>
-                      <button
-                        onClick={() => handleVote(sub.id, 'fake')}
-                        disabled={requireWorldIdToVote && !worldIdVerified}
-                        className="py-3 rounded-xl bg-blood/10 border border-blood/40 text-blood font-display text-xl tracking-wide active:scale-95 transition-transform"
-                      >
-                        🤖 SUS
-                      </button>
-                    </div>
+                    <div className="w-full h-64 flex items-center justify-center text-7xl bg-ash">{emoji}</div>
                   )}
+                </button>
 
-                  {/* Expanded details */}
-                  {expandedId === sub.id && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="border-t border-ember pt-3 mt-3 space-y-2"
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3 mb-2">
+                    <div>
+                      <p className="text-bone font-mono text-sm">{sub.user}</p>
+                      <p className="text-dim text-xs font-mono">{sub.time}</p>
+                    </div>
+                    <span className="text-xs font-mono px-2 py-1 rounded-full" style={{ color: STATUS_COLORS[sub.status], border: `1px solid ${STATUS_COLORS[sub.status]}55` }}>
+                      {STATUS_LABELS[sub.status]}
+                    </span>
+                  </div>
+
+                  <p className="text-bone text-sm leading-relaxed">{sub.caption}</p>
+                  {sub.infiltrator && <p className="text-purple-300 font-mono text-xs mt-2">🎭 Infiltrator mode</p>}
+
+                  <div className="mt-3 h-1.5 bg-ash rounded-full overflow-hidden">
+                    <div className="h-full bg-amber rounded-full" style={{ width: `${progress}%` }} />
+                  </div>
+                  <p className="text-dim text-[10px] font-mono mt-1">{totalVotes}/{quorum} votes</p>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => handleVote(sub.id, 'real')}
+                      disabled={Boolean(voted[sub.id])}
+                      className="py-3 rounded-2xl bg-neon/10 border border-neon/30 text-neon font-mono text-sm disabled:opacity-50"
                     >
-                      {/* Voter accuracy breakdown */}
-                      {sub.accuracy != null && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-dim font-mono text-xs">Voter accuracy:</span>
-                          <div className="flex-1 h-1.5 bg-ember rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: `${sub.accuracy}%`,
-                                background: sub.accuracy >= 80 ? '#00FF94' : sub.accuracy >= 60 ? '#FFB800' : '#FF1A1A',
-                              }}
-                            />
-                          </div>
-                          <span className={`font-mono text-xs ${sub.accuracy >= 80 ? 'text-neon' : sub.accuracy >= 60 ? 'text-amber' : 'text-blood'}`}>
-                            {sub.accuracy}%
-                          </span>
-                        </div>
-                      )}
+                      HUMAN · {sub.votes.real}
+                    </button>
+                    <button
+                      onClick={() => handleVote(sub.id, 'fake')}
+                      disabled={Boolean(voted[sub.id])}
+                      className="py-3 rounded-2xl bg-blood/10 border border-blood/30 text-blood font-mono text-sm disabled:opacity-50"
+                    >
+                      SUS · {sub.votes.fake}
+                    </button>
+                  </div>
 
-                      {/* Challenge button */}
+                  {isExpanded && (
+                    <div className="mt-4 space-y-3">
                       <button
                         onClick={() => handleChallenge(sub)}
-                        disabled={!sub.username}
-                        className="w-full py-2.5 rounded-xl bg-smoke border border-ember text-dim font-mono text-xs active:scale-95 transition-transform disabled:opacity-50"
+                        className="w-full py-3 rounded-2xl bg-amber/10 border border-amber/30 text-amber font-mono text-sm"
                       >
-                        {challengeToast === sub.id ? '🌐 Available in World App' : 'Challenge in World Chat →'}
+                        Challenge in chat
                       </button>
-                      {!sub.username && (
-                        <p className="text-dim font-mono text-[10px] opacity-70">
-                          Challenge requires a World username (captured on check-in).
-                        </p>
+                      <button
+                        onClick={() => setFired((v) => ({ ...v, [sub.id]: !v[sub.id] }))}
+                        className="w-full py-3 rounded-2xl bg-ash border border-ember text-dim font-mono text-sm"
+                      >
+                        {fired[sub.id] ? '🔥 Fired up' : '🔥 Fire reaction'}
+                      </button>
+                      {challengeToast === sub.id && (
+                        <p className="text-amber font-mono text-xs text-center">Open inside World App to challenge via chat.</p>
                       )}
-                    </motion.div>
+                    </div>
                   )}
-
-                  {/* Expand/collapse toggle */}
-                  <button
-                    onClick={() => setExpandedId(expandedId === sub.id ? null : sub.id)}
-                    className="w-full mt-3 py-1.5 text-dim font-mono text-xs opacity-60 hover:opacity-100 transition-opacity"
-                  >
-                    {expandedId === sub.id ? '▲ Less' : '▼ Details'}
-                  </button>
                 </div>
               </motion.div>
             );

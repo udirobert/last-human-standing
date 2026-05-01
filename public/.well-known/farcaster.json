@@ -1,0 +1,19 @@
+{
+  "accountAssociation": {
+    "header": "",
+    "payload": "",
+    "signature": ""
+  },
+  "frame": {
+    "version": "next",
+    "name": "Last Human Standing",
+    "subtitle": "Daily elimination for verified humans",
+    "description": "A daily real-world elimination game. Check in at themed locations, vote HUMAN or SUS, and be the last one standing. Powered by World ID.",
+    "iconUrl": "https://lasthumanstanding.thisyearnofear.com/favicon.svg",
+    "homeUrl": "https://lasthumanstanding.thisyearnofear.com",
+    "splashImageUrl": "https://lasthumanstanding.thisyearnofear.com/favicon.svg",
+    "splashBackgroundColor": "#0a0a0a",
+    "primaryCategory": "games",
+    "tags": ["game", "social", "elimination", "world-id", "proof-of-human"]
+  }
+}

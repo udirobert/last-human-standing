@@ -4,7 +4,6 @@ import crypto from "crypto";
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
 import { getSupabaseAdmin } from "./supabase.js";
-// signRequest implemented locally (idkit v2 removed ./signing export)
 function signRequest(signingKey, action, ttlSeconds = 300) {
   const nonce = randomId(16);
   const created_at = Math.floor(Date.now() / 1000);
@@ -21,36 +20,37 @@ const IS_PROD = process.env.NODE_ENV === "production";
 const supabaseAdmin = getSupabaseAdmin();
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
 const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE === "true";
+const SESSION_COOKIE = "lhs_session";
+const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
+const NONCE_TTL_MS = 1000 * 60 * 30;
+const PAY_REFERENCE_TTL_MS = 1000 * 60 * 30;
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,http://127.0.0.1:5173")
+  .split(",")
+  .map((v) => v.trim())
+  .filter(Boolean);
 
-// ---- Game parameters (tunable)
-const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200); // paid players required to activate prize round (legacy)
-const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 25); // normal votes required to finalize a check-in
-const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 10); // low-activity votes required
+const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200);
+const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 25);
+const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 10);
 const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 60);
-const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30); // if votes in window < threshold -> low activity
+const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30);
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
-// ---- Cohort / geo game lifecycle
-const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null; // ISO timestamp
+const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
 const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
 const CHECKIN_RADIUS_M = Number(process.env.CHECKIN_RADIUS_M || 100);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || null;
 
-// In-memory rounds fallback (used when Supabase isn't configured)
-const memRounds = new Map(); // day -> round
-const memCheckins = []; // { id, day, address, lat, lng, distance_m, rank, survived, created_at }
-
-// ---- In-memory stores (hackathon-friendly fallback)
-// If SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY are set, we write to Supabase instead.
-const siweNonces = new Map(); // nonce -> { createdAt }
-const sessions = new Map(); // sessionId -> { address, createdAt }
-const payReferences = new Map(); // reference -> { address, createdAt }
-const submissions = []; // { id, address, day, theme, caption, message, signature, createdAt, votes }
-const worldIdVerified = new Map(); // address -> true
-const paidUsers = new Set(); // address
+const memRounds = new Map();
+const memCheckins = [];
+const worldIdVerified = new Map();
+const paidUsers = new Set();
+const submissions = [];
+const memChatMessages = [];
+let balanceCache = { value: 0, fetchedAt: 0 };
 
 function now() {
   return Date.now();
@@ -61,176 +61,325 @@ function randomId(bytes = 16) {
 }
 
 function makeNonce() {
-  // Alphanumeric and >= 8 chars (docs requirement)
   return randomId(12).replaceAll(/[^a-z0-9]/gi, "").slice(0, 16);
 }
 
 function makeReferralCode(hint) {
-  const slug = (hint || 'anon').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 10);
+  const slug = (hint || "anon").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 10);
   return `LHS-${slug}-${randomId(3)}`;
 }
 
-function cleanup() {
-  const ttlMs = 1000 * 60 * 30; // 30 minutes
-  for (const [nonce, meta] of siweNonces) {
-    if (now() - meta.createdAt > ttlMs) siweNonces.delete(nonce);
-  }
-  for (const [sid, meta] of sessions) {
-    if (now() - meta.createdAt > 1000 * 60 * 60 * 24 * 7) sessions.delete(sid);
-  }
-  for (const [ref, meta] of payReferences) {
-    if (now() - meta.createdAt > ttlMs) payReferences.delete(ref);
-  }
+function isoFromMs(ms) {
+  return new Date(ms).toISOString();
 }
 
-setInterval(cleanup, 60_000).unref();
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function ensureObjectBody(req, res) {
+  if (!isObject(req.body)) {
+    res.status(400).json({ error: "invalid_json_body" });
+    return null;
+  }
+  return req.body;
+}
+
+function ensureString(value, { field, required = false, maxLength = 500, pattern } = {}) {
+  if (value == null || value === "") {
+    if (required) throw new Error(`missing_${field}`);
+    return null;
+  }
+  if (typeof value !== "string") throw new Error(`invalid_${field}`);
+  const trimmed = value.trim();
+  if (required && !trimmed) throw new Error(`missing_${field}`);
+  if (trimmed.length > maxLength) throw new Error(`invalid_${field}`);
+  if (pattern && !pattern.test(trimmed)) throw new Error(`invalid_${field}`);
+  return trimmed;
+}
+
+function ensureNumber(value, { field, min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY, required = false, integer = false } = {}) {
+  if (value == null) {
+    if (required) throw new Error(`missing_${field}`);
+    return null;
+  }
+  if (typeof value !== "number" || Number.isNaN(value)) throw new Error(`invalid_${field}`);
+  if (integer && !Number.isInteger(value)) throw new Error(`invalid_${field}`);
+  if (value < min || value > max) throw new Error(`invalid_${field}`);
+  return value;
+}
+
+function ensureBoolean(value, { field } = {}) {
+  if (value == null) return false;
+  if (typeof value !== "boolean") throw new Error(`invalid_${field}`);
+  return value;
+}
+
+function ensureEnum(value, { field, values, required = false } = {}) {
+  if (value == null || value === "") {
+    if (required) throw new Error(`missing_${field}`);
+    return null;
+  }
+  if (!values.includes(value)) throw new Error(`invalid_${field}`);
+  return value;
+}
+
+function ensureIsoDate(value, { field, required = false } = {}) {
+  const str = ensureString(value, { field, required, maxLength: 64 });
+  if (str == null) return null;
+  if (Number.isNaN(Date.parse(str))) throw new Error(`invalid_${field}`);
+  return str;
+}
+
+function sendValidationError(res, error) {
+  res.status(400).json({ error: error instanceof Error ? error.message : "invalid_request" });
+}
+
+function setSessionCookie(res, sessionId) {
+  res.cookie(SESSION_COOKIE, sessionId, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: IS_PROD,
+    maxAge: SESSION_TTL_MS,
+  });
+}
+
+function clearSessionCookie(res) {
+  res.clearCookie(SESSION_COOKIE, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: IS_PROD,
+  });
+}
+
+async function cleanupPersistentState() {
+  if (!supabaseAdmin) return;
+  const nowIso = new Date().toISOString();
+  await Promise.allSettled([
+    supabaseAdmin.from("game_sessions").delete().lte("expires_at", nowIso),
+    supabaseAdmin.from("siwe_nonces").delete().lte("expires_at", nowIso),
+    supabaseAdmin.from("pay_references").delete().lte("expires_at", nowIso),
+    supabaseAdmin.from("rate_limits").delete().lte("expires_at", nowIso),
+  ]);
+}
+
+setInterval(() => {
+  cleanupPersistentState().catch(() => {});
+}, 60_000).unref();
+
+const rateLimitStorage = supabaseAdmin
+  ? {
+      async hit({ key, now: currentNow, windowMs, limit }) {
+        const nowIso = isoFromMs(currentNow);
+        const expiresIso = isoFromMs(currentNow + windowMs);
+        const { data: existing } = await supabaseAdmin
+          .from("rate_limits")
+          .select("key,hits,window_started_at,expires_at")
+          .eq("key", key)
+          .maybeSingle();
+
+        let hits = 1;
+        let windowStartedAt = nowIso;
+        if (existing && Date.parse(existing.expires_at) > currentNow) {
+          hits = Number(existing.hits || 0) + 1;
+          windowStartedAt = existing.window_started_at;
+        }
+
+        await supabaseAdmin.from("rate_limits").upsert({
+          key,
+          hits,
+          window_started_at: windowStartedAt,
+          expires_at: expiresIso,
+        });
+
+        if (hits > limit) {
+          return {
+            allowed: false,
+            retryAfterMs: Math.max(0, Date.parse(existing?.expires_at || expiresIso) - currentNow),
+          };
+        }
+
+        return { allowed: true, retryAfterMs: 0 };
+      },
+    }
+  : null;
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
-
-// Basic CORS for local dev where Vite runs on 5173 and API on 8787.
 app.use((req, res, next) => {
-  res.setHeader("Access-Control-Allow-Origin", req.headers.origin || "*");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
+  res.setHeader("Permissions-Policy", "camera=(self), geolocation=(self)");
+  if (IS_PROD) {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Vary", "Origin");
+  }
   res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Headers", "content-type");
+  res.setHeader("Access-Control-Allow-Headers", "content-type,x-admin-token");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   if (req.method === "OPTIONS") return res.sendStatus(204);
   next();
 });
 
 app.get("/api/health", (req, res) => {
-  res.json({
-    ok: true,
-    time: new Date().toISOString(),
-    supabase: Boolean(supabaseAdmin),
-  });
+  res.json({ ok: true, time: new Date().toISOString(), supabase: Boolean(supabaseAdmin) });
 });
 
-function requireAuth(req, res, next) {
-  const sid = req.cookies?.lhs_session;
-  const session = sid ? sessions.get(sid) : null;
+async function createNonceRecord(nonce) {
+  if (!supabaseAdmin) return;
+  await supabaseAdmin.from("siwe_nonces").upsert({
+    nonce,
+    created_at: new Date().toISOString(),
+    expires_at: isoFromMs(now() + NONCE_TTL_MS),
+  });
+}
+
+async function consumeNonceRecord(nonce) {
+  if (!supabaseAdmin) return false;
+  const { data } = await supabaseAdmin.from("siwe_nonces").select("nonce,expires_at").eq("nonce", nonce).maybeSingle();
+  if (!data || Date.parse(data.expires_at) <= now()) return false;
+  await supabaseAdmin.from("siwe_nonces").delete().eq("nonce", nonce);
+  return true;
+}
+
+async function createSessionRecord(address) {
+  const sessionId = randomId(18);
+  if (supabaseAdmin) {
+    await supabaseAdmin.from("game_sessions").insert({
+      id: sessionId,
+      address,
+      expires_at: isoFromMs(now() + SESSION_TTL_MS),
+    });
+  }
+  return sessionId;
+}
+
+async function getSessionRecord(sessionId) {
+  if (!sessionId) return null;
+  if (supabaseAdmin) {
+    const { data } = await supabaseAdmin
+      .from("game_sessions")
+      .select("id,address,expires_at")
+      .eq("id", sessionId)
+      .maybeSingle();
+    if (!data || Date.parse(data.expires_at) <= now()) return null;
+    return data;
+  }
+  return null;
+}
+
+async function deleteSessionRecord(sessionId) {
+  if (!sessionId || !supabaseAdmin) return;
+  await supabaseAdmin.from("game_sessions").delete().eq("id", sessionId);
+}
+
+async function createPayReferenceRecord(reference, address) {
+  if (!supabaseAdmin) return;
+  await supabaseAdmin.from("pay_references").upsert({
+    reference,
+    address,
+    created_at: new Date().toISOString(),
+    expires_at: isoFromMs(now() + PAY_REFERENCE_TTL_MS),
+  });
+}
+
+async function consumePayReferenceRecord(reference) {
+  if (!supabaseAdmin) return null;
+  const { data } = await supabaseAdmin
+    .from("pay_references")
+    .select("reference,address,expires_at")
+    .eq("reference", reference)
+    .maybeSingle();
+  if (!data || Date.parse(data.expires_at) <= now()) return null;
+  await supabaseAdmin.from("pay_references").delete().eq("reference", reference);
+  return data;
+}
+
+async function getOptionalAuthAddress(req) {
+  const sid = req.cookies?.[SESSION_COOKIE];
+  const session = await getSessionRecord(sid);
+  return session?.address ?? null;
+}
+
+async function requireAuth(req, res, next) {
+  const sid = req.cookies?.[SESSION_COOKIE];
+  const session = await getSessionRecord(sid);
   if (!session) return res.status(401).json({ error: "not_authenticated" });
   req.user = { address: session.address };
   next();
 }
 
-// ---- Auth (SIWE via MiniKit)
 app.post(
   "/api/nonce",
-  rateLimit({
-    keyFn: (req) => `nonce:${req.ip}`,
-    limit: 30,
-    windowMs: 60_000,
-  }),
-  (req, res) => {
-  const nonce = makeNonce();
-  siweNonces.set(nonce, { createdAt: now() });
-  res.json({ nonce });
+  rateLimit({ keyFn: (req) => `nonce:${req.ip}`, limit: 30, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    const nonce = makeNonce();
+    await createNonceRecord(nonce);
+    res.json({ nonce });
   },
 );
 
 app.post(
   "/api/complete-siwe",
-  rateLimit({
-    keyFn: (req) => `siwe:${req.ip}`,
-    limit: 30,
-    windowMs: 60_000,
-  }),
+  rateLimit({ keyFn: (req) => `siwe:${req.ip}`, limit: 30, windowMs: 60_000, storage: rateLimitStorage }),
   async (req, res) => {
-  const { payload, nonce } = req.body || {};
-  if (!payload || !nonce) return res.status(400).json({ error: "missing_payload_or_nonce" });
-  if (!siweNonces.has(nonce)) return res.status(400).json({ error: "invalid_or_expired_nonce" });
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+    const payload = body.payload;
+    const nonce = body.nonce;
+    if (!payload || !nonce) return res.status(400).json({ error: "missing_payload_or_nonce" });
+    if (!(await consumeNonceRecord(nonce))) return res.status(400).json({ error: "invalid_or_expired_nonce" });
 
-  try {
-    const verification = await verifySiweMessage(payload, nonce);
-    if (!verification.isValid) return res.status(401).json({ error: "invalid_siwe" });
+    try {
+      const verification = await verifySiweMessage(payload, nonce);
+      if (!verification.isValid) return res.status(401).json({ error: "invalid_siwe" });
 
-    const address = verification.siweMessageData.address;
-    const sessionId = randomId(18);
-    sessions.set(sessionId, { address, createdAt: now() });
-    siweNonces.delete(nonce);
+      const address = verification.siweMessageData.address;
+      const sessionId = await createSessionRecord(address);
 
-    if (supabaseAdmin) {
-      await supabaseAdmin.from("users").upsert(
-        { address, last_seen_at: new Date().toISOString() },
-        { onConflict: "address" },
-      );
+      if (supabaseAdmin) {
+        await supabaseAdmin.from("users").upsert(
+          { address, last_seen_at: new Date().toISOString() },
+          { onConflict: "address" },
+        );
+      }
+
+      setSessionCookie(res, sessionId);
+      res.json({ ok: true, address });
+    } catch (e) {
+      res.status(400).json({ error: "siwe_verification_failed", message: e instanceof Error ? e.message : "unknown_error" });
     }
-
-    res.cookie("lhs_session", sessionId, {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: IS_PROD,
-      maxAge: 1000 * 60 * 60 * 24 * 7,
-    });
-
-    res.json({
-      ok: true,
-      address,
-    });
-  } catch (e) {
-    res.status(400).json({
-      error: "siwe_verification_failed",
-      message: e instanceof Error ? e.message : "unknown_error",
-    });
-  }
   },
 );
 
-// Demo / dev convenience: create a session without real SIWE.
-// Only available when DEV_BYPASS_VERIFICATION=true. Frontend calls this from
-// the browser fallback walletAuth path so the demo can actually exercise the
-// check-in API (which requires an auth session).
-app.post("/api/dev/login", async (req, res) => {
-  if (process.env.DEV_BYPASS_VERIFICATION !== "true") {
-    return res.status(404).json({ error: "not_enabled" });
-  }
-  const stubAddress = `0xDEMO${randomId(8).slice(0, 36).padEnd(36, '0')}`;
-  const sessionId = randomId(18);
-  sessions.set(sessionId, { address: stubAddress, createdAt: now() });
-  paidUsers.add(stubAddress.toLowerCase()); // demo: also mark "paid" so check-in works
-
-  if (supabaseAdmin) {
-    await supabaseAdmin.from("users").upsert(
-      { address: stubAddress, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString() },
-      { onConflict: "address" },
-    );
-  }
-
-  res.cookie("lhs_session", sessionId, {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: IS_PROD,
-    maxAge: 1000 * 60 * 60 * 24 * 7,
-  });
-  res.json({ ok: true, address: stubAddress, mode: "dev" });
-});
-
-app.post("/api/logout", (req, res) => {
-  const sid = req.cookies?.lhs_session;
-  if (sid) sessions.delete(sid);
-  res.clearCookie("lhs_session");
+app.post("/api/logout", async (req, res) => {
+  const sid = req.cookies?.[SESSION_COOKIE];
+  await deleteSessionRecord(sid);
+  clearSessionCookie(res);
   res.json({ ok: true });
 });
 
-// ---- World ID (IDKit)
-// This uses RP signatures (never expose the signing key to the client).
 app.post("/api/idkit/rp-context", requireAuth, async (req, res) => {
   const rp_id = process.env.WORLD_ID_RP_ID;
   const signing_key = process.env.WORLD_ID_SIGNING_KEY;
   const action = process.env.WORLD_ID_ACTION || "last-human-standing";
 
   if (!rp_id || !signing_key) {
-    return res.status(501).json({
-      error: "world_id_not_configured",
-      message: "Set WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY to enable World ID.",
-    });
+    return res.status(501).json({ error: "world_id_not_configured", message: "Set WORLD_ID_RP_ID and WORLD_ID_SIGNING_KEY to enable World ID." });
   }
 
   try {
     const signed = signRequest(signing_key, action, 5 * 60);
-    // rp_context shape expected by @worldcoin/idkit request widget
     return res.json({
       rp_context: {
         rp_id,
@@ -242,10 +391,7 @@ app.post("/api/idkit/rp-context", requireAuth, async (req, res) => {
       action,
     });
   } catch (e) {
-    return res.status(400).json({
-      error: "rp_context_failed",
-      message: e instanceof Error ? e.message : "unknown_error",
-    });
+    return res.status(400).json({ error: "rp_context_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
@@ -254,61 +400,43 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
   const app_id = process.env.WORLD_ID_APP_ID;
   const action = process.env.WORLD_ID_ACTION || "last-human-standing";
   const apiKey = process.env.WORLD_DEV_PORTAL_API_KEY;
-  const bypass = process.env.DEV_BYPASS_VERIFICATION === "true";
 
-  const { idkitResponse } = req.body || {};
+  const bodyReq = ensureObjectBody(req, res);
+  if (!bodyReq) return;
+  const { idkitResponse } = bodyReq;
   if (!idkitResponse) return res.status(400).json({ error: "missing_idkit_response" });
 
   if (!rp_id && !app_id) {
-    if (bypass) {
-      worldIdVerified.set(req.user.address.toLowerCase(), true);
-      if (supabaseAdmin) {
-        await supabaseAdmin.from("users").upsert(
-          { address: req.user.address, world_id_verified: true, last_seen_at: new Date().toISOString() },
-          { onConflict: "address" },
-        );
-      }
-      return res.json({ ok: true, verified: true, mode: "bypass" });
-    }
-    return res.status(501).json({
-      error: "world_id_not_configured",
-      message: "Set WORLD_ID_RP_ID to verify proofs.",
-    });
+    return res.status(501).json({ error: "world_id_not_configured", message: "Set WORLD_ID_RP_ID to verify proofs." });
   }
 
-  // Use rp_id (v4) when available, fall back to app_id (legacy)
   const verifyId = rp_id || app_id;
   const isV4 = Boolean(rp_id);
 
   try {
-    let body;
-    if (isV4) {
-      // World ID 4.0 Managed mode — POST /api/v4/verify/{rp_id}
-      body = JSON.stringify({
-        protocol_version: idkitResponse.protocol_version || "4.0",
-        nonce: idkitResponse.nonce,
-        action,
-        responses: idkitResponse.responses || [
-          {
-            identifier: idkitResponse.verification_level || "orb",
-            merkle_root: idkitResponse.merkle_root,
-            nullifier: idkitResponse.nullifier_hash,
-            proof: idkitResponse.proof,
-            signal_hash: idkitResponse.signal_hash || undefined,
-          },
-        ],
-      });
-    } else {
-      // Legacy v2
-      body = JSON.stringify({
-        nullifier_hash: idkitResponse.nullifier_hash,
-        merkle_root: idkitResponse.merkle_root,
-        proof: idkitResponse.proof,
-        verification_level: idkitResponse.verification_level || "orb",
-        action,
-        signal_hash: idkitResponse.signal_hash || undefined,
-      });
-    }
+    const verifyBody = isV4
+      ? JSON.stringify({
+          protocol_version: idkitResponse.protocol_version || "4.0",
+          nonce: idkitResponse.nonce,
+          action,
+          responses: idkitResponse.responses || [
+            {
+              identifier: idkitResponse.verification_level || "orb",
+              merkle_root: idkitResponse.merkle_root,
+              nullifier: idkitResponse.nullifier_hash,
+              proof: idkitResponse.proof,
+              signal_hash: idkitResponse.signal_hash || undefined,
+            },
+          ],
+        })
+      : JSON.stringify({
+          nullifier_hash: idkitResponse.nullifier_hash,
+          merkle_root: idkitResponse.merkle_root,
+          proof: idkitResponse.proof,
+          verification_level: idkitResponse.verification_level || "orb",
+          action,
+          signal_hash: idkitResponse.signal_hash || undefined,
+        });
 
     const endpoint = isV4
       ? `https://developer.worldcoin.org/api/v4/verify/${verifyId}`
@@ -320,7 +448,7 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
         "Content-Type": "application/json",
         ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
       },
-      body,
+      body: verifyBody,
     });
 
     const json = await resp.json().catch(() => null);
@@ -335,17 +463,13 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
     }
     return res.json({ ok: true, verified: true, details: json });
   } catch (e) {
-    return res.status(400).json({
-      error: "verify_exception",
-      message: e instanceof Error ? e.message : "unknown_error",
-    });
+    return res.status(400).json({ error: "verify_exception", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
-// ---- Live stats (prize pool balance from World Chain + player counts from Supabase)
 const WORLD_CHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
-const WLD_CONTRACT = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003"; // WLD on World Chain
-const ERC20_BALANCE_OF_SELECTOR = "0x70a08231"; // balanceOf(address) selector
+const WLD_CONTRACT = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003";
+const ERC20_BALANCE_OF_SELECTOR = "0x70a08231";
 
 async function fetchWldBalance(address) {
   const padded = address.replace("0x", "").toLowerCase().padStart(64, "0");
@@ -362,20 +486,15 @@ async function fetchWldBalance(address) {
   return Number(raw) / 1e18;
 }
 
-// Cache balance for 60s to avoid hammering RPC
-let balanceCache = { value: 0, fetchedAt: 0 };
-
 app.get("/api/stats", async (req, res) => {
   try {
     const prizePoolAddress = process.env.VITE_PRIZE_POOL_ADDRESS;
-
-    // Refresh cache every 60s
     if (prizePoolAddress && Date.now() - balanceCache.fetchedAt > 60_000) {
       try {
         balanceCache.value = await fetchWldBalance(prizePoolAddress);
         balanceCache.fetchedAt = Date.now();
       } catch {
-        // keep stale value on RPC error
+        // keep stale value
       }
     }
 
@@ -395,9 +514,7 @@ app.get("/api/stats", async (req, res) => {
       prizePool: {
         address: prizePoolAddress || null,
         balanceWld: balanceCache.value,
-        explorerUrl: prizePoolAddress
-          ? `https://worldscan.org/address/${prizePoolAddress}`
-          : null,
+        explorerUrl: prizePoolAddress ? `https://worldscan.org/address/${prizePoolAddress}` : null,
       },
       players: { total: totalPlayers, active: activePlayers },
     });
@@ -413,12 +530,10 @@ function computeVoteStatus(votes, quorum) {
   const fakePct = total > 0 ? votes.fake / total : 0;
   if (realPct >= REAL_PCT_TO_VERIFY) return { status: "verified", total, realPct, fakePct };
   if (fakePct >= FAKE_PCT_TO_FLAG) return { status: "flagged", total, realPct, fakePct };
-  // Ambiguous outcome: keep pending; in prod you might add "needs_review"
   return { status: "pending", total, realPct, fakePct };
 }
 
 async function getDynamicVoteQuorum() {
-  // Default: normal quorum.
   let effective = VOTE_QUORUM;
   let reason = "normal";
 
@@ -442,15 +557,11 @@ app.get("/api/round-status", async (req, res) => {
   try {
     let paidCount = paidUsers.size;
     if (supabaseAdmin) {
-      const { count, error } = await supabaseAdmin
-        .from("users")
-        .select("address", { count: "exact", head: true })
-        .eq("paid", true);
+      const { count, error } = await supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true);
       if (!error && typeof count === "number") paidCount = count;
     }
 
     const quorum = await getDynamicVoteQuorum();
-
     res.json({
       ok: true,
       round: {
@@ -468,141 +579,106 @@ app.get("/api/round-status", async (req, res) => {
       },
     });
   } catch (e) {
-    res.status(400).json({ error: "round_status_failed", message: e instanceof Error ? e.message : "unknown_error" });
+    res.status(500).json({ error: "round_status_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
-// ---- Payments (MiniKit Pay)
-app.post("/api/pay/reference", requireAuth, (req, res) => {
+app.post("/api/pay/reference", requireAuth, async (req, res) => {
   const reference = crypto.randomUUID();
-  payReferences.set(reference, { address: req.user.address, createdAt: now() });
-  res.json({ reference });
+  await createPayReferenceRecord(reference, req.user.address);
+  res.json({ ok: true, reference });
 });
+
+async function upsertPaidUser(address, { referredBy = null, platform = null } = {}) {
+  const lower = address.toLowerCase();
+  paidUsers.add(lower);
+  if (!supabaseAdmin) return;
+  const refCode = makeReferralCode(address.slice(0, 6));
+  await supabaseAdmin.from("users").upsert(
+    { address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), referral_code: refCode, referred_by: referredBy, platform },
+    { onConflict: "address", ignoreDuplicates: false },
+  );
+  if (referredBy) {
+    await supabaseAdmin.rpc("increment_referral", { ref_code: referredBy }).catch(() => {});
+  }
+}
 
 app.post("/api/pay/confirm", requireAuth, async (req, res) => {
-  const { payload } = req.body || {};
-  if (!payload?.transactionId || !payload?.reference) {
-    return res.status(400).json({ error: "missing_transaction_payload" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+  const payload = body.payload;
+  if (!payload?.transactionId || !payload?.reference) return res.status(400).json({ error: "missing_payment_payload" });
+
+  const ref = supabaseAdmin ? await consumePayReferenceRecord(payload.reference) : { address: req.user.address };
+  if (!ref || ref.address.toLowerCase() !== req.user.address.toLowerCase()) {
+    return res.status(400).json({ error: "invalid_payment_reference" });
   }
 
-  const meta = payReferences.get(payload.reference);
-  if (!meta) return res.status(400).json({ error: "unknown_reference" });
-  if (meta.address.toLowerCase() !== req.user.address.toLowerCase()) {
-    return res.status(403).json({ error: "reference_owner_mismatch" });
-  }
-
-  // Hackathon-friendly: allow bypass for local dev if env not configured.
   const appId = process.env.WORLD_APP_ID;
   const apiKey = process.env.WORLD_DEV_PORTAL_API_KEY;
-  const bypass = process.env.DEV_BYPASS_VERIFICATION === "true";
-
-  if (!appId || !apiKey) {
-    if (bypass) {
-      paidUsers.add(req.user.address.toLowerCase());
-      if (supabaseAdmin) {
-        const refCode = makeReferralCode(req.user.address.slice(0, 6));
-        const referredBy = req.body?.referredBy || null;
-        await supabaseAdmin.from("users").upsert(
-          { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), referral_code: refCode, referred_by: referredBy },
-          { onConflict: "address", ignoreDuplicates: false },
-        );
-        if (referredBy) {
-          await supabaseAdmin.rpc('increment_referral', { ref_code: referredBy }).catch(() => {});
-        }
-      }
-      return res.json({ ok: true, verified: true, mode: "bypass" });
-    }
-    return res.status(501).json({
-      error: "world_verification_not_configured",
-      message:
-        "Set WORLD_APP_ID and WORLD_DEV_PORTAL_API_KEY to verify payments (or set DEV_BYPASS_VERIFICATION=true for local demo).",
-    });
-  }
+  if (!appId || !apiKey) return res.status(501).json({ error: "payments_not_configured" });
 
   try {
     const url = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transactionId}?app_id=${appId}&type=payment`;
-    const resp = await fetch(url, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${apiKey}` },
-    });
-    if (!resp.ok) {
-      const text = await resp.text();
-      return res.status(400).json({ error: "world_api_error", status: resp.status, body: text });
-    }
+    const resp = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${apiKey}` } });
+    const json = await resp.json().catch(() => null);
+    if (!resp.ok) return res.status(400).json({ error: "payment_verify_failed", details: json });
 
-    const tx = await resp.json();
-    // tx structure may evolve; for hackathon we only return it and let UI treat response as verified.
-    paidUsers.add(req.user.address.toLowerCase());
-    if (supabaseAdmin) {
-      const refCode = makeReferralCode(req.user.address.slice(0, 6));
-      const referredBy = req.body?.referredBy || null;
-      await supabaseAdmin.from("users").upsert(
-        { address: req.user.address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), referral_code: refCode, referred_by: referredBy },
-        { onConflict: "address", ignoreDuplicates: false },
-      );
-      if (referredBy) {
-        await supabaseAdmin.rpc('increment_referral', { ref_code: referredBy }).catch(() => {});
-      }
-    }
-    res.json({ ok: true, verified: true, tx });
+    await upsertPaidUser(req.user.address, { referredBy: body.referredBy || null, platform: "world" });
+    res.json({ ok: true, paid: true, details: json });
   } catch (e) {
-    res.status(400).json({
-      error: "payment_verification_failed",
-      message: e instanceof Error ? e.message : "unknown_error",
-    });
+    res.status(400).json({ error: "payment_confirm_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
-// ---- Media uploads (Supabase Storage)
+app.post("/api/pay/browser-confirm", async (req, res) => {
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+
+  try {
+    const address = ensureString(body.address, { field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/ });
+    const txHash = ensureString(body.txHash, { field: "txHash", required: true, maxLength: 80, pattern: /^0x[a-fA-F0-9]{64}$/ });
+    const referredBy = ensureString(body.referredBy, { field: "referredBy", required: false, maxLength: 64, pattern: /^LHS-[a-z0-9]+-[a-f0-9]+$/i });
+    await upsertPaidUser(address, { referredBy, platform: "browser" });
+    res.json({ ok: true, paid: true, address, txHash });
+  } catch (error) {
+    sendValidationError(res, error);
+  }
+});
+
 app.post("/api/upload-url", requireAuth, async (req, res) => {
   if (!supabaseAdmin) {
-    return res.status(501).json({
-      error: "supabase_not_configured",
-      message: "Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable uploads.",
-    });
+    return res.status(501).json({ error: "supabase_not_configured", message: "Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable uploads." });
   }
 
-  const { fileName, contentType } = req.body || {};
-  if (!fileName) return res.status(400).json({ error: "missing_fileName" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+  const fileName = ensureString(body.fileName, { field: "fileName", required: true, maxLength: 120 });
+  const contentType = ensureString(body.contentType, { field: "contentType", required: false, maxLength: 120 }) || "application/octet-stream";
 
   const safeName = String(fileName).replaceAll(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
   const path = `${req.user.address}/${Date.now()}_${safeName}`;
 
   try {
-    const { data, error } = await supabaseAdmin.storage
-      .from(SUPABASE_BUCKET)
-      .createSignedUploadUrl(path, 60);
+    const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUploadUrl(path, 60);
     if (error) return res.status(400).json({ error: "signed_upload_failed", message: error.message });
-
-    res.json({
-      ok: true,
-      bucket: SUPABASE_BUCKET,
-      path,
-      token: data.token,
-      signedUrl: data.signedUrl,
-      contentType: contentType || "application/octet-stream",
-    });
+    res.json({ ok: true, bucket: SUPABASE_BUCKET, path, token: data.token, signedUrl: data.signedUrl, contentType });
   } catch (e) {
-    res.status(400).json({
-      error: "signed_upload_exception",
-      message: e instanceof Error ? e.message : "unknown_error",
-    });
+    res.status(400).json({ error: "signed_upload_exception", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
 app.post("/api/media-url", requireAuth, async (req, res) => {
-  if (!supabaseAdmin) {
-    return res.status(501).json({ error: "supabase_not_configured" });
-  }
-  const { path } = req.body || {};
-  if (!path) return res.status(400).json({ error: "missing_path" });
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+  const path = ensureString(body.path, { field: "path", required: true, maxLength: 255 });
 
   try {
     if (!SUPABASE_BUCKET_PRIVATE) {
       const publicUrl = supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(path).data.publicUrl;
       return res.json({ ok: true, url: publicUrl, kind: "public" });
     }
-
     const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(path, 60 * 5);
     if (error) return res.status(400).json({ error: "signed_url_failed", message: error.message });
     return res.json({ ok: true, url: data.signedUrl, kind: "signed" });
@@ -611,41 +687,41 @@ app.post("/api/media-url", requireAuth, async (req, res) => {
   }
 });
 
-// ---- Check-ins + votes
 app.post("/api/checkin", requireAuth, async (req, res) => {
-  const { day, theme, caption, message, signature, address, mediaPath, username, isInfiltrator } = req.body || {};
-  if (!message || !signature || !address) return res.status(400).json({ error: "missing_signature_payload" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
 
   try {
-    const ok = await verifyMessage({
-      address,
-      message,
-      signature,
-    });
+    const day = ensureNumber(body.day, { field: "day", required: true, integer: true, min: 0 });
+    const theme = ensureString(body.theme, { field: "theme", required: true, maxLength: 140 });
+    const caption = ensureString(body.caption, { field: "caption", required: false, maxLength: 140 }) || "";
+    const message = ensureString(body.message, { field: "message", required: true, maxLength: 2000 });
+    const signature = ensureString(body.signature, { field: "signature", required: true, maxLength: 255 });
+    const address = ensureString(body.address, { field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/ });
+    const mediaPath = ensureString(body.mediaPath, { field: "mediaPath", required: false, maxLength: 255 });
+    const username = ensureString(body.username, { field: "username", required: false, maxLength: 64 });
+    const isInfiltrator = ensureBoolean(body.isInfiltrator, { field: "isInfiltrator" });
+
+    const ok = await verifyMessage({ address, message, signature });
     if (!ok) return res.status(401).json({ error: "invalid_signature" });
 
     const { effective: dynamicVoteQuorum } = await getDynamicVoteQuorum();
-
     const payloadToStore = {
       address: req.user.address,
-      username: username ? String(username) : null,
-      day: Number(day ?? 0),
-      theme: String(theme ?? ""),
-      caption: String(caption ?? ""),
+      username,
+      day,
+      theme,
+      caption,
       message,
       signature,
-      media_path: mediaPath ? String(mediaPath) : null,
+      media_path: mediaPath,
       vote_quorum: dynamicVoteQuorum,
       status: "pending",
-      is_infiltrator: Boolean(isInfiltrator),
+      is_infiltrator: isInfiltrator,
     };
 
     if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from("submissions")
-        .insert(payloadToStore)
-        .select("*")
-        .single();
+      const { data, error } = await supabaseAdmin.from("submissions").insert(payloadToStore).select("*").single();
       if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
 
       let mediaUrl = null;
@@ -657,40 +733,22 @@ app.post("/api/checkin", requireAuth, async (req, res) => {
           mediaUrl = supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(data.media_path).data.publicUrl;
         }
       }
-      return res.json({
-        ok: true,
-        submission: {
-          ...data,
-          mediaUrl,
-          votes: { real: 0, fake: 0 },
-          voteQuorum: data.vote_quorum ?? dynamicVoteQuorum,
-        },
-      });
+      return res.json({ ok: true, submission: { ...data, mediaUrl, votes: { real: 0, fake: 0 }, voteQuorum: data.vote_quorum ?? dynamicVoteQuorum } });
     }
 
-    const submission = {
-      id: submissions.length + 1,
-      ...payloadToStore,
-      createdAt: new Date().toISOString(),
-      votes: { real: 0, fake: 0 },
-    };
+    const submission = { id: submissions.length + 1, ...payloadToStore, createdAt: new Date().toISOString(), votes: { real: 0, fake: 0 } };
     submissions.unshift(submission);
     return res.json({ ok: true, submission });
-  } catch (e) {
-    res.status(400).json({
-      error: "checkin_failed",
-      message: e instanceof Error ? e.message : "unknown_error",
-    });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 
-app.get("/api/feed", (req, res) => {
-  // Auth is optional — unauthenticated browser demo gets empty feed (mock data is client-side)
-  const sid = req.cookies?.lhs_session;
-  const session = sid ? sessions.get(sid) : null;
-  if (!session) return res.json({ ok: true, submissions: [] });
+app.get("/api/feed", async (req, res) => {
+  const address = await getOptionalAuthAddress(req);
+  if (!address) return res.json({ ok: true, submissions: [] });
 
-  (async () => {
+  try {
     if (!supabaseAdmin) return res.json({ ok: true, submissions: submissions.slice(0, 50) });
 
     const { data: subs, error } = await supabaseAdmin
@@ -701,12 +759,9 @@ app.get("/api/feed", (req, res) => {
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
 
     const ids = subs.map((s) => s.id);
-    const voteCounts = new Map(); // id -> { real, fake }
+    const voteCounts = new Map();
     if (ids.length > 0) {
-      const { data: agg, error: aggErr } = await supabaseAdmin
-        .from("votes")
-        .select("submission_id,vote")
-        .in("submission_id", ids);
+      const { data: agg, error: aggErr } = await supabaseAdmin.from("votes").select("submission_id,vote").in("submission_id", ids);
       if (!aggErr && Array.isArray(agg)) {
         for (const row of agg) {
           const cur = voteCounts.get(row.submission_id) || { real: 0, fake: 0 };
@@ -717,14 +772,7 @@ app.get("/api/feed", (req, res) => {
       }
     }
 
-    const withVotes = subs.map((s) => ({
-      ...s,
-      votes: voteCounts.get(s.id) || { real: 0, fake: 0 },
-      mediaUrl: null,
-      voteQuorum: s.vote_quorum ?? VOTE_QUORUM,
-    }));
-
-    // Add media URLs (public or signed depending on bucket config)
+    const withVotes = subs.map((s) => ({ ...s, votes: voteCounts.get(s.id) || { real: 0, fake: 0 }, mediaUrl: null, voteQuorum: s.vote_quorum ?? VOTE_QUORUM }));
     for (const item of withVotes) {
       if (!item.media_path) continue;
       if (!SUPABASE_BUCKET_PRIVATE) {
@@ -736,151 +784,117 @@ app.get("/api/feed", (req, res) => {
     }
 
     return res.json({ ok: true, submissions: withVotes });
-  })().catch((e) => {
+  } catch (e) {
     res.status(400).json({ error: "feed_failed", message: e instanceof Error ? e.message : "unknown_error" });
-  });
+  }
 });
 
 app.post(
   "/api/vote",
   requireAuth,
-  rateLimit({
-    keyFn: (req) => `vote:${req.user?.address || req.ip}`,
-    limit: 30,
-    windowMs: 60_000,
-  }),
-  (req, res) => {
-  const { submissionId, vote } = req.body || {};
-  if (!submissionId || !["real", "fake"].includes(vote)) return res.status(400).json({ error: "invalid_vote" });
+  rateLimit({ keyFn: (req) => `vote:${req.user?.address || req.ip}`, limit: 30, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
 
-  (async () => {
-    if (REQUIRE_WORLD_ID_FOR_VOTING) {
-      const addr = req.user.address.toLowerCase();
-      let verified = worldIdVerified.get(addr) === true;
-      if (supabaseAdmin && !verified) {
-        const { data } = await supabaseAdmin.from("users").select("world_id_verified").eq("address", req.user.address).single();
-        verified = Boolean(data?.world_id_verified);
-      }
-      if (!verified) return res.status(403).json({ error: "world_id_required" });
-    }
+    try {
+      const submissionId = ensureNumber(body.submissionId, { field: "submissionId", required: true, integer: true, min: 1 });
+      const vote = ensureEnum(body.vote, { field: "vote", required: true, values: ["real", "fake"] });
 
-    if (supabaseAdmin) {
-      const { error } = await supabaseAdmin.from("votes").insert({
-        submission_id: Number(submissionId),
-        voter_address: req.user.address,
-        vote,
-      });
-      if (error) {
-        if (String(error.message || "").includes("duplicate")) {
-          return res.status(409).json({ error: "already_voted" });
+      if (REQUIRE_WORLD_ID_FOR_VOTING) {
+        const addr = req.user.address.toLowerCase();
+        let verified = worldIdVerified.get(addr) === true;
+        if (supabaseAdmin && !verified) {
+          const { data } = await supabaseAdmin.from("users").select("world_id_verified").eq("address", req.user.address).single();
+          verified = Boolean(data?.world_id_verified);
         }
-        return res.status(400).json({ error: "db_vote_failed", message: error.message });
+        if (!verified) return res.status(403).json({ error: "world_id_required" });
       }
 
-      const { data: allVotes } = await supabaseAdmin
-        .from("votes")
-        .select("vote")
-        .eq("submission_id", Number(submissionId));
+      if (supabaseAdmin) {
+        const { error } = await supabaseAdmin.from("votes").insert({ submission_id: submissionId, voter_address: req.user.address, vote });
+        if (error) {
+          if (String(error.message || "").includes("duplicate")) return res.status(409).json({ error: "already_voted" });
+          return res.status(400).json({ error: "db_vote_failed", message: error.message });
+        }
 
-      const votes = { real: 0, fake: 0 };
-      for (const v of allVotes || []) {
-        if (v.vote === "real") votes.real += 1;
-        if (v.vote === "fake") votes.fake += 1;
+        const { data: allVotes } = await supabaseAdmin.from("votes").select("vote").eq("submission_id", submissionId);
+        const votes = { real: 0, fake: 0 };
+        for (const v of allVotes || []) {
+          if (v.vote === "real") votes.real += 1;
+          if (v.vote === "fake") votes.fake += 1;
+        }
+
+        const { data: subRow } = await supabaseAdmin.from("submissions").select("vote_quorum").eq("id", submissionId).single();
+        const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
+        const computed = computeVoteStatus(votes, quorum);
+        if (computed.status !== "pending") {
+          await supabaseAdmin.from("submissions").update({ status: computed.status }).eq("id", submissionId);
+          updateVoterAccuracy(submissionId, computed.status).catch(() => {});
+        }
+
+        return res.json({ ok: true, votes, status: computed.status, voteQuorum: quorum });
       }
 
-      const { data: subRow } = await supabaseAdmin
-        .from("submissions")
-        .select("vote_quorum")
-        .eq("id", Number(submissionId))
-        .single();
-      const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
-
-      const computed = computeVoteStatus(votes, quorum);
-      if (computed.status !== "pending") {
-        await supabaseAdmin
-          .from("submissions")
-          .update({ status: computed.status })
-          .eq("id", Number(submissionId));
-
-        // Update voter accuracy for all voters on this submission
-        updateVoterAccuracy(Number(submissionId), computed.status).catch(() => {});
-      }
-
-      return res.json({ ok: true, votes, status: computed.status, voteQuorum: quorum });
+      const sub = submissions.find((s) => s.id === submissionId);
+      if (!sub) return res.status(404).json({ error: "submission_not_found" });
+      sub.votes[vote] += 1;
+      const quorum = sub.vote_quorum ?? VOTE_QUORUM;
+      const computed = computeVoteStatus(sub.votes, quorum);
+      sub.status = computed.status;
+      return res.json({ ok: true, votes: sub.votes, status: sub.status, voteQuorum: quorum });
+    } catch (error) {
+      sendValidationError(res, error);
     }
-
-    const sub = submissions.find((s) => s.id === Number(submissionId));
-    if (!sub) return res.status(404).json({ error: "submission_not_found" });
-    sub.votes[vote] += 1;
-    const quorum = sub.vote_quorum ?? VOTE_QUORUM;
-    const computed = computeVoteStatus(sub.votes, quorum);
-    sub.status = computed.status;
-    return res.json({ ok: true, votes: sub.votes, status: sub.status, voteQuorum: quorum });
-  })().catch((e) => {
-    res.status(400).json({ error: "vote_failed", message: e instanceof Error ? e.message : "unknown_error" });
-  });
   },
 );
 
-// =====================================================================
-// Voter accuracy tracking
-// =====================================================================
-
 async function updateVoterAccuracy(submissionId, finalStatus) {
   if (!supabaseAdmin) return;
-  // "verified" means the correct vote was "real"; "flagged" means "fake" was correct
-  const correctVote = finalStatus === "verified" ? "real" : "fake";
+  const correctVote = finalStatus === "verified" ? "real" : finalStatus === "flagged" ? "fake" : null;
+  if (!correctVote) return;
+  const { data: allVotes } = await supabaseAdmin.from("votes").select("voter_address,vote").eq("submission_id", submissionId);
+  if (!Array.isArray(allVotes)) return;
 
-  const { data: allVotes } = await supabaseAdmin
-    .from("votes")
-    .select("voter_address, vote")
-    .eq("submission_id", submissionId);
-  if (!allVotes?.length) return;
+  const correctAddrs = allVotes.filter((v) => v.vote === correctVote).map((v) => v.voter_address);
+  const wrongAddrs = allVotes.filter((v) => v.vote !== correctVote).map((v) => v.voter_address);
 
-  for (const v of allVotes) {
-    const isCorrect = v.vote === correctVote;
-    // Upsert voter_stats: increment total_votes and correct_votes
-    const { data: existing } = await supabaseAdmin
-      .from("voter_stats")
-      .select("total_votes, correct_votes")
-      .eq("address", v.voter_address)
-      .maybeSingle();
-
-    const total = (existing?.total_votes ?? 0) + 1;
-    const correct = (existing?.correct_votes ?? 0) + (isCorrect ? 1 : 0);
-    const accuracy = Math.round((correct / total) * 100);
-
-    await supabaseAdmin.from("voter_stats").upsert(
-      { address: v.voter_address, total_votes: total, correct_votes: correct, accuracy_pct: accuracy },
-      { onConflict: "address" },
-    );
+  if (correctAddrs.length) {
+    await Promise.allSettled(correctAddrs.map((address) => supabaseAdmin.from("users").update({ last_seen_at: new Date().toISOString() }).eq("address", address)));
+  }
+  if (wrongAddrs.length) {
+    await Promise.allSettled(wrongAddrs.map((address) => supabaseAdmin.from("users").update({ last_seen_at: new Date().toISOString() }).eq("address", address)));
   }
 }
 
 app.get("/api/voter-stats/:address", async (req, res) => {
   try {
     const addr = req.params.address;
-    if (!addr) return res.status(400).json({ error: "missing_address" });
-    if (supabaseAdmin) {
-      const { data } = await supabaseAdmin
-        .from("voter_stats")
-        .select("total_votes, correct_votes, accuracy_pct")
-        .eq("address", addr)
-        .maybeSingle();
-      return res.json({ ok: true, stats: data || { total_votes: 0, correct_votes: 0, accuracy_pct: 0 } });
+    if (!supabaseAdmin) return res.json({ ok: true, address: addr, accuracy: null, correct: 0, total: 0 });
+    const { data: votes } = await supabaseAdmin.from("votes").select("submission_id,vote").eq("voter_address", addr);
+    if (!votes?.length) return res.json({ ok: true, address: addr, accuracy: null, correct: 0, total: 0 });
+
+    const submissionIds = [...new Set(votes.map((v) => v.submission_id))];
+    const { data: subs } = await supabaseAdmin.from("submissions").select("id,status").in("id", submissionIds);
+    const statusById = new Map((subs || []).map((s) => [s.id, s.status]));
+
+    let total = 0;
+    let correct = 0;
+    for (const v of votes) {
+      const status = statusById.get(v.submission_id);
+      if (status !== "verified" && status !== "flagged") continue;
+      total += 1;
+      if ((status === "verified" && v.vote === "real") || (status === "flagged" && v.vote === "fake")) correct += 1;
     }
-    return res.json({ ok: true, stats: { total_votes: 0, correct_votes: 0, accuracy_pct: 0 } });
+
+    return res.json({ ok: true, address: addr, accuracy: total ? correct / total : null, correct, total });
   } catch (e) {
     res.status(400).json({ error: "voter_stats_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
-// =====================================================================
-// Cohort + game state (theme-based check-ins, GPS optional)
-// =====================================================================
-
 function haversineMeters(lat1, lng1, lat2, lng2) {
-  const R = 6371000; // earth radius (m)
+  const R = 6371000;
   const toRad = (d) => (d * Math.PI) / 180;
   const dLat = toRad(lat2 - lat1);
   const dLng = toRad(lng2 - lng1);
@@ -893,7 +907,7 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
 function requireAdmin(req, res, next) {
   const token = req.headers["x-admin-token"];
   if (!ADMIN_TOKEN) return res.status(501).json({ error: "admin_not_configured" });
-  if (!token || token !== ADMIN_TOKEN) return res.status(401).json({ error: "unauthorized" });
+  if (token !== ADMIN_TOKEN) return res.status(401).json({ error: "invalid_admin_token" });
   next();
 }
 
@@ -907,11 +921,7 @@ function currentDayNumber(launchAtMs) {
 async function loadRound(day) {
   if (day == null) return null;
   if (supabaseAdmin) {
-    const { data } = await supabaseAdmin
-      .from("rounds")
-      .select("*")
-      .eq("day", day)
-      .maybeSingle();
+    const { data } = await supabaseAdmin.from("rounds").select("*").eq("day", day).maybeSingle();
     return data || null;
   }
   return memRounds.get(day) || null;
@@ -919,10 +929,7 @@ async function loadRound(day) {
 
 async function checkinCountForDay(day) {
   if (supabaseAdmin) {
-    const { count } = await supabaseAdmin
-      .from("checkins")
-      .select("id", { count: "exact", head: true })
-      .eq("day", day);
+    const { count } = await supabaseAdmin.from("checkins").select("id", { count: "exact", head: true }).eq("day", day);
     return count ?? 0;
   }
   return memCheckins.filter((c) => c.day === day).length;
@@ -931,12 +938,7 @@ async function checkinCountForDay(day) {
 async function userCheckinForDay(day, address) {
   if (!address) return null;
   if (supabaseAdmin) {
-    const { data } = await supabaseAdmin
-      .from("checkins")
-      .select("*")
-      .eq("day", day)
-      .eq("address", address)
-      .maybeSingle();
+    const { data } = await supabaseAdmin.from("checkins").select("*").eq("day", day).eq("address", address).maybeSingle();
     return data || null;
   }
   return memCheckins.find((c) => c.day === day && c.address === address) || null;
@@ -945,30 +947,16 @@ async function userCheckinForDay(day, address) {
 async function getUserRecord(address) {
   if (!address) return null;
   if (supabaseAdmin) {
-    const { data } = await supabaseAdmin
-      .from("users")
-      .select("*")
-      .eq("address", address)
-      .maybeSingle();
+    const { data } = await supabaseAdmin.from("users").select("*").eq("address", address).maybeSingle();
     return data || null;
   }
-  // In-memory fallback uses paidUsers + worldIdVerified maps
   const lower = address.toLowerCase();
-  return {
-    address,
-    paid: paidUsers.has(lower),
-    eliminated: false,
-    eliminated_at_day: null,
-    world_id_verified: worldIdVerified.get(lower) === true,
-  };
+  return { address, paid: paidUsers.has(lower), eliminated: false, eliminated_at_day: null, world_id_verified: worldIdVerified.get(lower) === true };
 }
 
 async function reservedCount() {
   if (supabaseAdmin) {
-    const { count } = await supabaseAdmin
-      .from("users")
-      .select("address", { count: "exact", head: true })
-      .eq("paid", true);
+    const { count } = await supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true);
     return count ?? 0;
   }
   return paidUsers.size;
@@ -993,11 +981,7 @@ app.get("/api/game/state", async (req, res) => {
       if (round) checkinCount = await checkinCountForDay(currentDay);
     }
 
-    // Identify the requesting user (optional — endpoint is public)
-    const sid = req.cookies?.lhs_session;
-    const session = sid ? sessions.get(sid) : null;
-    const address = session?.address ?? null;
-
+    const address = await getOptionalAuthAddress(req);
     let you = {
       isAuthed: false,
       isPaid: false,
@@ -1024,12 +1008,7 @@ app.get("/api/game/state", async (req, res) => {
       };
     }
 
-    // Has the cohort filled (closes pre-launch early)?
     const cohortFull = reserved >= COHORT_SIZE;
-    if (phase === "prelaunch" && cohortFull) {
-      // Pre-launch effectively closed; UI can show "cohort full, waiting for start"
-    }
-
     res.json({
       ok: true,
       now: new Date().toISOString(),
@@ -1058,10 +1037,7 @@ app.get("/api/game/state", async (req, res) => {
           }
         : null,
       you,
-      defaults: {
-        survivalCap: DAILY_SURVIVAL_CAP,
-        radiusM: CHECKIN_RADIUS_M,
-      },
+      defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
   } catch (e) {
     res.status(500).json({ error: "game_state_failed", message: e instanceof Error ? e.message : "unknown_error" });
@@ -1071,19 +1047,18 @@ app.get("/api/game/state", async (req, res) => {
 app.post(
   "/api/checkin/location",
   requireAuth,
-  rateLimit({
-    keyFn: (req) => `geo:${req.user?.address || req.ip}`,
-    limit: 20,
-    windowMs: 60_000,
-  }),
+  rateLimit({ keyFn: (req) => `geo:${req.user?.address || req.ip}`, limit: 20, windowMs: 60_000, storage: rateLimitStorage }),
   async (req, res) => {
-    const { lat, lng, accuracy } = req.body || {};
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
 
     try {
+      const lat = ensureNumber(body.lat, { field: "lat", required: false, min: -90, max: 90 });
+      const lng = ensureNumber(body.lng, { field: "lng", required: false, min: -180, max: 180 });
+      const accuracy = ensureNumber(body.accuracy, { field: "accuracy", required: false, min: 0, max: 10_000 });
+
       const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
-      if (!launchAtMs || Date.now() < launchAtMs) {
-        return res.status(400).json({ error: "game_not_live" });
-      }
+      if (!launchAtMs || Date.now() < launchAtMs) return res.status(400).json({ error: "game_not_live" });
       const day = currentDayNumber(launchAtMs);
       const round = await loadRound(day);
       if (!round) return res.status(400).json({ error: "round_not_set", day });
@@ -1094,7 +1069,6 @@ app.post(
       if (nowMs < opensAtMs) return res.status(400).json({ error: "round_not_open", opensAt: round.opens_at });
       if (nowMs > closesAtMs) return res.status(400).json({ error: "round_closed", closesAt: round.closes_at });
 
-      // GPS is optional metadata — compute distance only when both user and round have coords
       const hasUserGps = typeof lat === "number" && typeof lng === "number";
       const hasRoundGps = round.lat != null && round.lng != null;
       let distance = null;
@@ -1102,81 +1076,43 @@ app.post(
         distance = haversineMeters(lat, lng, Number(round.lat), Number(round.lng));
       }
 
-      // Check eligibility — must be paid + not already eliminated
       const userRec = await getUserRecord(req.user.address);
       if (!userRec?.paid) return res.status(403).json({ error: "not_reserved" });
       if (userRec?.eliminated) return res.status(403).json({ error: "already_eliminated", day: userRec.eliminated_at_day });
 
-      // Already checked in?
       const existing = await userCheckinForDay(day, req.user.address);
       if (existing) {
-        return res.json({
-          ok: true,
-          alreadyCheckedIn: true,
-          rank: existing.rank,
-          survived: existing.survived,
-          distanceM: existing.distance_m != null ? Math.round(existing.distance_m) : null,
-          survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP,
-        });
+        return res.json({ ok: true, alreadyCheckedIn: true, rank: existing.rank, survived: existing.survived, distanceM: existing.distance_m != null ? Math.round(existing.distance_m) : null, survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP });
       }
 
       const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
+      const username = userRec?.username ?? null;
+
+      if (supabaseAdmin) {
+        const { data, error } = await supabaseAdmin.rpc("create_checkin", {
+          p_day: day,
+          p_address: req.user.address,
+          p_username: username,
+          p_lat: hasUserGps ? lat : null,
+          p_lng: hasUserGps ? lng : null,
+          p_accuracy_m: typeof accuracy === "number" ? accuracy : null,
+          p_distance_m: distance,
+          p_survival_cap: cap,
+        });
+        if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
+        if (!data?.survived) {
+          await supabaseAdmin.from("users").update({ eliminated: true, eliminated_at_day: day }).eq("address", req.user.address);
+        }
+        return res.json({ ok: true, rank: data.rank, survived: data.survived, distanceM: data.distance_m != null ? Math.round(data.distance_m) : null, survivalCap: cap, gpsShared: hasUserGps });
+      }
+
       const currentCount = await checkinCountForDay(day);
       const rank = currentCount + 1;
       const survived = rank <= cap;
-
-      const row = {
-        day,
-        address: req.user.address,
-        lat: hasUserGps ? lat : null,
-        lng: hasUserGps ? lng : null,
-        accuracy_m: typeof accuracy === "number" ? accuracy : null,
-        distance_m: distance,
-        rank,
-        survived,
-      };
-
-      if (supabaseAdmin) {
-        const { data, error } = await supabaseAdmin
-          .from("checkins")
-          .insert(row)
-          .select("*")
-          .single();
-        if (error) {
-          if (String(error.message || "").includes("duplicate")) {
-            return res.status(409).json({ error: "already_checked_in" });
-          }
-          return res.status(400).json({ error: "db_insert_failed", message: error.message });
-        }
-        // If they didn't survive, mark eliminated
-        if (!survived) {
-          await supabaseAdmin
-            .from("users")
-            .update({ eliminated: true, eliminated_at_day: day })
-            .eq("address", req.user.address);
-        }
-        return res.json({
-          ok: true,
-          rank: data.rank,
-          survived: data.survived,
-          distanceM: data.distance_m != null ? Math.round(data.distance_m) : null,
-          survivalCap: cap,
-          gpsShared: hasUserGps,
-        });
-      }
-
-      // In-memory fallback
-      memCheckins.push({ id: memCheckins.length + 1, ...row, created_at: new Date().toISOString() });
-      return res.json({
-        ok: true,
-        rank,
-        survived,
-        distanceM: distance != null ? Math.round(distance) : null,
-        survivalCap: cap,
-        gpsShared: hasUserGps,
-      });
-    } catch (e) {
-      res.status(400).json({ error: "checkin_location_failed", message: e instanceof Error ? e.message : "unknown_error" });
+      memCheckins.push({ id: memCheckins.length + 1, day, address: req.user.address, username, lat: hasUserGps ? lat : null, lng: hasUserGps ? lng : null, accuracy_m: typeof accuracy === "number" ? accuracy : null, distance_m: distance, rank, survived, created_at: new Date().toISOString() });
+      return res.json({ ok: true, rank, survived, distanceM: distance != null ? Math.round(distance) : null, survivalCap: cap, gpsShared: hasUserGps });
+    } catch (error) {
+      sendValidationError(res, error);
     }
   },
 );
@@ -1193,47 +1129,35 @@ app.get("/api/cohort/roster", async (req, res) => {
       if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
       return res.json({ ok: true, roster: data || [] });
     }
-    // In-memory fallback
-    const list = Array.from(paidUsers).map((address) => ({
-      address,
-      username: null,
-      reserved_at: null,
-      eliminated: false,
-      eliminated_at_day: null,
-    }));
+    const list = Array.from(paidUsers).map((address) => ({ address, username: null, reserved_at: null, eliminated: false, eliminated_at_day: null }));
     return res.json({ ok: true, roster: list });
   } catch (e) {
     res.status(400).json({ error: "roster_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
-// ---- Lobby Chat (persistent messages for mini app)
-const memChatMessages = []; // fallback: { id, address, username, message, created_at }
-
 app.post("/api/chat", requireAuth, async (req, res) => {
-  const { message } = req.body || {};
-  if (!message || typeof message !== "string" || message.trim().length === 0) {
-    return res.status(400).json({ error: "missing_message" });
-  }
-  const text = message.trim().slice(0, 500);
-  const address = req.user.address;
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
 
   try {
+    const text = ensureString(body.message, { field: "message", required: true, maxLength: 500 });
+    const address = req.user.address;
+
     if (supabaseAdmin) {
-      // Look up username
       const { data: u } = await supabaseAdmin.from("users").select("username").eq("address", address).single();
       const row = { address, username: u?.username || null, message: text };
       const { data, error } = await supabaseAdmin.from("chat_messages").insert(row).select("*").single();
       if (error) return res.status(400).json({ error: "chat_insert_failed", message: error.message });
       return res.json({ ok: true, msg: data });
     }
-    // In-memory fallback
+
     const msg = { id: randomId(8), address, username: null, message: text, created_at: new Date().toISOString() };
     memChatMessages.push(msg);
     if (memChatMessages.length > 200) memChatMessages.shift();
     return res.json({ ok: true, msg });
-  } catch (e) {
-    res.status(400).json({ error: "chat_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 
@@ -1241,11 +1165,7 @@ app.get("/api/chat/messages", async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 50, 100);
   try {
     if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from("chat_messages")
-        .select("id, address, username, message, created_at")
-        .order("created_at", { ascending: false })
-        .limit(limit);
+      const { data, error } = await supabaseAdmin.from("chat_messages").select("id, address, username, message, created_at").order("created_at", { ascending: false }).limit(limit);
       if (error) return res.status(400).json({ error: "chat_read_failed", message: error.message });
       return res.json({ ok: true, messages: (data || []).reverse() });
     }
@@ -1262,113 +1182,73 @@ app.get("/api/checkins/today", async (req, res) => {
     if (day == null) return res.json({ ok: true, day: null, checkins: [] });
 
     if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from("checkins")
-        .select("rank, address, username, distance_m, survived, created_at")
-        .eq("day", day)
-        .order("rank", { ascending: true })
-        .limit(100);
+      const { data, error } = await supabaseAdmin.from("checkins").select("rank, address, username, distance_m, survived, created_at").eq("day", day).order("rank", { ascending: true }).limit(100);
       if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
       return res.json({ ok: true, day, checkins: data || [] });
     }
 
-    const list = memCheckins
-      .filter((c) => c.day === day)
-      .sort((a, b) => a.rank - b.rank)
-      .slice(0, 100);
+    const list = memCheckins.filter((c) => c.day === day).sort((a, b) => a.rank - b.rank).slice(0, 100);
     return res.json({ ok: true, day, checkins: list });
   } catch (e) {
     res.status(400).json({ error: "checkins_today_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
-// ---- Admin endpoints (token-gated)
 app.post("/api/admin/round", requireAdmin, async (req, res) => {
-  const { day, name, prompt, place_type, lat, lng, radius_m, survival_cap, opens_at, closes_at, status } = req.body || {};
-  if (typeof day !== "number" || !name || !opens_at || !closes_at) {
-    return res.status(400).json({ error: "missing_fields", required: ["day", "name", "opens_at", "closes_at"] });
-  }
-  const row = {
-    day,
-    name,
-    prompt: prompt ?? "",
-    place_type: place_type ?? name,
-    lat: typeof lat === "number" ? lat : null,
-    lng: typeof lng === "number" ? lng : null,
-    radius_m: typeof radius_m === "number" ? radius_m : CHECKIN_RADIUS_M,
-    survival_cap: typeof survival_cap === "number" ? survival_cap : DAILY_SURVIVAL_CAP,
-    opens_at,
-    closes_at,
-    status: status ?? "scheduled",
-    updated_at: new Date().toISOString(),
-  };
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
 
   try {
+    const day = ensureNumber(body.day, { field: "day", required: true, integer: true, min: 1 });
+    const name = ensureString(body.name, { field: "name", required: true, maxLength: 140 });
+    const prompt = ensureString(body.prompt, { field: "prompt", required: false, maxLength: 500 }) || "";
+    const place_type = ensureString(body.place_type, { field: "place_type", required: false, maxLength: 140 }) || name;
+    const lat = ensureNumber(body.lat, { field: "lat", required: false, min: -90, max: 90 });
+    const lng = ensureNumber(body.lng, { field: "lng", required: false, min: -180, max: 180 });
+    const radius_m = ensureNumber(body.radius_m, { field: "radius_m", required: false, integer: true, min: 1, max: 100000 }) ?? CHECKIN_RADIUS_M;
+    const survival_cap = ensureNumber(body.survival_cap, { field: "survival_cap", required: false, integer: true, min: 1, max: 100000 }) ?? DAILY_SURVIVAL_CAP;
+    const opens_at = ensureIsoDate(body.opens_at, { field: "opens_at", required: true });
+    const closes_at = ensureIsoDate(body.closes_at, { field: "closes_at", required: true });
+    const status = ensureEnum(body.status, { field: "status", required: false, values: ["scheduled", "open", "closed"] }) || "scheduled";
+
+    const row = { day, name, prompt, place_type, lat, lng, radius_m, survival_cap, opens_at, closes_at, status, updated_at: new Date().toISOString() };
     if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from("rounds")
-        .upsert(row, { onConflict: "day" })
-        .select("*")
-        .single();
+      const { data, error } = await supabaseAdmin.from("rounds").upsert(row, { onConflict: "day" }).select("*").single();
       if (error) return res.status(400).json({ error: "db_upsert_failed", message: error.message });
       return res.json({ ok: true, round: data });
     }
     memRounds.set(day, row);
     return res.json({ ok: true, round: row });
-  } catch (e) {
-    res.status(400).json({ error: "admin_round_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 
 app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
-  const { day } = req.body || {};
-  if (typeof day !== "number") return res.status(400).json({ error: "missing_day" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
 
   try {
+    const day = ensureNumber(body.day, { field: "day", required: true, integer: true, min: 1 });
     const round = await loadRound(day);
     if (!round) return res.status(404).json({ error: "round_not_found" });
     const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
 
     if (supabaseAdmin) {
-      // Mark non-survivors (rank > cap) as not-survived in checkins
-      await supabaseAdmin
-        .from("checkins")
-        .update({ survived: false })
-        .eq("day", day)
-        .gt("rank", cap);
-
-      // Mark all reserved users who have NO checkin for this day OR rank > cap as eliminated
-      const { data: ck } = await supabaseAdmin
-        .from("checkins")
-        .select("address, rank")
-        .eq("day", day);
+      await supabaseAdmin.from("checkins").update({ survived: false }).eq("day", day).gt("rank", cap);
+      const { data: ck } = await supabaseAdmin.from("checkins").select("address, rank").eq("day", day);
       const survivorAddrs = new Set((ck || []).filter((r) => r.rank <= cap).map((r) => r.address.toLowerCase()));
 
-      const { data: paidUsersRows } = await supabaseAdmin
-        .from("users")
-        .select("address, eliminated")
-        .eq("paid", true);
-
-      const toEliminate = (paidUsersRows || [])
-        .filter((u) => !u.eliminated && !survivorAddrs.has(u.address.toLowerCase()))
-        .map((u) => u.address);
-
+      const { data: paidUsersRows } = await supabaseAdmin.from("users").select("address, eliminated").eq("paid", true);
+      const toEliminate = (paidUsersRows || []).filter((u) => !u.eliminated && !survivorAddrs.has(u.address.toLowerCase())).map((u) => u.address);
       if (toEliminate.length > 0) {
-        await supabaseAdmin
-          .from("users")
-          .update({ eliminated: true, eliminated_at_day: day })
-          .in("address", toEliminate);
+        await supabaseAdmin.from("users").update({ eliminated: true, eliminated_at_day: day }).in("address", toEliminate);
       }
 
-      await supabaseAdmin
-        .from("rounds")
-        .update({ status: "closed", updated_at: new Date().toISOString() })
-        .eq("day", day);
-
+      await supabaseAdmin.from("rounds").update({ status: "closed", updated_at: new Date().toISOString() }).eq("day", day);
       return res.json({ ok: true, day, survivors: survivorAddrs.size, eliminated: toEliminate.length });
     }
 
-    // In-memory: mark non-survivors
     let survivors = 0;
     for (const c of memCheckins) {
       if (c.day === day) {
@@ -1379,49 +1259,43 @@ app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
     const r = memRounds.get(day);
     if (r) r.status = "closed";
     return res.json({ ok: true, day, survivors, eliminated: null, mode: "memory" });
-  } catch (e) {
-    res.status(400).json({ error: "close_day_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 
-// ---- Waitlist + Referral system
 app.post("/api/waitlist", async (req, res) => {
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+
   try {
-    const { email, referredBy } = req.body || {};
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ error: "invalid_email" });
-    }
-    const refCode = makeReferralCode(email.split('@')[0]);
+    const email = ensureString(body.email, { field: "email", required: true, maxLength: 255, pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/ });
+    const referredBy = ensureString(body.referredBy, { field: "referredBy", required: false, maxLength: 64, pattern: /^LHS-[a-z0-9]+-[a-f0-9]+$/i });
+    const refCode = makeReferralCode(email.split("@")[0]);
 
     if (supabaseAdmin) {
-      const { data, error } = await supabaseAdmin
-        .from("waitlist")
-        .upsert({ email, referral_code: refCode, referred_by: referredBy || null }, { onConflict: "email", ignoreDuplicates: false })
-        .select("referral_code, referral_count")
-        .single();
+      const { data, error } = await supabaseAdmin.from("waitlist").upsert({ email, referral_code: refCode, referred_by: referredBy || null }, { onConflict: "email", ignoreDuplicates: false }).select("referral_code, referral_count").single();
       if (error) return res.status(400).json({ error: "waitlist_failed", message: error.message });
-      if (referredBy) {
-        await supabaseAdmin.rpc('increment_referral', { ref_code: referredBy }).catch(() => {});
-      }
+      if (referredBy) await supabaseAdmin.rpc("increment_referral", { ref_code: referredBy }).catch(() => {});
       return res.json({ ok: true, referralCode: data.referral_code, referralCount: data.referral_count });
     }
+
     return res.json({ ok: true, referralCode: refCode, referralCount: 0 });
-  } catch (e) {
-    res.status(400).json({ error: "waitlist_error", message: e instanceof Error ? e.message : "unknown_error" });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 
 app.get("/api/referral-board", async (req, res) => {
   try {
     if (supabaseAdmin) {
-      // Merge users + waitlist referral counts into one leaderboard
       const [{ data: users }, { data: wl }] = await Promise.all([
         supabaseAdmin.from("users").select("username, address, referral_code, referral_count").gt("referral_count", 0).order("referral_count", { ascending: false }).limit(50),
         supabaseAdmin.from("waitlist").select("email, referral_code, referral_count").gt("referral_count", 0).order("referral_count", { ascending: false }).limit(50),
       ]);
       const board = [
-        ...(users || []).map(u => ({ name: u.username || u.address?.slice(0, 8) || 'anon', referralCode: u.referral_code, count: u.referral_count, source: 'user' })),
-        ...(wl || []).map(w => ({ name: w.email?.split('@')[0] || 'anon', referralCode: w.referral_code, count: w.referral_count, source: 'waitlist' })),
+        ...(users || []).map((u) => ({ name: u.username || u.address?.slice(0, 8) || "anon", referralCode: u.referral_code, count: u.referral_count, source: "user" })),
+        ...(wl || []).map((w) => ({ name: w.email?.split("@")[0] || "anon", referralCode: w.referral_code, count: w.referral_count, source: "waitlist" })),
       ].sort((a, b) => b.count - a.count).slice(0, 20);
       return res.json({ ok: true, board });
     }
@@ -1446,9 +1320,10 @@ app.get("/api/referral/:code", async (req, res) => {
   }
 });
 
-// Also return referral_code when fetching user profile (enhance existing roster endpoint)
+export { app };
 
-app.listen(PORT, () => {
-  // eslint-disable-next-line no-console
-  console.log(`API listening on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== "test") {
+  app.listen(PORT, () => {
+    console.log(`API listening on http://localhost:${PORT}`);
+  });
+}
