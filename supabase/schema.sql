@@ -251,9 +251,6 @@ begin
 end;
 $$;
 
--- RLS deferred (server uses service role). Enable + lock down before public launch.
-
-
 -- =============== Anti-cheat flags ===============
 create table if not exists public.submission_flags (
   id uuid primary key default gen_random_uuid(),
@@ -266,3 +263,74 @@ create table if not exists public.submission_flags (
 create index if not exists idx_submission_flags_submission on public.submission_flags(submission_id);
 create index if not exists idx_submission_flags_reason on public.submission_flags(reason);
 create index if not exists idx_submission_flags_created on public.submission_flags(created_at desc);
+
+-- RLS deferred (server uses service role). Enable + lock down before public launch.
+-- =============== Row Level Security ===============
+alter table public.users enable row level security;
+alter table public.rounds enable row level security;
+alter table public.checkins enable row level security;
+alter table public.submissions enable row level security;
+alter table public.votes enable row level security;
+alter table public.chat_messages enable row level security;
+alter table public.waitlist enable row level security;
+alter table public.game_sessions enable row level security;
+alter table public.siwe_nonces enable row level security;
+alter table public.pay_references enable row level security;
+alter table public.rate_limits enable row level security;
+alter table public.submission_flags enable row level security;
+
+-- Service role (server backend) bypasses all RLS — no policy needed for writes.
+-- Anon key: read-only, read-your-own for most tables.
+
+-- users: anyone can read; server writes only
+create policy "users_public_read" on public.users for select using (true);
+
+-- rounds: anyone can read; server writes only
+create policy "rounds_public_read" on public.rounds for select using (true);
+
+-- checkins: anyone can read the public leaderboard columns; server writes only
+create policy "checkins_public_read" on public.checkins for select
+  using (true);
+
+-- submissions: anyone can read; server writes only
+create policy "submissions_public_read" on public.submissions for select using (true);
+
+-- votes: anyone can read vote counts; server writes only
+create policy "votes_public_read" on public.votes for select using (true);
+
+-- chat_messages: anyone can read; server writes only
+create policy "chat_messages_public_read" on public.chat_messages for select using (true);
+
+-- waitlist: read-only; server writes
+create policy "waitlist_public_read" on public.waitlist for select using (true);
+
+-- game_sessions / siwe_nonces / pay_references / rate_limits: no read for anon; server only
+create policy "sessions_server_only" on public.game_sessions for all using (false) with check (false);
+create policy "nonces_server_only" on public.siwe_nonces for all using (false) with check (false);
+create policy "pay_refs_server_only" on public.pay_references for all using (false) with check (false);
+create policy "rate_limits_server_only" on public.rate_limits for all using (false) with check (false);
+
+-- submission_flags: admin read + server write only
+create policy "flags_server_only" on public.submission_flags for all using (false) with check (false);
+
+-- =============== Storage bucket policies ===============
+-- Create the checkins bucket if it doesn't exist (idempotent).
+-- The server uses signed URLs for uploads; the bucket itself can be private.
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+  values ('checkins', 'checkins', false, 10485760, array['image/jpeg','image/png','image/webp'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+-- Only the service role (server backend) can upload.
+create policy "checkins_service_upload" on storage.objects
+  for insert with check (bucket_id = 'checkins');
+
+-- Public (or signed-URL holders) can read back their own photos.
+create policy "checkins_public_read" on storage.objects
+  for select using (bucket_id = 'checkins');
+
+-- Server can delete (for cleanup).
+create policy "checkins_service_delete" on storage.objects
+  for delete using (bucket_id = 'checkins');

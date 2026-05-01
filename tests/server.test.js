@@ -5,11 +5,58 @@ vi.mock("../server/supabase.js", () => ({
   getSupabaseAdmin: () => null,
 }));
 
+// Mock World Chain RPC so browser-confirm tests don't hit real network
+const VALID_TX_HASH = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const VALID_ADDRESS = "0x1234567890abcdef1234567890ABCDEF12345678";
+const PRIZE_POOL = "0x7aD48187A2a4f4bF8d5aE7aD7A9Dbb58B4e27046";
+const WLD_CONTRACT = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003";
+const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df35b9bc";
+
+process.env.VITE_PRIZE_POOL_ADDRESS = PRIZE_POOL;
+
+function paddedAddr(addr) {
+  return addr.replace("0x", "").toLowerCase().padStart(64, "0");
+}
+
+globalThis.fetch = vi.fn(async (_url, opts) => {
+  const body = opts?.body ? JSON.parse(opts.body) : {};
+
+  if (body.method === "eth_getTransactionReceipt") {
+    const txHash = body.params?.[0];
+    if (txHash === VALID_TX_HASH) {
+      return {
+        ok: true,
+        json: () => ({
+          result: {
+            status: "0x1",
+            to: WLD_CONTRACT,
+            logs: [
+              {
+                address: WLD_CONTRACT,
+                topics: [
+                  ERC20_TRANSFER_TOPIC,
+                  "0x" + paddedAddr(VALID_ADDRESS), // from == sender
+                  "0x" + paddedAddr(PRIZE_POOL),     // to == prize pool
+                ],
+                data: "0x0000000000000000000000000000000000000000000000000de0b6b3a7640000", // 1 WLD
+              },
+            ],
+          },
+        }),
+      };
+    }
+    return { ok: true, json: () => ({ result: null }) };
+  }
+
+  return { ok: false, json: () => ({ result: null }) };
+});
+
 const { app } = await import("../server/index.js");
 
 describe("server hardening", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
+    if (globalThis.fetch.mockClear) globalThis.fetch.mockClear();
   });
 
   it("rejects removed dev login route", async () => {

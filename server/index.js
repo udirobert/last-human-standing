@@ -503,9 +503,10 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
   }
 });
 
-const WORLD_CHAIN_RPC = "https://worldchain-mainnet.g.alchemy.com/public";
+const WORLD_CHAIN_RPC = process.env.WORLD_CHAIN_RPC || "https://worldchain-mainnet.g.alchemy.com/public";
 const WLD_CONTRACT = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003";
 const ERC20_BALANCE_OF_SELECTOR = "0x70a08231";
+const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df35b9bc";
 
 async function fetchWldBalance(address) {
   const padded = address.replace("0x", "").toLowerCase().padStart(64, "0");
@@ -520,6 +521,67 @@ async function fetchWldBalance(address) {
   if (!json.result || json.result === "0x") return 0;
   const raw = BigInt(json.result);
   return Number(raw) / 1e18;
+}
+
+async function verifyWldTransfer(txHash, senderAddress, prizePoolAddress) {
+  try {
+    const receiptResp = await fetch(WORLD_CHAIN_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 1,
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const receiptJson = await receiptResp.json();
+    if (!receiptJson.result) return { valid: false, reason: "tx_not_found" };
+
+    const receipt = receiptJson.result;
+    if (receipt.status === "0x0") return { valid: false, reason: "tx_failed" };
+
+    // Check to == WLD contract
+    const toAddr = receipt.to?.toLowerCase();
+    if (toAddr !== WLD_CONTRACT.toLowerCase()) {
+      return { valid: false, reason: "wrong_contract", actualTo: receipt.to };
+    }
+
+    // Parse Transfer event log (topic0 + topics[1,2] + data)
+    // 3 topics: Transfer(address from, address to, uint256 amount)
+    const transferTopic = ERC20_TRANSFER_TOPIC.toLowerCase();
+    const transferLogs = receipt.logs.filter(
+      (log) =>
+        log.address?.toLowerCase() === WLD_CONTRACT.toLowerCase() &&
+        log.topics?.[0]?.toLowerCase() === transferTopic,
+    );
+
+    if (transferLogs.length === 0) return { valid: false, reason: "no_transfer_event" };
+
+    const normalizedSender = senderAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const normalizedRecipient = prizePoolAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const amountWei = BigInt(1) * BigInt(1e18);
+
+    for (const log of transferLogs) {
+      const fromRaw = log.topics[1]; // indexed: from
+      const toRaw = log.topics[2];   // indexed: to
+      const amountRaw = log.data === "0x" ? "0x0" : log.data;
+
+      const fromAddrLogged = fromRaw.replace("0x", "").toLowerCase();
+      const toAddrLogged = toRaw.replace("0x", "").toLowerCase();
+      const amount = BigInt(amountRaw);
+
+      // sender == from, prize pool == to, amount >= 1 WLD
+      if (fromAddrLogged === normalizedSender && toAddrLogged === normalizedRecipient && amount >= amountWei) {
+        return { valid: true, reason: "ok" };
+      }
+    }
+
+    return { valid: false, reason: "amount_insufficient_or_wrong_recipient" };
+  } catch (e) {
+    return { valid: false, reason: `rpc_error: ${e instanceof Error ? e.message : "unknown"}` };
+  }
 }
 
 app.get("/api/stats", async (req, res) => {
@@ -673,7 +735,9 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/pay/browser-confirm", async (req, res) => {
+app.post("/api/pay/browser-confirm",
+  rateLimit({ keyFn: (req) => `browserpay:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
   const body = ensureObjectBody(req, res);
   if (!body) return;
 
@@ -681,6 +745,15 @@ app.post("/api/pay/browser-confirm", async (req, res) => {
     const address = ensureString(body.address, { field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/ });
     const txHash = ensureString(body.txHash, { field: "txHash", required: true, maxLength: 80, pattern: /^0x[a-fA-F0-9]{64}$/ });
     const referredBy = ensureString(body.referredBy, { field: "referredBy", required: false, maxLength: 64, pattern: /^LHS-[a-z0-9]+-[a-f0-9]+$/i });
+
+    const prizePoolAddress = process.env.VITE_PRIZE_POOL_ADDRESS;
+    const verification = await verifyWldTransfer(txHash, address, prizePoolAddress);
+    if (!verification.valid) {
+      log("browser_pay_rejected", { address, txHash, reason: verification.reason });
+      return res.status(400).json({ error: "tx_verification_failed", reason: verification.reason });
+    }
+
+    log("browser_pay_confirmed", { address, txHash });
     await upsertPaidUser(address, { referredBy, platform: "browser" });
     res.json({ ok: true, paid: true, address, txHash });
   } catch (error) {
@@ -1212,8 +1285,11 @@ app.get("/api/cohort/roster", async (req, res) => {
   }
 });
 
-app.post("/api/chat", requireAuth, async (req, res) => {
-  const body = ensureObjectBody(req, res);
+app.post("/api/chat",
+  requireAuth,
+  rateLimit({ keyFn: (req) => `chat:${req.user?.address || req.ip}`, limit: 20, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    const body = ensureObjectBody(req, res);
   if (!body) return;
 
   try {
