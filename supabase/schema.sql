@@ -252,3 +252,17 @@ end;
 $$;
 
 -- RLS deferred (server uses service role). Enable + lock down before public launch.
+
+
+-- =============== Anti-cheat flags ===============
+create table if not exists public.submission_flags (
+  id uuid primary key default gen_random_uuid(),
+  submission_id bigint not null references public.submissions(id) on delete cascade,
+  reason text not null,
+  metadata jsonb default '{}',
+  created_at timestamptz not null default now()
+);
+
+create index if not exists idx_submission_flags_submission on public.submission_flags(submission_id);
+create index if not exists idx_submission_flags_reason on public.submission_flags(reason);
+create index if not exists idx_submission_flags_created on public.submission_flags(created_at desc);

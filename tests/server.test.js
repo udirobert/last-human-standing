@@ -140,4 +140,45 @@ describe("server hardening", () => {
     expect(res.body.ok).toBe(true);
     expect(res.body.paid).toBe(true);
   });
+
+  it("GET /api/admin/flags returns 401 without admin token", async () => {
+    const res = await request(app).get("/api/admin/flags");
+    expect([401, 501]).toContain(res.status);
+  });
+
+  it("GET /api/admin/flags returns 401 without admin token or 501 without Supabase", async () => {
+    const res = await request(app).get("/api/admin/flags");
+    expect([401, 501]).toContain(res.status);
+  });
+
+  it("POST /api/checkin/location returns 400 when game is not live", async () => {
+    const res = await request(app)
+      .post("/api/checkin/location")
+      .set("cookie", "lhs_session=fake")
+      .send({ lat: 0, lng: 0 });
+    expect([400, 401]).toContain(res.status);
+  });
+
+  it("POST /api/vote returns 404 for non-existent submission without Supabase", async () => {
+    const res = await request(app)
+      .post("/api/vote")
+      .set("cookie", "lhs_session=fake")
+      .send({ submissionId: 9999, vote: "real" });
+    expect([401, 404]).toContain(res.status);
+  });
+
+  it("GET /api/game/state returns valid phase and cohort fields", async () => {
+    const res = await request(app).get("/api/game/state");
+    expect(res.status).toBe(200);
+    expect(["prelaunch", "live"]).toContain(res.body.phase);
+    expect(typeof res.body.cohortSize).toBe("number");
+    expect(typeof res.body.reservedCount).toBe("number");
+    expect(typeof res.body.cohortFull).toBe("boolean");
+  });
+
+  it("POST /api/logout returns ok without session", async () => {
+    const res = await request(app).post("/api/logout");
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+  });
 });

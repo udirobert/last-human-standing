@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
 import { getSupabaseAdmin } from "./supabase.js";
+import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission } from "./anticheat.js";
 function signRequest(signingKey, action, ttlSeconds = 300) {
   const nonce = randomId(16);
   const created_at = Math.floor(Date.now() / 1000);
@@ -859,22 +860,32 @@ app.post(
           return res.status(400).json({ error: "db_vote_failed", message: error.message });
         }
 
-        const { data: allVotes } = await supabaseAdmin.from("votes").select("vote").eq("submission_id", submissionId);
-        const votes = { real: 0, fake: 0 };
+        // Anti-cheat: vote ring detection
+        const { data: allVotes } = await supabaseAdmin.from("votes").select("submission_id,voter_address,vote");
+        const { data: allSubs } = await supabaseAdmin.from("submissions").select("id,status");
+        const ringReason = checkVoteRing(req.user.address, submissionId, allVotes || [], allSubs || []);
+        if (ringReason) {
+          log("anticheat_flag", { reason: ringReason, address: req.user.address, submissionId });
+          await flagSubmission(supabaseAdmin, submissionId, ringReason, { voter: req.user.address });
+        }
+
+        const countedVotes = { real: 0, fake: 0 };
         for (const v of allVotes || []) {
-          if (v.vote === "real") votes.real += 1;
-          if (v.vote === "fake") votes.fake += 1;
+          if (v.submission_id === submissionId) {
+            if (v.vote === "real") countedVotes.real += 1;
+            if (v.vote === "fake") countedVotes.fake += 1;
+          }
         }
 
         const { data: subRow } = await supabaseAdmin.from("submissions").select("vote_quorum").eq("id", submissionId).single();
         const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
-        const computed = computeVoteStatus(votes, quorum);
+        const computed = computeVoteStatus(countedVotes, quorum);
         if (computed.status !== "pending") {
           await supabaseAdmin.from("submissions").update({ status: computed.status }).eq("id", submissionId);
           updateVoterAccuracy(submissionId, computed.status).catch(() => {});
         }
 
-        return res.json({ ok: true, votes, status: computed.status, voteQuorum: quorum });
+        return res.json({ ok: true, votes: countedVotes, status: computed.status, voteQuorum: quorum });
       }
 
       const sub = submissions.find((s) => s.id === submissionId);
@@ -1117,6 +1128,13 @@ app.post(
         distance = haversineMeters(lat, lng, Number(round.lat), Number(round.lng));
       }
 
+      // Anti-cheat: GPS plausibility
+      const radiusM = round.radius_m ?? CHECKIN_RADIUS_M;
+      const gpsReason = checkGpsPlausibility(distance, typeof accuracy === "number" ? accuracy : null, radiusM);
+      if (gpsReason) {
+        log("anticheat_flag", { reason: gpsReason, address: req.user.address, day, distanceM: distance != null ? Math.round(distance) : null });
+      }
+
       const userRec = await getUserRecord(req.user.address);
       if (!userRec?.paid) return res.status(403).json({ error: "not_reserved" });
       if (userRec?.eliminated) return res.status(403).json({ error: "already_eliminated", day: userRec.eliminated_at_day });
@@ -1124,6 +1142,14 @@ app.post(
       const existing = await userCheckinForDay(day, req.user.address);
       if (existing) {
         return res.json({ ok: true, alreadyCheckedIn: true, rank: existing.rank, survived: existing.survived, distanceM: existing.distance_m != null ? Math.round(existing.distance_m) : null, survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP });
+      }
+
+      // Anti-cheat: timing anomaly
+      let timingReason = null;
+      if (supabaseAdmin) {
+        const { data: recent } = await supabaseAdmin.from("checkins").select("address,day,created_at").eq("day", day).order("created_at", { ascending: false }).limit(50);
+        timingReason = checkTimingAnomaly(req.user.address, day, recent || []);
+        if (timingReason) log("anticheat_flag", { reason: timingReason, address: req.user.address, day });
       }
 
       const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
@@ -1271,6 +1297,22 @@ app.post("/api/admin/round", requireAdmin, async (req, res) => {
     return res.json({ ok: true, round: row });
   } catch (error) {
     sendValidationError(res, error);
+  }
+});
+
+app.get("/api/admin/flags", requireAdmin, async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  const limit = Math.min(Number(req.query.limit) || 50, 200);
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("submission_flags")
+      .select("id,reason,metadata,created_at,submission_id")
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+    return res.json({ ok: true, flags: data || [] });
+  } catch (e) {
+    return res.status(400).json({ error: "flags_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

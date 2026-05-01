@@ -1,20 +1,34 @@
-import { useState, useCallback, useEffect, Component } from 'react';
+import { useState, useCallback, useEffect, Component, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
-import Feed from './components/Feed';
-import Chat from './components/Chat';
-import Leaderboard from './components/Leaderboard';
 import BottomNav from './components/BottomNav';
 import ModeBanner from './components/ModeBanner.jsx';
 import RoundMetaBanner from './components/RoundMetaBanner.jsx';
+
+const Feed = lazy(() => import('./components/Feed.jsx'));
+const Chat = lazy(() => import('./components/Chat.jsx'));
+const Leaderboard = lazy(() => import('./components/Leaderboard.jsx'));
 
 // Error boundary — catches crashes and shows a retry screen instead of white page
 class ErrorBoundary extends Component {
   state = { hasError: false };
   static getDerivedStateFromError() { return { hasError: true }; }
-  componentDidCatch(err, info) { console.error('ErrorBoundary caught:', err, info); }
+  componentDidCatch(err, info) {
+    console.error('ErrorBoundary caught:', err, info);
+    const body = {
+      message: err instanceof Error ? err.message : String(err),
+      stack: err instanceof Error ? err.stack : null,
+      componentStack: info?.componentStack ?? null,
+      userAgent: navigator.userAgent,
+    };
+    fetch("/api/report-error", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => {});
+  }
   render() {
     if (this.state.hasError) {
       return (
@@ -129,6 +143,7 @@ export default function App() {
         )}
 
         {screen === SCREENS.FEED && (
+          <Suspense fallback={null}>
           <motion.div
             key="feed"
             initial={{ opacity: 0, x: 30 }}
@@ -138,9 +153,11 @@ export default function App() {
           >
             <Feed onBack={() => handleNavChange('home')} />
           </motion.div>
+          </Suspense>
         )}
 
         {screen === SCREENS.CHAT && (
+          <Suspense fallback={null}>
           <motion.div
             key="chat"
             initial={{ opacity: 0, x: 30 }}
@@ -150,9 +167,11 @@ export default function App() {
           >
             <Chat onBack={() => handleNavChange('home')} />
           </motion.div>
+          </Suspense>
         )}
 
         {screen === SCREENS.LEADERBOARD && (
+          <Suspense fallback={null}>
           <motion.div
             key="leaderboard"
             initial={{ opacity: 0, x: 30 }}
@@ -162,6 +181,7 @@ export default function App() {
           >
             <Leaderboard onBack={() => handleNavChange('home')} />
           </motion.div>
+          </Suspense>
         )}
       </AnimatePresence>
 
