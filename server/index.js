@@ -240,6 +240,18 @@ app.get("/api/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString(), supabase: Boolean(supabaseAdmin) });
 });
 
+app.post("/api/report-error", async (req, res) => {
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+  log("client_error", {
+    message: ensureString(body.message, { field: "message", maxLength: 500 }) ?? null,
+    hasStack: Boolean(body.stack),
+    hasComponentStack: Boolean(body.componentStack),
+    userAgent: ensureString(body.userAgent, { field: "userAgent", maxLength: 300 }) ?? null,
+  });
+  res.json({ ok: true });
+});
+
 async function createNonceRecord(nonce) {
   if (!supabaseAdmin) return;
   await supabaseAdmin.from("siwe_nonces").upsert({
@@ -360,10 +372,14 @@ app.post(
 
     try {
       const verification = await verifySiweMessage(payload, nonce);
-      if (!verification.isValid) return res.status(401).json({ error: "invalid_siwe" });
+      if (!verification.isValid) {
+        log("siwe_invalid", { nonce });
+        return res.status(401).json({ error: "invalid_siwe" });
+      }
 
       const address = verification.siweMessageData.address;
       const sessionId = await createSessionRecord(address);
+      log("siwe_success", { address });
 
       if (supabaseAdmin) {
         await supabaseAdmin.from("users").upsert(
@@ -375,6 +391,7 @@ app.post(
       setSessionCookie(res, sessionId);
       res.json({ ok: true, address });
     } catch (e) {
+      log("siwe_error", { nonce, message: e instanceof Error ? e.message : "unknown" });
       res.status(400).json({ error: "siwe_verification_failed", message: e instanceof Error ? e.message : "unknown_error" });
     }
   },
@@ -638,13 +655,19 @@ app.post("/api/pay/confirm", requireAuth, async (req, res) => {
 
   try {
     const url = `https://developer.worldcoin.org/api/v2/minikit/transaction/${payload.transactionId}?app_id=${appId}&type=payment`;
+    log("pay_confirm_fetch", { address: req.user.address, reference: payload.reference, txId: payload.transactionId });
     const resp = await fetch(url, { method: "GET", headers: { Authorization: `Bearer ${apiKey}` } });
     const json = await resp.json().catch(() => null);
-    if (!resp.ok) return res.status(400).json({ error: "payment_verify_failed", details: json });
+    if (!resp.ok) {
+      log("pay_confirm_rejected", { address: req.user.address, status: resp.status });
+      return res.status(400).json({ error: "payment_verify_failed", details: json });
+    }
 
     await upsertPaidUser(req.user.address, { referredBy: body.referredBy || null, platform: "world" });
+    log("pay_confirm_success", { address: req.user.address, platform: "world" });
     res.json({ ok: true, paid: true, details: json });
   } catch (e) {
+    log("pay_confirm_error", { address: req.user.address, message: e instanceof Error ? e.message : "unknown" });
     res.status(400).json({ error: "payment_confirm_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
@@ -1107,6 +1130,7 @@ app.post(
       const username = userRec?.username ?? null;
 
       if (supabaseAdmin) {
+        log("checkin_rpc", { address: req.user.address, day, gpsShared: hasUserGps, distanceM: distance != null ? Math.round(distance) : null });
         const { data, error } = await supabaseAdmin.rpc("create_checkin", {
           p_day: day,
           p_address: req.user.address,
@@ -1117,9 +1141,15 @@ app.post(
           p_distance_m: distance,
           p_survival_cap: cap,
         });
-        if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
+        if (error) {
+          log("checkin_error", { address: req.user.address, day, message: error.message });
+          return res.status(400).json({ error: "db_insert_failed", message: error.message });
+        }
         if (!data?.survived) {
           await supabaseAdmin.from("users").update({ eliminated: true, eliminated_at_day: day }).eq("address", req.user.address);
+          log("checkin_eliminated", { address: req.user.address, day, rank: data?.rank });
+        } else {
+          log("checkin_survived", { address: req.user.address, day, rank: data?.rank });
         }
         return res.json({ ok: true, rank: data.rank, survived: data.survived, distanceM: data.distance_m != null ? Math.round(data.distance_m) : null, survivalCap: cap, gpsShared: hasUserGps });
       }
@@ -1127,9 +1157,11 @@ app.post(
       const currentCount = await checkinCountForDay(day);
       const rank = currentCount + 1;
       const survived = rank <= cap;
+      log(survived ? "checkin_survived" : "checkin_eliminated", { address: req.user.address, day, rank, mode: "memory" });
       memCheckins.push({ id: memCheckins.length + 1, day, address: req.user.address, username, lat: hasUserGps ? lat : null, lng: hasUserGps ? lng : null, accuracy_m: typeof accuracy === "number" ? accuracy : null, distance_m: distance, rank, survived, created_at: new Date().toISOString() });
       return res.json({ ok: true, rank, survived, distanceM: distance != null ? Math.round(distance) : null, survivalCap: cap, gpsShared: hasUserGps });
     } catch (error) {
+      log("checkin_error", { address: req.user.address, message: error instanceof Error ? error.message : "unknown" });
       sendValidationError(res, error);
     }
   },
