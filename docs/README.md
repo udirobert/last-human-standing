@@ -81,7 +81,7 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
 
 1. Create a Supabase project
 2. Create a storage bucket (default `checkins`)
-3. Apply the schema (idempotent — adds `users`, `submissions`, `votes`, **`rounds`**, **`checkins`**). Two options:
+3. Apply the schema (idempotent — adds `users`, `submissions`, `votes`, `rounds`, `checkins`, plus runtime-persistence tables). Two options:
 
    **A) SQL Editor (manual, no creds needed):** paste the contents of `supabase/schema.sql` and click Run.
 
@@ -98,6 +98,21 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
    psql -h db.${PROJECT_REF}.supabase.co -p 5432 -U postgres -d postgres \
      -c "NOTIFY pgrst, 'reload schema';"
    ```
+
+### Schema tables
+
+| Table | Purpose |
+|---|---|
+| `users` | address, paid, eliminated, world_id_verified, referral_code, referral_count |
+| `rounds` | daily challenge: day, name, lat, lng, radius_m, survival_cap, opens_at, closes_at, prompt, status |
+| `checkins` | per-day arrival record: id, day, address, lat, lng, distance_m, rank, survived, photo_path, created_at |
+| `submissions` | audit-layer photo submissions with voting status |
+| `votes` | crowd votes (real/sus) per submission |
+| `game_sessions` | httpOnly session cookies; expires_at TTL |
+| `siwe_nonces` | consumed nonces for SIWE; prevents replay |
+| `pay_references` | payment references consumed on confirmation |
+| `rate_limits` | per-key request counters with TTL |
+| `submission_flags` | anti-cheat flags (GPS plausibility, vote ring, timing anomaly) |
 
 ## Admin operations
 

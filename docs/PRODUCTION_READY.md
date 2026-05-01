@@ -4,12 +4,11 @@ This documents the **modes**, the **cohort lifecycle**, and what's left to harde
 
 ## 1) Modes
 
-### A) Demo / Browser mode
-- MiniKit not installed → simulate wallet auth + pay (browser fallback)
-- When `DEV_BYPASS_VERIFICATION=true` on the server, the browser-fallback `walletAuth` calls **`POST /api/dev/login`** which mints a real httpOnly session cookie + marks the stub address as `paid`. This lets the demo exercise the real `/api/checkin/location` flow end-to-end.
-- The `/api/dev/login` endpoint returns `404 not_enabled` whenever `DEV_BYPASS_VERIFICATION` is anything other than `"true"` — keep this off in production.
-- Geo check-in still works (real navigator.geolocation)
-- Useful for screen-shareable walkthroughs
+### A) Browser / Mini App mode
+- MiniKit not installed → user connects any EVM wallet via Wagmi + viem and pays 1 WLD directly on World Chain via `BrowserWalletPay`
+- Entry fee confirmed via on-chain transaction; server reconciles via `/api/pay/browser-confirm`
+- Browser mode still exercises the real `/api/checkin/location` flow with geolocation
+- Useful for screen-shareable walkthroughs without World App
 
 ### B) Real / World App mode (pilot)
 - SIWE wallet auth verified on backend
@@ -88,16 +87,20 @@ prelaunch    →    live (Day 1..N)    →    ended
 - Audit DQ-and-replace ON in production
 - Optional: AI-image-detection signal in audit
 
+### Sessions
+- ✅ Sessions backed by Supabase `game_sessions` table with TTL; no in-memory Map
+- ✅ Nonce consumption persisted in `siwe_nonces`; payment references in `pay_references`
+- ✅ `requireAuth` middleware resolves sessions from DB on every request
+
 ### Supabase policies
 - Private `checkins` storage bucket + signed read URLs only
 - RLS: server-role writes only; clients can read their own checkins
 - Add unique index on `(day, address)` (already in schema)
 
 ### Observability
-- Structured logs (pino)
-- Error tracking (Sentry)
-- Metrics: check-ins/min, audit votes/min, p95 latency on `/api/checkin/location`
-- Alert on: round window opening with no admin row, anomalous GPS clusters
+- ✅ Structured logs: `log()` helper emits JSON events for auth, payment, check-in, anti-cheat
+- ✅ Client-side error boundary at app root; errors reported to `/api/report-error`
+- ⚪ Sentry / hosted error tracking (add `SENTRY_DSN` + `@sentry/react` when ready)
 
 ### UX hardening
 - Loading + empty + error states for every screen (not just happy path)
@@ -132,8 +135,12 @@ ssh snel-bot 'cd /opt/last-human-standing && \
 | Pre-launch waitlist UI | ✅ shipped |
 | Geo CheckIn UI | ✅ shipped |
 | Phase-aware Home + Standings | ✅ shipped |
+| Sessions DB-backed (Supabase) | ✅ shipped |
+| Anti-cheat: GPS plausibility + timing + vote ring | ✅ shipped |
+| Structured logs + client error reporting | ✅ shipped |
+| Browser wallet payment flow | ✅ shipped |
 | Audit DQ-and-replace | 🟡 collected, not enforced |
-| Sessions out of memory | ⚪ todo |
-| Anti-spoof signals | ⚪ todo |
+| Sentry error tracking | ⚪ todo |
 | Multi-cohort scheduler | ⚪ todo |
-| Sentry + structured logs | ⚪ todo |
+| Velocity spoof detection | ⚪ todo |
+| EXIF strip + photo deduplication | ⚪ todo |

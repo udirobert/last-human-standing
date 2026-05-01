@@ -17,7 +17,7 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 ```
 
 - For real flow: open inside World App with WLD balance ≥ 1.
-- For UI demos: any browser — demo mode auto-completes wallet auth + pay.
+- For browser demos: any browser — connect a wallet (MetaMask, WalletConnect, etc.) and pay the 1 WLD entry fee on World Chain.
 
 ## 1) The 2-minute "judge path"
 
@@ -89,9 +89,8 @@ curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
 ## 3) If something fails live (backup plan)
 
 - **GPS denied** → no problem — GPS is optional; photo + community voting is the primary trust layer
-- **World App keys missing** → `DEV_BYPASS_VERIFICATION=true` keeps the demo flowing
-- **Browser demo mode** is the always-works path for UI walkthroughs
-- **Stale `/api/game/state`** → tap retry banner; falls back to last-known state
+- **World App keys missing** → browser wallet flow still works; no demo bypass exists
+- **Wallet not connected** → prompt to connect via MetaMask or WalletConnect before the entry fee step
 
 ## 4) Pilot script (50-user test)
 
