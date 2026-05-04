@@ -327,12 +327,18 @@ export default function Onboarding({ onEnter }) {
                       />
                       <div className="border-t border-ember/30 pt-3 text-center">
                         <p className="text-dim text-[10px] font-mono">
-                          For full trust level, open in{' '}
-                          <a href="https://worldcoin.org/download" target="_blank" rel="noopener" className="text-amber underline">World App</a>
-                          {' '}and verify with World ID
+                          For full trust level, verify with{' '}
+                          <a href="https://worldcoin.org/download" target="_blank" rel="noopener" className="text-amber underline">World ID</a>
                         </p>
                       </div>
                     </div>
+                  )}
+
+                  {/* World ID verify — shown for browser users after payment (when VITE_ENABLE_IDKIT=true) */}
+                  {!isWorldApp && requireWorldId && !worldIdVerified && walletAuthed && entryPaid && (
+                    <Suspense fallback={<p className="text-dim text-xs font-mono text-center">Loading World ID…</p>}>
+                      <WorldIdVerify />
+                    </Suspense>
                   )}
 
                   {lastError && (

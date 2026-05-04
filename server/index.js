@@ -5,6 +5,9 @@ import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
 import { getSupabaseAdmin } from "./supabase.js";
 import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission } from "./anticheat.js";
+import { rateLimit } from "./rateLimit.js";
+import helmet from "helmet";
+import cors from "cors";
 function signRequest(signingKey, action, ttlSeconds = 300) {
   const nonce = randomId(16);
   const created_at = Math.floor(Date.now() / 1000);
@@ -14,7 +17,6 @@ function signRequest(signingKey, action, ttlSeconds = 300) {
   const sig = crypto.createHmac("sha256", Buffer.from(key, "hex")).update(payload).digest("hex");
   return { nonce, created_at, expires_at, sig };
 }
-import { rateLimit } from "./rateLimit.js";
 
 const PORT = Number(process.env.PORT || 8787);
 const IS_PROD = process.env.NODE_ENV === "production";
@@ -169,8 +171,33 @@ async function cleanupPersistentState() {
   ]);
 }
 
+async function autoAdvanceRounds() {
+  if (!supabaseAdmin) return;
+
+  try {
+    const { data, error } = await supabaseAdmin.rpc("advance_rounds");
+    if (error) {
+      log("round_scheduler_error", { source: "rpc", error: error.message });
+      return;
+    }
+    const result = data ?? { opened: [], closed: [], errors: [] };
+    for (const r of result.opened ?? []) {
+      log("round_auto_opened", { day: r.day });
+    }
+    for (const r of result.closed ?? []) {
+      log("round_auto_closed", { day: r.day, survivors: r.survivors, eliminated: r.eliminated });
+    }
+    for (const r of result.errors ?? []) {
+      log("round_scheduler_error", { day: r.day, error: r.error });
+    }
+  } catch (e) {
+    log("round_scheduler_error", { source: "catch", error: e instanceof Error ? e.message : "unknown" });
+  }
+}
+
 setInterval(() => {
   cleanupPersistentState().catch(() => {});
+  autoAdvanceRounds().catch(() => {});
 }, 60_000).unref();
 
 const rateLimitStorage = supabaseAdmin
@@ -213,29 +240,30 @@ const rateLimitStorage = supabaseAdmin
 const app = express();
 app.use(express.json({ limit: "1mb" }));
 app.use(cookieParser());
-app.use((req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "DENY");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Cross-Origin-Resource-Policy", "same-site");
-  res.setHeader("Permissions-Policy", "camera=(self), geolocation=(self)");
-  if (IS_PROD) {
-    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-  }
-  next();
-});
-app.use((req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Vary", "Origin");
-  }
-  res.setHeader("Access-Control-Allow-Credentials", "true");
-  res.setHeader("Access-Control-Allow-Headers", "content-type,x-admin-token");
-  res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-  if (req.method === "OPTIONS") return res.sendStatus(204);
-  next();
-});
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "same-origin" },
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+      frameSrc: ["'self'", "https://js.stripe.com"],
+      connectSrc: ["'self'", "https://worldchain-mainnet.g.alchemy.com", "https://*.supabase.co", "https://developer.worldcoin.org"],
+      imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      fontSrc: ["'self'", "data:"],
+    },
+  },
+}));
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(new Error("origin_not_allowed"));
+  },
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Cookie", "x-admin-token"],
+}));
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, time: new Date().toISOString(), supabase: Boolean(supabaseAdmin) });
@@ -1429,6 +1457,20 @@ app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
     return res.json({ ok: true, day, survivors, eliminated: null, mode: "memory" });
   } catch (error) {
     sendValidationError(res, error);
+  }
+});
+
+// Manual trigger for the Postgres advance_rounds() function.
+// Useful as a fallback if the setInterval scheduler is down, or for ad-hoc admin control.
+// Uses pg_advisory_xact_lock so it is safe to call concurrently with the scheduler.
+app.post("/api/admin/trigger-rounds", requireAdmin, async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  try {
+    const { data, error } = await supabaseAdmin.rpc("advance_rounds");
+    if (error) return res.status(500).json({ error: "rpc_failed", message: error.message });
+    return res.json({ ok: true, result: data });
+  } catch (e) {
+    return res.status(500).json({ error: "trigger_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

@@ -334,3 +334,96 @@ create policy "checkins_public_read" on storage.objects
 -- Server can delete (for cleanup).
 create policy "checkins_service_delete" on storage.objects
   for delete using (bucket_id = 'checkins');
+
+-- =============== Distributed scheduler lock ===============
+-- pg_advisory_xact_lock is transaction-scoped: released on commit/rollback.
+-- Lock ID 42424201 chosen to not collide with create_checkin's 424242.
+-- This function advances rounds atomically — safe to call from multiple server instances.
+create or replace function public.advance_rounds()
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+  now_ms bigint := trunc Extract(epoch from now()) * 1000;
+  now_iso timestamptz := now();
+  result jsonb := '{"opened": [], "closed": [], "errors": []}'::jsonb;
+  round_row record;
+  opens_ms bigint;
+  closes_ms bigint;
+  cap int;
+  survivor_addrs text[];
+  to_eliminate text[];
+  ck_row record;
+  user_row record;
+begin
+  perform pg_advisory_xact_lock(42424201);
+
+  for round_row in
+    select day, status, opens_at, closes_at, survival_cap
+    from public.rounds
+    where status in ('scheduled', 'open')
+    order by day asc
+  loop
+    begin
+      if round_row.status = 'scheduled' then
+        opens_ms := trunc(Extract(epoch from round_row.opens_at)) * 1000;
+        if now_ms >= opens_ms then
+          update public.rounds
+            set status = 'open', updated_at = now_iso
+            where day = round_row.day and status = 'scheduled';
+          result := jsonb_set(result, '{opened}', result->'opened' || jsonb_build_array(jsonb_build_object('day', round_row.day)));
+        end if;
+
+      elsif round_row.status = 'open' then
+        closes_ms := trunc(Extract(epoch from round_row.closes_at)) * 1000;
+        if now_ms >= closes_ms then
+          cap := coalesce(round_row.survival_cap, 25);
+
+          update public.checkins
+            set survived = false
+            where day = round_row.day and rank > cap;
+
+          survivor_addrs := array(
+            select lower(address)
+            from public.checkins
+            where day = round_row.day and rank <= cap
+          );
+
+          for user_row in
+            select address from public.users where paid = true and eliminated = false
+          loop
+            if not (lower(user_row.address) = any (survivor_addrs)) then
+              to_eliminate := array_append(to_eliminate, user_row.address);
+            end if;
+          end loop;
+
+          if array_length(to_eliminate, 1) > 0 then
+            update public.users
+              set eliminated = true, eliminated_at_day = round_row.day
+              where address = any (to_eliminate);
+          end if;
+
+          update public.rounds
+            set status = 'closed', updated_at = now_iso
+            where day = round_row.day and status = 'open';
+
+          result := jsonb_set(result, '{closed}', result->'closed' || jsonb_build_array(
+            jsonb_build_object(
+              'day', round_row.day,
+              'survivors', coalesce(cardinality(survivor_addrs), 0),
+              'eliminated', coalesce(cardinality(to_eliminate), 0)
+            )
+          ));
+        end if;
+      end if;
+    exception when others then
+      result := jsonb_set(result, '{errors}', result->'errors' || jsonb_build_array(
+        jsonb_build_object('day', round_row.day, 'error', sqlerrm)
+      ));
+    end;
+  end loop;
+
+  return result;
+end;
+$$;
