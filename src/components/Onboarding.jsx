@@ -1,14 +1,11 @@
-import { Suspense, lazy, useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import Countdown from './Countdown.jsx';
-import BrowserWalletPay from '../wallet/BrowserWalletPay.jsx';
 import Mascot from './Mascot.jsx';
 import SurvivalProfile from './SurvivalProfile.jsx';
 import ExitIntentModal, { useExitIntent } from './ExitIntentModal.jsx';
-
-const WorldIdVerify = lazy(() => import('../world/WorldIdVerify.jsx'));
 
 export default function Onboarding({ onEnter }) {
   const [step, setStep] = useState(0); // 0=splash, 1=rules, 2=verify, 3=profile
@@ -18,7 +15,6 @@ export default function Onboarding({ onEnter }) {
   const [survivalProfile, setSurvivalProfile] = useState(null);
   const [exitDiscount, setExitDiscount] = useState(false);
   const [paywallStep, setPaywallStep] = useState('annual'); // 'monthly', 'quarterly', 'annual', 'one-time'
-  const [expandedFaq, setExpandedFaq] = useState(null);
   const enteredRef = useRef(false);
   
   // Exit intent detection for discount offer

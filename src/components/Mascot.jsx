@@ -1,13 +1,23 @@
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * "Survivor" mascot — a determined little figure that's always one step ahead.
  * Used throughout onboarding to build emotional connection.
  */
-export default function Mascot({ variant = 'idle', size = 96, showBadge = false, badgeCount = 0 }) {
+export default function Mascot({ 
+  variant = 'idle', 
+  size = 96, 
+  showBadge = false, 
+  badgeCount = 0,
+  name = null,
+  onClick = null,
+  interactive = false,
+}) {
   const [blink, setBlink] = useState(false);
-  
+  const [isHovered, setIsHovered] = useState(false);
+  const [tapCount, setTapCount] = useState(0);
+
   // Blink animation
   useEffect(() => {
     const id = setInterval(() => {
@@ -16,6 +26,20 @@ export default function Mascot({ variant = 'idle', size = 96, showBadge = false,
     }, 3000 + Math.random() * 2000);
     return () => clearInterval(id);
   }, []);
+
+  // Tap interaction for easter egg
+  const handleTap = useCallback(() => {
+    if (!interactive) return;
+    setTapCount(prev => {
+      const next = prev + 1;
+      if (next === 5) {
+        onClick?.('secret');
+      } else {
+        onClick?.('tap');
+      }
+      return next;
+    });
+  }, [interactive, onClick]);
 
   const variants = {
     idle: {
@@ -36,16 +60,36 @@ export default function Mascot({ variant = 'idle', size = 96, showBadge = false,
       x: [0, -2, 2, -1, 0],
       transition: { duration: 1.5, repeat: Infinity }
     },
+    worried: {
+      y: [0, 2, 0],
+      transition: { duration: 0.8, repeat: Infinity }
+    },
+    winner: {
+      y: [0, -8, 0, -4, 0],
+      rotate: [-3, 3, -3, 0],
+      scale: [1, 1.05, 1],
+      transition: { duration: 1, repeat: Infinity }
+    },
   };
 
   return (
-    <div className="relative inline-flex items-center justify-center">
+    <div 
+      className={`relative inline-flex flex-col items-center ${interactive ? 'cursor-pointer' : ''}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      onClick={handleTap}
+    >
       <motion.div
         animate={variant === 'idle' ? 'idle' : variant}
         variants={variants}
-        className="relative"
+        className={`relative transition-all ${isHovered && interactive ? 'scale-110' : ''}`}
         style={{ width: size, height: size }}
+        whileTap={interactive ? { scale: 0.9 } : {}}
       >
+        {/* Glow effect on hover */}
+        {isHovered && interactive && (
+          <div className="absolute inset-0 rounded-full bg-amber-500/30 blur-xl animate-pulse" />
+        )}
         {/* Main body - a determined survivor figure */}
         <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
           {/* Shadow */}
@@ -159,6 +203,31 @@ export default function Mascot({ variant = 'idle', size = 96, showBadge = false,
             </motion.div>
           ))}
         </div>
+      )}
+
+      {/* Name label (if provided) */}
+      {name && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-2 px-3 py-1 bg-gray-800/80 rounded-full border border-gray-700"
+        >
+          <span className="text-amber-400 text-xs font-medium">{name}</span>
+        </motion.div>
+      )}
+
+      {/* Speech bubble for interactions */}
+      {interactive && isHovered && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-xl px-3 py-1.5 shadow-lg"
+        >
+          <span className="text-gray-300 text-xs whitespace-nowrap">
+            {tapCount > 0 ? `${5 - tapCount} more...` : 'Tap me!'}
+          </span>
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-gray-800" />
+        </motion.div>
       )}
     </div>
   );
