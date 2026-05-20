@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 
 // Sound context singleton
 let audioContext = null;

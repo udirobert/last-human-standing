@@ -3,14 +3,17 @@
  * Used when the app runs outside World App (browser demo or Farrcaster mini app).
  */
 import { http, createConfig } from "wagmi";
-import { worldchain } from "wagmi/chains";
+import { worldchain, celo, celoAlfajores } from "wagmi/chains";
 import { injected, walletConnect } from "wagmi/connectors";
 
 const WALLETCONNECT_ID =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "demo";
 
+const useCeloTestnet = import.meta.env.VITE_USE_CELO_TESTNET === "true";
+const browserChains = useCeloTestnet ? [worldchain, celoAlfajores] : [worldchain, celo];
+
 export const wagmiConfig = createConfig({
-  chains: [worldchain],
+  chains: browserChains,
   connectors: [
     injected(),
     ...(WALLETCONNECT_ID !== "demo"
@@ -19,6 +22,8 @@ export const wagmiConfig = createConfig({
   ],
   transports: {
     [worldchain.id]: http(),
+    [celo.id]: http(),
+    [celoAlfajores.id]: http(),
   },
 });
 

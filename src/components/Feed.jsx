@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_SUBMISSIONS, TODAY_THEME } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
+import { useTrustTier } from '../hooks/useTrustTier.js';
+import VoteGateBanner from './VoteGateBanner.jsx';
 import { MiniKit } from "@worldcoin/minikit-js";
 
 const STATUS_COLORS = {
@@ -20,7 +22,7 @@ const STATUS_LABELS = {
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 export default function Feed({ onBack }) {
-  const { walletAuthed, entryPaid, worldIdVerified, sendWorldChat, isMiniApp } = useWorld();
+  const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
   const { verification } = useRound();
   const [submissions, setSubmissions] = useState(isMiniApp ? [] : MOCK_SUBMISSIONS);
   const [voted, setVoted] = useState({});
@@ -31,7 +33,7 @@ export default function Feed({ onBack }) {
   const [loading, setLoading] = useState(isMiniApp);
   const [challengeToast, setChallengeToast] = useState(null);
 
-  const requireWorldIdToVote = import.meta.env.VITE_REQUIRE_WORLD_ID_FOR_VOTING === "true";
+  const { canVote } = useTrustTier();
 
   const loadFeed = useCallback(async () => {
     if (!(walletAuthed && entryPaid)) {
@@ -83,7 +85,7 @@ export default function Feed({ onBack }) {
   };
 
   const handleVote = async (id, type) => {
-    if (requireWorldIdToVote && !worldIdVerified) return;
+    if (!canVote) return;
     if (voted[id]) return;
     setVoted((v) => ({ ...v, [id]: type }));
     setSubmissions((subs) =>
@@ -168,6 +170,12 @@ export default function Feed({ onBack }) {
       </div>
 
       <div className="px-5 space-y-4">
+        {!isMiniApp && (
+          <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5">
+            Demo feed — sample submissions for browser preview. Live data appears in World App after check-ins.
+          </p>
+        )}
+        <VoteGateBanner />
         {loading && submissions.length === 0 && (
           <div className="text-dim font-mono text-sm text-center py-12">Loading feed…</div>
         )}

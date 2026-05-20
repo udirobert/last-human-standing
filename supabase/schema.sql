@@ -9,6 +9,9 @@ create table if not exists public.users (
   paid boolean not null default false,
   reserved_at timestamptz,
   world_id_verified boolean not null default false,
+  humanity_provider text,
+  humanity_nullifier text,
+  humanity_verified_at timestamptz,
   eliminated boolean not null default false,
   eliminated_at_day int,
   username text,
@@ -26,7 +29,13 @@ alter table public.users add column if not exists referral_code text;
 alter table public.users add column if not exists referral_count int not null default 0;
 alter table public.users add column if not exists referred_by text;
 alter table public.users add column if not exists platform text;
+alter table public.users add column if not exists humanity_provider text;
+alter table public.users add column if not exists humanity_nullifier text;
+alter table public.users add column if not exists humanity_verified_at timestamptz;
 create unique index if not exists users_referral_code_idx on public.users(referral_code);
+create unique index if not exists users_humanity_nullifier_uidx
+  on public.users(humanity_nullifier)
+  where humanity_nullifier is not null;
 
 -- =============== Daily rounds (geo + window) ===============
 create table if not exists public.rounds (

@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { Confetti } from '../hooks/useDelight';
-import { useSound } from '../hooks/useSound';
-import { useAchievements, AchievementToast } from '../hooks/useAchievements';
+import { Confetti } from '../hooks/useDelight.jsx';
+import { useSound } from '../hooks/useSound.js';
+import { useAchievements, AchievementToast } from '../hooks/useAchievements.jsx';
 import { 
   useSurvivalTips, 
   TipToast, 
@@ -9,8 +9,8 @@ import {
   SecretMessage,
   useSuspenseNotification,
   SuspenseNotification,
-} from '../hooks/useSurprises';
-import { useMascotName, MascotNameModal } from '../hooks/usePersonalization';
+} from '../hooks/useSurprises.jsx';
+import { useMascotName, MascotNameModal } from '../hooks/usePersonalization.jsx';
 
 // Combined context for all delight features
 const DelightContext = createContext(null);

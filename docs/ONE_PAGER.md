@@ -24,6 +24,10 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 
 ## What's built today
 
+- **🤖 ARIA AI Companion (Character Chat)** — Integrated interactive AI guide (ARIA) with customizable personalities (Guide, Mentor, Rival, Ally) powered by unified Venice/AISA One/Featherless APIs to help players strategically navigate the game.
+- **🔊 Immersive Audio Layer (Sound Design)** — Synthetic Web Audio sound engine (button click, success, milestone, errors, and custom mascot soundscapes) for zero-latency game audio.
+- **✨ Competitor-Optimized Onboarding Flow** — Personalization-focused onboarding flow: 9 stages of user investment, survival profiling, multiple subscription models, 7-day free trials, and an exit-intent discount trigger (70% off).
+- **🛡️ Pluggable Multi-Provider Proof of Humanity** — Extensible PoH architecture supporting World ID (live) and preparing Self Protocol (Celo Sepolia / Alfajores) with developer mock/verify endpoints and reusable database schema.
 - **Pre-launch waitlist + countdown** — wallet auth + 1 WLD entry locks your slot in the cohort
 - **Cohort lifecycle** — `phase: 'prelaunch' | 'live' | 'ended'`, exposed via `/api/game/state`
 - **Daily round model** — admin sets theme/place type, time window, survival cap, prompt (GPS coords optional for local events)

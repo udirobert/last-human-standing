@@ -131,7 +131,7 @@ export function AchievementToast({ achievement, onClose }) {
 }
 
 // Achievement grid component
-export function AchievementGrid({ unlocked = [], onShare }) {
+export function AchievementGrid({ unlocked = [] }) {
   const categories = ['checkin', 'streak', 'game', 'social', 'special'];
   
   return (

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 // Random survival tips database
 const TIPS = [
@@ -70,19 +70,16 @@ export function useEasterEgg(eggId) {
   const [unlocked, setUnlocked] = useState(false);
 
   const increment = useCallback(() => {
-    setCount(prev => {
+    setCount((prev) => {
       const next = prev + 1;
       localStorage.setItem(`easter_egg_${eggId}`, next.toString());
+      const egg = EASTER_EGGS[eggId];
+      if (egg && next >= egg.required) {
+        setUnlocked(true);
+      }
       return next;
     });
   }, [eggId]);
-
-  useEffect(() => {
-    const egg = EASTER_EGGS[eggId];
-    if (egg && count >= egg.required && !unlocked) {
-      setUnlocked(true);
-    }
-  }, [count, eggId, unlocked]);
 
   return { count, increment, unlocked, requirement: EASTER_EGGS[eggId]?.required };
 }

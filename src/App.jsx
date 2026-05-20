@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, Component, lazy, Suspense } from 'react';
+import { useState, useCallback, Component, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
@@ -6,6 +6,8 @@ import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
 import ModeBanner from './components/ModeBanner.jsx';
 import RoundMetaBanner from './components/RoundMetaBanner.jsx';
+import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
+import SoundProvider from './components/SoundProvider.jsx';
 
 const Feed = lazy(() => import('./components/Feed.jsx'));
 const Chat = lazy(() => import('./components/Chat.jsx'));
@@ -58,24 +60,26 @@ const SCREENS = {
   LEADERBOARD: 'leaderboard',
 };
 
-export default function App() {
+// Wrapper to use delight hooks in App
+function AppWithDelight() {
+  const { play: playSound, celebrate, soundEnabled, toggle: toggleSound } = useDelight();
   const [screen, setScreen] = useState(SCREENS.ONBOARDING);
   const [navTab, setNavTab] = useState('home');
   const [badges, setBadges] = useState({});
 
-  const markBadge = useCallback((tab) => {
-    setBadges((b) => (b[tab] ? b : { ...b, [tab]: true }));
-  }, []);
   const clearBadge = useCallback((tab) => {
     setBadges((b) => (b[tab] ? { ...b, [tab]: false } : b));
   }, []);
 
   const handleEnterGame = () => {
+    playSound('victory');
+    celebrate(30);
     setScreen(SCREENS.HOME);
     setNavTab('home');
   };
 
   const handleNavChange = (tab) => {
+    playSound('click');
     setNavTab(tab);
     clearBadge(tab);
     if (tab === 'home') setScreen(SCREENS.HOME);
@@ -86,18 +90,17 @@ export default function App() {
 
   const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN;
 
-  // Simulate unread chat badge when user is away from chat (browser demo feel)
-  useEffect(() => {
-    if (!isInGame || screen === SCREENS.CHAT) return;
-    const id = setInterval(() => {
-      if (screen !== SCREENS.CHAT) markBadge('chat');
-    }, 12_000);
-    return () => clearInterval(id);
-  }, [isInGame, markBadge, screen]);
-
   return (
-    <ErrorBoundary>
     <div className="relative">
+      {/* Sound toggle button */}
+      <button
+        onClick={toggleSound}
+        className="fixed top-20 right-4 z-50 w-10 h-10 rounded-full bg-smoke/80 backdrop-blur-sm border border-ember/30 flex items-center justify-center text-lg hover:bg-ember/30 transition-colors"
+        title={soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
+      >
+        {soundEnabled ? '🔊' : '🔇'}
+      </button>
+      
       <ModeBanner />
       <RoundMetaBanner />
       <AnimatePresence mode="wait">
@@ -122,7 +125,7 @@ export default function App() {
             transition={{ duration: 0.25 }}
           >
             <GameHome
-              onCheckIn={() => setScreen(SCREENS.CHECKIN)}
+              onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
               onViewChat={() => handleNavChange('chat')}
               onViewLeaderboard={() => handleNavChange('leaderboard')}
@@ -138,7 +141,7 @@ export default function App() {
             exit={{ y: '100%', opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
           >
-            <CheckIn onBack={() => setScreen(SCREENS.HOME)} onSubmit={() => setScreen(SCREENS.HOME)} />
+            <CheckIn onBack={() => setScreen(SCREENS.HOME)} onSubmit={() => { playSound('success'); setScreen(SCREENS.HOME); }} />
           </motion.div>
         )}
 
@@ -189,6 +192,17 @@ export default function App() {
         <BottomNav current={navTab} onChange={handleNavChange} badges={badges} />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <SoundProvider>
+        <DelightProvider showTipOnMount={true}>
+          <AppWithDelight />
+        </DelightProvider>
+      </SoundProvider>
     </ErrorBoundary>
   );
 }

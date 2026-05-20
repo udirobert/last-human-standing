@@ -6,20 +6,13 @@ import Mascot from './Mascot';
  * Exit Intent Modal - shows 70% discount when user tries to leave
  * Tracks mouse leaving viewport or going to close button
  */
-export default function ExitIntentModal({ isOpen, onAccept, onDecline, originalPrice = '1 WLD', discountedPrice = '0.35 WLD' }) {
+function ExitIntentModalBody({ onAccept, onDecline, originalPrice = '1 WLD', discountedPrice = '0.35 WLD' }) {
   const [countdown, setCountdown] = useState(10);
   const [accepting, setAccepting] = useState(false);
-  
-  // Countdown timer
+
   useEffect(() => {
-    if (!isOpen) {
-      setCountdown(10);
-      setAccepting(false);
-      return;
-    }
-    
     const interval = setInterval(() => {
-      setCountdown(prev => {
+      setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
           return 0;
@@ -27,9 +20,8 @@ export default function ExitIntentModal({ isOpen, onAccept, onDecline, originalP
         return prev - 1;
       });
     }, 1000);
-    
     return () => clearInterval(interval);
-  }, [isOpen]);
+  }, []);
 
   const handleAccept = () => {
     setAccepting(true);
@@ -39,8 +31,6 @@ export default function ExitIntentModal({ isOpen, onAccept, onDecline, originalP
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -144,6 +134,20 @@ export default function ExitIntentModal({ isOpen, onAccept, onDecline, originalP
             </div>
           </motion.div>
         </motion.div>
+  );
+}
+
+export default function ExitIntentModal({ isOpen, onAccept, onDecline, originalPrice = '1 WLD', discountedPrice = '0.35 WLD' }) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <ExitIntentModalBody
+          key="exit-intent"
+          onAccept={onAccept}
+          onDecline={onDecline}
+          originalPrice={originalPrice}
+          discountedPrice={discountedPrice}
+        />
       )}
     </AnimatePresence>
   );

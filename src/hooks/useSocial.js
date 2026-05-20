@@ -84,7 +84,7 @@ export function useFriendsLeaderboard() {
 }
 
 // Toast notification for social actions
-export function SocialToast({ type, message, onDismiss }) {
+export function SocialToast({ type, message }) {
   const icons = {
     share: '📤',
     referral: '🔗',

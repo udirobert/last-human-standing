@@ -53,6 +53,13 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 - **Infiltrator mode** — gamified social deduction where players can opt-in to submit borderline photos for immunity
 - **World ID** — optional gate for both check-in and voting
 
+### Premium Interactive Layer
+
+- **ARIA AI Strategy Guide** — Open the AI Chatbot component to chat with ARIA. Try switching personalities (`guide`, `mentor`, `rival`, `ally`) to see how ARIA adapts her style to strategically analyze the board or cheer you on. Real stream responses from Venice/AISA One/Featherless APIs can be turned on with key config.
+- **Dynamic Web Audio Soundscape** — Click various buttons (Survival styles, Onboarding checkmarks, AI chat triggers, and the Exit Intent modal) to experience zero-latency custom-synthesized SFX generated programmatically via Web Audio.
+- **Conversion-Optimized Onboarding** — Step through the 9-stage onboarding flow. Complete the motivation profiling, witness the personalized mascot responses, review the 6 tier subscription options (Annual with 7-day free trial, Monthly, One-Time), and try to close/exit the tab on the paywall step to trigger the 70% off Exit Intent discount modal.
+- **Extensible PoH (Self Protocol)** — Toggle the `VITE_ENABLE_SELF` flag to show the Celo/Self Protocol onboarding block, illustrating how the codebase supports pluggable humanity providers beyond World ID.
+
 ### Admin tooling
 
 ```bash

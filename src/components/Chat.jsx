@@ -22,7 +22,7 @@ export default function Chat({ onBack }) {
   const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
   const [rosterCount, setRosterCount] = useState(0);
   const [sending, setSending] = useState(false);
-  const onlineCount = isMiniApp ? rosterCount : 247;
+  const onlineCount = isMiniApp ? rosterCount : null;
 
   // ---- Browser demo: seed fake messages + bot interval ----
   useEffect(() => {
@@ -184,10 +184,18 @@ export default function Chat({ onBack }) {
               </h2>
               <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-dim text-xs">{onlineCount} {isMiniApp ? 'humans reserved' : 'survivors online'}</span>
-              <span className="text-dim text-xs">·</span>
-              <span className="font-mono text-dim text-xs">powered by XMTP</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {isMiniApp && onlineCount != null ? (
+                <span className="font-mono text-dim text-xs">{onlineCount} humans reserved</span>
+              ) : (
+                <span className="font-mono text-amber text-xs">Demo chat — simulated messages</span>
+              )}
+              {isMiniApp && (
+                <>
+                  <span className="text-dim text-xs">·</span>
+                  <span className="font-mono text-dim text-xs">powered by XMTP</span>
+                </>
+              )}
             </div>
           </div>
           <div className="bg-neon/10 border border-neon/30 rounded-xl px-3 py-1">

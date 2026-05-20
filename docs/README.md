@@ -41,6 +41,15 @@ Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLO
 - Cohort caps at `COHORT_SIZE` (default 50).
 - When the cohort fills or the countdown hits zero, **Day 1** begins.
 
+## Premium Interactive & Personalized Features
+
+Last Human Standing integrates key premium improvements inspired by modern, high-conversion competitor design strategies:
+
+1. **🤖 ARIA AI Companion (Character Chat)**: An interactive AI mascot companion (ARIA) with customizable personalities (`guide`, `mentor`, `rival`, `ally`) utilizing unified Venice/AISA One/Featherless API streams, designed to strategically coach and engage players.
+2. **🔊 Immersive Audio Layer (Sound Design)**: Zero-latency synthetic sound effects generated dynamically via the Web Audio API for highly responsive UI sounds (button click, success, milestone, errors, and custom mascot responses) without requiring audio asset downloads.
+3. **✨ Competitor-Optimized Onboarding Flow**: An expanded 9-stage onboarding flow designed to maximize user investment. Includes interactive profiling, name-based personalization throughout the experience, flexible subscription models, 7-day free trials, and an exit-intent modal that triggers a 70% discount offer.
+4. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID (live) and preparing Self Protocol (Celo Sepolia / Alfajores) with developer mock/verify endpoints, making the app highly versatile.
+
 ## World Stack usage
 
 - **World ID** — sybil-resistant identity (one human, one slot)

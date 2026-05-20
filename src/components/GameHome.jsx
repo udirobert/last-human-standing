@@ -5,11 +5,13 @@ import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
 import { usePolling } from '../hooks/usePolling.js';
 import Countdown from './Countdown.jsx';
+import MissionBoard from './MissionBoard.jsx';
+import TrustBadge from './TrustBadge.jsx';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
-  const { user, isWorldApp } = useWorld();
+  const { user, isWorldApp, isMiniApp } = useWorld();
   const {
-    phase, launchAt, currentDay, you,
+    phase, launchAt, currentDay,
     cohortSize, reservedCount, cohortFull,
   } = useRound();
   const { stats } = useStats();
@@ -60,10 +62,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
 
   const isPrelaunch = phase === 'prelaunch';
   const isLive = phase === 'live';
-  const isEliminated = Boolean(you?.isEliminated);
-  const checkedInToday = Boolean(you?.checkedInToday);
-  const survivedToday = you?.survivedToday;
-  const rankToday = you?.rankToday;
 
   const cohortPct = cohortSize > 0 ? Math.min(100, Math.round((reservedCount / cohortSize) * 100)) : 0;
 
@@ -77,10 +75,19 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
               {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : 'Ended'}
             </span>
           </div>
-          <div className="font-mono text-dim text-xs">{user?.displayName ?? 'anon'}</div>
+          <div className="flex flex-col items-end gap-1">
+            <TrustBadge />
+            <span className="font-mono text-dim text-xs">{user?.displayName ?? 'anon'}</span>
+          </div>
         </div>
         <h1 className="font-display text-4xl text-bone tracking-wide animate-glow">LAST HUMAN STANDING</h1>
       </div>
+
+      <MissionBoard
+        onCheckIn={onCheckIn}
+        onViewFeed={onViewFeed}
+        isDemoMode={!isMiniApp}
+      />
 
       {isPrelaunch && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mb-4">
@@ -212,24 +219,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
       </div>
 
       <div className="px-5 space-y-3">
-        {isLive && !isEliminated && !checkedInToday && (
-          <button onClick={onCheckIn} className="w-full bg-blood text-bone font-display text-3xl tracking-widest py-4 rounded-2xl active:scale-95 transition-transform animate-pulse-blood">
-            CHECK IN NOW
-          </button>
-        )}
-        {isLive && checkedInToday && (
-          <div className="bg-smoke rounded-2xl p-4 border border-neon/30">
-            <p className="font-display text-2xl text-neon">YOU'RE IN</p>
-            <p className="text-dim font-mono text-xs mt-1">Rank #{rankToday ?? '—'} · {survivedToday ? 'Survived today' : 'At risk'}</p>
-          </div>
-        )}
-        {isEliminated && (
-          <div className="bg-smoke rounded-2xl p-4 border border-blood/30">
-            <p className="font-display text-2xl text-blood">ELIMINATED</p>
-            <p className="text-dim font-mono text-xs mt-1">You can still vote, spectate, and chat.</p>
-          </div>
-        )}
-
         <div className="grid grid-cols-3 gap-3">
           <button onClick={onViewFeed} className="bg-smoke border border-ember rounded-2xl py-4 text-bone font-mono text-sm">Feed</button>
           <button onClick={onViewChat} className="bg-smoke border border-ember rounded-2xl py-4 text-bone font-mono text-sm">Chat</button>

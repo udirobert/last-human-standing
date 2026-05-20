@@ -6,6 +6,7 @@ import { verifyMessage } from "viem";
 import { getSupabaseAdmin } from "./supabase.js";
 import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission } from "./anticheat.js";
 import { rateLimit } from "./rateLimit.js";
+import { verifySelfProof } from "./selfVerify.js";
 import helmet from "helmet";
 import cors from "cors";
 function signRequest(signingKey, action, ttlSeconds = 300) {
@@ -368,11 +369,15 @@ async function requireAuth(req, res, next) {
 app.get("/api/me", requireAuth, async (req, res) => {
   log("me", { address: req.user.address });
   const userRecord = await getUserRecord(req.user.address);
+  const humanityVerified =
+    Boolean(userRecord?.world_id_verified) || Boolean(userRecord?.humanity_nullifier);
   res.json({
     ok: true,
     address: req.user.address,
     isPaid: Boolean(userRecord?.paid),
     worldIdVerified: Boolean(userRecord?.world_id_verified),
+    humanityVerified,
+    humanityProvider: userRecord?.humanity_provider ?? null,
     username: userRecord?.username ?? null,
     referralCode: userRecord?.referral_code ?? null,
   });
@@ -528,6 +533,59 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
     return res.json({ ok: true, verified: true, details: json });
   } catch (e) {
     return res.status(400).json({ error: "verify_exception", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.post("/api/self/verify", requireAuth, async (req, res) => {
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+
+  if (process.env.SELF_ENABLED !== "true") {
+    return res.status(501).json({
+      error: "self_not_configured",
+      message: "Set SELF_ENABLED=true and install @selfxyz/core to enable Self Protocol verification.",
+    });
+  }
+
+  try {
+    const verification = await verifySelfProof(body, req.user.address);
+    if (!verification.ok) {
+      return res.status(400).json({ error: verification.reason || "verify_failed", details: verification.details ?? null });
+    }
+
+    const nullifier = verification.nullifier;
+
+    if (supabaseAdmin) {
+      const { data: existing } = await supabaseAdmin
+        .from("users")
+        .select("address")
+        .eq("humanity_nullifier", nullifier)
+        .neq("address", req.user.address)
+        .maybeSingle();
+      if (existing) {
+        return res.status(409).json({ error: "nullifier_already_used" });
+      }
+
+      await supabaseAdmin.from("users").upsert(
+        {
+          address: req.user.address,
+          humanity_provider: "self",
+          humanity_nullifier: nullifier,
+          humanity_verified_at: new Date().toISOString(),
+          world_id_verified: true,
+          last_seen_at: new Date().toISOString(),
+        },
+        { onConflict: "address" },
+      );
+    }
+
+    worldIdVerified.set(req.user.address.toLowerCase(), true);
+    return res.json({ ok: true, verified: true, provider: "self", nullifier });
+  } catch (e) {
+    return res.status(400).json({
+      error: "self_verify_exception",
+      message: e instanceof Error ? e.message : "unknown_error",
+    });
   }
 });
 
@@ -948,10 +1006,14 @@ app.post(
         const addr = req.user.address.toLowerCase();
         let verified = worldIdVerified.get(addr) === true;
         if (supabaseAdmin && !verified) {
-          const { data } = await supabaseAdmin.from("users").select("world_id_verified").eq("address", req.user.address).single();
-          verified = Boolean(data?.world_id_verified);
+          const { data } = await supabaseAdmin
+            .from("users")
+            .select("world_id_verified, humanity_nullifier")
+            .eq("address", req.user.address)
+            .single();
+          verified = Boolean(data?.world_id_verified) || Boolean(data?.humanity_nullifier);
         }
-        if (!verified) return res.status(403).json({ error: "world_id_required" });
+        if (!verified) return res.status(403).json({ error: "humanity_verification_required" });
       }
 
       if (supabaseAdmin) {

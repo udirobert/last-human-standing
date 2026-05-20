@@ -21,4 +21,23 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  // Hooks / providers often export components + hooks from one module
+  {
+    files: [
+      'src/hooks/**/*.{js,jsx}',
+      'src/world/**/*.{js,jsx}',
+      'src/components/DelightProvider.jsx',
+      'src/components/ExitIntentModal.jsx',
+    ],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  // Decorative animation: random layout is intentional, computed once per mount
+  {
+    files: ['src/components/CelebrationAnimation.jsx'],
+    rules: {
+      'react-hooks/purity': 'off',
+    },
+  },
 ])

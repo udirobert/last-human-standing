@@ -70,7 +70,101 @@ export default function Mascot({
       scale: [1, 1.05, 1],
       transition: { duration: 1, repeat: Infinity }
     },
+    // NEW: Added per competitor analysis
+    sad: {
+      y: [0, 2, 0],
+      scale: [1, 0.95, 1],
+      transition: { duration: 2, repeat: Infinity }
+    },
+    sleeping: {
+      rotate: [0, 0, 0],
+      opacity: [1, 0.8, 1],
+      transition: { duration: 3, repeat: Infinity }
+    },
+    determined: {
+      y: [0, -6, 0],
+      scale: [1, 1.05, 1],
+      transition: { duration: 0.8, repeat: Infinity }
+    },
+    proud: {
+      y: [0, -8, 0],
+      rotate: [-2, 2, -2, 0],
+      transition: { duration: 1.2, repeat: Infinity }
+    },
+    shocked: {
+      scale: [1, 1.2, 1],
+      transition: { duration: 0.3, repeat: Infinity }
+    },
+    cheering: {
+      y: [0, -15, 0],
+      rotate: [-8, 8, -8, 0],
+      transition: { duration: 0.5, repeat: Infinity }
+    },
   };
+
+  // Variant-specific expressions
+  const getExpression = () => {
+    switch (variant) {
+      case 'sad':
+        return (
+          <>
+            {/* Sad eyes */}
+            <path d="M-10 -20 Q-6 -16 -2 -20" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+            <path d="M2 -20 Q6 -16 10 -20" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+            {/* Frown */}
+            <path d="M-6 -6 Q0 -10 6 -6" stroke="#0D0D0D" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          </>
+        );
+      case 'sleeping':
+        return (
+          <>
+            {/* Closed eyes - ZZZs */}
+            <path d="M-10 -18 L-2 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M2 -18 L10 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+            {/* Peaceful smile */}
+            <path d="M-4 -8 Q0 -6 4 -8" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+          </>
+        );
+      case 'shocked':
+        return (
+          <>
+            {/* Wide eyes */}
+            <circle cx="-6" cy="-18" r="5" fill="#0D0D0D" />
+            <circle cx="6" cy="-18" r="5" fill="#0D0D0D" />
+            <circle cx="-5" cy="-19" r="2" fill="white" />
+            <circle cx="7" cy="-19" r="2" fill="white" />
+            {/* O mouth */}
+            <circle cx="0" cy="-6" r="4" fill="#0D0D0D" />
+          </>
+        );
+      case 'determined':
+        return (
+          <>
+            {/* Fierce eyes */}
+            <path d="M-10 -20 L-2 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <path d="M10 -20 L2 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+            <circle cx="-6" cy="-18" r="3" fill="#0D0D0D" />
+            <circle cx="6" cy="-18" r="3" fill="#0D0D0D" />
+            {/* Determined grin */}
+            <path d="M-8 -6 Q0 -2 8 -6" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+          </>
+        );
+      case 'proud':
+        return (
+          <>
+            {/* Happy closed eyes */}
+            <path d="M-10 -18 Q-6 -14 -2 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+            <path d="M2 -18 Q6 -14 10 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+            {/* Big smile */}
+            <path d="M-8 -6 Q0 -2 8 -6" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+          </>
+        );
+      default:
+        return null; // Use default expression
+    }
+  };
+
+  const customExpression = getExpression();
 
   return (
     <div 
@@ -137,27 +231,31 @@ export default function Mascot({
             {/* Head */}
             <circle cx="0" cy="-16" r="16" fill="#FFB800" />
             
-            {/* Eyes */}
-            {!blink ? (
-              <>
-                <circle cx="-6" cy="-18" r="4" fill="#0D0D0D" />
-                <circle cx="6" cy="-18" r="4" fill="#0D0D0D" />
-                {/* Eye shine */}
-                <circle cx="-5" cy="-19" r="1.5" fill="white" />
-                <circle cx="7" cy="-19" r="1.5" fill="white" />
-              </>
-            ) : (
-              <path d="M-10 -18 Q-6 -14 -2 -18 M2 -18 Q6 -14 10 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
-            )}
+            {/* Eyes - use custom expression if defined, otherwise default */}
+            {!customExpression ? (
+              !blink ? (
+                <>
+                  <circle cx="-6" cy="-18" r="4" fill="#0D0D0D" />
+                  <circle cx="6" cy="-18" r="4" fill="#0D0D0D" />
+                  {/* Eye shine */}
+                  <circle cx="-5" cy="-19" r="1.5" fill="white" />
+                  <circle cx="7" cy="-19" r="1.5" fill="white" />
+                </>
+              ) : (
+                <path d="M-10 -18 Q-6 -14 -2 -18 M2 -18 Q6 -14 10 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+              )
+            ) : customExpression}
             
-            {/* Determined smile */}
-            <path 
-              d="M-6 -8 Q0 -4 6 -8" 
-              stroke="#0D0D0D" 
-              strokeWidth="2.5" 
-              strokeLinecap="round" 
-              fill="none"
-            />
+            {/* Smile (only if not using custom expression that has its own) */}
+            {!['sad', 'sleeping', 'shocked', 'determined', 'proud'].includes(variant) && (
+              <path 
+                d="M-6 -8 Q0 -4 6 -8" 
+                stroke="#0D0D0D" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                fill="none"
+              />
+            )}
             
             {/* Headband */}
             <path d="M-16 -16 Q0 -22 16 -16" stroke="#FF1A1A" strokeWidth="4" strokeLinecap="round" fill="none" />

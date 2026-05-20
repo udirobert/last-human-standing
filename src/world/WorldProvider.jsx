@@ -1,5 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
-/* eslint-disable react-hooks/set-state-in-effect */
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
@@ -70,7 +68,7 @@ export function WorldProvider({ children }) {
       }
       const json = await resp.json();
       if (json.isPaid) setEntryPaid(true);
-      if (json.worldIdVerified) setWorldIdVerified(true);
+      if (json.worldIdVerified || json.humanityVerified) setWorldIdVerified(true);
       if (json.username || json.address) {
         setUser((u) => ({
           address: json.address,
@@ -133,7 +131,7 @@ export function WorldProvider({ children }) {
       setLastError(e instanceof Error ? e.message : "Wallet auth failed");
       throw e;
     }
-  }, []);
+  }, [syncAuth]);
 
   const payEntryFee = useCallback(async ({ amountWld = 1, description = "Entry fee to join the prize pool", referredBy = null } = {}) => {
     setLastError(null);
@@ -255,7 +253,10 @@ export function WorldProvider({ children }) {
 
   // Reconcile client state with server on mount; clears stale local flags
   useEffect(() => {
-    syncAuth();
+    const t = setTimeout(() => {
+      syncAuth();
+    }, 0);
+    return () => clearTimeout(t);
   }, [syncAuth]);
 
   useEffect(() => {
@@ -326,7 +327,6 @@ export function WorldProvider({ children }) {
       sendWorldChat,
       markBrowserPaid,
       resetProgress,
-      syncAuth,
     ],
   );
 

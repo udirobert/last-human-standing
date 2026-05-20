@@ -1,14 +1,26 @@
 import { useMemo } from "react";
 import { useWorld } from "../world/WorldProvider.jsx";
+import { useTrustTier } from "../hooks/useTrustTier.js";
 
 export default function ModeBanner() {
   const { isWorldApp, installAttempted } = useWorld();
+  const { tier, labels } = useTrustTier();
 
   const mode = useMemo(() => {
     if (!installAttempted) return { label: "Initializing…", tone: "dim" };
-    if (isWorldApp) return { label: "World App mode", tone: "neon" };
-    return { label: "Demo mode (browser)", tone: "amber" };
-  }, [isWorldApp, installAttempted]);
+    if (isWorldApp) {
+      return {
+        label: tier === "verified" ? "World App · verified human" : "World App · verify for full trust",
+        tone: tier === "verified" ? "neon" : "amber",
+      };
+    }
+    return {
+      label: tier === "verified"
+        ? "Browser · verified"
+        : "Browser · demo data until live · verify for full trust",
+      tone: "amber",
+    };
+  }, [isWorldApp, installAttempted, tier]);
 
   const classes =
     mode.tone === "neon"
@@ -23,8 +35,12 @@ export default function ModeBanner() {
         <p className="text-xs font-mono text-center tracking-wider uppercase">
           {mode.label}
         </p>
+        {tier !== "verified" && installAttempted && (
+          <p className="text-[10px] font-mono text-center opacity-80 mt-0.5 normal-case">
+            {labels[tier]}
+          </p>
+        )}
       </div>
     </div>
   );
 }
-
