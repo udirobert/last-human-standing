@@ -39,6 +39,7 @@ export function RoundProvider({ children }) {
   const [error, setError] = useState(null);
   const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [usesDemoState, setUsesDemoState] = useState(false);
 
   useEffect(() => {
     if (!installAttempted) return;
@@ -66,19 +67,26 @@ export function RoundProvider({ children }) {
           verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },
         });
         setStatus("ready");
+        setUsesDemoState(false);
         setLastUpdatedAt(Date.now());
+        return true;
       } catch (e) {
         if (cancelled) return;
-        setStatus("error");
+        setStatus("ready");
+        setUsesDemoState(true);
         setError(e instanceof Error ? e.message : "Failed to load game state");
+        return false;
       }
     };
 
-    load();
-    const interval = setInterval(() => load({ silent: true }), 15_000);
+    let interval;
+    load().then((loadedLiveState) => {
+      if (cancelled || !loadedLiveState) return;
+      interval = setInterval(() => load({ silent: true }), 15_000);
+    });
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     };
   }, [installAttempted, refreshKey]);
 
@@ -91,10 +99,11 @@ export function RoundProvider({ children }) {
       isLoading: status === "loading",
       isReady: status === "ready",
       isError: status === "error",
+      usesDemoState,
       lastUpdatedAt,
       refresh,
     }),
-    [state, status, error, lastUpdatedAt, refresh],
+    [state, status, error, usesDemoState, lastUpdatedAt, refresh],
   );
 
   return <RoundContext.Provider value={value}>{children}</RoundContext.Provider>;

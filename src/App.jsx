@@ -1,11 +1,9 @@
-import { useState, useCallback, Component, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, Component, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
-import ModeBanner from './components/ModeBanner.jsx';
-import RoundMetaBanner from './components/RoundMetaBanner.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
 import SoundProvider from './components/SoundProvider.jsx';
 
@@ -62,10 +60,15 @@ const SCREENS = {
 
 // Wrapper to use delight hooks in App
 function AppWithDelight() {
-  const { play: playSound, celebrate, soundEnabled, toggle: toggleSound } = useDelight();
+  const { playSound, celebrate, soundEnabled, toggleSound } = useDelight();
   const [screen, setScreen] = useState(SCREENS.ONBOARDING);
   const [navTab, setNavTab] = useState('home');
   const [badges, setBadges] = useState({});
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0 });
+    document.scrollingElement?.scrollTo?.({ top: 0, left: 0 });
+  }, [screen]);
 
   const clearBadge = useCallback((tab) => {
     setBadges((b) => (b[tab] ? { ...b, [tab]: false } : b));
@@ -101,8 +104,6 @@ function AppWithDelight() {
         {soundEnabled ? '🔊' : '🔇'}
       </button>
       
-      <ModeBanner />
-      <RoundMetaBanner />
       <AnimatePresence mode="wait">
         {screen === SCREENS.ONBOARDING && (
           <motion.div

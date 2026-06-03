@@ -1,26 +1,27 @@
 import { useMemo } from "react";
+import { RefreshCcw } from "lucide-react";
 import { useWorld } from "../world/WorldProvider.jsx";
+import { useRound } from "../world/RoundProvider.jsx";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 
 export default function ModeBanner() {
   const { isWorldApp, installAttempted } = useWorld();
-  const { tier, labels } = useTrustTier();
+  const { isLoading, usesDemoState, refresh } = useRound();
+  const { tier } = useTrustTier();
 
   const mode = useMemo(() => {
-    if (!installAttempted) return { label: "Initializing…", tone: "dim" };
+    if (!installAttempted || isLoading) return { label: "Syncing", tone: "dim" };
     if (isWorldApp) {
       return {
-        label: tier === "verified" ? "World App · verified human" : "World App · verify for full trust",
+        label: tier === "verified" ? "Verified human" : "World App",
         tone: tier === "verified" ? "neon" : "amber",
       };
     }
     return {
-      label: tier === "verified"
-        ? "Browser · verified"
-        : "Browser · demo data until live · verify for full trust",
+      label: tier === "verified" ? "Verified" : "Demo mode",
       tone: "amber",
     };
-  }, [isWorldApp, installAttempted, tier]);
+  }, [isWorldApp, installAttempted, isLoading, tier]);
 
   const classes =
     mode.tone === "neon"
@@ -30,17 +31,25 @@ export default function ModeBanner() {
         : "bg-smoke border-ember text-dim";
 
   return (
-    <div className="fixed top-3 left-3 right-3 z-50 pointer-events-none">
-      <div className={`mx-auto max-w-md border rounded-xl px-3 py-2 ${classes}`}>
-        <p className="text-xs font-mono text-center tracking-wider uppercase">
+    <div className="flex flex-wrap justify-end gap-1.5">
+      <div className={`h-7 inline-flex items-center rounded-full border px-2.5 ${classes}`}>
+        <span className="font-mono text-[10px] uppercase tracking-wider leading-none">
           {mode.label}
-        </p>
-        {tier !== "verified" && installAttempted && (
-          <p className="text-[10px] font-mono text-center opacity-80 mt-0.5 normal-case">
-            {labels[tier]}
-          </p>
-        )}
+        </span>
       </div>
+      {usesDemoState && (
+        <button
+          type="button"
+          onClick={refresh}
+          title="Retry live state"
+          className="h-7 inline-flex items-center gap-1 rounded-full border border-ember bg-smoke px-2.5 text-dim active:scale-95 transition-transform"
+        >
+          <RefreshCcw size={11} aria-hidden="true" />
+          <span className="font-mono text-[10px] uppercase tracking-wider leading-none">
+            Demo round
+          </span>
+        </button>
+      )}
     </div>
   );
 }

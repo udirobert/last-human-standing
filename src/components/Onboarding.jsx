@@ -187,7 +187,7 @@ export default function Onboarding({ onEnter }) {
               onClick={() => setShowPersonalize(!showPersonalize)}
               className="text-dim text-xs font-mono underline mb-3 text-left"
             >
-              {showPersonalize ? "Hide" : "Optional: name your guide ARIA"}
+              {showPersonalize ? "Hide" : "Optional: personalize your guide"}
             </button>
             {showPersonalize && (
               <input
@@ -269,14 +269,23 @@ export default function Onboarding({ onEnter }) {
                     )}
                   </>
                 ) : (
-                  <BrowserWalletPay
-                    prizePoolAddress={prizePoolAddress}
-                    referredBy={referredBy}
-                    onPaid={(addr) => {
-                      markBrowserPaid(addr);
-                      markOnboardingDone();
-                    }}
-                  />
+                  <>
+                    <BrowserWalletPay
+                      prizePoolAddress={prizePoolAddress}
+                      referredBy={referredBy}
+                      onPaid={(addr) => {
+                        markBrowserPaid(addr);
+                        markOnboardingDone();
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { markOnboardingDone(); onEnter(); }}
+                      className="w-full mt-3 py-3 rounded-xl bg-ash border border-ember text-dim font-mono text-sm active:scale-95 transition-transform"
+                    >
+                      Explore demo
+                    </button>
+                  </>
                 )}
               </div>
             )}

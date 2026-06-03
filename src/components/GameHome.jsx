@@ -7,6 +7,7 @@ import { usePolling } from '../hooks/usePolling.js';
 import Countdown from './Countdown.jsx';
 import MissionBoard from './MissionBoard.jsx';
 import TrustBadge from './TrustBadge.jsx';
+import ModeBanner from './ModeBanner.jsx';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
   const { user, isWorldApp, isMiniApp } = useWorld();
@@ -76,7 +77,10 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
             </span>
           </div>
           <div className="flex flex-col items-end gap-1">
-            <TrustBadge />
+            <div className="flex items-center justify-end gap-1.5">
+              <TrustBadge />
+              <ModeBanner />
+            </div>
             <span className="font-mono text-dim text-xs">{user?.displayName ?? 'anon'}</span>
           </div>
         </div>

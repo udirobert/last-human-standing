@@ -51,6 +51,7 @@ export function WorldProvider({ children }) {
   const [worldIdVerified, setWorldIdVerified] = useState(Boolean(persisted?.worldIdVerified));
   const [user, setUser] = useState(persisted?.user ?? null);
   const [lastError, setLastError] = useState(null);
+  const [hasWorldAppId, setHasWorldAppId] = useState(false);
 
   const prizePoolAddress = import.meta.env.VITE_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
 
@@ -241,23 +242,27 @@ export function WorldProvider({ children }) {
   useEffect(() => {
     try {
       const appId = import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
-      MiniKit.install(appId ? { appId } : undefined);
+      setHasWorldAppId(Boolean(appId));
+      if (appId) {
+        MiniKit.install({ appId });
+      }
     } catch (e) {
       console.warn("MiniKit.install failed", e);
     } finally {
       setInstallAttempted(true);
-      setIsWorldApp(MiniKit.isInstalled());
+      setIsWorldApp(Boolean(import.meta.env.VITE_WORLD_ID_APP_ID) && MiniKit.isInstalled());
       setIsFarcaster(detectFarcaster());
     }
   }, []);
 
   // Reconcile client state with server on mount; clears stale local flags
   useEffect(() => {
+    if (!hasWorldAppId) return undefined;
     const t = setTimeout(() => {
       syncAuth();
     }, 0);
     return () => clearTimeout(t);
-  }, [syncAuth]);
+  }, [hasWorldAppId, syncAuth]);
 
   useEffect(() => {
     if (!isFarcaster) return;
@@ -294,6 +299,7 @@ export function WorldProvider({ children }) {
       isFarcaster,
       isMiniApp,
       platform,
+      hasWorldAppId,
       installAttempted,
       walletAuthed,
       entryPaid,
@@ -314,6 +320,7 @@ export function WorldProvider({ children }) {
       isFarcaster,
       isMiniApp,
       platform,
+      hasWorldAppId,
       installAttempted,
       walletAuthed,
       entryPaid,
