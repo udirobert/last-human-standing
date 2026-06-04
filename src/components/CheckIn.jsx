@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { DAILY_THEMES, TODAY_THEME } from '../data/game';
+import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
@@ -18,6 +19,8 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [result, setResult] = useState(null);
   const [submitError, setSubmitError] = useState(null);
   const [infiltratorMode, setInfiltratorMode] = useState(false);
+  const [queuedCheckin, setQueuedCheckin] = useState(false);
+  const { online, queueCheckin } = useOnlineStatus();
   const fileRef = useRef();
   const watchRef = useRef(null);
 
@@ -57,6 +60,20 @@ export default function CheckIn({ onBack, onSubmit }) {
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
+
+    // If offline, queue the check-in via the service worker
+    if (!online) {
+      setQueuedCheckin(true);
+      setStep(2);
+      setResult({ queued: true });
+      try {
+        await queueCheckin({ lat: pos?.lat, lng: pos?.lng, accuracy: pos?.accuracy });
+      } catch {
+        // SW queue best-effort
+      }
+      return;
+    }
+
     setStep(1);
     setSubmitError(null);
 
@@ -268,6 +285,16 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               )}
 
+              {!online && canSubmit && (
+                <div className="bg-amber/10 border border-amber/30 rounded-xl p-3 mb-3 flex items-center gap-2">
+                  <span className="text-amber text-lg">📡</span>
+                  <div className="flex-1">
+                    <p className="text-amber text-xs font-mono">You are offline</p>
+                    <p className="text-dim text-[10px] font-mono">Check-in will be queued and submitted when you reconnect.</p>
+                  </div>
+                </div>
+              )}
+
               <button
                 onClick={handleSubmit}
                 disabled={!canSubmit}
@@ -277,7 +304,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                     : canSubmit ? 'bg-blood text-bone animate-pulse-blood' : 'bg-ember text-dim'
                 }`}
               >
-                {!canSubmit ? 'TAKE A PHOTO FIRST' : infiltratorMode ? '🎭 SUBMIT AS INFILTRATOR' : 'SUBMIT CHECK-IN'}
+                {!online && canSubmit ? 'QUEUE OFFLINE' : !canSubmit ? 'TAKE A PHOTO FIRST' : infiltratorMode ? '🎭 SUBMIT AS INFILTRATOR' : 'SUBMIT CHECK-IN'}
               </button>
               {!canSubmit && (
                 <p className="text-dim text-xs font-mono text-center mt-2">
@@ -309,7 +336,27 @@ export default function CheckIn({ onBack, onSubmit }) {
               animate={{ opacity: 1, scale: 1 }}
               className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
             >
-              {result.survived ? (
+              {result.queued ? (
+                <>
+                  <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center">
+                    <span className="text-6xl">📡</span>
+                  </div>
+                  <div className="text-center">
+                    <p className="font-display text-4xl text-amber mb-1">QUEUED</p>
+                    <p className="text-bone font-mono text-sm">Check-in saved offline</p>
+                    <p className="text-dim font-mono text-xs mt-2">It will be submitted automatically when you're back online.</p>
+                    {queuedCheckin && (
+                      <p className="text-amber font-mono text-xs mt-1">✓ Queued with service worker</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => { onSubmit && onSubmit(); onBack(); }}
+                    className="w-full py-4 rounded-2xl font-display text-2xl tracking-widest active:scale-95 transition-transform text-bone bg-smoke border border-ember"
+                  >
+                    BACK TO GAME
+                  </button>
+                </>
+              ) : result.survived ? (
                 <>
                   <div className="w-28 h-28 rounded-full bg-neon/10 border-2 border-neon flex items-center justify-center animate-pulse-blood">
                     <span className="text-6xl">✅</span>

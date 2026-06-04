@@ -1,0 +1,118 @@
+import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
+import { subscribePush, unsubscribePush, getPushStatus } from "../lib/pushClient.js";
+
+/**
+ * PushOptIn — toggle component for enabling/disabling push notifications.
+ * Renders nothing if the browser doesn't support push, or if VAPID
+ * is not configured on the server.
+ */
+export default function PushOptIn() {
+  const [status, setStatus] = useState("loading"); // loading | unsupported | unconfigured | off | on | error
+  const [error, setError] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  // Fetch VAPID public key + status on mount
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (typeof window === "undefined") return;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        if (!cancelled) setStatus("unsupported");
+        return;
+      }
+      try {
+        const resp = await fetch("/api/push/vapid-key");
+        if (!resp.ok) {
+          if (!cancelled) setStatus("unconfigured");
+          return;
+        }
+        const { subscribed } = await getPushStatus();
+        if (!cancelled) setStatus(subscribed ? "on" : "off");
+      } catch (e) {
+        if (!cancelled) setStatus("error");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleEnable = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      // Request browser permission
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setError("Permission denied");
+        setStatus("off");
+        return;
+      }
+
+      // Fetch VAPID key
+      const resp = await fetch("/api/push/vapid-key");
+      const { publicKey } = await resp.json();
+
+      // Subscribe via the service worker
+      await subscribePush(publicKey);
+      setStatus("on");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+      setStatus("error");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  const handleDisable = useCallback(async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await unsubscribePush();
+      setStatus("off");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Unknown error");
+    } finally {
+      setBusy(false);
+    }
+  }, []);
+
+  if (status === "loading") return null;
+  if (status === "unsupported") return null;
+  if (status === "unconfigured") return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-smoke border border-ember rounded-2xl p-4"
+    >
+      <div className="flex items-start gap-3">
+        <span className="text-2xl">{status === "on" ? "🔔" : "🔕"}</span>
+        <div className="flex-1">
+          <p className="font-mono text-bone text-sm">
+            Round notifications
+          </p>
+          <p className="text-dim text-[11px] font-mono mt-1">
+            {status === "on"
+              ? "We'll ping you when a new round opens and when you're eliminated."
+              : "Get notified the moment a new round opens."}
+          </p>
+          {error && (
+            <p className="text-blood text-[11px] font-mono mt-1">{error}</p>
+          )}
+        </div>
+        <button
+          onClick={status === "on" ? handleDisable : handleEnable}
+          disabled={busy}
+          className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all active:scale-95 ${
+            status === "on"
+              ? "bg-ember text-bone border border-ember"
+              : "bg-amber text-ash"
+          } disabled:opacity-50`}
+        >
+          {busy ? "..." : status === "on" ? "Off" : "Enable"}
+        </button>
+      </div>
+    </motion.div>
+  );
+}

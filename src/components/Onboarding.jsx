@@ -8,6 +8,7 @@ import TrustBadge from "./TrustBadge.jsx";
 import WorldIdVerify from "../world/WorldIdVerify.jsx";
 import SelfVerify from "./SelfVerify.jsx";
 import BrowserWalletPay from "../wallet/BrowserWalletPay.jsx";
+import PushOptIn from "./PushOptIn.jsx";
 import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 
@@ -324,6 +325,9 @@ export default function Onboarding({ onEnter }) {
             <Mascot variant="celebrating" size={80} />
             <h2 className="font-display text-4xl text-bone mt-6">YOU&apos;RE IN</h2>
             <TrustBadge size="md" className="mt-3" />
+            <div className="w-full mt-4 px-2">
+              <PushOptIn />
+            </div>
             {phase === "prelaunch" && launchAt && (
               <p className="text-dim font-mono text-sm mt-4">Day 1 starts in <Countdown targetIso={launchAt} className="text-amber" /></p>
             )}

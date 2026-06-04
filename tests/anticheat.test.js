@@ -1,0 +1,252 @@
+// @vitest-environment node
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import {
+  checkGpsPlausibility,
+  checkTimingAnomaly,
+  checkVoteRing,
+  flagSubmission,
+} from "../server/anticheat.js";
+
+describe("checkGpsPlausibility", () => {
+  it("returns null when distance is null (no GPS data)", () => {
+    expect(checkGpsPlausibility(null, 50, 100)).toBeNull();
+  });
+
+  it("flags zero distance with poor accuracy as suspicious", () => {
+    expect(checkGpsPlausibility(0.5, 50, 100)).toBe("gps_zero_with_poor_accuracy");
+  });
+
+  it("does not flag accurate distance with good accuracy", () => {
+    expect(checkGpsPlausibility(50, 5, 100)).toBeNull();
+  });
+
+  it("flags distance > radius * 1.2 as outside radius", () => {
+    expect(checkGpsPlausibility(200, 5, 100)).toBe("gps_outside_radius");
+  });
+
+  it("does not flag distance just inside radius (with slack)", () => {
+    // 100m radius, 110m distance — within 1.2x slack
+    expect(checkGpsPlausibility(110, 5, 100)).toBeNull();
+  });
+
+  it("flags small distance with poor accuracy (accuracy mismatch)", () => {
+    expect(checkGpsPlausibility(1, 100, 200)).toBe("gps_accuracy_mismatch");
+  });
+
+  it("does not flag when accuracy is unknown", () => {
+    expect(checkGpsPlausibility(50, null, 100)).toBeNull();
+  });
+
+  it("treats radiusM <= 0 as no radius check", () => {
+    expect(checkGpsPlausibility(500, 5, 0)).toBeNull();
+  });
+});
+
+describe("checkTimingAnomaly", () => {
+  it("returns null when fewer than 2 check-ins for this user", () => {
+    const base = new Date("2026-06-04T12:00:00Z").toISOString();
+    const recent = [{ address: "0xabc", day: 1, created_at: base }];
+    expect(checkTimingAnomaly("0xabc", 1, recent)).toBeNull();
+  });
+
+  it("returns null when interval is healthy (>= 30s)", () => {
+    const t1 = new Date("2026-06-04T12:00:00Z").toISOString();
+    const t2 = new Date("2026-06-04T12:00:35Z").toISOString();
+    const recent = [
+      { address: "0xabc", day: 1, created_at: t1 },
+      { address: "0xabc", day: 1, created_at: t2 },
+    ];
+    expect(checkTimingAnomaly("0xabc", 1, recent)).toBeNull();
+  });
+
+  it("flags rapid recheckin within 30 seconds", () => {
+    const t1 = new Date("2026-06-04T12:00:00Z").toISOString();
+    const t2 = new Date("2026-06-04T12:00:10Z").toISOString();
+    const recent = [
+      { address: "0xabc", day: 1, created_at: t1 },
+      { address: "0xabc", day: 1, created_at: t2 },
+    ];
+    expect(checkTimingAnomaly("0xabc", 1, recent)).toBe("rapid_recheckin");
+  });
+
+  it("ignores other users' check-ins when computing intervals", () => {
+    const t1 = new Date("2026-06-04T12:00:00Z").toISOString();
+    const t2 = new Date("2026-06-04T12:00:05Z").toISOString();
+    const recent = [
+      { address: "0xabc", day: 1, created_at: t1 },
+      { address: "0xdef", day: 1, created_at: t2 },
+    ];
+    expect(checkTimingAnomaly("0xabc", 1, recent)).toBeNull();
+  });
+
+  it("uses most recent two of multiple check-ins", () => {
+    const t1 = new Date("2026-06-04T11:00:00Z").toISOString();
+    const t2 = new Date("2026-06-04T12:00:00Z").toISOString();
+    const t3 = new Date("2026-06-04T12:00:10Z").toISOString();
+    const recent = [
+      { address: "0xabc", day: 1, created_at: t1 },
+      { address: "0xabc", day: 1, created_at: t2 },
+      { address: "0xabc", day: 1, created_at: t3 },
+    ];
+    expect(checkTimingAnomaly("0xabc", 1, recent)).toBe("rapid_recheckin");
+  });
+
+  it("respects custom minIntervalMs threshold", () => {
+    const t1 = new Date("2026-06-04T12:00:00Z").toISOString();
+    const t2 = new Date("2026-06-04T12:00:25Z").toISOString();
+    const recent = [
+      { address: "0xabc", day: 1, created_at: t1 },
+      { address: "0xabc", day: 1, created_at: t2 },
+    ];
+    // 25s interval: too fast for 30s/60s threshold, fast enough for 10s
+    expect(checkTimingAnomaly("0xabc", 1, recent, 30_000)).toBe("rapid_recheckin");
+    expect(checkTimingAnomaly("0xabc", 1, recent, 10_000)).toBeNull();
+    expect(checkTimingAnomaly("0xabc", 1, recent, 60_000)).toBe("rapid_recheckin");
+
+    // 90s interval: passes 30s/60s thresholds
+    const t3 = new Date("2026-06-04T12:01:30Z").toISOString();
+    const relaxed = [
+      { address: "0xabc", day: 1, created_at: t1 },
+      { address: "0xabc", day: 1, created_at: t3 },
+    ];
+    expect(checkTimingAnomaly("0xabc", 1, relaxed, 30_000)).toBeNull();
+    expect(checkTimingAnomaly("0xabc", 1, relaxed, 60_000)).toBeNull();
+    expect(checkTimingAnomaly("0xabc", 1, relaxed, 120_000)).toBe("rapid_recheckin");
+  });
+});
+
+describe("checkVoteRing", () => {
+  const submissions = [
+    { id: 1, status: "verified" },
+    { id: 2, status: "verified" },
+    { id: 3, status: "flagged" },
+    { id: 4, status: "verified" },
+    { id: 5, status: "flagged" },
+    { id: 6, status: "verified" },
+  ];
+
+  it("returns null when fewer than minSamples evaluated", () => {
+    const allVotes = [
+      { submission_id: 1, voter_address: "0xring", vote: "real" },
+      { submission_id: 2, voter_address: "0xring", vote: "real" },
+    ];
+    expect(checkVoteRing("0xring", 99, allVotes, submissions)).toBeNull();
+  });
+
+  it("flags voter who always votes real on finalized submissions", () => {
+    const allVotes = [
+      { submission_id: 1, voter_address: "0xring", vote: "real" },
+      { submission_id: 2, voter_address: "0xring", vote: "real" },
+      { submission_id: 4, voter_address: "0xring", vote: "real" },
+      { submission_id: 6, voter_address: "0xring", vote: "real" },
+      { submission_id: 3, voter_address: "0xring", vote: "real" },
+    ];
+    expect(checkVoteRing("0xring", 99, allVotes, submissions)).toBe("vote_ring_real_always");
+  });
+
+  it("flags voter who always votes fake on flagged submissions", () => {
+    const flagged = [
+      { id: 1, status: "flagged" },
+      { id: 2, status: "flagged" },
+      { id: 3, status: "flagged" },
+      { id: 4, status: "flagged" },
+      { id: 5, status: "flagged" },
+    ];
+    const allVotes = [
+      { submission_id: 1, voter_address: "0xevil", vote: "fake" },
+      { submission_id: 2, voter_address: "0xevil", vote: "fake" },
+      { submission_id: 3, voter_address: "0xevil", vote: "fake" },
+      { submission_id: 4, voter_address: "0xevil", vote: "fake" },
+      { submission_id: 5, voter_address: "0xevil", vote: "fake" },
+    ];
+    expect(checkVoteRing("0xevil", 99, allVotes, flagged)).toBe("vote_ring_fake_always");
+  });
+
+  it("does not flag a balanced voter", () => {
+    const subs = [
+      { id: 1, status: "verified" },
+      { id: 2, status: "verified" },
+      { id: 3, status: "flagged" },
+      { id: 4, status: "verified" },
+      { id: 5, status: "flagged" },
+    ];
+    const allVotes = [
+      { submission_id: 1, voter_address: "0xmix", vote: "real" },
+      { submission_id: 2, voter_address: "0xmix", vote: "real" },
+      { submission_id: 3, voter_address: "0xmix", vote: "fake" },
+      { submission_id: 4, voter_address: "0xmix", vote: "real" },
+      { submission_id: 5, voter_address: "0xmix", vote: "fake" },
+    ];
+    expect(checkVoteRing("0xmix", 99, allVotes, subs)).toBeNull();
+  });
+
+  it("ignores the submission being voted on (no self-leak)", () => {
+    const subs = [
+      { id: 1, status: "verified" },
+      { id: 2, status: "verified" },
+      { id: 3, status: "verified" },
+      { id: 4, status: "verified" },
+      { id: 5, status: "verified" },
+    ];
+    const allVotes = [
+      { submission_id: 1, voter_address: "0xring", vote: "real" },
+      { submission_id: 2, voter_address: "0xring", vote: "real" },
+      { submission_id: 3, voter_address: "0xring", vote: "real" },
+      { submission_id: 4, voter_address: "0xring", vote: "real" },
+      { submission_id: 5, voter_address: "0xring", vote: "real" },
+      { submission_id: 99, voter_address: "0xring", vote: "fake" },
+    ];
+    expect(checkVoteRing("0xring", 99, allVotes, subs)).toBe("vote_ring_real_always");
+  });
+
+  it("treats pending submissions as not-yet-evaluable (skipped)", () => {
+    const subs = [
+      { id: 1, status: "pending" },
+      { id: 2, status: "pending" },
+      { id: 3, status: "pending" },
+      { id: 4, status: "pending" },
+      { id: 5, status: "pending" },
+    ];
+    const allVotes = [
+      { submission_id: 1, voter_address: "0xring", vote: "real" },
+      { submission_id: 2, voter_address: "0xring", vote: "real" },
+      { submission_id: 3, voter_address: "0xring", vote: "real" },
+      { submission_id: 4, voter_address: "0xring", vote: "real" },
+      { submission_id: 5, voter_address: "0xring", vote: "real" },
+    ];
+    expect(checkVoteRing("0xring", 99, allVotes, subs)).toBeNull();
+  });
+});
+
+describe("flagSubmission", () => {
+  let supabaseMock;
+  beforeEach(() => {
+    supabaseMock = {
+      from: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+  });
+
+  it("is a no-op when supabase is null", async () => {
+    await expect(flagSubmission(null, 1, "reason", {})).resolves.toBeUndefined();
+  });
+
+  it("inserts a flag row when supabase is configured", async () => {
+    await flagSubmission(supabaseMock, 42, "vote_ring", { voter: "0xabc" });
+    expect(supabaseMock.from).toHaveBeenCalledWith("submission_flags");
+    expect(supabaseMock.insert).toHaveBeenCalledWith({
+      submission_id: 42,
+      reason: "vote_ring",
+      metadata: { voter: "0xabc" },
+    });
+  });
+
+  it("defaults metadata to empty object", async () => {
+    await flagSubmission(supabaseMock, 7, "gps_outside_radius");
+    expect(supabaseMock.insert).toHaveBeenCalledWith({
+      submission_id: 7,
+      reason: "gps_outside_radius",
+      metadata: {},
+    });
+  });
+});
