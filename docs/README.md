@@ -179,3 +179,80 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 ## Hackathon submission
 
 See `submission.md`, `ONE_PAGER.md`, `DEMO.md`.
+
+---
+
+## Testing
+
+See [TESTING.md](./TESTING.md) for the full testing guide. Quick start:
+
+```bash
+npm run test:run      # 87 tests across 7 files
+npm run test:coverage # with line/function/branch thresholds
+```
+
+## Offline support
+
+The app registers a service worker (`public/sw.js`) that:
+
+- **Caches the app shell** (index.html, manifest) on install — the app loads even when offline
+- **Network-first for /api/*** — last-known data is served from cache when offline
+- **Check-in queue** — if you submit a check-in while offline, it's stored in IndexedDB and replayed automatically when the connection returns (via Background Sync API)
+- **Offline indicator** — the check-in screen shows a "📡 You're offline" banner and a "QUEUED" result state
+
+Registered automatically in `src/main.jsx`. See `src/hooks/useOnlineStatus.js` for the client hook.
+
+## Push notifications
+
+Web Push (VAPID) notifications are supported. When enabled:
+
+| Trigger | Notification |
+|---------|-------------|
+| Round opens | Broadcast to all subscribed users |
+| User eliminated | Per-user notification with day info |
+| Admin test | `POST /api/push/test` (admin-only) |
+
+### Setup
+
+1. Generate VAPID keys: `npx web-push generate-vapid-keys`
+2. Add to production `.env`:
+   ```
+   VAPID_PUBLIC_KEY=<public-key>
+   VAPID_SECRET=<your-vapid-secret>
+   VAPID_EMAIL=admin@lasthumanstanding.thisyearnofear.com
+   ```
+3. Users opt-in during onboarding via the `PushOptIn` component
+
+## Project structure
+
+```
+.
+├── public/                    # Static assets + service worker
+│   └── sw.js                  # Offline SW + background sync
+├── src/
+│   ├── components/           # React UI components
+│   ├── config/               # AI + humanity provider configs
+│   ├── data/                 # Game constants & mock data
+│   ├── hooks/                # Custom React hooks
+│   ├── lib/                  # Client-side utilities (pushClient)
+│   ├── wallet/               # Wagmi + viem wallet config
+│   └── world/                # World App integration providers
+├── server/
+│   ├── index.js              # Express app (orchestrator + remaining routes)
+│   ├── anticheat.js          # GPS plausibility, timing, vote ring detection
+│   ├── rateLimit.js           # Rate limiter (DB-backed + in-memory fallback)
+│   ├── lib/                  # Server libraries
+│   │   ├── push.js           # VAPID push notification sender
+│   │   └── validators.js     # Request body validators
+│   └── routes/               # Modular route handlers
+│       ├── auth.js           # /api/nonce, /api/complete-siwe, /api/logout, /api/me
+│       ├── payment.js        # /api/pay/reference, /api/pay/confirm, /api/pay/browser-confirm
+│       ├── push.js           # /api/push/subscribe, /api/push/unsubscribe, /api/push/test
+│       └── referral.js       # /api/waitlist, /api/referral-board, /api/referral/:code
+├── supabase/
+│   ├── schema.sql            # Full database schema (idempotent)
+│   └── migrations/           # Incremental migrations
+│       └── 003_push_subscriptions.sql
+├── tests/                    # Vitest test files (87 tests, 7 files)
+└── docs/                     # Documentation
+```

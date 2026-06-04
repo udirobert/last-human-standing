@@ -28,3 +28,17 @@ yarn-error.log*
 Thumbs.db
 .blackboxcli/
 .antigravitycli/
+
+# Test & coverage
+coverage/
+html/
+*.test-report
+.vitest/
+
+# Supabase local dev (ignored; schema is versioned in migrations/)
+supabase/.temp/
+supabase/.branches/
+supabase/.env
+
+# Server-side .env files (dev only; production env is set on machine)
+.env.backup
