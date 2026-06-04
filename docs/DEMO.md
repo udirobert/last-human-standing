@@ -107,3 +107,40 @@ curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
 4. After window closes: `POST /api/admin/close-day { day: 1 }`
 5. Repeat with shrinking caps: 25 → 12 → 6 → 3 → 1
 6. Final survivor takes the pool; announce in chat
+---
+
+## Celo Integration (for Onchain Agents Hackathon)
+
+This app now supports Celo-native payments and Self Protocol verification.
+
+### Celo payment flows
+
+| Endpoint | Description |
+|----------|-------------|
+| `/api/pay/browser-celo-confirm` | Verifies cUSD/USDC payments on Celo mainnet (RPC: forno.celo.org) |
+| `/api/self/verify` | Self Protocol proof-of-humanity on Celo |
+| `/api/aria/agent` | ARIA agent identity (ERC-8004 DID) |
+| `/api/aria/verify` | Autonomous photo verification |
+| `/api/aria/suggest` | Round theme suggestions |
+| `/api/aria/x402` | x402 payment protocol challenges |
+
+### Setup for Celo demo
+
+```bash
+VITE_CELO_PRIZE_POOL_ADDRESS=<celo-address-to-receive-entry-fees>
+CELO_RPC=https://forno.celo.org
+SELF_ENABLED=true
+SELF_SCOPE=last-human-standing
+SELF_MOCK_PASSPORT=true
+VITE_ENABLE_SELF=true
+VITE_USE_CELO_TESTNET=false
+```
+
+### ARIA agent registration
+
+```bash
+curl -X POST https://lasthumanstanding.thisyearnofear.com/api/aria/register \
+  -H "x-admin-token: $ADMIN_TOKEN"
+
+curl https://lasthumanstanding.thisyearnofear.com/api/aria/agent
+```

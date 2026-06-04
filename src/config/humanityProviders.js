@@ -16,7 +16,7 @@ export const HUMANITY_PROVIDERS = {
     id: "self",
     label: "Self Protocol",
     chain: "Celo (+ multi-chain)",
-    status: "planned",
+    status: "live",
     docsUrl: "https://docs.self.xyz/self-pass/self-pass",
     verifyEnv: "VITE_ENABLE_SELF",
   },

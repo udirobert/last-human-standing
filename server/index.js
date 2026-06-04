@@ -13,6 +13,7 @@ import pushRoutes from "./routes/push.js";
 import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payment.js";
 import referralRoutes from "./routes/referral.js";
+import ariaRoutes from "./routes/aria.js";
 import {
   ensureObjectBody, ensureString, ensureNumber, ensureBoolean,
   ensureEnum, ensureIsoDate, sendValidationError,
@@ -1445,6 +1446,7 @@ app.use("/api", paymentRoutes({
 }));
 
 app.use("/api", referralRoutes({ supabaseAdmin, log, makeReferralCode }));
+app.use("/api", ariaRoutes({ requireAdmin, log }));
 
 export { app };
 

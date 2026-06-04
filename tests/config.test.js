@@ -67,18 +67,19 @@ describe("Humanity providers config", () => {
     expect(HUMANITY_PROVIDERS.world.status).toBe("live");
   });
 
-  it("exposes a self provider marked planned (not yet live)", () => {
+  it("exposes a self provider marked live for Celo integration", () => {
     expect(HUMANITY_PROVIDERS.self.id).toBe("self");
-    expect(HUMANITY_PROVIDERS.self.status).toBe("planned");
+    expect(HUMANITY_PROVIDERS.self.status).toBe("live");
   });
 
-  it("returns only live providers from getLiveHumanityProviders", () => {
+  it("returns both live providers from getLiveHumanityProviders", () => {
     const live = getLiveHumanityProviders();
     expect(live.some((p) => p.id === "world")).toBe(true);
-    expect(live.some((p) => p.id === "self")).toBe(false);
+    expect(live.some((p) => p.id === "self")).toBe(true);
   });
 
-  it("isProviderEnabled returns false for non-live providers regardless of env", () => {
+  it("isProviderEnabled returns false for providers when env var is not set", () => {
+    // VITE_ENABLE_SELF is not set in test env, so Self provider is disabled
     expect(isProviderEnabled(HUMANITY_PROVIDERS.self)).toBe(false);
   });
 

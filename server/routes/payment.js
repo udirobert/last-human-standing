@@ -5,6 +5,80 @@ import { ensureObjectBody, ensureString, sendValidationError } from "../lib/vali
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df35b9bc";
 const WLD_CONTRACT = "0x2cFc85d8E48F8EAB294be644d9E25C3030863003";
 const WORLD_CHAIN_RPC = process.env.WORLD_CHAIN_RPC || "https://worldchain-mainnet.g.alchemy.com/public";
+const CELO_RPC = process.env.CELO_RPC || "https://forno.celo.org";
+const CELO_ALFAJORES_RPC = process.env.CELO_ALFAJORES_RPC || "https://alfajores-forno.celo.org";
+
+/**
+ * Celo token contract addresses (mainnet).
+ */
+const CELO_TOKENS = {
+  cUSD: "0x765DE816845861e75A25fCA122bb6898E8B2a1cF",
+  USDC: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
+};
+
+/**
+ * Verify an ERC-20 transfer on Celo (cUSD or USDC).
+ * Returns { valid, reason }.
+ */
+async function verifyCeloTransfer(txHash, senderAddress, tokenSymbol, prizePoolAddress) {
+  const tokenAddress = CELO_TOKENS[tokenSymbol];
+  if (!tokenAddress) {
+    return { valid: false, reason: `unsupported_token_${tokenSymbol}` };
+  }
+
+  const rpcUrl = process.env.USE_CELO_TESTNET === "true" ? CELO_ALFAJORES_RPC : CELO_RPC;
+
+  try {
+    const receiptResp = await fetch(rpcUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1,
+        method: "eth_getTransactionReceipt",
+        params: [txHash],
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const receiptJson = await receiptResp.json();
+    if (!receiptJson.result) return { valid: false, reason: "tx_not_found" };
+
+    const receipt = receiptJson.result;
+    if (receipt.status === "0x0") return { valid: false, reason: "tx_failed" };
+
+    const toAddr = receipt.to?.toLowerCase();
+    if (toAddr !== tokenAddress.toLowerCase()) {
+      return { valid: false, reason: "wrong_contract", actualTo: receipt.to };
+    }
+
+    const transferTopic = ERC20_TRANSFER_TOPIC.toLowerCase();
+    const transferLogs = receipt.logs.filter(
+      (log) =>
+        log.address?.toLowerCase() === tokenAddress.toLowerCase() &&
+        log.topics?.[0]?.toLowerCase() === transferTopic,
+    );
+    if (transferLogs.length === 0) return { valid: false, reason: "no_transfer_event" };
+
+    const normalizedSender = senderAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const normalizedRecipient = prizePoolAddress.toLowerCase().replace("0x", "").padStart(64, "0");
+    const amountWei = BigInt(5) * BigInt(10 ** (tokenSymbol === "cUSD" ? 18 : 6));
+
+    for (const log of transferLogs) {
+      const fromRaw = log.topics[1];
+      const toRaw = log.topics[2];
+      const amountRaw = log.data === "0x0" ? "0x0" : log.data;
+      const fromAddrLogged = fromRaw.replace("0x", "").toLowerCase();
+      const toAddrLogged = toRaw.replace("0x", "").toLowerCase();
+      const amount = BigInt(amountRaw);
+
+      if (fromAddrLogged === normalizedSender && toAddrLogged === normalizedRecipient && amount >= amountWei) {
+        return { valid: true, reason: "ok" };
+      }
+    }
+    return { valid: false, reason: "amount_insufficient_or_wrong_recipient" };
+  } catch (e) {
+    return { valid: false, reason: `rpc_error: ${e instanceof Error ? e.message : "unknown"}` };
+  }
+}
 
 /**
  * Verify a WLD ERC-20 transfer on World Chain.
@@ -143,6 +217,43 @@ export default function paymentRoutes({
       log("browser_pay_confirmed", { address, txHash });
       await upsertPaidUser(address, { referredBy, platform: "browser" });
       res.json({ ok: true, paid: true, address, txHash });
+    } catch (error) {
+      sendValidationError(res, error);
+    }
+  });
+
+  // ---------- POST /api/pay/browser-celo-confirm (Celo cUSD/USDC) ----------
+  router.post("/pay/browser-celo-confirm", async (req, res) => {
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+
+    try {
+      const address = ensureString(body.address, {
+        field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
+      });
+      const txHash = ensureString(body.txHash, {
+        field: "txHash", required: true, maxLength: 80, pattern: /^0x[a-fA-F0-9]{64}$/,
+      });
+      const token = (ensureString(body.token, { field: "token", maxLength: 16 }) || "cUSD").toUpperCase();
+      const referredBy = ensureString(body.referredBy, {
+        field: "referredBy", required: false, maxLength: 64, pattern: /^LHS-[a-z0-9]+-[a-f0-9]+$/i,
+      });
+
+      const prizePoolAddress =
+        process.env.VITE_CELO_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
+      if (prizePoolAddress === "0x0000000000000000000000000000000000000000") {
+        return res.status(501).json({ error: "celo_prize_pool_not_configured" });
+      }
+
+      const verification = await verifyCeloTransfer(txHash, address, token, prizePoolAddress);
+      if (!verification.valid) {
+        log("celo_pay_rejected", { address, txHash, token, reason: verification.reason });
+        return res.status(400).json({ error: "tx_verification_failed", reason: verification.reason });
+      }
+
+      log("celo_pay_confirmed", { address, txHash, token });
+      await upsertPaidUser(address, { referredBy, platform: "celo" });
+      res.json({ ok: true, paid: true, address, txHash, token, chain: "celo" });
     } catch (error) {
       sendValidationError(res, error);
     }
