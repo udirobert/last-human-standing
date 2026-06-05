@@ -282,7 +282,8 @@ export function WorldProvider({ children }) {
     setWalletAuthed(true);
     setEntryPaid(true);
     if (address) setUser((u) => u ?? { address, username: null, displayName: safeTruncateAddress(address) });
-  }, []);
+    syncAuth();
+  }, [syncAuth]);
 
   const resetProgress = useCallback(() => {
     setWalletAuthed(false);

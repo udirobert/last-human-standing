@@ -279,13 +279,18 @@ export default function Onboarding({ onEnter }) {
                         markOnboardingDone();
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => { markOnboardingDone(); onEnter(); }}
-                      className="w-full mt-3 py-3 rounded-xl bg-ash border border-ember text-dim font-mono text-sm active:scale-95 transition-transform"
-                    >
-                      Explore demo
-                    </button>
+                    <div className="mt-4 pt-3 border-t border-ember/30">
+                      <button
+                        type="button"
+                        onClick={() => { markOnboardingDone(); onEnter(); }}
+                        className="w-full py-3 rounded-xl bg-ash border border-ember/50 text-dim font-mono text-sm hover:text-bone hover:border-ember active:scale-95 transition-all"
+                      >
+                        See how it works (no payment required)
+                      </button>
+                      <p className="text-dim/70 text-[10px] font-mono text-center mt-1.5">
+                        Browse the feed and leaderboard as an observer
+                      </p>
+                    </div>
                   </>
                 )}
               </div>

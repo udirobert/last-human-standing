@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyMessage } from "viem";
+import { rateLimit } from "../rateLimit.js";
 import { ensureObjectBody, ensureString, sendValidationError } from "../lib/validators.js";
 
 const ERC20_TRANSFER_TOPIC = "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df35b9bc";
@@ -144,6 +144,9 @@ export default function paymentRoutes({
   upsertPaidUser,
   createPayReferenceRecord,
   consumePayReferenceRecord,
+  createSessionRecord,
+  setSessionCookie,
+  rateLimitStorage,
 }) {
   const router = Router();
 
@@ -192,7 +195,9 @@ export default function paymentRoutes({
   });
 
   // ---------- POST /api/pay/browser-confirm (browser wallets) ----------
-  router.post("/pay/browser-confirm", async (req, res) => {
+  router.post("/pay/browser-confirm",
+    rateLimit({ keyFn: (req) => `browserpay:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
     const body = ensureObjectBody(req, res);
     if (!body) return;
 
@@ -216,6 +221,10 @@ export default function paymentRoutes({
 
       log("browser_pay_confirmed", { address, txHash });
       await upsertPaidUser(address, { referredBy, platform: "browser" });
+
+      const sessionId = await createSessionRecord(address);
+      setSessionCookie(res, sessionId);
+
       res.json({ ok: true, paid: true, address, txHash });
     } catch (error) {
       sendValidationError(res, error);
@@ -223,7 +232,9 @@ export default function paymentRoutes({
   });
 
   // ---------- POST /api/pay/browser-celo-confirm (Celo cUSD/USDC) ----------
-  router.post("/pay/browser-celo-confirm", async (req, res) => {
+  router.post("/pay/browser-celo-confirm",
+    rateLimit({ keyFn: (req) => `celopay:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
     const body = ensureObjectBody(req, res);
     if (!body) return;
 
@@ -253,6 +264,10 @@ export default function paymentRoutes({
 
       log("celo_pay_confirmed", { address, txHash, token });
       await upsertPaidUser(address, { referredBy, platform: "celo" });
+
+      const sessionId = await createSessionRecord(address);
+      setSessionCookie(res, sessionId);
+
       res.json({ ok: true, paid: true, address, txHash, token, chain: "celo" });
     } catch (error) {
       sendValidationError(res, error);

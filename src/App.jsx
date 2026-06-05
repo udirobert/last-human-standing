@@ -10,6 +10,7 @@ import SoundProvider from './components/SoundProvider.jsx';
 const Feed = lazy(() => import('./components/Feed.jsx'));
 const Chat = lazy(() => import('./components/Chat.jsx'));
 const Leaderboard = lazy(() => import('./components/Leaderboard.jsx'));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'));
 
 // Error boundary — catches crashes and shows a retry screen instead of white page
 class ErrorBoundary extends Component {
@@ -56,39 +57,63 @@ const SCREENS = {
   FEED: 'feed',
   CHAT: 'chat',
   LEADERBOARD: 'leaderboard',
+  ADMIN: 'admin',
 };
 
-// Wrapper to use delight hooks in App
-function AppWithDelight() {
-  const { playSound, celebrate, soundEnabled, toggleSound } = useDelight();
-  const [screen, setScreen] = useState(SCREENS.ONBOARDING);
-  const [navTab, setNavTab] = useState('home');
-  const [badges, setBadges] = useState({});
+  // Wrapper to use delight hooks in App
+  function AppWithDelight() {
+    const { playSound, celebrate, soundEnabled, toggleSound } = useDelight();
+    const [screen, setScreen] = useState(SCREENS.ONBOARDING);
+    const [navTab, setNavTab] = useState('home');
+    const [badges, setBadges] = useState({});
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0 });
-    document.scrollingElement?.scrollTo?.({ top: 0, left: 0 });
-  }, [screen]);
+    // Check for admin access via URL param or direct navigation
+    const urlParams = new URLSearchParams(window.location.search);
+    const adminParam = urlParams.get('admin') === '1' || window.location.pathname === '/admin';
+    const isAdminEnabled = import.meta.env.VITE_ADMIN_TOKEN && import.meta.env.VITE_ADMIN_TOKEN.trim() !== '';
+    const isAdmin = adminParam && isAdminEnabled;
 
-  const clearBadge = useCallback((tab) => {
-    setBadges((b) => (b[tab] ? { ...b, [tab]: false } : b));
-  }, []);
+    useEffect(() => {
+      window.scrollTo({ top: 0, left: 0 });
+      document.scrollingElement?.scrollTo?.({ top: 0, left: 0 });
+    }, [screen]);
 
-  const handleEnterGame = () => {
-    playSound('victory');
-    celebrate(30);
-    setScreen(SCREENS.HOME);
-    setNavTab('home');
-  };
+    const clearBadge = useCallback((tab) => {
+      setBadges((b) => (b[tab] ? { ...b, [tab]: false } : b));
+    }, []);
 
-  const handleNavChange = (tab) => {
-    playSound('click');
-    setNavTab(tab);
-    clearBadge(tab);
-    if (tab === 'home') setScreen(SCREENS.HOME);
-    else if (tab === 'feed') setScreen(SCREENS.FEED);
-    else if (tab === 'chat') setScreen(SCREENS.CHAT);
-    else if (tab === 'leaderboard') setScreen(SCREENS.LEADERBOARD);
+    const handleEnterGame = () => {
+      playSound('victory');
+      celebrate(30);
+      setScreen(SCREENS.HOME);
+      setNavTab('home');
+    };
+
+    const handleNavChange = (tab) => {
+      playSound('click');
+      setNavTab(tab);
+      clearBadge(tab);
+      if (tab === 'home') setScreen(SCREENS.HOME);
+      else if (tab === 'feed') setScreen(SCREENS.FEED);
+      else if (tab === 'chat') setScreen(SCREENS.CHAT);
+      else if (tab === 'leaderboard') setScreen(SCREENS.LEADERBOARD);
+    };
+
+    // Auto-redirect to admin screen if admin access is granted
+    useEffect(() => {
+      if (isAdmin && screen !== SCREENS.ADMIN) {
+        setScreen(SCREENS.ADMIN);
+        setNavTab('admin');
+      }
+    }, [isAdmin, screen]);
+
+  // Allow admins to access dashboard via URL param or secret route
+  // For security, we'll check if admin token is set and allow direct navigation
+  const handleAdminAccess = () => {
+    if (isAdmin) {
+      setScreen(SCREENS.ADMIN);
+      setNavTab('admin');
+    }
   };
 
   const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN;
@@ -174,19 +199,33 @@ function AppWithDelight() {
           </Suspense>
         )}
 
-        {screen === SCREENS.LEADERBOARD && (
-          <Suspense fallback={null}>
-          <motion.div
-            key="leaderboard"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            <Leaderboard onBack={() => handleNavChange('home')} />
-          </motion.div>
-          </Suspense>
-        )}
+      {screen === SCREENS.LEADERBOARD && (
+        <Suspense fallback={null}>
+        <motion.div
+          key="leaderboard"
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <Leaderboard onBack={() => handleNavChange('home')} />
+        </motion.div>
+        </Suspense>
+      )}
+
+      {screen === SCREENS.ADMIN && (
+        <Suspense fallback={null}>
+        <motion.div
+          key="admin"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+        >
+          <AdminDashboard onBack={() => { setScreen(SCREENS.HOME); setNavTab('home'); }} />
+        </motion.div>
+        </Suspense>
+      )}
       </AnimatePresence>
 
       {isInGame && (
