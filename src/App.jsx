@@ -5,7 +5,6 @@ import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
-import SoundProvider from './components/SoundProvider.jsx';
 
 const Feed = lazy(() => import('./components/Feed.jsx'));
 const Chat = lazy(() => import('./components/Chat.jsx'));
@@ -238,11 +237,9 @@ const SCREENS = {
 export default function App() {
   return (
     <ErrorBoundary>
-      <SoundProvider>
-        <DelightProvider showTipOnMount={true}>
-          <AppWithDelight />
-        </DelightProvider>
-      </SoundProvider>
+      <DelightProvider showTipOnMount={true}>
+        <AppWithDelight />
+      </DelightProvider>
     </ErrorBoundary>
   );
 }
