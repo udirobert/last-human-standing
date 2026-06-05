@@ -193,20 +193,30 @@
 | No dark/light mode toggle | Consider system preference detection |
 | Leaderboard missing elimination reason | Add `eliminated_reason` field |
 
-### 4e. Deploy notes (Hetzner / PM2) — ✅ Still valid
-```bash
-rsync -az --exclude='.git' --exclude='node_modules' --exclude='dist' --exclude='.env' \
-  ./ snel-bot:/opt/last-human-standing/
+### 4e. Deploy (Hetzner / PM2) — ✅ Automated
 
-ssh snel-bot 'cd /opt/last-human-standing && \
-  npm install && \
-  npm run build && \
-  pm2 restart last-human-standing && \
-  sleep 2 && \
-  curl -s https://lasthumanstanding.thisyearnofear.com/api/health'
+Deploy is handled by `scripts/deploy.sh` from the project root:
+
+```bash
+bash scripts/deploy.sh
 ```
 
-**Critical deploy note**: `npm run build` (vite) is in `devDependencies`. If you run `npm install --omit=dev` on the server, build will fail. Confirm the deploy script always runs `npm install` without `--omit=dev`.
+This builds locally, rsyncs to a timestamped release directory on the server, symlinks shared `.env` and `node_modules`, restarts PM2, and runs a health check. On failure it rolls back automatically.
+
+To roll back manually:
+```bash
+bash scripts/deploy-rollback.sh
+```
+
+**Server layout:**
+```
+/opt/last-human-standing/
+├── shared/          # .env (protected), node_modules (shared)
+├── releases/        # Timestamped release dirs (keep 2)
+└── current -> releases/<latest>/
+```
+
+**Critical**: The build happens locally (Vite). The server only runs `npm install --omit=dev` for Express production deps. Never run `npm run build` on the server.
 
 ---
 
