@@ -10,6 +10,9 @@ dist
 .cursor/
 .bolt/
 .mcp/
+.junie/
+.bud/
+.qoder/
 
 # Build outputs
 build/
