@@ -235,6 +235,16 @@ export default function paymentRoutes({
     }
   });
 
+  // ---------- POST /api/pay/free-entry (hackathon campaign mode) ----------
+  router.post("/pay/free-entry", requireAuth, async (req, res) => {
+    if (process.env.FREE_ENTRY_MODE !== "true") {
+      return res.status(501).json({ error: "free_entry_not_available" });
+    }
+    await upsertPaidUser(req.user.address, { platform: "free_entry" });
+    log("free_entry", { address: req.user.address });
+    res.json({ ok: true, paid: true });
+  });
+
   // ---------- POST /api/pay/browser-celo-confirm (Celo cUSD/USDC) ----------
   router.post("/pay/browser-celo-confirm",
     rateLimit({ keyFn: (req) => `celopay:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
