@@ -331,6 +331,10 @@ async function getOptionalAuthAddress(req) {
 }
 
 async function requireAuth(req, res, next) {
+  // Allow admin token as alternative auth
+  if (ADMIN_TOKEN && req.headers["x-admin-token"] === ADMIN_TOKEN) {
+    return next();
+  }
   const sid = req.cookies?.[SESSION_COOKIE];
   const session = await getSessionRecord(sid);
   if (!session) return res.status(401).json({ error: "not_authenticated" });
