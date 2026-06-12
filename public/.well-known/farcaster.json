@@ -1,19 +1,19 @@
 {
   "accountAssociation": {
-    "header": "",
-    "payload": "",
-    "signature": ""
+    "header": "eyJmaWQiOjUyNTQsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHg4QjAzQTJDMzY1YzI2MUFlQmU2ODQyMjREQkI2Qzk1OTJhQkNkRkIyIn0",
+    "payload": "eyJkb21haW4iOiJsYXN0aHVtYW5zdGFuZGluZy50aGlzeWVhcm5vZmVhci5jb20ifQ",
+    "signature": "j/7N6S7bWkFwquJCr5BkblgN5l1iUWj2uFPiIVMkMLpwKqL4yy+MHeT06VzFflNDZN7EFoi5hQTUl9abGLIRrRw="
   },
   "miniapp": {
     "version": "1",
     "name": "Last Human Standing",
-    "subtitle": "Daily elimination for verified humans",
+    "subtitle": "Daily elimination game",
     "description": "A daily real-world elimination game. Check in at themed locations, vote HUMAN or SUS, and be the last one standing. Powered by Celo.",
-    "iconUrl": "https://lasthumanstanding.thisyearnofear.com/favicon.svg",
+    "iconUrl": "https://lasthumanstanding.thisyearnofear.com/og-image.png",
     "homeUrl": "https://lasthumanstanding.thisyearnofear.com",
-    "imageUrl": "https://lasthumanstanding.thisyearnofear.com/favicon.svg",
+    "imageUrl": "https://lasthumanstanding.thisyearnofear.com/og-image.png",
     "buttonTitle": "Survive",
-    "splashImageUrl": "https://lasthumanstanding.thisyearnofear.com/favicon.svg",
+    "splashImageUrl": "https://lasthumanstanding.thisyearnofear.com/splash.png",
     "splashBackgroundColor": "#0a0a0a",
     "primaryCategory": "games",
     "tags": ["game", "social", "elimination", "celo", "proof-of-human"]
