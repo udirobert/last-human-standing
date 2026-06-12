@@ -5,12 +5,18 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 
 export default function ModeBanner() {
-  const { isWorldApp, installAttempted } = useWorld();
+  const { isWorldApp, isFarcaster, installAttempted } = useWorld();
   const { isLoading, usesDemoState, refresh } = useRound();
   const { tier } = useTrustTier();
 
   const mode = useMemo(() => {
     if (!installAttempted || isLoading) return { label: "Syncing", tone: "dim" };
+    if (isFarcaster) {
+      return {
+        label: tier === "verified" ? "Verified human" : "Farcaster",
+        tone: tier === "verified" ? "neon" : "indigo",
+      };
+    }
     if (isWorldApp) {
       return {
         label: tier === "verified" ? "Verified human" : "World App",
@@ -21,14 +27,16 @@ export default function ModeBanner() {
       label: tier === "verified" ? "Verified" : "Demo mode",
       tone: "amber",
     };
-  }, [isWorldApp, installAttempted, isLoading, tier]);
+  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier]);
 
   const classes =
     mode.tone === "neon"
       ? "bg-neon/10 border-neon/30 text-neon"
       : mode.tone === "amber"
         ? "bg-amber/10 border-amber/30 text-amber"
-        : "bg-smoke border-ember text-dim";
+        : mode.tone === "indigo"
+          ? "bg-indigo/10 border-indigo/30 text-indigo"
+          : "bg-smoke border-ember text-dim";
 
   return (
     <div className="flex flex-wrap justify-end gap-1.5">

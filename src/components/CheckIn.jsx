@@ -8,7 +8,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
-  const { signCheckIn } = useWorld();
+  const { isFarcaster, farcasterUser, signCheckIn } = useWorld();
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
   const [gpsEnabled, setGpsEnabled] = useState(false);
@@ -391,6 +391,24 @@ export default function CheckIn({ onBack, onSubmit }) {
               >
                 BACK TO GAME
               </button>
+
+              {isFarcaster && result?.survived && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const { sdk } = await import("@farcaster/miniapp-sdk");
+                      await sdk.actions.composeCast({
+                        text: `I just checked in to Round ${currentDay} of Last Human Standing! ${window.location.origin}`,
+                        embeds: [window.location.origin],
+                      });
+                    } catch { /* user dismissed composer */ }
+                  }}
+                  className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
+                >
+                  SHARE ON FARCASTER
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

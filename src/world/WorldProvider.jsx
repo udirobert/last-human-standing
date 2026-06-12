@@ -2,6 +2,24 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback } 
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
 
+function constructSiweMessage({ domain, address, statement, uri, nonce, chainId }) {
+  const issuedAt = new Date().toISOString();
+  const expirationTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+  return [
+    `${domain} wants you to sign in with your Ethereum account:`,
+    address,
+    "",
+    statement,
+    "",
+    `URI: ${uri}`,
+    "Version: 1",
+    `Chain ID: ${chainId}`,
+    `Nonce: ${nonce}`,
+    `Issued At: ${issuedAt}`,
+    `Expiration Time: ${expirationTime}`,
+  ].join("\n");
+}
+
 function detectFarcaster() {
   try {
     if (typeof window !== "undefined" && (window.farcaster || window.parent !== window)) {
@@ -50,6 +68,7 @@ export function WorldProvider({ children }) {
   const [entryPaid, setEntryPaid] = useState(Boolean(persisted?.entryPaid));
   const [worldIdVerified, setWorldIdVerified] = useState(Boolean(persisted?.worldIdVerified));
   const [user, setUser] = useState(persisted?.user ?? null);
+  const [farcasterUser, setFarcasterUser] = useState(persisted?.farcasterUser ?? null);
   const [lastError, setLastError] = useState(null);
   const [hasWorldAppId, setHasWorldAppId] = useState(false);
 
@@ -85,18 +104,69 @@ export function WorldProvider({ children }) {
   const walletAuth = useCallback(async () => {
     setLastError(null);
 
-    if (!MiniKit.isInstalled()) {
-      const err = "Wallet auth requires World App in production mode.";
-      setLastError(err);
-      throw new Error(err);
-    }
-
     const nonceResp = await fetch("/api/nonce", { method: "POST" });
     if (!nonceResp.ok) {
       const text = await nonceResp.text();
       throw new Error(`Nonce request failed: ${text}`);
     }
     const { nonce } = await nonceResp.json();
+
+    if (isFarcaster) {
+      try {
+        const { sdk } = await import("@farcaster/miniapp-sdk");
+        const provider = await sdk.wallet.getEthereumProvider();
+        const [address] = await provider.request({ method: "eth_requestAccounts" });
+        const chainId = await provider.request({ method: "eth_chainId" });
+        const domain = window.location.host;
+        const uri = window.location.origin;
+
+        const message = constructSiweMessage({
+          domain,
+          address,
+          statement: "Sign in to Last Human Standing",
+          uri,
+          nonce,
+          chainId: parseInt(chainId, 16),
+        });
+
+        const signature = await provider.request({
+          method: "personal_sign",
+          params: [message, address],
+        });
+
+        const verifyResp = await fetch("/api/complete-siwe", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ payload: { message, signature, address }, nonce }),
+        });
+        if (!verifyResp.ok) {
+          const text = await verifyResp.text();
+          throw new Error(`SIWE verification failed: ${text}`);
+        }
+        const { address: verifiedAddress } = await verifyResp.json();
+
+        const ctx = sdk.context;
+        const fcUser = ctx?.user
+          ? { fid: ctx.user.fid, username: ctx.user.username, pfpUrl: ctx.user.pfpUrl, displayName: ctx.user.displayName || `@${ctx.user.username}` }
+          : null;
+
+        setWalletAuthed(true);
+        setFarcasterUser(fcUser);
+        setUser({ address: verifiedAddress, username: fcUser?.username ?? null, displayName: fcUser?.displayName ?? safeTruncateAddress(verifiedAddress) });
+        await syncAuth();
+        return { message, signature, address: verifiedAddress };
+      } catch (e) {
+        setLastError(e instanceof Error ? e.message : "Farcaster auth failed");
+        throw e;
+      }
+    }
+
+    if (!MiniKit.isInstalled()) {
+      const err = "Wallet auth requires World App or Farcaster.";
+      setLastError(err);
+      throw new Error(err);
+    }
 
     try {
       const result = await MiniKit.walletAuth({
@@ -132,7 +202,7 @@ export function WorldProvider({ children }) {
       setLastError(e instanceof Error ? e.message : "Wallet auth failed");
       throw e;
     }
-  }, [syncAuth]);
+  }, [syncAuth, isFarcaster]);
 
   const payEntryFee = useCallback(async ({ amountWld = 1, description = "Entry fee to join the prize pool", referredBy = null } = {}) => {
     setLastError(null);
@@ -186,6 +256,34 @@ export function WorldProvider({ children }) {
     setLastError(null);
     try {
       const message = typeof input === "string" ? input : input.message;
+
+      if (isFarcaster) {
+        const { sdk } = await import("@farcaster/miniapp-sdk");
+        const provider = await sdk.wallet.getEthereumProvider();
+        const [address] = await provider.request({ method: "eth_requestAccounts" });
+        const signature = await provider.request({
+          method: "personal_sign",
+          params: [message, address],
+        });
+        await fetch("/api/checkin", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            day: typeof input === "string" ? Math.floor(Date.now() / (1000 * 60 * 60 * 24)) : input.day,
+            theme: typeof input === "string" ? "daily" : input.theme,
+            caption: typeof input === "string" ? "" : input.caption,
+            mediaPath: typeof input === "string" ? null : (input.mediaPath ?? null),
+            isInfiltrator: typeof input === "string" ? false : Boolean(input.isInfiltrator),
+            username: farcasterUser?.username ?? user?.username ?? null,
+            message,
+            signature,
+            address,
+          }),
+        });
+        return { data: { signature, address } };
+      }
+
       const result = await MiniKit.signMessage({
         message,
         fallback: () => {
@@ -217,7 +315,7 @@ export function WorldProvider({ children }) {
       setLastError(e instanceof Error ? e.message : "Signing failed");
       throw e;
     }
-  }, [user]);
+  }, [user, farcasterUser, isFarcaster]);
 
   const sendWorldChat = useCallback(async ({ to, message }) => {
     setLastError(null);
@@ -268,12 +366,21 @@ export function WorldProvider({ children }) {
     if (!isFarcaster) return;
     import("@farcaster/miniapp-sdk").then(({ sdk }) => {
       sdk.actions.ready();
+      const ctx = sdk.context;
+      if (ctx?.user) {
+        setFarcasterUser({
+          fid: ctx.user.fid,
+          username: ctx.user.username,
+          pfpUrl: ctx.user.pfpUrl,
+          displayName: ctx.user.displayName || `@${ctx.user.username}`,
+        });
+      }
     }).catch(() => {});
   }, [isFarcaster]);
 
   useEffect(() => {
-    persist({ walletAuthed, entryPaid, worldIdVerified, user });
-  }, [walletAuthed, entryPaid, worldIdVerified, user]);
+    persist({ walletAuthed, entryPaid, worldIdVerified, user, farcasterUser });
+  }, [walletAuthed, entryPaid, worldIdVerified, user, farcasterUser]);
 
   const platform = isWorldApp ? "world" : isFarcaster ? "farcaster" : "browser";
   const isMiniApp = isWorldApp || isFarcaster;
@@ -290,8 +397,9 @@ export function WorldProvider({ children }) {
     setEntryPaid(false);
     setWorldIdVerified(false);
     setUser(null);
+    setFarcasterUser(null);
     setLastError(null);
-    persist({ walletAuthed: false, entryPaid: false, worldIdVerified: false, user: null });
+    persist({ walletAuthed: false, entryPaid: false, worldIdVerified: false, user: null, farcasterUser: null });
   }, []);
 
   const value = useMemo(
@@ -306,6 +414,7 @@ export function WorldProvider({ children }) {
       entryPaid,
       worldIdVerified,
       user,
+      farcasterUser,
       lastError,
       prizePoolAddress,
       walletAuth,
@@ -327,6 +436,7 @@ export function WorldProvider({ children }) {
       entryPaid,
       worldIdVerified,
       user,
+      farcasterUser,
       lastError,
       prizePoolAddress,
       walletAuth,

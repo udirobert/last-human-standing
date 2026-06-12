@@ -75,6 +75,10 @@ rsync -az --delete \
   --exclude='*' \
   ./ "${HOST}:${REMOTE_BASE}/${RELEASE_DIR}/"
 
+# ─── Symlink dist for nginx ─────────────────────────────────────────────
+info "Symlinking dist for nginx…"
+ssh "${HOST}" "ln -sfn ${REMOTE_BASE}/current/dist ${REMOTE_BASE}/dist" 2>/dev/null || true
+
 # ─── Symlink shared resources ────────────────────────────────────────────
 info "Linking shared .env and node_modules…"
 ssh "${HOST}" bash -s <<LINK

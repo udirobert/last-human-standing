@@ -24,6 +24,7 @@ const RULES = [
 export default function Onboarding({ onEnter }) {
   const {
     isWorldApp,
+    isFarcaster,
     walletAuthed,
     entryPaid,
     lastError,
@@ -31,6 +32,7 @@ export default function Onboarding({ onEnter }) {
     payEntryFee,
     markBrowserPaid,
     prizePoolAddress,
+    farcasterUser,
   } = useWorld();
   const { tier } = useTrustTier();
   const { phase, launchAt, cohortSize, reservedCount, round, you, isLive } = useRound();
@@ -319,7 +321,7 @@ export default function Onboarding({ onEnter }) {
               </div>
             )}
 
-            {entryPaid && tier !== "verified" && (
+            {!isFarcaster && entryPaid && tier !== "verified" && (
               <div className="mb-4 space-y-3">
                 <p className="text-dim text-xs font-mono mb-2">Upgrade to verified human (recommended before Day 1):</p>
                 {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
