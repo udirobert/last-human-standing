@@ -12,9 +12,19 @@
     "iconUrl": "https://lasthumanstanding.thisyearnofear.com/og-image.png",
     "homeUrl": "https://lasthumanstanding.thisyearnofear.com",
     "imageUrl": "https://lasthumanstanding.thisyearnofear.com/og-image.png",
-    "buttonTitle": "Survive",
+    "buttonTitle": "Play Now",
     "splashImageUrl": "https://lasthumanstanding.thisyearnofear.com/splash.png",
     "splashBackgroundColor": "#0a0a0a",
+    "heroImageUrl": "https://lasthumanstanding.thisyearnofear.com/splash.png",
+    "tagline": "One human, one slot. Last one wins.",
+    "ogTitle": "Last Human Standing",
+    "ogDescription": "A daily real-world elimination game. Check in at themed locations, vote HUMAN or SUS, and be the last human standing. Powered by Celo.",
+    "ogImageUrl": "https://lasthumanstanding.thisyearnofear.com/og-image.png",
+    "castShareUrl": "https://lasthumanstanding.thisyearnofear.com",
+    "screenshotUrls": [
+      "https://lasthumanstanding.thisyearnofear.com/screenshot1.png",
+      "https://lasthumanstanding.thisyearnofear.com/screenshot2.png"
+    ],
     "primaryCategory": "games",
     "tags": ["game", "social", "elimination", "celo", "proof-of-human"]
   }
