@@ -202,9 +202,13 @@ export default function paymentRoutes({
     if (!body) return;
 
     try {
-      const address = ensureString(body.address, {
+      const address = req.user?.address || ensureString(body.address, {
         field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
       });
+      // If user has a session, verify address matches
+      if (req.user?.address && req.user.address.toLowerCase() !== address.toLowerCase()) {
+        return res.status(403).json({ error: "address_mismatch" });
+      }
       const txHash = ensureString(body.txHash, {
         field: "txHash", required: true, maxLength: 80, pattern: /^0x[a-fA-F0-9]{64}$/,
       });
@@ -239,9 +243,13 @@ export default function paymentRoutes({
     if (!body) return;
 
     try {
-      const address = ensureString(body.address, {
+      const address = req.user?.address || ensureString(body.address, {
         field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
       });
+      // If user has a session, verify address matches
+      if (req.user?.address && req.user.address.toLowerCase() !== address.toLowerCase()) {
+        return res.status(403).json({ error: "address_mismatch" });
+      }
       const txHash = ensureString(body.txHash, {
         field: "txHash", required: true, maxLength: 80, pattern: /^0x[a-fA-F0-9]{64}$/,
       });

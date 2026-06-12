@@ -1,11 +1,14 @@
 import { Router } from "express";
+import { rateLimit } from "../rateLimit.js";
 import { ensureObjectBody, ensureString, sendValidationError } from "../lib/validators.js";
 
-export default function referralRoutes({ supabaseAdmin, log, makeReferralCode }) {
+export default function referralRoutes({ supabaseAdmin, log, makeReferralCode, rateLimitStorage }) {
   const router = Router();
 
   // ---------- POST /api/waitlist ----------
-  router.post("/waitlist", async (req, res) => {
+  router.post("/waitlist",
+    rateLimit({ keyFn: (req) => `waitlist:${req.ip}`, limit: 5, windowMs: 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
     const body = ensureObjectBody(req, res);
     if (!body) return;
     try {

@@ -57,6 +57,7 @@ const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
 const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
 const CHECKIN_RADIUS_M = Number(process.env.CHECKIN_RADIUS_M || 100);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || null;
+const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || null;
 
 let balanceCache = { value: 0, fetchedAt: 0 };
 
@@ -726,7 +727,10 @@ app.post("/api/media-url", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/checkin", requireAuth, async (req, res) => {
+app.post("/api/checkin",
+  requireAuth,
+  rateLimit({ keyFn: (req) => `checkin:${req.user?.address || req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
   const body = ensureObjectBody(req, res);
   if (!body) return;
 
@@ -953,10 +957,10 @@ function haversineMeters(lat1, lng1, lat2, lng2) {
 }
 
 function requireAdmin(req, res, next) {
-  const token = req.headers["x-admin-token"];
-  if (!ADMIN_TOKEN) return res.status(501).json({ error: "admin_not_configured" });
-  if (token !== ADMIN_TOKEN) return res.status(401).json({ error: "invalid_admin_token" });
-  next();
+  if (ADMIN_TOKEN && req.headers["x-admin-token"] === ADMIN_TOKEN) return next();
+  if (ADMIN_ADDRESS && req.user?.address?.toLowerCase() === ADMIN_ADDRESS.toLowerCase()) return next();
+  if (!ADMIN_TOKEN && !ADMIN_ADDRESS) return res.status(501).json({ error: "admin_not_configured" });
+  return res.status(401).json({ error: "invalid_admin_token" });
 }
 
 function currentDayNumber(launchAtMs) {
@@ -1238,7 +1242,7 @@ app.get("/api/checkins/today", async (req, res) => {
   }
 });
 
-app.post("/api/admin/round", requireAdmin, async (req, res) => {
+app.post("/api/admin/round", requireAuth, requireAdmin, async (req, res) => {
   const body = ensureObjectBody(req, res);
   if (!body) return;
 
@@ -1265,7 +1269,7 @@ app.post("/api/admin/round", requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/api/admin/rounds", requireAdmin, async (req, res) => {
+app.get("/api/admin/rounds", requireAuth, requireAdmin, async (req, res) => {
   if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
   try {
     const { data, error } = await supabaseAdmin
@@ -1279,7 +1283,7 @@ app.get("/api/admin/rounds", requireAdmin, async (req, res) => {
   }
 });
 
-app.get("/api/admin/flags", requireAdmin, async (req, res) => {
+app.get("/api/admin/flags", requireAuth, requireAdmin, async (req, res) => {
   if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
   const limit = Math.min(Number(req.query.limit) || 50, 200);
   try {
@@ -1295,7 +1299,7 @@ app.get("/api/admin/flags", requireAdmin, async (req, res) => {
   }
 });
 
-app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
+app.post("/api/admin/close-day", requireAuth, requireAdmin, async (req, res) => {
   const body = ensureObjectBody(req, res);
   if (!body) return;
 
@@ -1326,7 +1330,7 @@ app.post("/api/admin/close-day", requireAdmin, async (req, res) => {
 // Manual trigger for the Postgres advance_rounds() function.
 // Useful as a fallback if the setInterval scheduler is down, or for ad-hoc admin control.
 // Uses pg_advisory_xact_lock so it is safe to call concurrently with the scheduler.
-app.post("/api/admin/trigger-rounds", requireAdmin, async (req, res) => {
+app.post("/api/admin/trigger-rounds", requireAuth, requireAdmin, async (req, res) => {
   if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
   try {
     const { data, error } = await supabaseAdmin.rpc("advance_rounds");
@@ -1375,8 +1379,8 @@ app.use("/api", paymentRoutes({
   rateLimitStorage,
 }));
 
-app.use("/api", referralRoutes({ supabaseAdmin, log, makeReferralCode }));
-app.use("/api", ariaRoutes({ requireAdmin, log }));
+app.use("/api", referralRoutes({ supabaseAdmin, log, makeReferralCode, rateLimitStorage }));
+app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));
 
 export { app };
 

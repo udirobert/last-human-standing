@@ -4,6 +4,7 @@ import {
   getAgentHandle,
   ariaVerifyPhoto,
   ariaBuildPayoutTx,
+  ariaBroadcastPayoutTx,
   ariaSuggestNextRound,
   ariaBuildX402Request,
   ariaRegisterAgent,
@@ -23,7 +24,7 @@ import { ensureObjectBody, ensureString, sendValidationError } from "../lib/vali
  *   POST /api/aria/register  - register on 8004scan
  *   POST /api/aria/payout    - build payout transaction
  */
-export default function ariaRoutes({ requireAdmin, log }) {
+export default function ariaRoutes({ requireAuth, requireAdmin, log }) {
   const router = Router();
 
   // ---------- Public: agent identity ----------
@@ -92,14 +93,14 @@ export default function ariaRoutes({ requireAdmin, log }) {
   });
 
   // ---------- Admin: ERC-8004 registration ----------
-  router.post("/aria/register", requireAdmin, async (req, res) => {
+  router.post("/aria/register", requireAuth, requireAdmin, async (req, res) => {
     const result = await ariaRegisterAgent();
     log("aria_register", { ok: result.ok, reason: result.reason || "ok" });
     res.json(result);
   });
 
   // ---------- Admin: build payout transaction ----------
-  router.post("/aria/payout", requireAdmin, async (req, res) => {
+  router.post("/aria/payout", requireAuth, requireAdmin, async (req, res) => {
     const body = ensureObjectBody(req, res);
     if (!body) return;
     try {
@@ -111,6 +112,24 @@ export default function ariaRoutes({ requireAdmin, log }) {
       const tx = await ariaBuildPayoutTx({ winnerAddress, amountUsd, token });
       log("aria_payout_build", { winnerAddress, amountUsd, token });
       res.json({ ok: true, tx, agentDid: getAgentDid() });
+    } catch (error) {
+      sendValidationError(res, error);
+    }
+  });
+
+  // ---------- Admin: broadcast payout transaction (autonomous agent action) ----------
+  router.post("/aria/broadcast", requireAuth, requireAdmin, async (req, res) => {
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+    try {
+      const winnerAddress = ensureString(body.winnerAddress, {
+        field: "winnerAddress", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
+      });
+      const amountUsd = typeof body.amountUsd === "number" ? body.amountUsd : 0;
+      const token = ensureString(body.token, { field: "token", maxLength: 16 }) || "cUSD";
+      const result = await ariaBroadcastPayoutTx({ winnerAddress, amountUsd, token });
+      log("aria_broadcast", { winnerAddress, amountUsd, token, ok: result.ok });
+      res.json(result.ok ? { ok: true, ...result } : { ok: false, error: result.reason });
     } catch (error) {
       sendValidationError(res, error);
     }

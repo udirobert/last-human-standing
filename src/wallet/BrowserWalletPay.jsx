@@ -41,6 +41,7 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
     fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({
         address,
         txHash,

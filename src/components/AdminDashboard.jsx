@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 
-const ADMIN_TOKEN = import.meta.env.VITE_ADMIN_TOKEN;
+const ADMIN_ADDRESS = import.meta.env.VITE_ADMIN_ADDRESS;
 
 async function adminFetch(path, options = {}) {
   const res = await fetch(path, {
     ...options,
+    credentials: 'include',
     headers: {
       'content-type': 'application/json',
-      'x-admin-token': ADMIN_TOKEN,
       ...(options.headers || {}),
     },
   });
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
   });
   const [submittingRound, setSubmittingRound] = useState(false);
 
-  const isAdmin = user?.address && ADMIN_TOKEN;
+  const isAdmin = ADMIN_ADDRESS && user?.address?.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -125,7 +125,7 @@ export default function AdminDashboard() {
       <div className="min-h-screen bg-ash flex flex-col items-center justify-center px-5 py-10 font-body">
         <div className="text-center">
           <p className="font-display text-4xl text-bone mb-4">🔒 Admin Only</p>
-          <p className="text-dim font-mono text-sm">Set VITE_ADMIN_TOKEN in your environment to access the dashboard.</p>
+          <p className="text-dim font-mono text-sm">Connect your admin wallet to access the dashboard.</p>
         </div>
       </div>
     );

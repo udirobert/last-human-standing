@@ -88,9 +88,6 @@ export async function ariaVerifyPhoto({ mediaPath, mimeType, sizeBytes, dimensio
 /**
  * Build the onchain transaction for paying the final survivor.
  * Returns { to, value, data, chain, token, amount }.
- *
- * The actual transaction is signed by the server's hot wallet
- * (PRIZE_POOL_SIGNING_KEY) and broadcast — never by ARIA itself.
  */
 export async function ariaBuildPayoutTx({ winnerAddress, amountUsd, token = "cUSD", chain = "celo" }) {
   if (!winnerAddress) throw new Error("winner_address_required");
@@ -121,6 +118,104 @@ export async function ariaBuildPayoutTx({ winnerAddress, amountUsd, token = "cUS
     amountUsd,
     agentDid: AGENT_DID,
   };
+}
+
+const CELO_RPC = process.env.CELO_RPC || "https://forno.celo.org";
+const CELO_PRIZE_POOL_KEY = process.env.CELO_PRIZE_POOL_PRIVATE_KEY || process.env.PRIZE_POOL_SIGNING_KEY || null;
+const CELO_PRIZE_POOL_ADDRESS = process.env.VITE_CELO_PRIZE_POOL_ADDRESS || null;
+
+/**
+ * Sign and broadcast an ERC-20 payout transaction on Celo.
+ * This is the agent's autonomous onchain action — called after the game ends.
+ * Returns { txHash, explorerUrl } on success.
+ */
+export async function ariaBroadcastPayoutTx({ winnerAddress, amountUsd, token = "cUSD" }) {
+  if (!CELO_PRIZE_POOL_KEY) {
+    return { ok: false, reason: "no_prize_pool_key" };
+  }
+  if (!CELO_PRIZE_POOL_ADDRESS) {
+    return { ok: false, reason: "no_prize_pool_address" };
+  }
+
+  const tx = await ariaBuildPayoutTx({ winnerAddress, amountUsd, token });
+
+  try {
+    // 1) Get nonce
+    const nonceResp = await fetch(CELO_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        jsonrpc: "2.0", id: 1,
+        method: "eth_getTransactionCount",
+        params: [CELO_PRIZE_POOL_ADDRESS, "pending"],
+      }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const nonceJson = await nonceResp.json();
+    const nonce = nonceJson.result || "0x0";
+
+    // 2) Get gas price
+    const gasResp = await fetch(CELO_RPC, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "eth_gasPrice", params: [] }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const gasJson = await gasResp.json();
+    const gasPrice = gasJson.result || "0x";
+    const gasLimit = "0x30d40"; // 200k — ample for ERC-20 transfer
+
+    // 3) Build the raw tx
+    const rawTx = {
+      from: CELO_PRIZE_POOL_ADDRESS,
+      to: tx.to,
+      nonce,
+      gasPrice,
+      gas: gasLimit,
+      value: "0x0",
+      data: tx.data,
+      chainId: "0xa4ec", // 42220 = Celo mainnet
+    };
+
+    // 4) Sign via eth_sendTransaction using the private key
+    // This requires importing viem for proper signing
+    const { createWalletClient, http } = await import("viem");
+    const { celo } = await import("viem/chains");
+    const { privateKeyToAccount } = await import("viem/accounts");
+
+    const account = privateKeyToAccount(CELO_PRIZE_POOL_KEY.startsWith("0x") ? CELO_PRIZE_POOL_KEY : `0x${CELO_PRIZE_POOL_KEY}`);
+
+    const walletClient = createWalletClient({
+      account,
+      chain: celo,
+      transport: http(CELO_RPC),
+    });
+
+    const txHash = await walletClient.sendTransaction({
+      to: rawTx.to,
+      value: BigInt(0),
+      data: rawTx.data,
+      gasPrice: BigInt(gasPrice),
+      gas: BigInt(gasLimit),
+      chainId: 42220,
+    });
+
+    return {
+      ok: true,
+      txHash,
+      explorerUrl: `https://celoscan.io/tx/${txHash}`,
+      chain: "celo",
+      token,
+      amountUsd,
+      winnerAddress,
+      agentDid: AGENT_DID,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: `broadcast_error: ${e instanceof Error ? e.message : "unknown"}`,
+    };
+  }
 }
 
 // ── Agent 3: Round Manager ───────────────────────────────────────────
@@ -180,9 +275,8 @@ export function ariaBuildX402Request({ resource, amountUsd, token = "cUSD", reci
 // ── ERC-8004 Agent Registration ─────────────────────────────────────
 
 /**
- * Register ARIA on the ERC-8004 registry. In production this would
- * POST to 8004scan.io; here we generate the registration payload and
- * return what would be sent.
+ * Register ARIA on the ERC-8004 registry.
+ * Signs the payload with AGENT_SIGNING_KEY and POSTs to 8004scan.io.
  */
 export async function ariaRegisterAgent() {
   if (!AGENT_SIGNING_KEY) {
@@ -193,7 +287,6 @@ export async function ariaRegisterAgent() {
     };
   }
 
-  // The registration payload
   const payload = {
     agentDid: AGENT_DID,
     handle: getAgentHandle(),
@@ -207,12 +300,38 @@ export async function ariaRegisterAgent() {
     wallet: process.env.ARIA_AGENT_WALLET || null,
   };
 
-  return {
-    ok: true,
-    registry: AGENT_REGISTRY,
-    payload,
-    note: "In production, this payload is signed with AGENT_SIGNING_KEY and POSTed to the registry. The agentDid + signature are recorded onchain.",
-  };
+  // Sign the payload with the agent key
+  const signature = crypto
+    .createHmac("sha256", AGENT_SIGNING_KEY)
+    .update(JSON.stringify(payload))
+    .digest("hex");
+
+  try {
+    const resp = await fetch(AGENT_REGISTRY, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, signature }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const result = await resp.json().catch(() => null);
+
+    if (resp.ok) {
+      return { ok: true, registry: AGENT_REGISTRY, agentDid: AGENT_DID, result };
+    }
+
+    return {
+      ok: false,
+      reason: `registry_rejected: ${resp.status}`,
+      agentDid: AGENT_DID,
+      details: result,
+    };
+  } catch (e) {
+    return {
+      ok: false,
+      reason: `registry_error: ${e instanceof Error ? e.message : "unknown"}`,
+      agentDid: AGENT_DID,
+    };
+  }
 }
 
 export default {
@@ -220,6 +339,7 @@ export default {
   getAgentHandle,
   ariaVerifyPhoto,
   ariaBuildPayoutTx,
+  ariaBroadcastPayoutTx,
   ariaSuggestNextRound,
   ariaBuildX402Request,
   ariaRegisterAgent,
