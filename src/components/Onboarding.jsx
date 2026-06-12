@@ -144,7 +144,7 @@ export default function Onboarding({ onEnter }) {
                 )}
               </div>
 
-              {!isWorldApp && (
+              {!isWorldApp && !isFarcaster && (
                 <p className="text-amber/90 text-xs font-mono text-center">
                   Browser mode: connect wallet + verify humanity for full trust. Demo feed uses sample data until live.
                 </p>

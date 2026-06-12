@@ -23,12 +23,16 @@ function constructSiweMessage({ domain, address, statement, uri, nonce, chainId 
 function detectFarcaster() {
   try {
     if (typeof window !== "undefined" && (window.farcaster || window.parent !== window)) {
-      return Boolean(window.farcaster);
+      return true;
     }
   } catch (error) {
     void error;
   }
   return false;
+}
+
+if (typeof window !== "undefined" && (window.farcaster || window.parent !== window)) {
+  import("@farcaster/miniapp-sdk").then(({ sdk }) => sdk.actions.ready()).catch(() => {});
 }
 
 const WorldContext = createContext(null);
@@ -365,7 +369,6 @@ export function WorldProvider({ children }) {
   useEffect(() => {
     if (!isFarcaster) return;
     import("@farcaster/miniapp-sdk").then(({ sdk }) => {
-      sdk.actions.ready();
       const ctx = sdk.context;
       if (ctx?.user) {
         setFarcasterUser({
