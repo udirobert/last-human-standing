@@ -97,8 +97,31 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
   if (!isConnected) {
     return (
       <div className="space-y-3">
+        {/* Token selector first — let the user see Celo is supported
+            BEFORE connecting a wallet. Eliminates the
+            'WLD-only-on-first-glance' impression. */}
+        <p className="text-dim font-mono text-[10px] uppercase tracking-widest text-center">
+          Pay with
+        </p>
+        <div className="grid grid-cols-3 gap-2">
+          {PAYMENT_OPTIONS.map((opt) => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => setSelectedToken(opt.id)}
+              className={`py-2.5 rounded-xl font-mono text-xs transition-all ${
+                selectedToken === opt.id
+                  ? "bg-blood text-bone border border-blood"
+                  : "bg-ash text-dim border border-ember hover:border-blood/40"
+              }`}
+            >
+              <div className="font-bold">{opt.label}</div>
+              <div className="text-[9px] opacity-70">{opt.description}</div>
+            </button>
+          ))}
+        </div>
         <p className="text-dim font-mono text-xs text-center">
-          Connect any wallet to pay the entry fee on World Chain or Celo
+          Connect any wallet to pay the entry fee on {isCeloSelected ? "Celo" : "World Chain"}
         </p>
         {connectors.map((connector) => (
           <button

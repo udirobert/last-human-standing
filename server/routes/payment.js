@@ -185,7 +185,7 @@ export default function paymentRoutes({
         log("pay_confirm_rejected", { address: req.user.address, status: resp.status });
         return res.status(400).json({ error: "payment_verify_failed", details: json });
       }
-      await upsertPaidUser(req.user.address, { referredBy: body.referredBy || null, platform: "world" });
+      await upsertPaidUser(req.user.address, { referredBy: body.referredBy || null, platform: "world", entryKind: "paid", entryToken: "wld" });
       log("pay_confirm_success", { address: req.user.address, platform: "world" });
       res.json({ ok: true, paid: true, details: json });
     } catch (e) {
@@ -224,7 +224,7 @@ export default function paymentRoutes({
       }
 
       log("browser_pay_confirmed", { address, txHash });
-      await upsertPaidUser(address, { referredBy, platform: "browser" });
+      await upsertPaidUser(address, { referredBy, platform: "browser", entryKind: "paid", entryToken: "wld" });
 
       const sessionId = await createSessionRecord(address);
       setSessionCookie(res, sessionId);
@@ -240,9 +240,9 @@ export default function paymentRoutes({
     if (process.env.FREE_ENTRY_MODE !== "true") {
       return res.status(501).json({ error: "free_entry_not_available" });
     }
-    await upsertPaidUser(req.user.address, { platform: "free_entry" });
+    await upsertPaidUser(req.user.address, { platform: "free_entry", entryKind: "free" });
     log("free_entry", { address: req.user.address });
-    res.json({ ok: true, paid: true });
+    res.json({ ok: true, paid: true, entryKind: "free" });
   });
 
   // ---------- POST /api/pay/browser-celo-confirm (Celo cUSD/USDC) ----------
@@ -281,7 +281,7 @@ export default function paymentRoutes({
       }
 
       log("celo_pay_confirmed", { address, txHash, token });
-      await upsertPaidUser(address, { referredBy, platform: "celo" });
+      await upsertPaidUser(address, { referredBy, platform: "celo", entryKind: "paid", entryToken: token.toLowerCase() });
 
       const sessionId = await createSessionRecord(address);
       setSessionCookie(res, sessionId);

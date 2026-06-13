@@ -16,6 +16,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const {
     phase, launchAt, currentDay,
     cohortSize, reservedCount, cohortFull,
+    cohort: cohortSplit,
     usesDemoState, refresh: refreshRound,
   } = useRound();
   const { stats } = useStats();
@@ -84,9 +85,14 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
       {isPrelaunch && (
         <PrelaunchPanel
           launchAt={launchAt}
-          cohortSize={cohortSize}
-          reservedCount={reservedCount}
-          cohortFull={cohortFull}
+          cohort={cohortSplit ?? {
+            size: cohortSize,
+            paidSlots: 25,
+            freeSlots: 25,
+            paidCount: 0,
+            freeCount: 0,
+          }}
+          prizePool={stats?.prizePool}
           referralCode={user?.referralCode}
           referralCount={user?.referralCount ?? 0}
           reservedAt={user?.reservedAt}

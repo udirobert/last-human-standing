@@ -15,30 +15,9 @@ import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 import { useEntryMode } from "../hooks/useEntryMode.js";
 import ScreenLoader from "./ui/ScreenLoader.jsx";
+import { RULES, FAQS, getEntryCopy } from "../lib/copy.js";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
-
-const RULES = [
-  { n: "01", title: "ONE HUMAN, ONE SLOT", body: "World ID or verified wallet. No bots.", icon: "🫂" },
-  { n: "02", title: "DAILY THEME", body: "Find the place type anywhere on Earth. Race for survival slots.", icon: "🌍" },
-  { n: "03", title: "PROVE IT", body: "Photo + crowd vote HUMAN or SUS. Optional GPS for credibility.", icon: "📸" },
-  { n: "04", title: "LAST ONE WINS", body: "Cap shrinks daily until one human takes the on-chain pot.", icon: "🏆" },
-];
-
-const FAQS = [
-  {
-    q: "Do I need crypto to play?",
-    a: "Not this season. Entry is free during the launch campaign. You'll need a wallet to vote in the audit and to receive any winnings onchain.",
-  },
-  {
-    q: "What if I miss a day?",
-    a: "You're eliminated — but you can still vote in the audit, hang out in the lobby, and watch the cohort play out.",
-  },
-  {
-    q: "Can I play from any country?",
-    a: "Yes. Themes are place types (a café, a park), not GPS pins. Find the place anywhere on Earth and take a photo.",
-  },
-];
 
 export default function Onboarding({ onEnter }) {
   const {
@@ -317,20 +296,15 @@ export default function Onboarding({ onEnter }) {
             <button type="button" onClick={() => setStep(1)} className="text-dim text-sm mb-4 text-left">← back</button>
 
             <Mascot variant={entryPaid ? "celebrating" : "excited"} size={64} />
-            <h2 className="font-display text-4xl text-bone mt-4 mb-1">
-              {entryPaid
-                ? "SPOT SECURED"
-                : isFree
-                  ? "RESERVE · FREE"
-                  : `RESERVE · ${ENTRY_FEE_WLD} WLD`}
-            </h2>
-            <p className="text-dim text-sm font-mono mb-4">
-              {entryPaid
-                ? "You're in. Come back when Day 1 opens."
-                : isFree
-                  ? "Launch campaign — no payment required. One slot per wallet."
-                  : `Your ${ENTRY_FEE_WLD} WLD entry goes into the prize pool. One entry, one slot.`}
-            </p>
+            {(() => {
+              const entryCopy = getEntryCopy({ isFreeMode: isFree, alreadyPaid: entryPaid });
+              return (
+                <>
+                  <h2 className="font-display text-4xl text-bone mt-4 mb-1">{entryCopy.title}</h2>
+                  <p className="text-dim text-sm font-mono mb-4">{entryCopy.blurb}</p>
+                </>
+              );
+            })()}
             <TrustBadge size="md" className="mb-4" />
 
             <div className="bg-smoke border border-neon/30 rounded-2xl p-4 mb-4 space-y-3">

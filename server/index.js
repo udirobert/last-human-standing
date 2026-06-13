@@ -8,6 +8,8 @@ import { getSupabaseAdmin } from "./supabase.js";
 import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission } from "./anticheat.js";
 import { rateLimit } from "./rateLimit.js";
 import { verifySelfProof } from "./selfVerify.js";
+import { fetchCeloPot } from "./lib/celoBalance.js";
+import { drawLottery, ALGORITHM_VERSION } from "./lib/lottery.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -55,6 +57,17 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || null;
 const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || null;
 
 let balanceCache = { value: 0, fetchedAt: 0 };
+let celoBalanceCache = { value: null, fetchedAt: 0 };
+
+// Cohort composition. 25 paid (guaranteed) + 25 free (lottery).
+// 50 humans, one cohort. Override per-cohort later via the
+// lottery_results table.
+const COHORT_CONFIG = {
+  cohort: 1,
+  size: 50,
+  paidSlots: 25,
+  freeSlots: 25,
+};
 
 function now() {
   return Date.now();
@@ -652,10 +665,21 @@ async function verifyWldTransfer(txHash, senderAddress, prizePoolAddress) {
 app.get("/api/stats", async (req, res) => {
   try {
     const prizePoolAddress = process.env.VITE_PRIZE_POOL_ADDRESS;
-    if (prizePoolAddress && Date.now() - balanceCache.fetchedAt > 60_000) {
+    const celoPrizePoolAddress = process.env.VITE_CELO_PRIZE_POOL_ADDRESS;
+    const now = Date.now();
+
+    if (prizePoolAddress && now - balanceCache.fetchedAt > 60_000) {
       try {
         balanceCache.value = await fetchWldBalance(prizePoolAddress);
-        balanceCache.fetchedAt = Date.now();
+        balanceCache.fetchedAt = now;
+      } catch {
+        // keep stale value
+      }
+    }
+    if (celoPrizePoolAddress && now - celoBalanceCache.fetchedAt > 60_000) {
+      try {
+        celoBalanceCache.value = await fetchCeloPot(celoPrizePoolAddress);
+        celoBalanceCache.fetchedAt = now;
       } catch {
         // keep stale value
       }
@@ -663,21 +687,45 @@ app.get("/api/stats", async (req, res) => {
 
     let totalPlayers = 0;
     let activePlayers = 0;
+    let paidCount = 0;
+    let freeCount = 0;
     if (supabaseAdmin) {
-      const [total, active] = await Promise.all([
+      const [total, active, paid, free] = await Promise.all([
         supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true),
         supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("eliminated", false),
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid"),
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free"),
       ]);
       totalPlayers = total.count ?? 0;
       activePlayers = active.count ?? 0;
+      paidCount = paid.count ?? 0;
+      freeCount = free.count ?? 0;
     }
 
     res.json({
       ok: true,
       prizePool: {
-        address: prizePoolAddress || null,
+        wld: {
+          address: prizePoolAddress || null,
+          balance: balanceCache.value,
+          explorerUrl: prizePoolAddress ? `https://worldscan.org/address/${prizePoolAddress}` : null,
+        },
+        celo: celoBalanceCache.value || {
+          address: celoPrizePoolAddress || null,
+          celo: 0, cusd: 0, usdc: 0, stable: 0,
+          explorerUrl: celoPrizePoolAddress ? `https://celoscan.io/address/${celoPrizePoolAddress}` : null,
+        },
+        // Backward-compat alias for older clients.
         balanceWld: balanceCache.value,
+        address: prizePoolAddress || null,
         explorerUrl: prizePoolAddress ? `https://worldscan.org/address/${prizePoolAddress}` : null,
+      },
+      cohort: {
+        size: COHORT_CONFIG.size,
+        paidSlots: COHORT_CONFIG.paidSlots,
+        freeSlots: COHORT_CONFIG.freeSlots,
+        paidCount,
+        freeCount,
       },
       players: { total: totalPlayers, active: activePlayers },
     });
@@ -748,11 +796,22 @@ app.get("/api/round-status", async (req, res) => {
 
 
 
-async function upsertPaidUser(address, { referredBy = null, platform = null } = {}) {
+async function upsertPaidUser(address, { referredBy = null, platform = null, entryKind = "paid", entryToken = null } = {}) {
   if (!supabaseAdmin) return;
   const refCode = makeReferralCode(address.slice(0, 6));
   await supabaseAdmin.from("users").upsert(
-    { address, paid: true, reserved_at: new Date().toISOString(), last_seen_at: new Date().toISOString(), referral_code: refCode, referred_by: referredBy, platform },
+    {
+      address,
+      paid: true,
+      reserved_at: new Date().toISOString(),
+      last_seen_at: new Date().toISOString(),
+      referral_code: refCode,
+      referred_by: referredBy,
+      platform,
+      entry_kind: entryKind,
+      entry_token: entryToken,
+      cohort: 1,
+    },
     { onConflict: "address", ignoreDuplicates: false },
   );
   if (referredBy) {
@@ -1080,10 +1139,20 @@ async function reservedCount() {
   return count ?? 0;
 }
 
+async function cohortSplitCount() {
+  if (!supabaseAdmin) return { paidCount: 0, freeCount: 0 };
+  const [paid, free] = await Promise.all([
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid"),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free"),
+  ]);
+  return { paidCount: paid.count ?? 0, freeCount: free.count ?? 0 };
+}
+
 app.get("/api/game/state", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
     const reserved = await reservedCount();
+    const split = await cohortSplitCount();
 
     let phase = "prelaunch";
     let currentDay = null;
@@ -1135,6 +1204,11 @@ app.get("/api/game/state", async (req, res) => {
       cohortSize: COHORT_SIZE,
       reservedCount: reserved,
       cohortFull,
+      cohort: {
+        ...COHORT_CONFIG,
+        paidCount: split.paidCount,
+        freeCount: split.freeCount,
+      },
       currentDay,
       round: round
         ? {
@@ -1157,6 +1231,25 @@ app.get("/api/game/state", async (req, res) => {
       you,
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
+
+    // Lazy lottery draw — the first /api/game/state call after
+    // GAME_LAUNCH_AT triggers the deterministic draw. Idempotent:
+    // subsequent calls (and concurrent calls) return the stored
+    // result.
+    if (phase === "live" && supabaseAdmin) {
+      try {
+        const stored = await getStoredLotteryResult(COHORT_CONFIG.cohort);
+        if (!stored) {
+          await drawAndStoreLottery({
+            cohort: COHORT_CONFIG.cohort,
+            freeSlots: COHORT_CONFIG.freeSlots,
+            drawnBy: "lazy",
+          });
+        }
+      } catch (drawErr) {
+        log?.("lottery_lazy_error", { error: drawErr instanceof Error ? drawErr.message : String(drawErr) });
+      }
+    }
   } catch (e) {
     res.status(500).json({ error: "game_state_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
@@ -1269,12 +1362,27 @@ app.get("/api/cohort/roster", async (req, res) => {
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count, referred_by")
+      .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count, referred_by, entry_kind, entry_token, cohort")
       .eq("paid", true)
       .order("reserved_at", { ascending: false })
       .limit(200);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
-    return res.json({ ok: true, roster: data || [] });
+
+    const roster = data || [];
+    const paidCount = roster.filter((u) => u.entry_kind === "paid").length;
+    const freeCount = roster.filter((u) => u.entry_kind === "free").length;
+    return res.json({
+      ok: true,
+      roster,
+      split: {
+        cohort: COHORT_CONFIG.cohort,
+        size: COHORT_CONFIG.size,
+        paidSlots: COHORT_CONFIG.paidSlots,
+        freeSlots: COHORT_CONFIG.freeSlots,
+        paidCount,
+        freeCount,
+      },
+    });
   } catch (e) {
     res.status(400).json({ error: "roster_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
@@ -1311,6 +1419,158 @@ app.get("/api/chat/messages", async (req, res) => {
     return res.json({ ok: true, messages: (data || []).reverse() });
   } catch (e) {
     res.status(400).json({ error: "chat_messages_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// =============== Lottery ===============
+// Deterministic draw for the free cohort slots. Read-only status
+// endpoint for clients; admin-only draw endpoint. The lazy draw
+// in /api/game/state triggers it once at GAME_LAUNCH_AT.
+
+let lotteryInFlight = null;
+
+async function getStoredLotteryResult(cohort) {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from("lottery_results")
+    .select("cohort, seed, algorithm_version, free_slots, candidates, drawn, drawn_at, drawn_by")
+    .eq("cohort", cohort)
+    .maybeSingle();
+  if (error) return null;
+  return data;
+}
+
+async function drawAndStoreLottery({ cohort, freeSlots, drawnBy = "lazy" }) {
+  if (!supabaseAdmin) return null;
+  if (!GAME_LAUNCH_AT) {
+    throw new Error("GAME_LAUNCH_AT not set; cannot seed lottery");
+  }
+  if (lotteryInFlight) return lotteryInFlight;
+
+  lotteryInFlight = (async () => {
+    // Pull every free-registered candidate for this cohort. We sort
+    // by reserved_at so the seed is the only source of randomness
+    // (the order is otherwise arbitrary).
+    const { data: candidates, error } = await supabaseAdmin
+      .from("users")
+      .select("address, username, referral_count")
+      .eq("paid", true)
+      .eq("entry_kind", "free")
+      .eq("cohort", cohort)
+      .order("reserved_at", { ascending: true });
+    if (error) throw error;
+
+    const result = drawLottery(candidates || [], {
+      launchAtIso: GAME_LAUNCH_AT,
+      cohort,
+      slots: freeSlots,
+    });
+
+    // Persist the canonical draw. ON CONFLICT DO NOTHING so a
+    // double-call (admin endpoint after lazy) is idempotent.
+    const { error: insertErr } = await supabaseAdmin
+      .from("lottery_results")
+      .upsert(
+        {
+          cohort,
+          seed: result.seed,
+          algorithm_version: result.algorithmVersion,
+          free_slots: result.slots,
+          candidates: result.candidates,
+          drawn: result.drawn,
+          drawn_at: new Date().toISOString(),
+          drawn_by: drawnBy,
+        },
+        { onConflict: "cohort", ignoreDuplicates: true },
+      );
+    if (insertErr) {
+      log?.("lottery_persist_error", { error: insertErr.message });
+    }
+
+    // Mark the losers as cohort 2 priority so we don't lose them.
+    if (result.rolledToCohort2.length > 0) {
+      const losers = result.rolledToCohort2.map((u) => u.address);
+      await supabaseAdmin
+        .from("users")
+        .update({ cohort: 2 })
+        .in("address", losers)
+        .then(({ error: rollErr }) => {
+          if (rollErr) log?.("lottery_rollover_error", { error: rollErr.message });
+        });
+    }
+
+    log?.("lottery_drawn", {
+      cohort,
+      seed: result.seed,
+      algorithm: result.algorithmVersion,
+      candidates: result.candidates,
+      slots: result.slots,
+      drawnBy,
+    });
+    return result;
+  })();
+
+  try {
+    return await lotteryInFlight;
+  } finally {
+    lotteryInFlight = null;
+  }
+}
+
+app.get("/api/lottery/status", async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const cohort = Number(req.query.cohort) || COHORT_CONFIG.cohort;
+    const stored = await getStoredLotteryResult(cohort);
+
+    // Count free-registered users so the client can show
+    // "12 / 25 free slots filled" before the draw.
+    const { count: freeRegistered } = await supabaseAdmin
+      .from("users")
+      .select("address", { count: "exact", head: true })
+      .eq("paid", true)
+      .eq("entry_kind", "free")
+      .eq("cohort", cohort);
+
+    const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+    const now = Date.now();
+    const pastLaunch = launchAtMs != null && now >= launchAtMs;
+
+    return res.json({
+      ok: true,
+      cohort,
+      drawAt: GAME_LAUNCH_AT,
+      status: stored ? "drawn" : pastLaunch ? "pending" : "scheduled",
+      freeSlots: COHORT_CONFIG.freeSlots,
+      freeRegistered: freeRegistered ?? 0,
+      seed: stored?.seed ?? null,
+      algorithmVersion: stored?.algorithm_version ?? ALGORITHM_VERSION,
+      drawn: stored?.drawn ?? null,
+      drawnAt: stored?.drawn_at ?? null,
+      drawnBy: stored?.drawn_by ?? null,
+    });
+  } catch (e) {
+    res.status(400).json({ error: "lottery_status_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+app.post("/api/lottery/draw", requireAdmin, async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const cohort = Number(req.body?.cohort) || COHORT_CONFIG.cohort;
+    const existing = await getStoredLotteryResult(cohort);
+    if (existing) {
+      return res.json({ ok: true, alreadyDrawn: true, result: existing });
+    }
+    const result = await drawAndStoreLottery({
+      cohort,
+      freeSlots: COHORT_CONFIG.freeSlots,
+      drawnBy: req.user?.address || "admin",
+    });
+    return res.json({ ok: true, result });
+  } catch (e) {
+    log?.("lottery_draw_error", { error: e instanceof Error ? e.message : "unknown" });
+    res.status(400).json({ error: "lottery_draw_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
