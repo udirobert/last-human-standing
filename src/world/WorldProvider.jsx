@@ -100,6 +100,9 @@ export function WorldProvider({ children }) {
           address: json.address,
           username: json.username ?? u?.username ?? null,
           displayName: json.username ? `@${json.username}` : safeTruncateAddress(json.address),
+          referralCode: json.referralCode ?? u?.referralCode ?? null,
+          referralCount: json.referralCount ?? 0,
+          reservedAt: json.reservedAt ?? null,
         }));
       }
     } catch {

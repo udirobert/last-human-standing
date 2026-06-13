@@ -99,5 +99,53 @@ export default function referralRoutes({ supabaseAdmin, log, makeReferralCode, r
     }
   });
 
+  // ---------- GET /api/referral-rank/:code ----------
+  // Returns the user's referral rank (e.g., "You're #3 top referrer")
+  router.get("/referral-rank/:code", async (req, res) => {
+    try {
+      const code = req.params.code;
+      if (!supabaseAdmin) return res.json({ ok: true, rank: null, totalReferrers: 0 });
+
+      // Get the user's referral count
+      const { data: user } = await supabaseAdmin
+        .from("users").select("referral_count").eq("referral_code", code).single();
+      const myCount = user?.referral_count ?? 0;
+
+      if (myCount === 0) {
+        return res.json({ ok: true, rank: null, totalReferrers: 0 });
+      }
+
+      // Count how many users have more referrals than this user
+      const { count } = await supabaseAdmin
+        .from("users")
+        .select("id", { count: "exact", head: true })
+        .gt("referral_count", myCount);
+
+      // Also check waitlist
+      const { count: wlCount } = await supabaseAdmin
+        .from("waitlist")
+        .select("id", { count: "exact", head: true })
+        .gt("referral_count", myCount);
+
+      const totalAbove = (count ?? 0) + (wlCount ?? 0);
+      const rank = totalAbove + 1;
+
+      // Total referrers (for context)
+      const { count: totalUsers } = await supabaseAdmin
+        .from("users")
+        .select("id", { count: "exact", head: true })
+        .gt("referral_count", 0);
+      const { count: totalWl } = await supabaseAdmin
+        .from("waitlist")
+        .select("id", { count: "exact", head: true })
+        .gt("referral_count", 0);
+      const totalReferrers = (totalUsers ?? 0) + (totalWl ?? 0);
+
+      return res.json({ ok: true, rank, totalReferrers, myCount });
+    } catch (e) {
+      res.status(400).json({ error: "referral_rank_error", message: e instanceof Error ? e.message : "unknown_error" });
+    }
+  });
+
   return router;
 }

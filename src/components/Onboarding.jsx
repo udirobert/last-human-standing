@@ -5,12 +5,91 @@ import { useRound } from "../world/RoundProvider.jsx";
 import Countdown from "./Countdown.jsx";
 import Mascot from "./Mascot.jsx";
 import TrustBadge from "./TrustBadge.jsx";
+import DailyPrompt from "./DailyPrompt.jsx";
 import WorldIdVerify from "../world/WorldIdVerify.jsx";
 import SelfVerify from "./SelfVerify.jsx";
 import BrowserWalletPay from "../wallet/BrowserWalletPay.jsx";
 import PushOptIn from "./PushOptIn.jsx";
 import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useTrustTier } from "../hooks/useTrustTier.js";
+
+function ShareButtons({ referralCode, referralCount }) {
+  const [copied, setCopied] = useState(false);
+  const [loadingRank, setLoadingRank] = useState(false);
+  const [rankData, setRankData] = useState(null);
+
+  const shareUrl = `${window.location.origin}?ref=${referralCode}`;
+  const shareText = encodeURIComponent(
+    referralCount > 0
+      ? `I just secured my spot in Last Human Standing! 🚀 Join me: ${shareUrl}`
+      : `I just reserved my spot in Last Human Standing — the last human standing game! 🚀 Join: ${shareUrl}`
+  );
+
+  useEffect(() => {
+    if (!referralCode) return;
+    setLoadingRank(true);
+    fetch(`/api/referral-rank/${referralCode}`)
+      .then((r) => r.ok ? r.json() : null)
+      .then((d) => { if (d) setRankData(d); })
+      .catch(() => {})
+      .finally(() => setLoadingRank(false));
+  }, [referralCode]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
+
+  if (!referralCode) return null;
+
+  return (
+    <div className="w-full mt-4 space-y-3">
+      {/* Referral stats */}
+      <div className="bg-smoke/50 rounded-xl p-3 space-y-1">
+        <p className="text-dim text-xs font-mono uppercase">Your referral link</p>
+        <p className="text-neon text-sm font-mono truncate">{shareUrl}</p>
+        {referralCount > 0 && (
+          <p className="text-amber text-sm font-mono">
+            {referralCount} friend{referralCount !== 1 ? "s" : ""} invited
+            {rankData?.rank && !loadingRank && (
+              <span className="text-dim"> · #{rankData.rank} top referrer</span>
+            )}
+          </p>
+        )}
+      </div>
+
+      {/* Share buttons */}
+      <div className="flex gap-2">
+        <a
+          href={`https://twitter.com/intent/tweet?text=${shareText}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 py-2.5 rounded-xl bg-[#1DA1F2]/20 text-[#1DA1F2] text-sm font-display hover:bg-[#1DA1F2]/30 transition-colors"
+        >
+          𝕏 Post
+        </a>
+        <a
+          href={`https://warpcast.com/frame-compose?text=${encodeURIComponent(`I just secured my spot in Last Human Standing! 🚀 ${shareUrl}`)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 py-2.5 rounded-xl bg-[#8B5CF6]/20 text-[#A78BFA] text-sm font-display hover:bg-[#8B5CF6]/30 transition-colors"
+        >
+          ſ Share
+        </a>
+        <button
+          type="button"
+          onClick={handleCopy}
+          className="flex-1 py-2.5 rounded-xl bg-neon/20 text-neon text-sm font-display hover:bg-neon/30 transition-colors"
+        >
+          {copied ? "Copied!" : "Copy Link"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -48,6 +127,7 @@ export default function Onboarding({ onEnter }) {
     markBrowserPaid,
     prizePoolAddress,
     farcasterUser,
+    user,
   } = useWorld();
   const { tier } = useTrustTier();
   const { phase, launchAt, cohortSize, reservedCount, round, you, isLive } = useRound();
@@ -210,6 +290,9 @@ export default function Onboarding({ onEnter }) {
                   </p>
                 )}
               </div>
+
+              {/* Daily pulse — community teaser, even before signup */}
+              <DailyPrompt />
 
               {/* Primary CTA */}
               <button
@@ -462,7 +545,7 @@ export default function Onboarding({ onEnter }) {
           >
             <Mascot variant="celebrating" size={80} />
             <h2 className="font-display text-4xl text-bone mt-6">YOU&apos;RE IN</h2>
-            <TrustBadge size="md" className="mt-3" />
+            <TrustBadge size="md" className="mt-3" showEarlyBadge={phase === "prelaunch"} reservedAt={user?.reservedAt} />
             <div className="w-full mt-4 px-2">
               <PushOptIn />
             </div>
@@ -472,10 +555,14 @@ export default function Onboarding({ onEnter }) {
             <p className="text-dim text-xs font-mono mt-2 max-w-xs">
               First {round?.survivalCap ?? 25} players survive each day. Watch the mission board when live.
             </p>
+            <div className="w-full px-2">
+              <DailyPrompt />
+            </div>
+            <ShareButtons referralCode={user?.referralCode} referralCount={user?.referralCount ?? 0} />
             <button
               type="button"
               onClick={() => { markOnboardingDone(); onEnter(); }}
-              className="w-full mt-8 py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95"
+              className="w-full mt-4 py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95"
             >
               {isLive ? "ENTER ARENA →" : "ENTER LOBBY →"}
             </button>

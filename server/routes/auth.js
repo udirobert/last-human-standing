@@ -110,6 +110,8 @@ export default function authRoutes({
       humanityProvider: userRecord?.humanity_provider ?? null,
       username: userRecord?.username ?? null,
       referralCode: userRecord?.referral_code ?? null,
+      referralCount: userRecord?.referral_count ?? 0,
+      reservedAt: userRecord?.reserved_at ?? null,
     });
   });
 
