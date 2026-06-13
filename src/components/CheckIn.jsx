@@ -23,6 +23,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const { online, queueCheckin } = useOnlineStatus();
   const fileRef = useRef();
   const watchRef = useRef(null);
+  const sharedRef = useRef(false);
 
   const theme = round?.placeType || round?.name || TODAY_THEME.theme;
   const themeData = DAILY_THEMES.find(t => t.theme === theme) || TODAY_THEME;
@@ -53,6 +54,25 @@ export default function CheckIn({ onBack, onSubmit }) {
   useEffect(() => {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
+
+  // Auto-share on Farcaster after successful check-in
+  useEffect(() => {
+    if (!isFarcaster || step !== 2 || !result?.survived || sharedRef.current) return;
+    sharedRef.current = true;
+    const timer = setTimeout(async () => {
+      try {
+        const { sdk } = await import("@farcaster/miniapp-sdk");
+        const shareUrl = result.checkinId
+          ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
+          : window.location.origin;
+        await sdk.actions.composeCast({
+          text: `I just checked in to Round ${currentDay} of Last Human Standing! Can you survive the longest?`,
+          embeds: [shareUrl],
+        });
+      } catch { /* user dismissed composer */ }
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [isFarcaster, step, result, currentDay]);
 
   const canSubmit = photoFile != null; // photo is the primary proof
 
@@ -382,6 +402,26 @@ export default function CheckIn({ onBack, onSubmit }) {
                     <p className="text-bone font-mono text-sm">You arrived as #{result.rank} (cap was {result.survivalCap})</p>
                     <p className="text-dim font-mono text-xs mt-2">You're out. Stay for the audit + chat.</p>
                   </div>
+                  {isFarcaster && (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          const { sdk } = await import("@farcaster/miniapp-sdk");
+                          const shareUrl = result.checkinId
+                            ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
+                            : window.location.origin;
+                          await sdk.actions.composeCast({
+                            text: `I got eliminated from Last Human Standing on Day ${currentDay}. Ready for round 2?`,
+                            embeds: [shareUrl],
+                          });
+                        } catch { /* user dismissed composer */ }
+                      }}
+                      className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
+                    >
+                      SHARE YOUR ELIMINATION
+                    </button>
+                  )}
                 </>
               )}
 
@@ -398,9 +438,12 @@ export default function CheckIn({ onBack, onSubmit }) {
                   onClick={async () => {
                     try {
                       const { sdk } = await import("@farcaster/miniapp-sdk");
+                      const shareUrl = result.checkinId
+                        ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
+                        : window.location.origin;
                       await sdk.actions.composeCast({
-                        text: `I just checked in to Round ${currentDay} of Last Human Standing! ${window.location.origin}`,
-                        embeds: [window.location.origin],
+                        text: `I just checked in to Round ${currentDay} of Last Human Standing! Can you survive the longest?`,
+                        embeds: [shareUrl],
                       });
                     } catch { /* user dismissed composer */ }
                   }}

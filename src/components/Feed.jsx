@@ -147,13 +147,21 @@ export default function Feed({ onBack }) {
           <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
             <span className="text-dim text-lg">←</span>
           </button>
-          <div>
+          <div className="flex-1">
             <h2 className="font-display text-3xl text-bone tracking-wide">AUDIT FEED</h2>
-            <p className="font-mono text-dim text-xs">Vote HUMAN or SUS</p>
+            <div className="flex items-center gap-2">
+              <p className="font-mono text-dim text-xs">Vote HUMAN or SUS</p>
+              {import.meta.env.VITE_VOTE_REGISTRY_ADDRESS && (
+                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-neon">
+                  <span className="w-1.5 h-1.5 rounded-full bg-neon animate-pulse" />
+                  ONCHAIN
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex gap-2 mb-3">
+        <div className="flex gap-2 mb-3 items-center">
           {['all', 'pending', 'verified', 'flagged'].map((key) => (
             <button
               key={key}

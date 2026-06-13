@@ -134,7 +134,7 @@ export default function Onboarding({ onEnter }) {
 
             <div className="w-full space-y-3">
               <div className="bg-smoke rounded-2xl p-4 border border-ember">
-                <p className="font-mono text-dim text-xs uppercase mb-1">Cohort #1</p>
+                <p className="font-mono text-dim text-xs uppercase mb-1">Season 1</p>
                 <p className="font-display text-3xl text-bone">{reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span></p>
                 <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
                   <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
@@ -229,15 +229,15 @@ export default function Onboarding({ onEnter }) {
               {entryPaid ? "SPOT SECURED" : `RESERVE · ${ENTRY_FEE_WLD} WLD`}
             </h2>
             <p className="text-dim text-sm font-mono mb-4">
-              Entry fee goes to the on-chain prize pool. One payment, one slot.
+              Your fee goes into the prize pool. One entry, one slot.
             </p>
             <TrustBadge size="md" className="mb-4" />
 
             <div className="bg-smoke border border-neon/30 rounded-2xl p-4 mb-4 space-y-3">
-              <p className="font-mono text-neon text-xs uppercase">Trust levels</p>
+              <p className="font-mono text-neon text-xs uppercase">Badges</p>
               <ul className="text-dim text-xs font-mono space-y-2 list-disc pl-4">
-                <li><span className="text-amber">Provisional</span> — paid, not yet verified (can play, limited voting if configured)</li>
-                <li><span className="text-neon">Verified human</span> — World ID or Self Protocol (Celo)</li>
+                <li><span className="text-amber">Basic</span> — paid, not yet verified (full access when configured)</li>
+                <li><span className="text-neon">Verified</span> — World ID or Self Protocol (Celo)</li>
               </ul>
             </div>
 
@@ -362,7 +362,7 @@ export default function Onboarding({ onEnter }) {
               <p className="text-dim font-mono text-sm mt-4">Day 1 starts in <Countdown targetIso={launchAt} className="text-amber" /></p>
             )}
             <p className="text-dim text-xs font-mono mt-2 max-w-xs">
-              First {round?.survivalCap ?? 25} check-ins survive each day. Watch the mission board when live.
+              First {round?.survivalCap ?? 25} players survive each day. Watch the mission board when live.
             </p>
             <button
               type="button"

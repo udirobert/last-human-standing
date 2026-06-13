@@ -10,6 +10,7 @@ const Feed = lazy(() => import('./components/Feed.jsx'));
 const Chat = lazy(() => import('./components/Chat.jsx'));
 const Leaderboard = lazy(() => import('./components/Leaderboard.jsx'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'));
+const PlayerHistory = lazy(() => import('./components/PlayerHistory.jsx'));
 
 // Error boundary — catches crashes and shows a retry screen instead of white page
 class ErrorBoundary extends Component {
@@ -57,6 +58,7 @@ const SCREENS = {
   CHAT: 'chat',
   LEADERBOARD: 'leaderboard',
   ADMIN: 'admin',
+  HISTORY: 'history',
 };
 
   // Wrapper to use delight hooks in App
@@ -154,6 +156,7 @@ const SCREENS = {
               onViewFeed={() => handleNavChange('feed')}
               onViewChat={() => handleNavChange('chat')}
               onViewLeaderboard={() => handleNavChange('leaderboard')}
+              onViewHistory={() => setScreen(SCREENS.HISTORY)}
             />
           </motion.div>
         )}
@@ -222,6 +225,20 @@ const SCREENS = {
           transition={{ duration: 0.25 }}
         >
           <AdminDashboard onBack={() => { setScreen(SCREENS.HOME); setNavTab('home'); }} />
+        </motion.div>
+        </Suspense>
+      )}
+
+      {screen === SCREENS.HISTORY && (
+        <Suspense fallback={null}>
+        <motion.div
+          key="history"
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          <PlayerHistory onBack={() => handleNavChange('home')} />
         </motion.div>
         </Suspense>
       )}

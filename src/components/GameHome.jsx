@@ -8,8 +8,9 @@ import Countdown from './Countdown.jsx';
 import MissionBoard from './MissionBoard.jsx';
 import TrustBadge from './TrustBadge.jsx';
 import ModeBanner from './ModeBanner.jsx';
+import ActivityFeed from './ActivityFeed.jsx';
 
-export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard }) {
+export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard, onViewHistory }) {
   const { user, isWorldApp, isMiniApp } = useWorld();
   const {
     phase, launchAt, currentDay,
@@ -81,7 +82,12 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
               <TrustBadge />
               <ModeBanner />
             </div>
-            <span className="font-mono text-dim text-xs">{user?.displayName ?? 'anon'}</span>
+            <button
+              onClick={onViewHistory}
+              className="font-mono text-dim text-xs hover:text-bone transition-colors underline decoration-dotted underline-offset-2"
+            >
+              {user?.displayName ?? 'anon'}
+            </button>
           </div>
         </div>
         <h1 className="font-display text-4xl text-bone tracking-wide animate-glow">LAST HUMAN STANDING</h1>
@@ -93,27 +99,29 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
         isDemoMode={!isMiniApp}
       />
 
+      <ActivityFeed />
+
       {isPrelaunch && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-5 mb-4">
           <div className="bg-smoke border border-amber/40 rounded-3xl p-6 relative overflow-hidden">
-            <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Cohort #1 · Day 1 in</p>
+                <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Day 1 in</p>
             {launchAt
               ? <Countdown targetIso={launchAt} className="font-display text-5xl text-bone leading-none animate-glow" />
               : <p className="font-display text-3xl text-dim">TBA</p>}
             <div className="mt-4 flex items-center justify-between text-xs font-mono text-dim">
-              <span>{reservedCount.toLocaleString()} of {cohortSize} humans confirmed</span>
+              <span>{reservedCount.toLocaleString()} of {cohortSize} players joined</span>
               <span>{cohortPct}%</span>
             </div>
             <div className="mt-1 h-1.5 bg-ember rounded-full overflow-hidden">
               <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
             </div>
             {cohortFull && (
-              <p className="text-neon text-xs font-mono mt-3">✓ Cohort full · waiting for launch</p>
+              <p className="text-neon text-xs font-mono mt-3">✓ Season full · waiting for launch</p>
             )}
           </div>
           {!waitlistState ? (
             <div className="mt-4 bg-smoke border border-ember rounded-2xl p-4">
-              <p className="font-mono text-bone text-sm mb-1">🧍 Want in on Cohort #1?</p>
+              <p className="font-mono text-bone text-sm mb-1">🧍 First time here?</p>
               <p className="text-dim text-xs font-mono mb-3">We'll notify you when Day 1 opens. {!isWorldApp && 'Download World App to play for real.'}</p>
               <div className="flex gap-2">
                 <input
@@ -216,9 +224,9 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
           {prizeExplorer && <a href={prizeExplorer} target="_blank" rel="noopener" className="text-[10px] font-mono text-dim underline">view on chain</a>}
         </div>
         <div className="bg-smoke rounded-2xl p-4 border border-ember">
-          <p className="text-dim text-xs font-mono mb-1">Humans Left</p>
+          <p className="text-dim text-xs font-mono mb-1">Survivors</p>
           <p className="font-display text-2xl text-bone leading-none">{activePlayers ?? '—'}</p>
-          <p className="text-[10px] font-mono text-dim mt-1">{eliminated} eliminated</p>
+          <p className="text-[10px] font-mono text-dim mt-1">{eliminated} out</p>
         </div>
       </div>
 

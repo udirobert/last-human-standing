@@ -35,10 +35,10 @@ export default function MissionBoard({ onCheckIn, onViewFeed, isDemoMode }) {
         animate={{ opacity: 1, y: 0 }}
         className="mx-5 mb-4 bg-smoke border border-amber/30 rounded-3xl p-5"
       >
-        <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Before Day 1</p>
-        <p className="font-display text-2xl text-bone mb-2">Reserve your slot</p>
+        <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Pre-game</p>
+        <p className="font-display text-2xl text-bone mb-2">You're registered</p>
         <p className="text-dim text-sm font-mono leading-relaxed">
-          When the cohort launches, you will get a daily theme, a check-in window, and a race for the first {cap} survivors.
+          When the game starts, you will get a daily theme, a check-in window, and a race for the first {cap} spots.
         </p>
         <div className="mt-3">
           <TrustBadge size="md" />
@@ -90,7 +90,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, isDemoMode }) {
           )}
         </div>
         <div className="bg-ash rounded-xl p-3 border border-ember">
-          <p className="text-dim text-[10px] font-mono uppercase">Survival slots</p>
+          <p className="text-dim text-[10px] font-mono uppercase">Spots left</p>
           <p className="text-bone font-display text-2xl mt-0.5">
             {slotsLeft != null ? slotsLeft : "—"}
             <span className="text-dim text-sm font-mono"> / {cap}</span>

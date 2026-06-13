@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
 
@@ -359,12 +359,58 @@ export function WorldProvider({ children }) {
 
   // Reconcile client state with server on mount; clears stale local flags
   useEffect(() => {
-    if (!hasWorldAppId) return undefined;
+    if (!hasWorldAppId && !isFarcaster) return undefined;
     const t = setTimeout(() => {
       syncAuth();
     }, 0);
     return () => clearTimeout(t);
-  }, [hasWorldAppId, syncAuth]);
+  }, [hasWorldAppId, isFarcaster, syncAuth]);
+
+  // Auto-auth for Farcaster users with connected wallets
+  const autoAuthAttempted = useRef(false);
+  useEffect(() => {
+    if (!isFarcaster || walletAuthed || autoAuthAttempted.current) return;
+    const doAutoAuth = async () => {
+      autoAuthAttempted.current = true;
+      try {
+        const { sdk } = await import("@farcaster/miniapp-sdk");
+        const ctx = sdk.context;
+        if (!ctx?.user?.addresses?.length) return;
+        const provider = await sdk.wallet.getEthereumProvider().catch(() => null);
+        if (!provider) return;
+        const [address] = await provider.request({ method: "eth_requestAccounts" }).catch(() => []);
+        if (!address) return;
+        const chainId = await provider.request({ method: "eth_chainId" }).catch(() => "0x2105");
+        const domain = window.location.host;
+        const uri = window.location.origin;
+        const nonceResp = await fetch("/api/nonce", { method: "POST" });
+        if (!nonceResp.ok) return;
+        const { nonce } = await nonceResp.json();
+        const message = constructSiweMessage({
+          domain, address, statement: "Sign in to Last Human Standing", uri, nonce,
+          chainId: parseInt(chainId, 16),
+        });
+        const signature = await provider.request({ method: "personal_sign", params: [message, address] });
+        const verifyResp = await fetch("/api/complete-siwe", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ payload: { message, signature, address }, nonce }),
+        });
+        if (!verifyResp.ok) return;
+        const { address: verifiedAddress } = await verifyResp.json();
+        const fcUser = ctx?.user
+          ? { fid: ctx.user.fid, username: ctx.user.username, pfpUrl: ctx.user.pfpUrl, displayName: ctx.user.displayName || `@${ctx.user.username}` }
+          : null;
+        setWalletAuthed(true);
+        setFarcasterUser(fcUser);
+        setUser({ address: verifiedAddress, username: fcUser?.username ?? null, displayName: fcUser?.displayName ?? safeTruncateAddress(verifiedAddress) });
+      } catch {
+        // silent — user can auth manually
+      }
+    };
+    doAutoAuth();
+  }, [isFarcaster, walletAuthed]);
 
   useEffect(() => {
     if (!isFarcaster) return;
