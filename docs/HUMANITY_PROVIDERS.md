@@ -6,7 +6,7 @@ Last Human Standing uses a **pluggable humanity layer** so we are not locked to 
 
 | Provider | Chain / surface | Status | Notes |
 |----------|-----------------|--------|-------|
-| **World ID** | World App + browser (IDKit) | Live | Orb verification via `/api/idkit/verify`. Primary path for World cohort. |
+| **World ID** | World App + browser (IDKit v4) | Live | Orb verification via `/api/idkit/verify`. RP-signature flow: client fetches `/api/idkit/rp-context` (server signs with `@worldcoin/idkit-server`), widget renders with `IDKitRequestWidget` + `orbLegacy({ signal: wallet })`. Server forwards proof to `https://developer.world.org/api/v4/verify/{rp_id}`. |
 | **[Self Protocol](https://docs.self.xyz/)** | Celo + multi-chain ZK passports | Live (Celo Sepolia, mock passport) | Privacy-preserving proof-of-human. Production mainnet flips in via `SELF_MOCK_PASSPORT=false`. Self Pass supports passports/IDs from 60+ countries. |
 | **Wallet + WLD entry** | World Chain | Live | Sybil *cost* signal only — not proof of unique human without PoH. |
 | **Celo wallet path** | Celo | Live | cUSD/USDC entry on Celo (browser path). Pair with Self verification instead of WLD-only browser path. |
@@ -22,10 +22,11 @@ UI surfaces this via `TrustBadge` and `useTrustTier()`. `ModeBanner` shows the p
 ## Recommended architecture (next sprint)
 
 ```
-Client                    API                         DB
-──────                    ───                         ──
-WorldIdVerify  ──►  POST /api/idkit/verify     ──►  users.world_id_verified
-SelfVerify     ──►  POST /api/self/verify      ──►  users.humanity_provider, humanity_nullifier
+Client                              API                                 DB
+──────                              ───                                 ──
+WorldIdVerify  ──►  POST /api/idkit/rp-context  (server signs rp_context)
+WorldIdVerify  ──►  POST /api/idkit/verify      ──►  users.world_id_verified
+SelfVerify     ──►  POST /api/self/verify       ──►  users.humanity_provider, humanity_nullifier
 Browser pay    ──►  POST /api/pay/browser-confirm
 ```
 

@@ -22,8 +22,8 @@
 - **World App users**: World ID Orb verification via `@worldcoin/idkit` v4 (`IDKitRequestWidget` with server-signed `rp_context`) → `/api/idkit/verify` → `https://developer.world.org/api/v4/verify/{rp_id}`. Cloud verification, v4 endpoint. ✅
 - **Browser users**: NO PoH layer today. SIWE auth + on-chain WLD payment is a WEAK sybil signal — someone can create unlimited wallets to get multiple entries. The payment is real but not human-verified.
 - **Recommendation (pre-pilot)**: Choose one:
-  - **Option A**: Embed [World ID Flex](https://docs.worldcoin.org/id/flex) (phone number or cloud) into browser onboarding for a lighter PoH signal. World ID JS SDK supports this via `VerificationLevel.Device` or the cloud flow.
-  - **Option B**: Require browser users to also verify via World ID (same SDK, browser popup). The `WorldIdVerify.jsx` component already exists — just wire it into `Onboarding.jsx` for browser users too (not just World App).
+  - **Option A**: Embed [World ID Flex](https://docs.worldcoin.org/id/flex) (phone number or cloud) into browser onboarding for a lighter PoH signal. World ID JS SDK supports this via the `deviceLegacy({})` preset (4.0 API) or the cloud flow.
+  - **Option B**: Require browser users to also verify via World ID (same `IDKitRequestWidget` + `orbLegacy` path, browser popup). The `WorldIdVerify.jsx` component is already on the 4.0 spec — wire it into `Onboarding.jsx` for browser users too (not just World App).
   - **Option C**: Accept the risk for pilot scope (50 users, manual oversight) and label browser users as "provisional" in the UI.
 
 ### 1d. Referral mechanics — ⚪ Good for virality, undermonetized
