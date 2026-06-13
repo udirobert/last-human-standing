@@ -16,9 +16,62 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+      /* First-paint splash. Replaced by React on DOMContentLoaded.
+         Same palette as the app so there's no jarring flash. */
+      html, body { margin: 0; background: #0a0a0a; color: #f5f0e8; }
+      body { font-family: 'DM Mono', ui-monospace, monospace; }
+      #splash {
+        position: fixed; inset: 0;
+        display: flex; flex-direction: column;
+        align-items: center; justify-content: center;
+        gap: 1.25rem;
+        background: #0a0a0a;
+        z-index: 9999;
+      }
+      #splash .glyph {
+        font-family: 'Bebas Neue', system-ui, sans-serif;
+        font-size: 3rem;
+        letter-spacing: 0.05em;
+        color: #ff1a1a;
+        line-height: 1;
+      }
+      #splash .label {
+        font-size: 0.75rem;
+        color: #a89c8a;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+      }
+      #splash .bar {
+        width: 7rem; height: 2px;
+        background: linear-gradient(90deg, transparent, #ff1a1a 50%, transparent);
+        background-size: 200% 100%;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      @keyframes pulse { 0%,100% { background-position: 100% 0; } 50% { background-position: 0 0; } }
+    </style>
   </head>
   <body>
+    <div id="splash">
+      <div class="glyph">LHS</div>
+      <div class="bar"></div>
+      <div class="label">Loading the arena</div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      // Remove the splash once React has rendered the app shell.
+      // Falls back to a 4s timeout in case the module fails to load.
+      window.addEventListener('DOMContentLoaded', () => {
+        setTimeout(() => {
+          const s = document.getElementById('splash');
+          if (s) s.remove();
+        }, 200);
+        setTimeout(() => {
+          const s = document.getElementById('splash');
+          if (s) s.remove();
+        }, 4000);
+      });
+    </script>
   </body>
 </html>

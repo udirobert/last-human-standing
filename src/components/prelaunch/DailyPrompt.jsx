@@ -175,7 +175,7 @@ export default function DailyPrompt() {
       </div>
       {vote === null ? (
         <p className="text-dim/70 text-[10px] font-mono mt-2 text-center">
-          Tap to vote · results drop at midnight
+          Your take · community totals land with the leaderboard at launch
         </p>
       ) : (
         <p className="text-dim/70 text-[10px] font-mono mt-2 text-center">

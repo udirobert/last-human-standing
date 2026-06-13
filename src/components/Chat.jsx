@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
+import ScreenLoader from './ui/ScreenLoader.jsx';
+import NetworkPill from './ui/NetworkPill.jsx';
 
 const BOT_RESPONSES = [
   "still alive another day, respect",
@@ -26,6 +28,8 @@ export default function Chat({ onBack }) {
   const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
   const [rosterCount, setRosterCount] = useState(0);
   const [sending, setSending] = useState(false);
+  const [chatError, setChatError] = useState(null);
+  const [chatLoading, setChatLoading] = useState(true);
   const onlineCount = isMiniApp || useMocks ? rosterCount : null;
 
   // ---- Browser demo: seed fake messages + bot interval ----
@@ -55,10 +59,14 @@ export default function Chat({ onBack }) {
 
   // ---- Mini app: fetch real lobby messages ----
   const loadMessages = useCallback(async () => {
-    if (!isMiniApp) return;
+    if (!isMiniApp) {
+      setChatLoading(false);
+      return;
+    }
     try {
       const resp = await fetch('/api/chat/messages?limit=50');
-      if (!resp.ok) return;
+      if (!resp.ok) throw new Error(`chat_${resp.status}`);
+      setChatError(null);
       const data = await resp.json();
       if (Array.isArray(data?.messages)) {
         setMessages(data.messages.map(m => ({
@@ -70,7 +78,11 @@ export default function Chat({ onBack }) {
           isVerified: true,
         })));
       }
-    } catch { /* ignore */ }
+    } catch (e) {
+      setChatError(e instanceof Error ? e.message : 'chat_load_failed');
+    } finally {
+      setChatLoading(false);
+    }
   }, [isMiniApp, user?.address]);
 
   useEffect(() => {
@@ -219,7 +231,8 @@ export default function Chat({ onBack }) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ maxHeight: 'calc(100vh - 280px)' }}>
+      <NetworkPill error={chatError} onRetry={loadMessages} />
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ maxHeight: 'calc(100dvh - 280px)' }}>
         {/* Day divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />
@@ -229,8 +242,13 @@ export default function Chat({ onBack }) {
           <div className="flex-1 h-px bg-ember" />
         </div>
 
+        {/* Loading state for first fetch */}
+        {chatLoading && messages.length === 0 && (
+          <ScreenLoader kind="chat" />
+        )}
+
         {/* Empty state for mini app */}
-        {isMiniApp && messages.length === 0 && (
+        {!chatLoading && isMiniApp && messages.length === 0 && (
           <div className="text-center py-8">
             <span className="text-4xl block mb-3">🫂</span>
             <p className="text-bone font-mono text-sm mb-1">No messages yet</p>

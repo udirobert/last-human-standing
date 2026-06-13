@@ -1269,7 +1269,7 @@ app.get("/api/cohort/roster", async (req, res) => {
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count")
+      .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count, referred_by")
       .eq("paid", true)
       .order("reserved_at", { ascending: false })
       .limit(200);

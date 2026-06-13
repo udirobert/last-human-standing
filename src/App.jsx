@@ -4,7 +4,9 @@ import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
+import ScreenLoader from './components/ui/ScreenLoader.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
+import { useScreenState } from './hooks/useScreenState.js';
 
 const Feed = lazy(() => import('./components/Feed.jsx'));
 const Chat = lazy(() => import('./components/Chat.jsx'));
@@ -64,8 +66,13 @@ const SCREENS = {
   // Wrapper to use delight hooks in App
   function AppWithDelight() {
     const { playSound, celebrate, soundEnabled, toggleSound } = useDelight();
-    const [screen, setScreen] = useState(SCREENS.ONBOARDING);
-    const [navTab, setNavTab] = useState('home');
+    const [refreshNonce, setRefreshNonce] = useState(0);
+    const handleRefresh = useCallback(() => setRefreshNonce((n) => n + 1), []);
+
+    const { screen, navTab, setScreen, setNavTab } = useScreenState({
+      defaultScreen: SCREENS.ONBOARDING,
+      validScreens: Object.values(SCREENS),
+    });
     const [badges, setBadges] = useState({});
 
     // Check for admin access via URL param or direct navigation
@@ -106,7 +113,7 @@ const SCREENS = {
         setScreen(SCREENS.ADMIN);
         setNavTab('admin');
       }
-    }, [isAdmin, screen]);
+    }, [isAdmin, screen, setScreen, setNavTab]);
 
   // Allow admins to access dashboard via URL param or secret route
   // For security, we'll check if admin token is set and allow direct navigation
@@ -121,15 +128,8 @@ const SCREENS = {
 
   return (
     <div className="relative">
-      {/* Sound toggle button */}
-      <button
-        onClick={toggleSound}
-        className="fixed top-20 right-4 z-50 w-10 h-10 rounded-full bg-smoke/80 backdrop-blur-sm border border-ember/30 flex items-center justify-center text-lg hover:bg-ember/30 transition-colors"
-        title={soundEnabled ? '🔊 Sound On' : '🔇 Sound Off'}
-      >
-        {soundEnabled ? '🔊' : '🔇'}
-      </button>
-      
+
+
       <AnimatePresence mode="wait">
         {screen === SCREENS.ONBOARDING && (
           <motion.div
@@ -157,6 +157,7 @@ const SCREENS = {
               onViewChat={() => handleNavChange('chat')}
               onViewLeaderboard={() => handleNavChange('leaderboard')}
               onViewHistory={() => setScreen(SCREENS.HISTORY)}
+              onRefresh={handleRefresh}
             />
           </motion.div>
         )}
@@ -174,7 +175,7 @@ const SCREENS = {
         )}
 
         {screen === SCREENS.FEED && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<ScreenLoader kind="list" />}>
           <motion.div
             key="feed"
             initial={{ opacity: 0, x: 30 }}
@@ -188,7 +189,7 @@ const SCREENS = {
         )}
 
         {screen === SCREENS.CHAT && (
-          <Suspense fallback={null}>
+          <Suspense fallback={<ScreenLoader kind="chat" />}>
           <motion.div
             key="chat"
             initial={{ opacity: 0, x: 30 }}
@@ -202,7 +203,7 @@ const SCREENS = {
         )}
 
       {screen === SCREENS.LEADERBOARD && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ScreenLoader kind="list" />}>
         <motion.div
           key="leaderboard"
           initial={{ opacity: 0, x: 30 }}
@@ -216,7 +217,7 @@ const SCREENS = {
       )}
 
       {screen === SCREENS.ADMIN && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ScreenLoader kind="detail" />}>
         <motion.div
           key="admin"
           initial={{ opacity: 0 }}
@@ -230,7 +231,7 @@ const SCREENS = {
       )}
 
       {screen === SCREENS.HISTORY && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<ScreenLoader kind="detail" />}>
         <motion.div
           key="history"
           initial={{ opacity: 0, x: 30 }}
@@ -245,7 +246,13 @@ const SCREENS = {
       </AnimatePresence>
 
       {isInGame && (
-        <BottomNav current={navTab} onChange={handleNavChange} badges={badges} />
+        <BottomNav
+          current={navTab}
+          onChange={handleNavChange}
+          badges={badges}
+          soundEnabled={soundEnabled}
+          onToggleSound={toggleSound}
+        />
       )}
     </div>
   );

@@ -1,95 +1,20 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, lazy, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
 import Countdown from "./Countdown.jsx";
 import Mascot from "./Mascot.jsx";
 import TrustBadge from "./TrustBadge.jsx";
-import DailyPrompt from "./DailyPrompt.jsx";
+import DailyPrompt from "./prelaunch/DailyPrompt.jsx";
+import EarlyBadge from "./prelaunch/EarlyBadge.jsx";
 import WorldIdVerify from "../world/WorldIdVerify.jsx";
-import SelfVerify from "./SelfVerify.jsx";
+const SelfVerify = lazy(() => import("./SelfVerify.jsx"));
 import BrowserWalletPay from "../wallet/BrowserWalletPay.jsx";
 import PushOptIn from "./PushOptIn.jsx";
 import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useTrustTier } from "../hooks/useTrustTier.js";
-
-function ShareButtons({ referralCode, referralCount }) {
-  const [copied, setCopied] = useState(false);
-  const [loadingRank, setLoadingRank] = useState(false);
-  const [rankData, setRankData] = useState(null);
-
-  const shareUrl = `${window.location.origin}?ref=${referralCode}`;
-  const shareText = encodeURIComponent(
-    referralCount > 0
-      ? `I just secured my spot in Last Human Standing! 🚀 Join me: ${shareUrl}`
-      : `I just reserved my spot in Last Human Standing — the last human standing game! 🚀 Join: ${shareUrl}`
-  );
-
-  useEffect(() => {
-    if (!referralCode) return;
-    setLoadingRank(true);
-    fetch(`/api/referral-rank/${referralCode}`)
-      .then((r) => r.ok ? r.json() : null)
-      .then((d) => { if (d) setRankData(d); })
-      .catch(() => {})
-      .finally(() => setLoadingRank(false));
-  }, [referralCode]);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(shareUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* ignore */ }
-  };
-
-  if (!referralCode) return null;
-
-  return (
-    <div className="w-full mt-4 space-y-3">
-      {/* Referral stats */}
-      <div className="bg-smoke/50 rounded-xl p-3 space-y-1">
-        <p className="text-dim text-xs font-mono uppercase">Your referral link</p>
-        <p className="text-neon text-sm font-mono truncate">{shareUrl}</p>
-        {referralCount > 0 && (
-          <p className="text-amber text-sm font-mono">
-            {referralCount} friend{referralCount !== 1 ? "s" : ""} invited
-            {rankData?.rank && !loadingRank && (
-              <span className="text-dim"> · #{rankData.rank} top referrer</span>
-            )}
-          </p>
-        )}
-      </div>
-
-      {/* Share buttons */}
-      <div className="flex gap-2">
-        <a
-          href={`https://twitter.com/intent/tweet?text=${shareText}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 py-2.5 rounded-xl bg-[#1DA1F2]/20 text-[#1DA1F2] text-sm font-display hover:bg-[#1DA1F2]/30 transition-colors"
-        >
-          𝕏 Post
-        </a>
-        <a
-          href={`https://warpcast.com/frame-compose?text=${encodeURIComponent(`I just secured my spot in Last Human Standing! 🚀 ${shareUrl}`)}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 py-2.5 rounded-xl bg-[#8B5CF6]/20 text-[#A78BFA] text-sm font-display hover:bg-[#8B5CF6]/30 transition-colors"
-        >
-          ſ Share
-        </a>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="flex-1 py-2.5 rounded-xl bg-neon/20 text-neon text-sm font-display hover:bg-neon/30 transition-colors"
-        >
-          {copied ? "Copied!" : "Copy Link"}
-        </button>
-      </div>
-    </div>
-  );
-}
+import { useEntryMode } from "../hooks/useEntryMode.js";
+import ScreenLoader from "./ui/ScreenLoader.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -130,6 +55,7 @@ export default function Onboarding({ onEnter }) {
     user,
   } = useWorld();
   const { tier } = useTrustTier();
+  const { isFree } = useEntryMode();
   const { phase, launchAt, cohortSize, reservedCount, round, you, isLive } = useRound();
 
   const [step, setStep] = useState(() => {
@@ -394,14 +320,14 @@ export default function Onboarding({ onEnter }) {
             <h2 className="font-display text-4xl text-bone mt-4 mb-1">
               {entryPaid
                 ? "SPOT SECURED"
-                : import.meta.env.VITE_FREE_ENTRY_MODE === "true"
+                : isFree
                   ? "RESERVE · FREE"
                   : `RESERVE · ${ENTRY_FEE_WLD} WLD`}
             </h2>
             <p className="text-dim text-sm font-mono mb-4">
               {entryPaid
                 ? "You're in. Come back when Day 1 opens."
-                : import.meta.env.VITE_FREE_ENTRY_MODE === "true"
+                : isFree
                   ? "Launch campaign — no payment required. One slot per wallet."
                   : `Your ${ENTRY_FEE_WLD} WLD entry goes into the prize pool. One entry, one slot.`}
             </p>
@@ -429,7 +355,7 @@ export default function Onboarding({ onEnter }) {
 
             {!entryPaid && (
               <div className="bg-smoke border border-ember rounded-2xl p-5 mb-4">
-                {import.meta.env.VITE_FREE_ENTRY_MODE === "true" ? (
+                {isFree ? (
                   <>
                     <p className="font-display text-3xl text-neon mb-1">FREE ENTRY</p>
                     <p className="text-dim text-xs font-mono mb-4">Hackathon campaign — no payment required</p>
@@ -511,7 +437,11 @@ export default function Onboarding({ onEnter }) {
               <div className="mb-4 space-y-3">
                 <p className="text-dim text-xs font-mono mb-2">Upgrade to verified human (recommended before Day 1):</p>
                 {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
-                {import.meta.env.VITE_ENABLE_SELF === "true" && <SelfVerify />}
+                {import.meta.env.VITE_ENABLE_SELF === "true" && (
+                  <Suspense fallback={<ScreenLoader kind="detail" />}>
+                    <SelfVerify />
+                  </Suspense>
+                )}
                 {!import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
                   <p className="text-dim text-[10px] font-mono text-center">
                     Humanity verification is offline in this build.
@@ -545,7 +475,10 @@ export default function Onboarding({ onEnter }) {
           >
             <Mascot variant="celebrating" size={80} />
             <h2 className="font-display text-4xl text-bone mt-6">YOU&apos;RE IN</h2>
-            <TrustBadge size="md" className="mt-3" showEarlyBadge={phase === "prelaunch"} reservedAt={user?.reservedAt} />
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+              <TrustBadge size="md" />
+              {phase === "prelaunch" && <EarlyBadge size="md" reservedAt={user?.reservedAt} />}
+            </div>
             <div className="w-full mt-4 px-2">
               <PushOptIn />
             </div>
@@ -553,16 +486,12 @@ export default function Onboarding({ onEnter }) {
               <p className="text-dim font-mono text-sm mt-4">Day 1 starts in <Countdown targetIso={launchAt} className="text-amber" /></p>
             )}
             <p className="text-dim text-xs font-mono mt-2 max-w-xs">
-              First {round?.survivalCap ?? 25} players survive each day. Watch the mission board when live.
+              The full prelaunch home — countdown, share link, leaderboard, daily prompt — is waiting in the lobby.
             </p>
-            <div className="w-full px-2">
-              <DailyPrompt />
-            </div>
-            <ShareButtons referralCode={user?.referralCode} referralCount={user?.referralCount ?? 0} />
             <button
               type="button"
               onClick={() => { markOnboardingDone(); onEnter(); }}
-              className="w-full mt-4 py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95"
+              className="w-full mt-6 py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95"
             >
               {isLive ? "ENTER ARENA →" : "ENTER LOBBY →"}
             </button>

@@ -45,15 +45,20 @@ export function RoundProvider({ children }) {
     if (!installAttempted) return;
 
     let cancelled = false;
+    let consecutiveFailures = 0;
+    let inFlight = false;
+    let timer = null;
 
     const load = async ({ silent = false } = {}) => {
+      if (inFlight) return false;
+      inFlight = true;
       if (!silent) setStatus("loading");
       setError(null);
       try {
         const resp = await fetch("/api/game/state", { credentials: "include" });
         if (!resp.ok) throw new Error(await resp.text());
         const data = await resp.json();
-        if (cancelled) return;
+        if (cancelled) return true;
         setState({
           phase: data.phase ?? "prelaunch",
           launchAt: data.launchAt ?? null,
@@ -69,24 +74,36 @@ export function RoundProvider({ children }) {
         setStatus("ready");
         setUsesDemoState(false);
         setLastUpdatedAt(Date.now());
+        consecutiveFailures = 0;
         return true;
       } catch (e) {
-        if (cancelled) return;
+        if (cancelled) return false;
         setStatus("ready");
         setUsesDemoState(true);
         setError(e instanceof Error ? e.message : "Failed to load game state");
+        consecutiveFailures += 1;
         return false;
+      } finally {
+        inFlight = false;
       }
     };
 
-    let interval;
-    load().then((loadedLiveState) => {
-      if (cancelled || !loadedLiveState) return;
-      interval = setInterval(() => load({ silent: true }), 15_000);
+    const tick = async () => {
+      const ok = await load({ silent: true });
+      if (cancelled) return;
+      // 15s when healthy, 60s after 2+ consecutive failures
+      const delay = ok || consecutiveFailures < 2 ? 15_000 : 60_000;
+      timer = setTimeout(tick, delay);
+    };
+
+    load().then((ok) => {
+      if (cancelled) return;
+      const delay = ok || consecutiveFailures < 2 ? 15_000 : 60_000;
+      timer = setTimeout(tick, delay);
     });
     return () => {
       cancelled = true;
-      if (interval) clearInterval(interval);
+      if (timer) clearTimeout(timer);
     };
   }, [installAttempted, refreshKey]);
 

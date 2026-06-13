@@ -25,6 +25,10 @@ export default defineConfig({
         },
       },
     },
+    // Cap is for the (still-large) SelfVerify route chunk. The main
+    // index bundle is targeted at < 200 kB; the cap is permissive
+    // enough to keep warnings actionable, not noisy.
+    chunkSizeWarningLimit: 1200,
   },
   server: {
     proxy: {

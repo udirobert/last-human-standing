@@ -1,4 +1,29 @@
-export default function BottomNav({ current, onChange, badges = {} }) {
+// Prefetch the lazy chunks on first interaction so the screen is hot
+// by the time the user taps. Cheap on dev tools; fire-and-forget.
+const prefetchers = {
+  feed: () => import('./Feed.jsx'),
+  chat: () => import('./Chat.jsx'),
+  leaderboard: () => import('./Leaderboard.jsx'),
+  history: () => import('./PlayerHistory.jsx'),
+};
+
+const prefetched = new Set();
+function prefetch(id) {
+  if (prefetched.has(id)) return;
+  const p = prefetchers[id]?.();
+  if (p) {
+    prefetched.add(id);
+    p.catch(() => {});
+  }
+}
+
+export default function BottomNav({
+  current,
+  onChange,
+  badges = {},
+  soundEnabled = true,
+  onToggleSound,
+}) {
   const tabs = [
     { id: 'home', label: 'Survive', icon: '🏠' },
     { id: 'feed', label: 'Vote', icon: '🗳️' },
@@ -8,11 +33,13 @@ export default function BottomNav({ current, onChange, badges = {} }) {
 
   return (
     <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-ash border-t border-ember px-4 py-3 z-50">
-      <div className="flex justify-around">
+      <div className="flex justify-around items-center">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => onChange(tab.id)}
+            onMouseEnter={() => prefetch(tab.id)}
+            onTouchStart={() => prefetch(tab.id)}
             className={`relative flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all active:scale-90 ${
               current === tab.id ? 'text-blood' : 'text-dim'
             }`}
@@ -26,6 +53,20 @@ export default function BottomNav({ current, onChange, badges = {} }) {
             </span>
           </button>
         ))}
+        {onToggleSound && (
+          <button
+            type="button"
+            onClick={onToggleSound}
+            className="flex flex-col items-center gap-1 px-3 py-2 rounded-xl text-dim active:scale-90 transition-transform"
+            title={soundEnabled ? 'Sound on (tap to mute)' : 'Sound off (tap to enable)'}
+            aria-label={soundEnabled ? 'Mute sound' : 'Enable sound'}
+          >
+            <span className="text-xl" aria-hidden>{soundEnabled ? '🔊' : '🔇'}</span>
+            <span className="font-mono text-xs tracking-wide">
+              {soundEnabled ? 'Sound' : 'Muted'}
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
