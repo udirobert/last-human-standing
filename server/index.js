@@ -9,7 +9,7 @@ import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission
 import { rateLimit } from "./rateLimit.js";
 import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
-import { drawLottery, ALGORITHM_VERSION } from "./lib/lottery.js";
+import { drawLottery, ALGORITHM_VERSION, freeSlotsFor } from "./lib/lottery.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -1441,15 +1441,8 @@ async function getStoredLotteryResult(cohort) {
 
 /**
  * Compute the actual free-lottery slot count at draw time.
- *
- * The cohort model is 25 paid (guaranteed) + 25 free (lottery). If
- * fewer than 25 people paid by T-0, the unfilled paid slots
- * expand the free lottery up to a cap of 25. So:
- *   - 25 paid   → free draws up to 25
- *   - 10 paid   → free draws up to 25 (still 15 paid-empty, no promotion)
- *   - 0 paid    → free draws up to 25 (no promotion beyond the cap)
- * The 25-free cap is intentional — it keeps the free pool from
- * becoming a pure-payless funnel that can grow the cohort past 50.
+ * Pure math lives in `freeSlotsFor`; this just queries the live
+ * paid count and hands off.
  */
 async function computeFreeLotterySlots(cohort) {
   if (!supabaseAdmin) return COHORT_CONFIG.freeSlots;
@@ -1459,11 +1452,7 @@ async function computeFreeLotterySlots(cohort) {
     .eq("paid", true)
     .eq("entry_kind", "paid")
     .eq("cohort", cohort);
-  const paidCount = count ?? 0;
-  // Free lottery keeps its 25 cap regardless of how many paid. If
-  // we want unfilled-paid to promote free in a future cohort, this
-  // is the line to change: `Math.min(COHORT_CONFIG.freeSlots, COHORT_CONFIG.freeSlots + (COHORT_CONFIG.paidSlots - paidCount))`.
-  return Math.min(COHORT_CONFIG.freeSlots, COHORT_CONFIG.freeSlots);
+  return freeSlotsFor(count ?? 0);
 }
 
 async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {

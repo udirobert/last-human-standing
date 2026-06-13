@@ -2,7 +2,11 @@
 import { describe, it, expect } from "vitest";
 import {
   ALGORITHM_VERSION,
+  COHORT_FREE_SLOTS,
+  COHORT_PAID_SLOTS,
+  COHORT_SIZE,
   drawLottery,
+  freeSlotsFor,
   lotterySeed,
   seedToU32,
   shuffle,
@@ -118,5 +122,58 @@ describe("lottery", () => {
     expect(Number.isInteger(u)).toBe(true);
     expect(u).toBeGreaterThanOrEqual(0);
     expect(u).toBeLessThanOrEqual(0xFFFFFFFF);
+  });
+});
+
+describe("freeSlotsFor (dynamic slot allocation)", () => {
+  it("exposes the cohort constants", () => {
+    expect(COHORT_SIZE).toBe(50);
+    expect(COHORT_PAID_SLOTS).toBe(25);
+    expect(COHORT_FREE_SLOTS).toBe(25);
+  });
+
+  it("expands the free lottery when paid < 25 (0 paid → 50 free)", () => {
+    expect(freeSlotsFor(0)).toBe(50);
+  });
+
+  it("partially expands at intermediate paid counts", () => {
+    expect(freeSlotsFor(10)).toBe(40);
+    expect(freeSlotsFor(20)).toBe(30);
+    expect(freeSlotsFor(24)).toBe(26);
+  });
+
+  it("caps at 25 when paid = 25 (paid cap reached)", () => {
+    expect(freeSlotsFor(25)).toBe(25);
+  });
+
+  it("shrinks to 20 when paid = 30 (cohort cap reached)", () => {
+    expect(freeSlotsFor(30)).toBe(20);
+  });
+
+  it("returns 0 when paid = 50 (cohort full, no lottery needed)", () => {
+    expect(freeSlotsFor(50)).toBe(0);
+    expect(freeSlotsFor(100)).toBe(0);
+  });
+
+  it("never exceeds the cohort size (no 51st person)", () => {
+    // Even if paid were somehow negative (bad data), the function
+    // clamps to the cohort size.
+    expect(freeSlotsFor(-100)).toBe(50);
+  });
+
+  it("guards against bad input", () => {
+    expect(freeSlotsFor(undefined)).toBe(50);  // treated as 0
+    expect(freeSlotsFor(null)).toBe(50);       // treated as 0
+    expect(freeSlotsFor(NaN)).toBe(50);        // treated as 0
+    expect(freeSlotsFor("not a number")).toBe(50);
+  });
+
+  it("is monotonic non-increasing in paid count", () => {
+    let prev = 50;
+    for (let paid = 0; paid <= 60; paid += 1) {
+      const slots = freeSlotsFor(paid);
+      expect(slots).toBeLessThanOrEqual(prev);
+      prev = slots;
+    }
   });
 });

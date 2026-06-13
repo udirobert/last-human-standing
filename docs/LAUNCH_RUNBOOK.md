@@ -4,6 +4,25 @@ This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`
 and the lottery draws.
 
+## Cohort model (recap)
+
+25 paid (guaranteed) + 25 free (lottery), capped at 50. The
+free lottery's slot count is dynamic: unfilled paid slots
+promote into the lottery, so the cohort always fills to 50
+unless the free pool itself is too small.
+
+| Paid by T-0 | Free lottery draws | Total cohort |
+|---:|---:|---:|
+| 0 | 50 | 50 |
+| 10 | 40 | 50 |
+| 25 | 25 | 50 |
+| 30 | 20 | 50 |
+| 50 | 0 | 50 |
+
+The math lives in `server/lib/lottery.js → freeSlotsFor(paidCount)`
+and is called at draw time (not at request time) so a paid
+signup between the lazy trigger and the actual draw is honoured.
+
 ## T-24h (now-ish)
 
 - [ ] **Apply the migration** in Supabase SQL editor:

@@ -34,7 +34,7 @@ export const ENTRY = {
   free: {
     cardLabel: "Or enter free",
     title: "ENTER FREE LOTTERY",
-    blurb: "No payment. Lottery drawn at launch from everyone who registered. Up to 25 free slots, more if paid slots are unfilled.",
+    blurb: "No payment. Lottery drawn at launch. Free slots expand to fill any unfilled paid slots — up to 50.",
     cta: "JOIN FREE →",
   },
   fallback: {
@@ -47,7 +47,7 @@ export const ENTRY = {
 export const ENTRY_HEADING = {
   // Top-level heading above the two cards.
   freeMode: "CHOOSE YOUR PATH",
-  freeModeSub: "25 paid (guaranteed) + 25 lottery. Pay to skip the lottery, or enter free and let the draw decide.",
+  freeModeSub: "Pay to guarantee a slot, or enter the free lottery. Free slots expand to fill any unfilled paid slots at launch — up to 50.",
   paidMode: "RESERVE A SLOT",
   paidModeSub: "Cohort cap is 50 humans, worldwide.",
   alreadyPaid: "YOU'RE IN",

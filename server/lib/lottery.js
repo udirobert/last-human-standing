@@ -116,3 +116,28 @@ export function drawLottery(candidates, { launchAtIso, cohort, slots }) {
     rolledToCohort2,
   };
 }
+
+// Cohort composition constants. Kept here so the math is testable
+// in isolation from the database.
+export const COHORT_SIZE = 50;
+export const COHORT_PAID_SLOTS = 25;
+export const COHORT_FREE_SLOTS = 25;
+
+/**
+ * Compute the actual free-lottery slot count at draw time.
+ *
+ * The cohort model is 25 paid (guaranteed) + 25 free (lottery).
+ * Unfilled paid slots promote into the free lottery so a
+ * low-pay day doesn't leave the cohort half-empty at launch:
+ *   - 0  paid   → free draws up to 50  (everyone is in)
+ *   - 10 paid   → free draws up to 40
+ *   - 25 paid   → free draws up to 25  (paid cap reached)
+ *   - 30 paid   → free draws up to 20  (cohort cap reached)
+ *   - 50 paid   → free draws 0         (lottery is moot)
+ * Capped at COHORT_SIZE and floored at 0 so the math is always
+ * coherent: a free lottery of 25 with 25 paid = full cohort.
+ */
+export function freeSlotsFor(paidCount) {
+  const paid = Math.max(0, Number.isFinite(paidCount) ? paidCount : 0);
+  return Math.max(0, Math.min(COHORT_SIZE, COHORT_SIZE - paid));
+}
