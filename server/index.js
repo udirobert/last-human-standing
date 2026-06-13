@@ -460,9 +460,19 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
 
     if (!resp.ok) return res.status(400).json({ error: "verify_failed", details: json, used_legacy_fallback: usedLegacyFallback });
 
+    // Extract nullifier from the verified proof for uniqueness tracking
+    const nullifier = idkitResponse.nullifier_hash;
+
     if (supabaseAdmin) {
       await supabaseAdmin.from("users").upsert(
-        { address: req.user.address, world_id_verified: true, last_seen_at: new Date().toISOString() },
+        {
+          address: req.user.address,
+          world_id_verified: true, // Legacy flag — kept for backward compat
+          humanity_provider: "worldcoin", // New unified humanity column
+          humanity_nullifier: nullifier,
+          humanity_verified_at: new Date().toISOString(),
+          last_seen_at: new Date().toISOString(),
+        },
         { onConflict: "address" },
       );
     }
