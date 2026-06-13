@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { DAILY_THEMES, TODAY_THEME } from "../data/game";
@@ -15,6 +16,18 @@ function formatWindow(iso) {
 
 export default function MissionBoard({ onCheckIn, onViewFeed }) {
   const { phase, isLive, currentDay, round, you } = useRound();
+
+  // "Closing soon" pulse: recompute once a minute from a state
+  // variable so the JSX is render-pure. (Date.now() in render
+  // trips the react-hooks/purity rule.)
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  const msRemaining = round?.closesAt ? Math.max(0, new Date(round.closesAt).getTime() - nowMs) : null;
+  const minutesLeft = msRemaining !== null ? Math.floor(msRemaining / 60000) : null;
+  const closingSoon = minutesLeft !== null && minutesLeft < 60;
 
   const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
   const themeData = DAILY_THEMES.find((t) => t.theme === themeLabel) || TODAY_THEME;
@@ -78,8 +91,9 @@ export default function MissionBoard({ onCheckIn, onViewFeed }) {
             {opens && closes ? `${opens} – ${closes}` : "Set by admin"}
           </p>
           {round?.closesAt && (
-            <p className="text-amber text-[10px] font-mono mt-1">
-              Closes <Countdown targetIso={round.closesAt} className="inline font-mono" />
+            <p className={closingSoon ? 'text-amber font-mono text-sm font-semibold mt-1 animate-pulse' : 'text-amber text-[10px] font-mono mt-1'}>
+              {closingSoon ? '⏳ Closes ' : 'Closes '}
+              <Countdown targetIso={round.closesAt} className="inline font-mono" />
             </p>
           )}
         </div>

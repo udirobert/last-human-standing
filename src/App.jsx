@@ -65,7 +65,7 @@ const SCREENS = {
 
   // Wrapper to use delight hooks in App
   function AppWithDelight() {
-    const { playSound, celebrate, soundEnabled, toggleSound } = useDelight();
+    const { playSound, celebrate } = useDelight();
     const [refreshNonce, setRefreshNonce] = useState(0);
     const handleRefresh = useCallback(() => setRefreshNonce((n) => n + 1), []);
 
@@ -154,8 +154,6 @@ const SCREENS = {
             <GameHome
               onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
-              onViewChat={() => handleNavChange('chat')}
-              onViewLeaderboard={() => handleNavChange('leaderboard')}
               onViewHistory={() => setScreen(SCREENS.HISTORY)}
               onRefresh={handleRefresh}
             />
@@ -250,8 +248,6 @@ const SCREENS = {
           current={navTab}
           onChange={handleNavChange}
           badges={badges}
-          soundEnabled={soundEnabled}
-          onToggleSound={toggleSound}
         />
       )}
     </div>

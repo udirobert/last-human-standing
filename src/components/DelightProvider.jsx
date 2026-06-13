@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Confetti } from '../hooks/useDelight.jsx';
 import { useSound } from '../hooks/useSound.js';
 import { useAchievements, AchievementToast } from '../hooks/useAchievements.jsx';
@@ -187,22 +188,17 @@ export function SoundToggle() {
       onClick={toggleSound}
       className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
       title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+      aria-label={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
     >
-      {soundEnabled ? '🔊' : '🔇'}
-    </button>
-  );
-}
-
-// Quick celebrate button (for testing/development)
-export function DebugCelebrate() {
-  const { celebrate } = useDelight();
-  
-  return (
-    <button
-      onClick={() => celebrate(30)}
-      className="fixed bottom-24 right-4 px-3 py-1 bg-purple-600 text-white text-xs rounded-full"
-    >
-      🎉 Test
+      <motion.span
+        key={soundEnabled ? 'on' : 'off'}
+        initial={{ scale: 1.4, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
+        style={{ display: 'inline-block' }}
+      >
+        {soundEnabled ? '🔊' : '🔇'}
+      </motion.span>
     </button>
   );
 }

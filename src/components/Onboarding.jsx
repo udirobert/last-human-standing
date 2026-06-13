@@ -302,158 +302,171 @@ export default function Onboarding({ onEnter }) {
             exit={{ opacity: 0, x: -24 }}
             className="flex-1 flex flex-col"
           >
-            <Mascot variant={entryPaid ? "celebrating" : "excited"} size={64} />
-            {(() => {
-              const heading = getEntryHeading({ isFreeMode: isFree, alreadyPaid: entryPaid });
-              return (
-                <>
-                  <h2 className="font-display text-4xl text-bone mt-4 mb-1">{heading.title}</h2>
-                  <p className="text-dim text-sm font-mono mb-4">{heading.sub}</p>
-                </>
-              );
-            })()}
-            <TrustBadge size="md" className="mb-4" />
-
-            <div className="bg-smoke border border-neon/30 rounded-2xl p-4 mb-4 space-y-3">
-              <p className="font-mono text-neon text-xs uppercase">Trust tiers</p>
-              <ul className="text-dim text-xs font-mono space-y-2 list-disc pl-4">
-                <li>
-                  <span className="text-amber">Provisional</span> — wallet signed in, not yet verified
-                  (can play, can vote when configured)
-                </li>
-                <li>
-                  <span className="text-neon">Verified human</span> — World ID or Self Protocol
-                  (full trust, recommended before Day 1)
-                </li>
-              </ul>
-              {tier === "unverified" && (
-                <p className="text-dim/80 text-[10px] font-mono">
-                  You're currently <span className="text-amber">unverified</span> — sign in and reserve
-                  a slot to unlock the Provisional tier.
-                </p>
-              )}
-            </div>
-
-            {!entryPaid && (
-              <div className="space-y-3 mb-4">
-                {/* PAID CARD — always visible so users can choose to guarantee. */}
-                <div className="bg-smoke border border-ember rounded-2xl p-5">
-                  <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1">
-                    {ENTRY.paid.cardLabel}
-                  </p>
-                  <p className="font-display text-3xl text-amber mb-1">{ENTRY.paid.title}</p>
-                  <p className="text-dim text-xs font-mono mb-4">{ENTRY.paid.blurb}</p>
-
-                  {isWorldApp ? (
+            <StageShell
+              onBack={() => setStep(1)}
+              faq
+              withAmbient
+              AmbientComponent={<AmbientBackdrop phase={phase} />}
+            >
+              <StageSection index={0} className="flex flex-col items-center text-center pt-2">
+                <Mascot variant={entryPaid ? "celebrating" : "excited"} size={80} />
+                {(() => {
+                  const heading = getEntryHeading({ isFreeMode: isFree, alreadyPaid: entryPaid });
+                  return (
                     <>
-                      {!walletAuthed ? (
-                        <button
-                          type="button"
-                          onClick={handleWalletAuth}
-                          disabled={authing}
-                          className="w-full py-4 rounded-2xl bg-neon/10 border border-neon/40 text-neon font-display text-xl mb-3 active:scale-95"
-                        >
-                          {authing ? "CONNECTING…" : "CONNECT WALLET"}
-                        </button>
-                      ) : (
-                        <p className="text-neon font-mono text-xs text-center mb-3">✓ Wallet connected</p>
-                      )}
-                      {walletAuthed && (
-                        <button
-                          type="button"
-                          onClick={handlePay}
-                          disabled={paying}
-                          className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 disabled:opacity-50"
-                        >
-                          {paying ? "PROCESSING…" : `PAY ${ENTRY_FEE_WLD} WLD →`}
-                        </button>
-                      )}
+                      <h2 className="font-display text-4xl text-bone mt-4 mb-1">{heading.title}</h2>
+                      <p className="text-dim text-sm font-mono mb-2">{heading.sub}</p>
                     </>
-                  ) : (
-                    <BrowserWalletPay
-                      prizePoolAddress={prizePoolAddress}
-                      referredBy={referredBy}
-                      onPaid={(addr) => {
-                        markBrowserPaid(addr);
-                        markOnboardingDone();
-                      }}
-                    />
-                  )}
-                </div>
+                  );
+                })()}
+                <TrustBadge size="md" className="mb-2" />
+              </StageSection>
 
-                {/* FREE CARD — only when free mode is on. */}
-                {isFree && (
-                  <div className="bg-smoke border border-neon/30 rounded-2xl p-5">
-                    <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-                      {ENTRY.free.cardLabel}
+              <div className="mt-3 space-y-3 flex-1">
+                <StageSection index={1} className="bg-smoke border border-neon/30 rounded-2xl p-4">
+                  <p className="font-mono text-neon text-xs uppercase">Trust tiers</p>
+                  <ul className="text-dim text-xs font-mono space-y-2 list-disc pl-4 mt-2">
+                    <li>
+                      <span className="text-amber">Provisional</span> — wallet signed in, not yet verified
+                      (can play, can vote when configured)
+                    </li>
+                    <li>
+                      <span className="text-neon">Verified human</span> — World ID or Self Protocol
+                      (full trust, recommended before Day 1)
+                    </li>
+                  </ul>
+                  {tier === "unverified" && (
+                    <p className="text-dim/80 text-[10px] font-mono mt-2">
+                      You're currently <span className="text-amber">unverified</span> — sign in and reserve
+                      a slot to unlock the Provisional tier.
                     </p>
-                    <p className="font-display text-3xl text-neon mb-1">{ENTRY.free.title}</p>
-                    <p className="text-dim text-xs font-mono mb-4">{ENTRY.free.blurb}</p>
+                  )}
+                </StageSection>
+
+                {!entryPaid && (
+                  <>
+                    {/* PAID CARD */}
+                    <StageSection index={2} className="bg-smoke border border-ember rounded-2xl p-5">
+                      <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1">
+                        {ENTRY.paid.cardLabel}
+                      </p>
+                      <p className="font-display text-3xl text-amber mb-1">{ENTRY.paid.title}</p>
+                      <p className="text-dim text-xs font-mono mb-4">{ENTRY.paid.blurb}</p>
+
+                      {isWorldApp ? (
+                        <>
+                          {!walletAuthed ? (
+                            <button
+                              type="button"
+                              onClick={handleWalletAuth}
+                              disabled={authing}
+                              className="w-full py-4 rounded-2xl bg-neon/10 border border-neon/40 text-neon font-display text-xl mb-3 active:scale-95"
+                            >
+                              {authing ? "CONNECTING…" : "CONNECT WALLET"}
+                            </button>
+                          ) : (
+                            <p className="text-neon font-mono text-xs text-center mb-3">✓ Wallet connected</p>
+                          )}
+                          {walletAuthed && (
+                            <button
+                              type="button"
+                              onClick={handlePay}
+                              disabled={paying}
+                              className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 disabled:opacity-50"
+                            >
+                              {paying ? "PROCESSING…" : `PAY ${ENTRY_FEE_WLD} WLD →`}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <BrowserWalletPay
+                          prizePoolAddress={prizePoolAddress}
+                          referredBy={referredBy}
+                          onPaid={(addr) => {
+                            markBrowserPaid(addr);
+                            markOnboardingDone();
+                          }}
+                        />
+                      )}
+                    </StageSection>
+
+                    {/* FREE CARD — only when free mode is on */}
+                    {isFree && (
+                      <StageSection index={3} className="bg-smoke border border-neon/30 rounded-2xl p-5">
+                        <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
+                          {ENTRY.free.cardLabel}
+                        </p>
+                        <p className="font-display text-3xl text-neon mb-1">{ENTRY.free.title}</p>
+                        <p className="text-dim text-xs font-mono mb-4">{ENTRY.free.blurb}</p>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            try {
+                              const resp = await fetch("/api/pay/free-entry", { method: "POST", credentials: "include" });
+                              if (!resp.ok) throw new Error("free_entry_failed");
+                              markBrowserPaid();
+                              markOnboardingDone();
+                            } catch { /* silent */ }
+                          }}
+                          className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
+                        >
+                          {ENTRY.free.cta}
+                        </button>
+                      </StageSection>
+                    )}
+
+                    {/* Observer peek — no signup. Browser only. */}
+                    {!isWorldApp && (
+                      <StageSection index={4}>
+                        <button
+                          type="button"
+                          onClick={() => { markOnboardingDone(); onEnter(); }}
+                          className="w-full py-3 rounded-xl bg-ash border border-ember/50 text-dim font-mono text-sm hover:text-bone hover:border-ember active:scale-95 transition-all"
+                        >
+                          See how it works (no signup)
+                        </button>
+                        <p className="text-dim/70 text-[10px] font-mono text-center mt-1.5">
+                          Browse the feed and leaderboard as an observer
+                        </p>
+                      </StageSection>
+                    )}
+                  </>
+                )}
+
+                {!isFarcaster && entryPaid && tier !== "verified" && (
+                  <StageSection index={5} className="space-y-3">
+                    <p className="text-dim text-xs font-mono mb-2">Upgrade to verified human (recommended before Day 1):</p>
+                    {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
+                    {import.meta.env.VITE_ENABLE_SELF === "true" && (
+                      <Suspense fallback={<ScreenLoader kind="detail" />}>
+                        <SelfVerify />
+                      </Suspense>
+                    )}
+                    {!import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
+                      <p className="text-dim text-[10px] font-mono text-center">
+                        Humanity verification is offline in this build.
+                      </p>
+                    )}
+                  </StageSection>
+                )}
+
+                {entryPaid && (
+                  <StageSection index={6}>
                     <button
                       type="button"
-                      onClick={async () => {
-                        try {
-                          const resp = await fetch("/api/pay/free-entry", { method: "POST", credentials: "include" });
-                          if (!resp.ok) throw new Error("free_entry_failed");
-                          markBrowserPaid();
-                          markOnboardingDone();
-                        } catch { /* silent */ }
-                      }}
+                      onClick={() => { markOnboardingDone(); setStep(3); }}
                       className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
                     >
-                      {ENTRY.free.cta}
+                      CONTINUE →
                     </button>
-                  </div>
+                  </StageSection>
                 )}
 
-                {/* Observer peek — no signup. Browser only. */}
-                {!isWorldApp && (
-                  <div className="pt-1">
-                    <button
-                      type="button"
-                      onClick={() => { markOnboardingDone(); onEnter(); }}
-                      className="w-full py-3 rounded-xl bg-ash border border-ember/50 text-dim font-mono text-sm hover:text-bone hover:border-ember active:scale-95 transition-all"
-                    >
-                      See how it works (no signup)
-                    </button>
-                    <p className="text-dim/70 text-[10px] font-mono text-center mt-1.5">
-                      Browse the feed and leaderboard as an observer
-                    </p>
-                  </div>
+                {lastError && (
+                  <p className="text-blood text-xs font-mono mt-3 text-center">{lastError}</p>
                 )}
               </div>
-            )}
-
-            {!isFarcaster && entryPaid && tier !== "verified" && (
-              <div className="mb-4 space-y-3">
-                <p className="text-dim text-xs font-mono mb-2">Upgrade to verified human (recommended before Day 1):</p>
-                {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
-                {import.meta.env.VITE_ENABLE_SELF === "true" && (
-                  <Suspense fallback={<ScreenLoader kind="detail" />}>
-                    <SelfVerify />
-                  </Suspense>
-                )}
-                {!import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
-                  <p className="text-dim text-[10px] font-mono text-center">
-                    Humanity verification is offline in this build.
-                  </p>
-                )}
-              </div>
-            )}
-
-            {entryPaid && (
-              <button
-                type="button"
-                onClick={() => { markOnboardingDone(); setStep(3); }}
-                className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
-              >
-                CONTINUE →
-              </button>
-            )}
-
-            {lastError && (
-              <p className="text-blood text-xs font-mono mt-3 text-center">{lastError}</p>
-            )}
+            </StageShell>
           </motion.div>
         )}
 

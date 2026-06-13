@@ -29,7 +29,7 @@ import { StageSection } from './StageShell.jsx';
  *     by the shared PrizePots component (so WLD + Celo are visible
  *     in the same place they appear in Onboarding)
  */
-export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard, onViewHistory, onRefresh }) {
+export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRefresh }) {
   const { user } = useWorld();
   const {
     phase, launchAt, currentDay,
@@ -39,17 +39,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   } = useRound();
   const { stats } = useStats();
 
-  const [pwaPrompt, setPwaPrompt] = useState(null);
-  const [pwaDismissed, setPwaDismissed] = useState(false);
-
-  useEffect(() => {
-    const handler = (e) => {
-      e.preventDefault();
-      setPwaPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
 
   const totalPlayers = stats?.players?.total ?? reservedCount ?? 0;
   const activePlayers = stats?.players?.active ?? null;
@@ -134,16 +123,24 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
         <div className="px-5 grid grid-cols-2 gap-3 mb-4">
           <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
             <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Survivors</p>
-            <p className="font-display text-2xl text-bone leading-none tabular-nums">
-              {activePlayers ?? '—'}
-            </p>
+            {activePlayers === null ? (
+              <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
+            ) : (
+              <p className="font-display text-2xl text-bone leading-none tabular-nums">
+                {activePlayers}
+              </p>
+            )}
             <p className="text-[10px] font-mono text-dim mt-1">{eliminated} eliminated</p>
           </div>
           <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
             <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Cohort 1</p>
-            <p className="font-display text-2xl text-bone leading-none tabular-nums">
-              {totalPlayers}<span className="text-dim text-sm"> / 50</span>
-            </p>
+            {totalPlayers === 0 && activePlayers === null ? (
+              <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
+            ) : (
+              <p className="font-display text-2xl text-bone leading-none tabular-nums">
+                {totalPlayers}<span className="text-dim text-sm"> / 50</span>
+              </p>
+            )}
             <p className="text-[10px] font-mono text-dim mt-1">
               {cohortSplit?.paidCount ?? 0} paid · {cohortSplit?.freeCount ?? 0} free
             </p>
@@ -156,44 +153,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
         <PrizePots prizePool={stats?.prizePool} />
       </StageSection>
 
-      <StageSection index={5} className="relative z-10">
-        <div className="px-5 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <button onClick={onViewFeed} className="bg-smoke/70 border border-ember/40 rounded-2xl py-4 text-bone font-mono text-sm backdrop-blur-sm hover:border-amber/60 active:scale-95 transition-all">
-              Feed
-            </button>
-            <button onClick={onViewChat} className="bg-smoke/70 border border-ember/40 rounded-2xl py-4 text-bone font-mono text-sm backdrop-blur-sm hover:border-amber/60 active:scale-95 transition-all">
-              Chat
-            </button>
-            <button onClick={onViewLeaderboard} className="bg-smoke/70 border border-ember/40 rounded-2xl py-4 text-bone font-mono text-sm backdrop-blur-sm hover:border-amber/60 active:scale-95 transition-all">
-              Board
-            </button>
-          </div>
-
-          {pwaPrompt && !pwaDismissed && (
-            <div className="bg-smoke/70 border border-amber/30 rounded-2xl p-4 backdrop-blur-sm">
-              <p className="font-mono text-bone text-sm mb-2">Install this app for faster daily check-ins</p>
-              <div className="flex gap-2">
-                <button
-                  onClick={async () => {
-                    await pwaPrompt.prompt();
-                    setPwaPrompt(null);
-                  }}
-                  className="flex-1 bg-amber text-ash font-mono text-sm py-2.5 rounded-xl"
-                >
-                  Install
-                </button>
-                <button
-                  onClick={() => setPwaDismissed(true)}
-                  className="px-4 py-2.5 rounded-xl border border-ember text-dim font-mono text-sm"
-                >
-                  Later
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </StageSection>
     </div>
   );
 }

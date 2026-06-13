@@ -88,6 +88,7 @@ export default function CheckIn({ onBack, onSubmit }) {
     // If offline, queue the check-in via the service worker
     if (!online) {
       setQueuedCheckin(true);
+      navigator.vibrate?.([20, 30, 20]);
       setStep(2);
       setResult({ queued: true });
       try {
@@ -166,6 +167,12 @@ export default function CheckIn({ onBack, onSubmit }) {
       }
       setResult(json);
       refreshRound();
+      // Haptic feedback: survived = celebration pulse, eliminated = single thud
+      if (json.survived) {
+        navigator.vibrate?.([30, 50, 100]);
+      } else {
+        navigator.vibrate?.([200]);
+      }
       setStep(2);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'check-in failed');
@@ -293,10 +300,6 @@ export default function CheckIn({ onBack, onSubmit }) {
 
               {/* Infiltrator toggle — submit a borderline photo for immunity
                   if the crowd sides with you. Risky, but it can save your run. */}
-              <p className="text-dim text-[11px] font-mono mb-2 leading-relaxed">
-                🕶️ <span className="text-purple-300">Infiltrator</span> is a high-risk play: pick a
-                photo that could go either way. If the crowd trusts it, you earn immunity for tomorrow.
-              </p>
               <button
                 onClick={() => setInfiltratorMode(!infiltratorMode)}
                 className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
@@ -308,7 +311,11 @@ export default function CheckIn({ onBack, onSubmit }) {
                 {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity)'}
               </button>
               {infiltratorMode && (
-                <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-3 mb-3">
+                <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-3 mb-3 space-y-2">
+                  <p className="text-dim text-[11px] font-mono leading-relaxed">
+                    🕶️ <span className="text-purple-300">Infiltrator</span> is a high-risk play: pick a
+                    photo that could go either way. If the crowd trusts it, you earn immunity for tomorrow.
+                  </p>
                   <p className="text-purple-300 text-xs font-mono">
                     ⚡ If the crowd votes you HUMAN, you earn immunity tomorrow.
                     If they vote you SUS, you get double elimination risk. Choose wisely.
