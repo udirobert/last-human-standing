@@ -1242,7 +1242,6 @@ app.get("/api/game/state", async (req, res) => {
         if (!stored) {
           await drawAndStoreLottery({
             cohort: COHORT_CONFIG.cohort,
-            freeSlots: COHORT_CONFIG.freeSlots,
             drawnBy: "lazy",
           });
         }
@@ -1440,7 +1439,34 @@ async function getStoredLotteryResult(cohort) {
   return data;
 }
 
-async function drawAndStoreLottery({ cohort, freeSlots, drawnBy = "lazy" }) {
+/**
+ * Compute the actual free-lottery slot count at draw time.
+ *
+ * The cohort model is 25 paid (guaranteed) + 25 free (lottery). If
+ * fewer than 25 people paid by T-0, the unfilled paid slots
+ * expand the free lottery up to a cap of 25. So:
+ *   - 25 paid   → free draws up to 25
+ *   - 10 paid   → free draws up to 25 (still 15 paid-empty, no promotion)
+ *   - 0 paid    → free draws up to 25 (no promotion beyond the cap)
+ * The 25-free cap is intentional — it keeps the free pool from
+ * becoming a pure-payless funnel that can grow the cohort past 50.
+ */
+async function computeFreeLotterySlots(cohort) {
+  if (!supabaseAdmin) return COHORT_CONFIG.freeSlots;
+  const { count } = await supabaseAdmin
+    .from("users")
+    .select("address", { count: "exact", head: true })
+    .eq("paid", true)
+    .eq("entry_kind", "paid")
+    .eq("cohort", cohort);
+  const paidCount = count ?? 0;
+  // Free lottery keeps its 25 cap regardless of how many paid. If
+  // we want unfilled-paid to promote free in a future cohort, this
+  // is the line to change: `Math.min(COHORT_CONFIG.freeSlots, COHORT_CONFIG.freeSlots + (COHORT_CONFIG.paidSlots - paidCount))`.
+  return Math.min(COHORT_CONFIG.freeSlots, COHORT_CONFIG.freeSlots);
+}
+
+async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
   if (!supabaseAdmin) return null;
   if (!GAME_LAUNCH_AT) {
     throw new Error("GAME_LAUNCH_AT not set; cannot seed lottery");
@@ -1448,6 +1474,11 @@ async function drawAndStoreLottery({ cohort, freeSlots, drawnBy = "lazy" }) {
   if (lotteryInFlight) return lotteryInFlight;
 
   lotteryInFlight = (async () => {
+    // Resolve the actual slot count at draw time, not at request
+    // time — paid signups can land between the lazy trigger and
+    // the actual draw.
+    const freeSlots = await computeFreeLotterySlots(cohort);
+
     // Pull every free-registered candidate for this cohort. We sort
     // by reserved_at so the seed is the only source of randomness
     // (the order is otherwise arbitrary).
@@ -1536,12 +1567,17 @@ app.get("/api/lottery/status", async (req, res) => {
     const now = Date.now();
     const pastLaunch = launchAtMs != null && now >= launchAtMs;
 
+    // Live count so the client can show the right number of free
+    // slots. Computed from the same logic the draw uses.
+    const liveFreeSlots = await computeFreeLotterySlots(cohort);
     return res.json({
       ok: true,
       cohort,
       drawAt: GAME_LAUNCH_AT,
       status: stored ? "drawn" : pastLaunch ? "pending" : "scheduled",
-      freeSlots: COHORT_CONFIG.freeSlots,
+      freeSlots: liveFreeSlots,
+      freeSlotsMax: COHORT_CONFIG.freeSlots,
+      paidSlots: COHORT_CONFIG.paidSlots,
       freeRegistered: freeRegistered ?? 0,
       seed: stored?.seed ?? null,
       algorithmVersion: stored?.algorithm_version ?? ALGORITHM_VERSION,
@@ -1564,7 +1600,6 @@ app.post("/api/lottery/draw", requireAdmin, async (req, res) => {
     }
     const result = await drawAndStoreLottery({
       cohort,
-      freeSlots: COHORT_CONFIG.freeSlots,
       drawnBy: req.user?.address || "admin",
     });
     return res.json({ ok: true, result });

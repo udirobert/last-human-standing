@@ -15,7 +15,7 @@ import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 import { useEntryMode } from "../hooks/useEntryMode.js";
 import ScreenLoader from "./ui/ScreenLoader.jsx";
-import { RULES, FAQS, getEntryCopy } from "../lib/copy.js";
+import { RULES, FAQS, getEntryHeading, ENTRY } from "../lib/copy.js";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -297,11 +297,11 @@ export default function Onboarding({ onEnter }) {
 
             <Mascot variant={entryPaid ? "celebrating" : "excited"} size={64} />
             {(() => {
-              const entryCopy = getEntryCopy({ isFreeMode: isFree, alreadyPaid: entryPaid });
+              const heading = getEntryHeading({ isFreeMode: isFree, alreadyPaid: entryPaid });
               return (
                 <>
-                  <h2 className="font-display text-4xl text-bone mt-4 mb-1">{entryCopy.title}</h2>
-                  <p className="text-dim text-sm font-mono mb-4">{entryCopy.blurb}</p>
+                  <h2 className="font-display text-4xl text-bone mt-4 mb-1">{heading.title}</h2>
+                  <p className="text-dim text-sm font-mono mb-4">{heading.sub}</p>
                 </>
               );
             })()}
@@ -328,11 +328,60 @@ export default function Onboarding({ onEnter }) {
             </div>
 
             {!entryPaid && (
-              <div className="bg-smoke border border-ember rounded-2xl p-5 mb-4">
-                {isFree ? (
-                  <>
-                    <p className="font-display text-3xl text-neon mb-1">FREE ENTRY</p>
-                    <p className="text-dim text-xs font-mono mb-4">Hackathon campaign — no payment required</p>
+              <div className="space-y-3 mb-4">
+                {/* PAID CARD — always visible so users can choose to guarantee. */}
+                <div className="bg-smoke border border-ember rounded-2xl p-5">
+                  <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1">
+                    {ENTRY.paid.cardLabel}
+                  </p>
+                  <p className="font-display text-3xl text-amber mb-1">{ENTRY.paid.title}</p>
+                  <p className="text-dim text-xs font-mono mb-4">{ENTRY.paid.blurb}</p>
+
+                  {isWorldApp ? (
+                    <>
+                      {!walletAuthed ? (
+                        <button
+                          type="button"
+                          onClick={handleWalletAuth}
+                          disabled={authing}
+                          className="w-full py-4 rounded-2xl bg-neon/10 border border-neon/40 text-neon font-display text-xl mb-3 active:scale-95"
+                        >
+                          {authing ? "CONNECTING…" : "CONNECT WALLET"}
+                        </button>
+                      ) : (
+                        <p className="text-neon font-mono text-xs text-center mb-3">✓ Wallet connected</p>
+                      )}
+                      {walletAuthed && (
+                        <button
+                          type="button"
+                          onClick={handlePay}
+                          disabled={paying}
+                          className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 disabled:opacity-50"
+                        >
+                          {paying ? "PROCESSING…" : `PAY ${ENTRY_FEE_WLD} WLD →`}
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <BrowserWalletPay
+                      prizePoolAddress={prizePoolAddress}
+                      referredBy={referredBy}
+                      onPaid={(addr) => {
+                        markBrowserPaid(addr);
+                        markOnboardingDone();
+                      }}
+                    />
+                  )}
+                </div>
+
+                {/* FREE CARD — only when free mode is on. */}
+                {isFree && (
+                  <div className="bg-smoke border border-neon/30 rounded-2xl p-5">
+                    <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
+                      {ENTRY.free.cardLabel}
+                    </p>
+                    <p className="font-display text-3xl text-neon mb-1">{ENTRY.free.title}</p>
+                    <p className="text-dim text-xs font-mono mb-4">{ENTRY.free.blurb}</p>
                     <button
                       type="button"
                       onClick={async () => {
@@ -345,64 +394,25 @@ export default function Onboarding({ onEnter }) {
                       }}
                       className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
                     >
-                      JOIN FREE →
+                      {ENTRY.free.cta}
                     </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-display text-3xl text-amber mb-1">{ENTRY_FEE_WLD} WLD</p>
-                    <p className="text-dim text-xs font-mono mb-4">Single entry · grows the prize pool</p>
+                  </div>
+                )}
 
-                    {isWorldApp ? (
-                      <>
-                        {!walletAuthed ? (
-                          <button
-                            type="button"
-                            onClick={handleWalletAuth}
-                            disabled={authing}
-                            className="w-full py-4 rounded-2xl bg-neon/10 border border-neon/40 text-neon font-display text-xl mb-3 active:scale-95"
-                          >
-                            {authing ? "CONNECTING…" : "CONNECT WALLET"}
-                          </button>
-                        ) : (
-                          <p className="text-neon font-mono text-xs text-center mb-3">✓ Wallet connected</p>
-                        )}
-                        {walletAuthed && (
-                          <button
-                            type="button"
-                            onClick={handlePay}
-                            disabled={paying}
-                            className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 disabled:opacity-50"
-                          >
-                            {paying ? "PROCESSING…" : `PAY ${ENTRY_FEE_WLD} WLD →`}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <BrowserWalletPay
-                          prizePoolAddress={prizePoolAddress}
-                          referredBy={referredBy}
-                          onPaid={(addr) => {
-                            markBrowserPaid(addr);
-                            markOnboardingDone();
-                          }}
-                        />
-                        <div className="mt-4 pt-3 border-t border-ember/30">
-                          <button
-                            type="button"
-                            onClick={() => { markOnboardingDone(); onEnter(); }}
-                            className="w-full py-3 rounded-xl bg-ash border border-ember/50 text-dim font-mono text-sm hover:text-bone hover:border-ember active:scale-95 transition-all"
-                          >
-                            See how it works (no payment required)
-                          </button>
-                          <p className="text-dim/70 text-[10px] font-mono text-center mt-1.5">
-                            Browse the feed and leaderboard as an observer
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </>
+                {/* Observer peek — no signup. Browser only. */}
+                {!isWorldApp && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { markOnboardingDone(); onEnter(); }}
+                      className="w-full py-3 rounded-xl bg-ash border border-ember/50 text-dim font-mono text-sm hover:text-bone hover:border-ember active:scale-95 transition-all"
+                    >
+                      See how it works (no signup)
+                    </button>
+                    <p className="text-dim/70 text-[10px] font-mono text-center mt-1.5">
+                      Browse the feed and leaderboard as an observer
+                    </p>
+                  </div>
                 )}
               </div>
             )}

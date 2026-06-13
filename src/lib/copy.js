@@ -22,8 +22,9 @@ export const ENTRY = {
   // World Chain: 1 WLD = $1 at the time of writing. Celo: 5 cUSD or
   // 5 USDC. All routes go into the single prize pot.
   paid: {
+    cardLabel: "Pay to guarantee",
     title: "RESERVE A SLOT",
-    blurb: "Pay 1 WLD (World Chain) or 5 cUSD / 5 USDC (Celo). Guaranteed entry. Fees go to the prize pot.",
+    blurb: "1 WLD (World Chain) or 5 cUSD / 5 USDC (Celo). Guaranteed entry. All fees go to the prize pot.",
     perChain: [
       { chain: "World Chain", token: "WLD", amount: "1" },
       { chain: "Celo", token: "cUSD", amount: "5" },
@@ -31,13 +32,26 @@ export const ENTRY = {
     ],
   },
   free: {
+    cardLabel: "Or enter free",
     title: "ENTER FREE LOTTERY",
-    blurb: "No payment. 25 lottery spots drawn at launch from everyone who registered. Top referrers get a higher pick position.",
+    blurb: "No payment. Lottery drawn at launch from everyone who registered. Up to 25 free slots, more if paid slots are unfilled.",
+    cta: "JOIN FREE →",
   },
   fallback: {
-    title: "RESERVE",
-    blurb: "Cohort cap is 50 humans, worldwide.",
+    cardLabel: "Reserve",
+    title: "RESERVE A SLOT",
+    blurb: "Pay the entry fee in WLD. One entry, one slot.",
   },
+};
+
+export const ENTRY_HEADING = {
+  // Top-level heading above the two cards.
+  freeMode: "CHOOSE YOUR PATH",
+  freeModeSub: "25 paid (guaranteed) + 25 lottery. Pay to skip the lottery, or enter free and let the draw decide.",
+  paidMode: "RESERVE A SLOT",
+  paidModeSub: "Cohort cap is 50 humans, worldwide.",
+  alreadyPaid: "YOU'RE IN",
+  alreadyPaidSub: "Come back when Day 1 opens.",
 };
 
 export const RULES = [
@@ -96,18 +110,12 @@ export const FAQS = [
  *   - "lottery": already in the free lottery
  *   - "paid": already paid
  */
-export function getEntryCopy({ isFreeMode = isFreeEntryMode(), alreadyPaid = false } = {}) {
+export function getEntryHeading({ isFreeMode = isFreeEntryMode(), alreadyPaid = false } = {}) {
   if (alreadyPaid) {
-    return {
-      title: "SPOT SECURED",
-      blurb: "You're in. Come back when Day 1 opens.",
-    };
+    return { title: ENTRY_HEADING.alreadyPaid, sub: ENTRY_HEADING.alreadyPaidSub };
   }
   if (isFreeMode) {
-    return {
-      title: ENTRY.paid.title,
-      blurb: ENTRY.paid.blurb,
-    };
+    return { title: ENTRY_HEADING.freeMode, sub: ENTRY_HEADING.freeModeSub };
   }
-  return ENTRY.fallback;
+  return { title: ENTRY_HEADING.paidMode, sub: ENTRY_HEADING.paidModeSub };
 }
