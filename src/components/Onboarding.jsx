@@ -21,6 +21,21 @@ const RULES = [
   { n: "04", title: "LAST ONE WINS", body: "Cap shrinks daily until one human takes the on-chain pot.", icon: "🏆" },
 ];
 
+const FAQS = [
+  {
+    q: "Do I need crypto to play?",
+    a: "Not this season. Entry is free during the launch campaign. You'll need a wallet to vote in the audit and to receive any winnings onchain.",
+  },
+  {
+    q: "What if I miss a day?",
+    a: "You're eliminated — but you can still vote in the audit, hang out in the lobby, and watch the cohort play out.",
+  },
+  {
+    q: "Can I play from any country?",
+    a: "Yes. Themes are place types (a café, a park), not GPS pins. Find the place anywhere on Earth and take a photo.",
+  },
+];
+
 export default function Onboarding({ onEnter }) {
   const {
     isWorldApp,
@@ -49,6 +64,8 @@ export default function Onboarding({ onEnter }) {
   const [mascotName, setMascotName] = useState(() => {
     try { return localStorage.getItem("lhs_mascot_name") || ""; } catch { return ""; }
   });
+  const [pot, setPot] = useState(null);
+  const [faqOpen, setFaqOpen] = useState(null);
   const enteredRef = useRef(false);
 
   const verified = walletAuthed && entryPaid;
@@ -58,6 +75,17 @@ export default function Onboarding({ onEnter }) {
   const [referredBy] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("ref") || null; } catch { return null; }
   });
+
+  // Fetch live prize pot for the welcome screen. Best-effort; tolerates
+  // the endpoint being down by leaving pot as null (UI shows "loading…").
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/stats", { credentials: "include" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data?.prizePool) setPot(data.prizePool); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (!verified || enteredRef.current) return;
@@ -117,46 +145,101 @@ export default function Onboarding({ onEnter }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center justify-between px-6 pt-8 pb-10"
+            className="flex-1 flex flex-col items-center px-6 pt-6 pb-10 overflow-y-auto"
           >
-            <div className="flex flex-col items-center text-center">
-              <Mascot variant="excited" size={90} />
-              <h1 className="font-display text-5xl text-bone mt-6 leading-none tracking-wider animate-glow">
+            <div className="flex flex-col items-center text-center w-full max-w-md">
+              <Mascot variant="excited" size={80} />
+              <h1 className="font-display text-4xl text-bone mt-4 leading-none tracking-wider animate-glow">
                 LAST<br />HUMAN<br />STANDING
               </h1>
-              <p className="text-dim font-mono text-xs mt-4 max-w-xs">
-                Daily real-world elimination. Photo proof + crowd audit. One human wins the pot.
+              <p className="text-bone font-mono text-sm mt-4 max-w-xs leading-relaxed">
+                Be one of 50 humans. Check in at a daily themed location. Last survivor takes the on-chain pot.
               </p>
-              <div className="mt-4">
+              <div className="mt-3">
                 <TrustBadge size="md" />
               </div>
             </div>
 
-            <div className="w-full space-y-3">
+            <div className="w-full max-w-md mt-6 space-y-3">
+              {/* How a day looks — concrete micro-example */}
+              <div className="bg-smoke rounded-2xl p-4 border border-ember/50">
+                <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-3">Here's how a day looks</p>
+                <ul className="space-y-2">
+                  <li className="flex gap-3 font-mono text-sm text-bone">
+                    <span className="text-lg shrink-0">☕</span>
+                    <span>Theme drops (e.g. <span className="text-amber">AT A CAFÉ</span>)</span>
+                  </li>
+                  <li className="flex gap-3 font-mono text-sm text-bone">
+                    <span className="text-lg shrink-0">📸</span>
+                    <span>You have a few hours to take a photo at any café on Earth</span>
+                  </li>
+                  <li className="flex gap-3 font-mono text-sm text-bone">
+                    <span className="text-lg shrink-0">🗳️</span>
+                    <span>The community votes you HUMAN or SUS</span>
+                  </li>
+                  <li className="flex gap-3 font-mono text-sm text-bone">
+                    <span className="text-lg shrink-0">🏆</span>
+                    <span>First 25 of 50 advance. Last one standing wins the pot.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Cohort + pot card */}
               <div className="bg-smoke rounded-2xl p-4 border border-ember">
-                <p className="font-mono text-dim text-xs uppercase mb-1">Season 1</p>
+                <p className="font-mono text-dim text-xs uppercase mb-1">Cohort 1</p>
                 <p className="font-display text-3xl text-bone">{reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span></p>
                 <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
                   <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
                 </div>
+                <div className="mt-3 flex items-center justify-between text-xs font-mono">
+                  <span className="text-dim">
+                    Prize pot:{" "}
+                    {pot?.balanceWld != null
+                      ? <span className="text-amber">{pot.balanceWld} WLD</span>
+                      : <span className="text-dim/70">loading…</span>}
+                  </span>
+                  {launchAt && phase === "prelaunch" && (
+                    <span className="text-amber">
+                      Day 1 in <Countdown targetIso={launchAt} className="inline" />
+                    </span>
+                  )}
+                </div>
                 {launchAt && phase === "prelaunch" && (
-                  <p className="text-amber font-mono text-xs mt-2">Day 1 in <Countdown targetIso={launchAt} className="inline" /></p>
+                  <p className="text-dim text-[11px] font-mono mt-2 leading-relaxed">
+                    When the clock hits zero, the theme drops. Race to be one of the first 25 to check in.
+                  </p>
                 )}
               </div>
 
-              {!isWorldApp && !isFarcaster && (
-                <p className="text-amber/90 text-xs font-mono text-center">
-                  Browser mode: connect wallet + verify humanity for full trust. Demo feed uses sample data until live.
-                </p>
-              )}
-
+              {/* Primary CTA */}
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-3xl tracking-widest active:scale-95 transition-transform"
+                className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform"
               >
-                CONTINUE →
+                HOW TO PLAY →
               </button>
+
+              {/* FAQ accordion */}
+              <div className="mt-2 space-y-2">
+                {FAQS.map((item, i) => (
+                  <div key={item.q} className="bg-smoke/60 rounded-xl border border-ember/30 overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setFaqOpen(faqOpen === i ? null : i)}
+                      className="w-full px-4 py-3 text-left font-mono text-xs text-bone flex items-center justify-between gap-3"
+                    >
+                      <span>{item.q}</span>
+                      <span className="text-amber text-base shrink-0">{faqOpen === i ? "−" : "+"}</span>
+                    </button>
+                    {faqOpen === i && (
+                      <div className="px-4 pb-3 font-mono text-[11px] text-dim leading-relaxed">
+                        {item.a}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
         )}
