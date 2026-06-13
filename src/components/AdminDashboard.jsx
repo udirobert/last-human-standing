@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 
@@ -45,12 +45,7 @@ export default function AdminDashboard() {
 
   const isAdmin = ADMIN_ADDRESS && user?.address?.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    loadAll();
-  }, [isAdmin]);
-
-  const loadAll = async () => {
+  const loadAll = useCallback(async () => {
     setLoading(true);
     try {
       const [gameState, rounds, users, flags, stats] = await Promise.all([
@@ -66,7 +61,12 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    loadAll();
+  }, [isAdmin, loadAll]);
 
   const handleCreateRound = async (e) => {
     e.preventDefault();

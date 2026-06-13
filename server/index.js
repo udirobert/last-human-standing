@@ -935,7 +935,7 @@ app.post(
         }
 
         // Enqueue for onchain batch submission
-        try { enqueueVote(submissionId, req.user.address, vote); } catch {};
+        try { enqueueVote(submissionId, req.user.address, vote); } catch (voteErr) { log?.warn?.("vote_enqueue_failed", { error: String(voteErr) }); };
 
         // Anti-cheat: vote ring detection (scoped to this voter's history)
         const { data: voterVotes } = await supabaseAdmin
