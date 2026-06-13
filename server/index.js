@@ -713,7 +713,7 @@ app.get("/api/stats", async (req, res) => {
         },
         celo: celoBalanceCache.value || {
           address: celoPrizePoolAddress || null,
-          celo: 0, cusd: 0, usdc: 0, stable: 0,
+          cusd: 0,
           explorerUrl: celoPrizePoolAddress ? `https://celoscan.io/address/${celoPrizePoolAddress}` : null,
         },
         // Backward-compat alias for older clients.

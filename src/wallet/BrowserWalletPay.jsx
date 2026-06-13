@@ -1,6 +1,6 @@
 /**
  * Browser / Farcaster wallet connect + pay component.
- * Supports WLD on World Chain and cUSD/USDC on Celo.
+ * Supports WLD on World Chain and cUSD on Celo.
  */
 import { useState } from "react";
 import { useAccount, useConnect, useDisconnect, useWriteContract, useWaitForTransactionReceipt, useChainId } from "wagmi";
@@ -17,7 +17,6 @@ import {
 const PAYMENT_OPTIONS = [
   { id: "wld", label: "1 WLD", description: "World Chain", chain: "World Chain" },
   { id: "cusd", label: "5 cUSD", description: "Celo stablecoin", chain: "Celo" },
-  { id: "usdc", label: "5 USDC", description: "USD Coin on Celo", chain: "Celo" },
 ];
 
 export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy, celoPrizePool }) {
@@ -64,11 +63,10 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
     setError(null);
 
     if (isCeloSelected) {
-      const tokenSymbol = selectedToken === "cusd" ? "cUSD" : "USDC";
-      const tokenConfig = CELO_TOKENS[tokenSymbol];
-      const tokenAddress = getCeloTokenAddress(tokenSymbol, chainId);
+      const tokenConfig = CELO_TOKENS.cUSD;
+      const tokenAddress = getCeloTokenAddress("cUSD", chainId);
       const prizeAddr = celoPrizePool || CELO_PRIZE_POOL_ADDRESS;
-      const amount = selectedToken === "cusd" ? "5" : "5"; // 5 cUSD or 5 USDC
+      const amount = "5"; // 5 cUSD
 
       try {
         writeContract({

@@ -28,7 +28,6 @@ export const ENTRY = {
     perChain: [
       { chain: "World Chain", token: "WLD", amount: "1" },
       { chain: "Celo", token: "cUSD", amount: "5" },
-      { chain: "Celo", token: "USDC", amount: "5" },
     ],
   },
   free: {

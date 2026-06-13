@@ -2,16 +2,14 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 /**
- * Prize pots card. Shows the WLD (World Chain) and cUSD+USDC
- * (Celo) prize pools side-by-side. Each pot is tap-to-reveal
- * for the on-chain address and the last deposit tx hash (when
- * available). Pure: takes a `prizePool` object in the /api/stats
- * shape and renders.
+ * Prize pots card. Shows the WLD (World Chain) and cUSD (Celo)
+ * prize pools side-by-side. Each pot is tap-to-reveal for the
+ * on-chain address and explorer link. Pure: takes a `prizePool`
+ * object in the /api/stats shape and renders.
  *
- * Backward-compatible: reads both the new shape
- *   { wld: { balance, explorerUrl }, celo: { stable, cusd, usdc, explorerUrl } }
- * and the legacy alias
- *   { balanceWld, address, explorerUrl }.
+ * Reads:
+ *   prizePool.wld  = { balance, explorerUrl }
+ *   prizePool.celo = { cusd, address, explorerUrl }
  */
 export default function PrizePots({ prizePool, className = "" }) {
   if (!prizePool) return null;
@@ -35,11 +33,11 @@ export default function PrizePots({ prizePool, className = "" }) {
       />
       <PotCard
         chain="Celo"
-        balance={celo?.stable}
-        suffix="cUSD+USDC"
+        balance={celo?.cusd}
+        suffix="cUSD"
         address={celo?.address}
         explorerUrl={celo?.explorerUrl}
-        empty={!celo?.stable}
+        empty={!celo?.cusd}
       />
     </div>
   );
