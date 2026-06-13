@@ -5,6 +5,9 @@ import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { DAILY_THEMES, TODAY_THEME } from '../data/game';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
+import FAQModal from './FAQModal.jsx';
+import AmbientBackdrop from './AmbientBackdrop.jsx';
+import { StageSection } from './StageShell.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
@@ -171,7 +174,8 @@ export default function CheckIn({ onBack, onSubmit }) {
   };
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col font-body">
+    <div className="relative min-h-screen bg-ash flex flex-col font-body overflow-hidden">
+      <AmbientBackdrop phase="live" />
       <input
         ref={fileRef}
         type="file"
@@ -187,18 +191,19 @@ export default function CheckIn({ onBack, onSubmit }) {
       />
 
       {/* Header */}
-      <div className="px-5 pt-12 pb-6 flex items-center gap-4">
-        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
+      <div className="relative z-10 px-5 pt-12 pb-6 flex items-center gap-4">
+        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
           <span className="text-dim text-lg">←</span>
         </button>
-        <div>
+        <div className="flex-1">
           <h2 className="font-display text-3xl text-bone tracking-wide">CHECK IN</h2>
           <p className="font-mono text-dim text-xs">Day {currentDay ?? '—'} · {theme || 'No round set'}</p>
         </div>
+        <FAQModal />
       </div>
 
       {!round ? (
-        <div className="flex-1 flex flex-col items-center justify-center px-5 gap-3">
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-5 gap-3">
           <p className="text-5xl">⏳</p>
           <p className="text-dim font-mono text-sm text-center">No round set for today yet.</p>
         </div>

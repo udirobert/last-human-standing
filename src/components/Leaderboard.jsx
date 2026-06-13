@@ -5,6 +5,8 @@ import { useStats } from '../hooks/useStats.js';
 import { usePolling } from '../hooks/usePolling.js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import Countdown from './Countdown.jsx';
+import FAQModal from './FAQModal.jsx';
+import AmbientBackdrop from './AmbientBackdrop.jsx';
 
 function shortAddr(addr) {
   if (!addr) return 'anon';
@@ -72,19 +74,21 @@ export default function Leaderboard({ onBack }) {
   const isLive = phase === 'live';
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
+    <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
+      <AmbientBackdrop phase={isLive ? 'live' : 'prelaunch'} />
       {/* Header */}
-      <div className="px-5 pt-12 pb-4">
+      <div className="relative z-10 px-5 pt-12 pb-4">
         <div className="flex items-center gap-4 mb-4">
-          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
+          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
             <span className="text-dim text-lg">←</span>
           </button>
-          <div>
+          <div className="flex-1">
             <h2 className="font-display text-3xl text-bone tracking-wide">STANDINGS</h2>
             <p className="font-mono text-dim text-xs">
               {isLive ? `Day ${currentDay ?? '—'} · ${survivors.length}/${round?.survivalCap ?? '—'} arrived` : 'Pre-launch'}
             </p>
           </div>
+          <FAQModal />
         </div>
 
         {/* Pre-launch: countdown + cohort progress */}

@@ -1,8 +1,12 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
+import { useRound } from '../world/RoundProvider.jsx';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import NetworkPill from './ui/NetworkPill.jsx';
+import FAQModal from './FAQModal.jsx';
+import AmbientBackdrop from './AmbientBackdrop.jsx';
+import { StageSection } from './StageShell.jsx';
 
 const BOT_RESPONSES = [
   "still alive another day, respect",
@@ -188,11 +192,12 @@ export default function Chat({ onBack }) {
     : input.trim().length > 0 && toUser.trim().length > 0;
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col font-body">
+    <div className="relative min-h-screen bg-ash flex flex-col font-body overflow-hidden">
+      <AmbientBackdrop phase="prelaunch" />
       {/* Header */}
-      <div className="px-5 pt-12 pb-4 bg-ash border-b border-ember">
+      <div className="relative z-10 px-5 pt-12 pb-4 bg-ash/80 backdrop-blur-md border-b border-ember/40">
         <div className="flex items-center gap-4 mb-1">
-          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
+          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1">
@@ -217,6 +222,7 @@ export default function Chat({ onBack }) {
           <div className="bg-neon/10 border border-neon/30 rounded-xl px-3 py-1">
             <span className="font-mono text-neon text-xs">🔒 E2E</span>
           </div>
+          <FAQModal />
         </div>
       </div>
 

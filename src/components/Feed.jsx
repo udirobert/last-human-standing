@@ -6,6 +6,9 @@ import { useRound } from '../world/RoundProvider.jsx';
 import { useTrustTier } from '../hooks/useTrustTier.js';
 import VoteGateBanner from './VoteGateBanner.jsx';
 import { MiniKit } from "@worldcoin/minikit-js";
+import FAQModal from './FAQModal.jsx';
+import AmbientBackdrop from './AmbientBackdrop.jsx';
+import { StageSection } from './StageShell.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -28,7 +31,7 @@ const useMocks = import.meta.env.DEV;
 
 export default function Feed({ onBack }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
-  const { verification } = useRound();
+  const { verification, phase } = useRound();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
   const [fired, setFired] = useState({});
@@ -156,10 +159,12 @@ export default function Feed({ onBack }) {
   const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
-      <div className="px-5 pt-12 pb-4 sticky top-0 bg-ash z-10">
+    <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
+      <AmbientBackdrop phase={phase === 'live' ? 'live' : 'prelaunch'} />
+
+      <div className="relative z-10 px-5 pt-12 pb-4 sticky top-0 bg-ash/80 backdrop-blur-md z-20">
         <div className="flex items-center gap-4 mb-4">
-          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke flex items-center justify-center">
+          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1">
@@ -174,6 +179,7 @@ export default function Feed({ onBack }) {
               )}
             </div>
           </div>
+          <FAQModal />
         </div>
 
         <div className="flex gap-2 mb-3 items-center">
