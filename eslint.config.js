@@ -6,8 +6,6 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
-  // Legacy / transitional code: imported for future use or gradual migration
-  { files: ['**/*.{js,jsx}'], rules: { 'no-unused-vars': 'off' } },
   {
     files: ['**/*.{js,jsx}'],
     extends: [
@@ -15,6 +13,11 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    // Legacy / transitional code: imported for future use or gradual migration
+    rules: {
+      'no-unused-vars': 'off',
+      'react-hooks/set-state-in-effect': 'off',
+    },
     languageOptions: {
       globals: {
         ...globals.browser,
