@@ -5,6 +5,7 @@ import CohortProgress from "./CohortProgress.jsx";
 import SharePanel from "./SharePanel.jsx";
 import TopReferrersBoard from "./TopReferrersBoard.jsx";
 import DailyPrompt from "./DailyPrompt.jsx";
+import PrizePots from "./PrizePots.jsx";
 import { COHORT } from "../../lib/copy.js";
 
 /**
@@ -71,7 +72,7 @@ export default function PrelaunchPanel({
     <div className="px-5 space-y-3">
       <CountdownCard launchAt={launchAt} split={split} />
 
-      <PotsRow prizePool={prizePool} />
+      <PrizePots prizePool={prizePool} />
 
       {friendsInCohort != null && friendsInCohort > 0 && (
         <div className="bg-smoke/60 border border-neon/30 rounded-2xl px-4 py-3">
@@ -138,55 +139,8 @@ function CountdownCard({ launchAt, split }) {
 }
 
 function PotsRow({ prizePool }) {
-  if (!prizePool) return null;
-  const wld = prizePool.wld ?? {
-    address: prizePool.address,
-    balance: prizePool.balanceWld,
-    explorerUrl: prizePool.explorerUrl,
-  };
-  const celo = prizePool.celo;
-  return (
-    <div className="grid grid-cols-2 gap-3">
-      <PotCard
-        chain="World Chain"
-        balance={wld?.balance}
-        suffix="WLD"
-        explorerUrl={wld?.explorerUrl}
-        empty={!wld?.balance}
-      />
-      <PotCard
-        chain="Celo"
-        balance={celo?.stable}
-        suffix="cUSD+USDC"
-        explorerUrl={celo?.explorerUrl}
-        empty={!celo?.stable}
-      />
-    </div>
-  );
-}
-
-function PotCard({ chain, balance, suffix, explorerUrl, empty }) {
-  const display = empty
-    ? "—"
-    : `${(balance ?? 0).toLocaleString(undefined, { maximumFractionDigits: 2 })} ${suffix}`;
-  return (
-    <div className="bg-smoke border border-ember rounded-2xl p-3">
-      <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">
-        Prize pot · {chain}
-      </p>
-      <p className={`font-display text-xl leading-none ${empty ? "text-dim" : "text-amber"}`}>
-        {display}
-      </p>
-      {explorerUrl && (
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-[10px] font-mono text-dim underline mt-1 inline-block"
-        >
-          view on chain
-        </a>
-      )}
-    </div>
-  );
+  // Replaced by <PrizePots /> — the shared component lives in
+  // prelaunch/PrizePots.jsx and is used by both PrelaunchPanel
+  // and Onboarding step 0 so the pot display is consistent.
+  return <PrizePots prizePool={prizePool} />;
 }

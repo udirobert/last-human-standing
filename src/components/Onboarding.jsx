@@ -16,6 +16,7 @@ import { useTrustTier } from "../hooks/useTrustTier.js";
 import { useEntryMode } from "../hooks/useEntryMode.js";
 import ScreenLoader from "./ui/ScreenLoader.jsx";
 import { RULES, FAQS, getEntryHeading, ENTRY } from "../lib/copy.js";
+import PrizePots from "./prelaunch/PrizePots.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -176,19 +177,14 @@ export default function Onboarding({ onEnter }) {
                 <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
                   <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs font-mono">
-                  <span className="text-dim">
-                    Prize pot:{" "}
-                    {pot?.balanceWld != null
-                      ? <span className="text-amber">{pot.balanceWld} WLD</span>
-                      : <span className="text-dim/70">loading…</span>}
-                  </span>
-                  {launchAt && phase === "prelaunch" && (
-                    <span className="text-amber">
-                      Day 1 in <Countdown targetIso={launchAt} className="inline" />
-                    </span>
-                  )}
+                <div className="mt-3">
+                  <PrizePots prizePool={pot} />
                 </div>
+                {launchAt && phase === "prelaunch" && (
+                  <p className="text-amber font-mono text-xs mt-3 text-right">
+                    Day 1 in <Countdown targetIso={launchAt} className="inline" />
+                  </p>
+                )}
                 {launchAt && phase === "prelaunch" && (
                   <p className="text-dim text-[11px] font-mono mt-2 leading-relaxed">
                     When the clock hits zero, the theme drops. Race to be one of the first 25 to check in.
