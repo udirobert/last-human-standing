@@ -344,17 +344,17 @@ export function WorldProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    // MiniKit.install is now performed by <MiniKitProvider> in main.jsx.
+    // We just sync our derived flags (hasWorldAppId, isWorldApp,
+    // isFarcaster) on mount.
     try {
       const appId = import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
       setHasWorldAppId(Boolean(appId));
-      if (appId) {
-        MiniKit.install({ appId });
-      }
     } catch (e) {
-      console.warn("MiniKit.install failed", e);
+      console.warn("MiniKit install detection failed", e);
     } finally {
       setInstallAttempted(true);
-      setIsWorldApp(Boolean(import.meta.env.VITE_WORLD_ID_APP_ID) && MiniKit.isInstalled());
+      setIsWorldApp(MiniKit.isInstalled());
       setIsFarcaster(detectFarcaster());
     }
   }, []);

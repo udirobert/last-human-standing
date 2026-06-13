@@ -3,6 +3,7 @@ import cookieParser from "cookie-parser";
 import crypto from "crypto";
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
+import { signRequest as idkitSignRequest } from "@worldcoin/idkit-server";
 import { getSupabaseAdmin } from "./supabase.js";
 import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission } from "./anticheat.js";
 import { rateLimit } from "./rateLimit.js";
@@ -23,16 +24,6 @@ import {
 } from "./lib/validators.js";
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
 import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
-function signRequest(signingKey, action, ttlSeconds = 300) {
-  const nonce = randomId(16);
-  const created_at = Math.floor(Date.now() / 1000);
-  const expires_at = created_at + ttlSeconds;
-  const payload = `${nonce}.${action}.${created_at}.${expires_at}`;
-  const key = signingKey.startsWith("0x") ? signingKey.slice(2) : signingKey;
-  const sig = crypto.createHmac("sha256", Buffer.from(key, "hex")).update(payload).digest("hex");
-  return { nonce, created_at, expires_at, sig };
-}
-
 const PORT = Number(process.env.PORT || 8787);
 const IS_PROD = process.env.NODE_ENV === "production";
 const supabaseAdmin = getSupabaseAdmin();
@@ -367,13 +358,21 @@ app.post("/api/idkit/rp-context", requireAuth, async (req, res) => {
   }
 
   try {
-    const signed = signRequest(signing_key, action, 5 * 60);
+    // Official algorithm from @worldcoin/idkit-server (secp256k1 ECDSA
+    // over Keccak-256 + EIP-191 — see docs.world.org/idkit/signatures).
+    // The old local HMAC-SHA256 signRequest produced signatures World
+    // App would reject, so we use the published SDK here.
+    const signed = idkitSignRequest({
+      signingKeyHex: signing_key,
+      action,
+      ttl: 5 * 60,
+    });
     return res.json({
       rp_context: {
         rp_id,
         nonce: signed.nonce,
-        created_at: signed.created_at,
-        expires_at: signed.expires_at,
+        created_at: signed.createdAt,
+        expires_at: signed.expiresAt,
         signature: signed.sig,
       },
       action,
@@ -402,45 +401,64 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
   const isV4 = Boolean(rp_id);
 
   try {
-    const verifyBody = isV4
-      ? JSON.stringify({
-          protocol_version: idkitResponse.protocol_version || "4.0",
-          nonce: idkitResponse.nonce,
-          action,
-          responses: idkitResponse.responses || [
-            {
-              identifier: idkitResponse.verification_level || "orb",
-              merkle_root: idkitResponse.merkle_root,
-              nullifier: idkitResponse.nullifier_hash,
-              proof: idkitResponse.proof,
-              signal_hash: idkitResponse.signal_hash || undefined,
-            },
-          ],
-        })
-      : JSON.stringify({
-          nullifier_hash: idkitResponse.nullifier_hash,
-          merkle_root: idkitResponse.merkle_root,
-          proof: idkitResponse.proof,
-          verification_level: idkitResponse.verification_level || "orb",
-          action,
-          signal_hash: idkitResponse.signal_hash || undefined,
-        });
-
-    const endpoint = isV4
-      ? `https://developer.worldcoin.org/api/v4/verify/${verifyId}`
-      : `https://developer.worldcoin.org/api/v2/verify/${verifyId}`;
-
-    const resp = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      },
-      body: verifyBody,
+    // Per the current IDKit spec (docs.world.org/idkit/integrate Step 5):
+    // "Forward the IDKit result payload as-is. No field remapping is
+    // required." The v4 endpoint accepts both 4.0 and legacy 3.0 proofs.
+    // We fall back to the legacy /v2/verify endpoint only if v4 rejects
+    // with `app_not_migrated` AND we still have an app_id to verify with.
+    const v4Body = JSON.stringify(idkitResponse);
+    const legacyBody = JSON.stringify({
+      nullifier_hash: idkitResponse.nullifier_hash,
+      merkle_root: idkitResponse.merkle_root,
+      proof: idkitResponse.proof,
+      verification_level: idkitResponse.verification_level || "orb",
+      action,
+      signal_hash: idkitResponse.signal_hash || undefined,
     });
 
-    const json = await resp.json().catch(() => null);
-    if (!resp.ok) return res.status(400).json({ error: "verify_failed", details: json });
+    const v4Endpoint = `https://developer.world.org/api/v4/verify/${verifyId}`;
+    const legacyEndpoint = `https://developer.worldcoin.org/api/v2/verify/${app_id || verifyId}`;
+
+    let resp;
+    let json;
+    let usedLegacyFallback = false;
+
+    if (isV4) {
+      resp = await fetch(v4Endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: v4Body,
+      });
+      json = await resp.json().catch(() => null);
+      if (!resp.ok && json?.code === "app_not_migrated" && app_id) {
+        usedLegacyFallback = true;
+        resp = await fetch(legacyEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          },
+          body: legacyBody,
+        });
+        json = await resp.json().catch(() => null);
+      }
+    } else {
+      usedLegacyFallback = true;
+      resp = await fetch(legacyEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+        },
+        body: legacyBody,
+      });
+      json = await resp.json().catch(() => null);
+    }
+
+    if (!resp.ok) return res.status(400).json({ error: "verify_failed", details: json, used_legacy_fallback: usedLegacyFallback });
 
     if (supabaseAdmin) {
       await supabaseAdmin.from("users").upsert(
@@ -448,7 +466,7 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
         { onConflict: "address" },
       );
     }
-    return res.json({ ok: true, verified: true, details: json });
+    return res.json({ ok: true, verified: true, details: json, used_legacy_fallback: usedLegacyFallback });
   } catch (e) {
     return res.status(400).json({ error: "verify_exception", message: e instanceof Error ? e.message : "unknown_error" });
   }

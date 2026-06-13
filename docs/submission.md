@@ -72,7 +72,7 @@ The social deduction layer (HUMAN/SUS voting + Infiltrator mode) makes cheating 
 
 ## Tech stack
 - Frontend: React + Vite + Tailwind + Framer Motion
-- Mini App SDK: `@worldcoin/minikit-js` v2, `@worldcoin/idkit` v2
+- Mini App SDK: `@worldcoin/minikit-js` v2, `@worldcoin/idkit` v4 (with `@worldcoin/idkit-server` for backend signing)
 - Backend: Node.js + Express v5, `@supabase/supabase-js` v2, viem
 - Geo: server-side haversine (optional GPS metadata); navigator.geolocation in client (opt-in)
 - Infra: Hetzner VPS, PM2, Nginx, Let's Encrypt

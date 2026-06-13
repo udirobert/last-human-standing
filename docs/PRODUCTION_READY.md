@@ -19,7 +19,7 @@
 - **Recommendation**: Add a trust-tier indicator on the onboarding "YOU'RE IN" screen. Browser users should see a provisional badge ("Provisional — complete World ID for full trust"), World App users see a verified badge ("✅ Verified Human").
 
 ### 1c. Proof-of-humanity gate — ⚪ Browser path needs PoH layer before production
-- **World App users**: World ID Orb verification via `@worldcoin/idkit` → `/api/idkit/verify` (cloud verification, v4 endpoint). ✅
+- **World App users**: World ID Orb verification via `@worldcoin/idkit` v4 (`IDKitRequestWidget` with server-signed `rp_context`) → `/api/idkit/verify` → `https://developer.world.org/api/v4/verify/{rp_id}`. Cloud verification, v4 endpoint. ✅
 - **Browser users**: NO PoH layer today. SIWE auth + on-chain WLD payment is a WEAK sybil signal — someone can create unlimited wallets to get multiple entries. The payment is real but not human-verified.
 - **Recommendation (pre-pilot)**: Choose one:
   - **Option A**: Embed [World ID Flex](https://docs.worldcoin.org/id/flex) (phone number or cloud) into browser onboarding for a lighter PoH signal. World ID JS SDK supports this via `VerificationLevel.Device` or the cloud flow.
