@@ -17,6 +17,10 @@ import { useEntryMode } from "../hooks/useEntryMode.js";
 import ScreenLoader from "./ui/ScreenLoader.jsx";
 import { RULES, FAQS, getEntryHeading, ENTRY } from "../lib/copy.js";
 import PrizePots from "./prelaunch/PrizePots.jsx";
+import DayTimeline from "./DayTimeline.jsx";
+import LaunchCountdown from "./LaunchCountdown.jsx";
+import FAQModal from "./FAQModal.jsx";
+import AmbientBackdrop from "./AmbientBackdrop.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -131,99 +135,114 @@ export default function Onboarding({ onEnter }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col items-center px-6 pt-6 pb-10 overflow-y-auto"
+            className="relative flex-1 flex flex-col items-center px-6 pt-4 pb-10 overflow-y-auto"
           >
-            <div className="flex flex-col items-center text-center w-full max-w-md">
-              <Mascot variant="excited" size={80} />
-              <h1 className="font-display text-4xl text-bone mt-4 leading-none tracking-wider animate-glow">
-                LAST<br />HUMAN<br />STANDING
-              </h1>
-              <p className="text-bone font-mono text-sm mt-4 max-w-xs leading-relaxed">
-                Be one of 50 humans. Check in at a daily themed location. Last survivor takes the on-chain pot.
-              </p>
-              <div className="mt-3">
-                <TrustBadge size="md" />
-              </div>
+            <AmbientBackdrop />
+
+            {/* FAQ button (top right) — keeps the welcome screen uncluttered */}
+            <div className="absolute top-4 right-4 z-10">
+              <FAQModal />
             </div>
 
-            <div className="w-full max-w-md mt-6 space-y-3">
-              {/* How a day looks — concrete micro-example */}
-              <div className="bg-smoke rounded-2xl p-4 border border-ember/50">
-                <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-3">Here's how a day looks</p>
-                <ul className="space-y-2">
-                  <li className="flex gap-3 font-mono text-sm text-bone">
-                    <span className="text-lg shrink-0">☕</span>
-                    <span>Theme drops (e.g. <span className="text-amber">AT A CAFÉ</span>)</span>
-                  </li>
-                  <li className="flex gap-3 font-mono text-sm text-bone">
-                    <span className="text-lg shrink-0">📸</span>
-                    <span>You have a few hours to take a photo at any café on Earth</span>
-                  </li>
-                  <li className="flex gap-3 font-mono text-sm text-bone">
-                    <span className="text-lg shrink-0">🗳️</span>
-                    <span>The community votes you HUMAN or SUS</span>
-                  </li>
-                  <li className="flex gap-3 font-mono text-sm text-bone">
-                    <span className="text-lg shrink-0">🏆</span>
-                    <span>First 25 of 50 advance. Last one standing wins the pot.</span>
-                  </li>
-                </ul>
-              </div>
+            <div className="relative z-10 flex flex-col items-center text-center w-full max-w-md">
+              <Mascot variant="excited" size={120} />
+              <motion.h1
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, type: "spring", damping: 16 }}
+                className="font-display text-5xl text-bone mt-5 leading-none tracking-wider animate-glow"
+              >
+                LAST HUMAN<br />STANDING
+              </motion.h1>
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.25 }}
+                className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed"
+              >
+                Be one of 50 humans. Last survivor takes the on-chain pot.
+              </motion.p>
+            </div>
 
-              {/* Cohort + pot card */}
-              <div className="bg-smoke rounded-2xl p-4 border border-ember">
-                <p className="font-mono text-dim text-xs uppercase mb-1">Cohort 1</p>
-                <p className="font-display text-3xl text-bone">{reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span></p>
-                <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
-                  <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
-                </div>
-                <div className="mt-3">
-                  <PrizePots prizePool={pot} />
-                </div>
-                {launchAt && phase === "prelaunch" && (
-                  <p className="text-amber font-mono text-xs mt-3 text-right">
-                    Day 1 in <Countdown targetIso={launchAt} className="inline" />
-                  </p>
-                )}
-                {launchAt && phase === "prelaunch" && (
-                  <p className="text-dim text-[11px] font-mono mt-2 leading-relaxed">
-                    When the clock hits zero, the theme drops. Race to be one of the first 25 to check in.
-                  </p>
-                )}
-              </div>
+            <div className="relative z-10 w-full max-w-md mt-6 space-y-4">
+              {/* 4-step "a day in the life" — visual timeline */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm"
+              >
+                <DayTimeline />
+              </motion.div>
 
-              {/* Daily pulse — community teaser, even before signup */}
-              <DailyPrompt />
+              {/* Cohort + countdown — dramatic launch clock */}
+              {phase === "prelaunch" && launchAt && (
+                <motion.div
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.55 }}
+                  className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm"
+                >
+                  <LaunchCountdown targetIso={launchAt} />
+                  <div className="mt-3">
+                    <p className="font-mono text-dim text-[10px] uppercase tracking-widest text-center mb-1">
+                      Cohort 1
+                    </p>
+                    <p className="font-display text-3xl text-bone text-center tabular-nums">
+                      {reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span>
+                    </p>
+                    <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${cohortPct}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full bg-amber rounded-full"
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Prize pots — small chips, secondary */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="bg-smoke/40 rounded-2xl p-3 border border-ember/30 backdrop-blur-sm"
+              >
+                <PrizePots prizePool={pot} />
+              </motion.div>
+
+              {/* Daily pulse teaser — single line, no header */}
+              <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.85 }}
+              >
+                <DailyPrompt />
+              </motion.div>
 
               {/* Primary CTA */}
-              <button
+              <motion.button
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.0 }}
                 type="button"
                 onClick={() => setStep(1)}
-                className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform"
+                className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
               >
                 HOW TO PLAY →
-              </button>
+              </motion.button>
 
-              {/* FAQ accordion */}
-              <div className="mt-2 space-y-2">
-                {FAQS.map((item, i) => (
-                  <div key={item.q} className="bg-smoke/60 rounded-xl border border-ember/30 overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setFaqOpen(faqOpen === i ? null : i)}
-                      className="w-full px-4 py-3 text-left font-mono text-xs text-bone flex items-center justify-between gap-3"
-                    >
-                      <span>{item.q}</span>
-                      <span className="text-amber text-base shrink-0">{faqOpen === i ? "−" : "+"}</span>
-                    </button>
-                    {faqOpen === i && (
-                      <div className="px-4 pb-3 font-mono text-[11px] text-dim leading-relaxed">
-                        {item.a}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+              {/* Trust badge — small, at the bottom */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.15 }}
+                className="flex justify-center"
+              >
+                <TrustBadge size="sm" />
+              </motion.div>
             </div>
           </motion.div>
         )}
