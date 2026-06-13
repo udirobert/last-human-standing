@@ -292,34 +292,46 @@ alter table public.submission_flags enable row level security;
 -- Anon key: read-only, read-your-own for most tables.
 
 -- users: anyone can read; server writes only
+drop policy if exists "users_public_read" on public.users;
 create policy "users_public_read" on public.users for select using (true);
 
 -- rounds: anyone can read; server writes only
+drop policy if exists "rounds_public_read" on public.rounds;
 create policy "rounds_public_read" on public.rounds for select using (true);
 
 -- checkins: anyone can read the public leaderboard columns; server writes only
+drop policy if exists "checkins_public_read" on public.checkins;
 create policy "checkins_public_read" on public.checkins for select
   using (true);
 
 -- submissions: anyone can read; server writes only
+drop policy if exists "submissions_public_read" on public.submissions;
 create policy "submissions_public_read" on public.submissions for select using (true);
 
 -- votes: anyone can read vote counts; server writes only
+drop policy if exists "votes_public_read" on public.votes;
 create policy "votes_public_read" on public.votes for select using (true);
 
 -- chat_messages: anyone can read; server writes only
+drop policy if exists "chat_messages_public_read" on public.chat_messages;
 create policy "chat_messages_public_read" on public.chat_messages for select using (true);
 
 -- waitlist: read-only; server writes
+drop policy if exists "waitlist_public_read" on public.waitlist;
 create policy "waitlist_public_read" on public.waitlist for select using (true);
 
 -- game_sessions / siwe_nonces / pay_references / rate_limits: no read for anon; server only
+drop policy if exists "sessions_server_only" on public.game_sessions;
 create policy "sessions_server_only" on public.game_sessions for all using (false) with check (false);
+drop policy if exists "nonces_server_only" on public.siwe_nonces;
 create policy "nonces_server_only" on public.siwe_nonces for all using (false) with check (false);
+drop policy if exists "pay_refs_server_only" on public.pay_references;
 create policy "pay_refs_server_only" on public.pay_references for all using (false) with check (false);
+drop policy if exists "rate_limits_server_only" on public.rate_limits;
 create policy "rate_limits_server_only" on public.rate_limits for all using (false) with check (false);
 
 -- submission_flags: admin read + server write only
+drop policy if exists "flags_server_only" on public.submission_flags;
 create policy "flags_server_only" on public.submission_flags for all using (false) with check (false);
 
 -- =============== Storage bucket policies ===============
@@ -333,14 +345,17 @@ on conflict (id) do update set
   allowed_mime_types = excluded.allowed_mime_types;
 
 -- Only the service role (server backend) can upload.
+drop policy if exists "checkins_service_upload" on storage.objects;
 create policy "checkins_service_upload" on storage.objects
   for insert with check (bucket_id = 'checkins');
 
 -- Public (or signed-URL holders) can read back their own photos.
+drop policy if exists "checkins_public_read" on storage.objects;
 create policy "checkins_public_read" on storage.objects
   for select using (bucket_id = 'checkins');
 
 -- Server can delete (for cleanup).
+drop policy if exists "checkins_service_delete" on storage.objects;
 create policy "checkins_service_delete" on storage.objects
   for delete using (bucket_id = 'checkins');
 
@@ -354,7 +369,7 @@ language plpgsql
 security definer
 as $$
 declare
-  now_ms bigint := trunc Extract(epoch from now()) * 1000;
+  now_ms bigint := trunc(Extract(epoch from now())) * 1000;
   now_iso timestamptz := now();
   result jsonb := '{"opened": [], "closed": [], "errors": []}'::jsonb;
   round_row record;
