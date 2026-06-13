@@ -225,7 +225,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
       frameSrc: ["'self'", "https://js.stripe.com"],
-      connectSrc: ["'self'", "https://worldchain-mainnet.g.alchemy.com", "https://*.supabase.co", "https://developer.worldcoin.org", "https://api.neynar.com"],
+      connectSrc: ["'self'", "https://worldchain-mainnet.g.alchemy.com", "https://*.supabase.co", "https://developer.worldcoin.org", "https://developer.world.org", "https://api.neynar.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", "data:"],
