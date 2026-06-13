@@ -21,6 +21,9 @@ import DayTimeline from "./DayTimeline.jsx";
 import LaunchCountdown from "./LaunchCountdown.jsx";
 import FAQModal from "./FAQModal.jsx";
 import AmbientBackdrop from "./AmbientBackdrop.jsx";
+import StageShell, { StageSection, CohortTicker } from "./StageShell.jsx";
+import { RULE_ICON_MAP } from "./RuleIconMap.js";
+import StepThreeConfetti from "./StepThreeConfetti.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -135,115 +138,86 @@ export default function Onboarding({ onEnter }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative flex-1 flex flex-col items-center px-6 pt-4 pb-10 overflow-y-auto"
+            className="flex-1 flex flex-col"
           >
-            <AmbientBackdrop />
-
-            {/* FAQ button (top right) — keeps the welcome screen uncluttered */}
-            <div className="absolute top-4 right-4 z-10">
-              <FAQModal />
-            </div>
-
-            <div className="relative z-10 flex flex-col items-center text-center w-full max-w-md">
-              <Mascot variant="excited" size={120} />
-              <motion.h1
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1, type: "spring", damping: 16 }}
-                className="font-display text-5xl text-bone mt-5 leading-none tracking-wider animate-glow"
-              >
-                LAST HUMAN<br />STANDING
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.25 }}
-                className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed"
-              >
-                Be one of 50 humans. Last survivor takes the on-chain pot.
-              </motion.p>
-            </div>
-
-            <div className="relative z-10 w-full max-w-md mt-6 space-y-4">
-              {/* 4-step "a day in the life" — visual timeline */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm"
-              >
-                <DayTimeline />
-              </motion.div>
-
-              {/* Cohort + countdown — dramatic launch clock */}
-              {phase === "prelaunch" && launchAt && (
-                <motion.div
-                  initial={{ opacity: 0, y: 12 }}
+            <StageShell
+              onBack={null}
+              faq
+              withAmbient
+              AmbientComponent={<AmbientBackdrop phase={phase} />}
+            >
+              <StageSection index={0} className="flex flex-col items-center text-center pt-2">
+                <Mascot variant="excited" size={120} />
+                <motion.h1
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.55 }}
-                  className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm"
+                  transition={{ delay: 0.15, type: "spring", damping: 16 }}
+                  className="font-display text-5xl text-bone mt-5 leading-none tracking-wider animate-glow"
                 >
-                  <LaunchCountdown targetIso={launchAt} />
-                  <div className="mt-3">
-                    <p className="font-mono text-dim text-[10px] uppercase tracking-widest text-center mb-1">
-                      Cohort 1
-                    </p>
-                    <p className="font-display text-3xl text-bone text-center tabular-nums">
-                      {reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span>
-                    </p>
-                    <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
-                      <motion.div
-                        initial={{ width: 0 }}
-                        animate={{ width: `${cohortPct}%` }}
-                        transition={{ duration: 0.8, ease: "easeOut" }}
-                        className="h-full bg-amber rounded-full"
-                      />
+                  LAST HUMAN<br />STANDING
+                </motion.h1>
+                <p className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed">
+                  Be one of 50 humans. Last survivor takes the on-chain pot.
+                </p>
+              </StageSection>
+
+              <div className="mt-5 space-y-3">
+                <StageSection index={1} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
+                  <DayTimeline />
+                </StageSection>
+
+                {phase === "prelaunch" && launchAt && (
+                  <StageSection index={2} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
+                    <LaunchCountdown targetIso={launchAt} />
+                    <div className="mt-3">
+                      <p className="font-mono text-dim text-[10px] uppercase tracking-widest text-center mb-1">
+                        Cohort 1
+                      </p>
+                      <p className="font-display text-3xl text-bone text-center tabular-nums">
+                        {reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span>
+                      </p>
+                      <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${cohortPct}%` }}
+                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          className="h-full bg-amber rounded-full"
+                        />
+                      </div>
                     </div>
-                  </div>
-                </motion.div>
-              )}
+                  </StageSection>
+                )}
 
-              {/* Prize pots — small chips, secondary */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.7 }}
-                className="bg-smoke/40 rounded-2xl p-3 border border-ember/30 backdrop-blur-sm"
-              >
-                <PrizePots prizePool={pot} />
-              </motion.div>
+                <StageSection index={3} className="bg-smoke/40 rounded-2xl p-3 border border-ember/30 backdrop-blur-sm">
+                  <PrizePots prizePool={pot} />
+                </StageSection>
 
-              {/* Daily pulse teaser — single line, no header */}
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.85 }}
-              >
-                <DailyPrompt />
-              </motion.div>
+                <StageSection index={4}>
+                  <CohortTicker pollMs={15000} />
+                </StageSection>
 
-              {/* Primary CTA */}
-              <motion.button
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 1.0 }}
-                type="button"
-                onClick={() => setStep(1)}
-                className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
-              >
-                HOW TO PLAY →
-              </motion.button>
+                <StageSection index={5}>
+                  <DailyPrompt />
+                </StageSection>
 
-              {/* Trust badge — small, at the bottom */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.15 }}
-                className="flex justify-center"
-              >
-                <TrustBadge size="sm" />
-              </motion.div>
-            </div>
+                <StageSection index={6}>
+                  <motion.button
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.85 }}
+                    type="button"
+                    onClick={() => setStep(1)}
+                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
+                  >
+                    HOW TO PLAY →
+                  </motion.button>
+                </StageSection>
+
+                <StageSection index={7} className="flex justify-center">
+                  <TrustBadge size="sm" />
+                </StageSection>
+              </div>
+            </StageShell>
           </motion.div>
         )}
 
@@ -253,50 +227,70 @@ export default function Onboarding({ onEnter }) {
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
-            className="flex-1 flex flex-col px-6 pt-6 pb-8"
+            className="flex-1 flex flex-col"
           >
-            <button type="button" onClick={() => setStep(0)} className="text-dim text-sm mb-4 text-left">← back</button>
-            <h2 className="font-display text-4xl text-bone mb-2">THE RULES</h2>
-            <p className="text-dim text-sm font-mono mb-4">Four steps. No fine print.</p>
-
-            <div className="space-y-3 flex-1 overflow-auto">
-              {RULES.map((rule) => (
-                <div key={rule.n} className="flex gap-3 bg-smoke rounded-2xl p-4 border border-ember/50">
-                  <span className="text-2xl">{rule.icon}</span>
-                  <div>
-                    <p className="font-display text-lg text-bone">{rule.title}</p>
-                    <p className="text-dim text-xs mt-1">{rule.body}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowPersonalize(!showPersonalize)}
-              className="text-dim text-xs font-mono underline mb-3 text-left"
+            <StageShell
+              onBack={() => setStep(0)}
+              faq
+              withAmbient
+              AmbientComponent={<AmbientBackdrop phase={phase} />}
             >
-              {showPersonalize ? "Hide" : "Optional: personalize your guide"}
-            </button>
-            {showPersonalize && (
-              <input
-                type="text"
-                value={mascotName}
-                onChange={(e) => setMascotName(e.target.value)}
-                onBlur={() => mascotName && localStorage.setItem("lhs_mascot_name", mascotName)}
-                placeholder="Your name (optional)"
-                className="w-full mb-3 bg-smoke border border-ember rounded-xl px-4 py-3 text-bone font-mono text-sm"
-                maxLength={20}
-              />
-            )}
+              <StageSection index={0} className="text-center">
+                <h2 className="font-display text-4xl text-bone mb-1">THE RULES</h2>
+                <p className="text-dim text-sm font-mono">Four steps. No fine print.</p>
+              </StageSection>
 
-            <button
-              type="button"
-              onClick={() => { markOnboardingDone(); setStep(2); }}
-              className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform"
-            >
-              RESERVE MY SLOT →
-            </button>
+              <div className="mt-4 space-y-2.5 flex-1">
+                {RULES.map((rule, i) => {
+                  const Icon = RULE_ICON_MAP[rule.n] || null;
+                  return (
+                    <StageSection key={rule.n} index={i + 1}>
+                      <div className="flex items-center gap-3 bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
+                        {Icon ? <Icon /> : <span className="text-2xl">{rule.icon}</span>}
+                        <div className="min-w-0">
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-mono text-amber text-[10px] tracking-widest">{rule.n}</span>
+                            <p className="font-display text-base text-bone leading-tight">{rule.title}</p>
+                          </div>
+                          <p className="text-dim text-[11px] mt-0.5 leading-snug">{rule.body}</p>
+                        </div>
+                      </div>
+                    </StageSection>
+                  );
+                })}
+              </div>
+
+              <StageSection index={5}>
+                <button
+                  type="button"
+                  onClick={() => setShowPersonalize(!showPersonalize)}
+                  className="text-dim text-xs font-mono underline mb-3 text-left"
+                >
+                  {showPersonalize ? "Hide" : "Optional: personalize your guide"}
+                </button>
+                {showPersonalize && (
+                  <input
+                    type="text"
+                    value={mascotName}
+                    onChange={(e) => setMascotName(e.target.value)}
+                    onBlur={() => mascotName && localStorage.setItem("lhs_mascot_name", mascotName)}
+                    placeholder="Your name (optional)"
+                    className="w-full mb-3 bg-smoke border border-ember rounded-xl px-4 py-3 text-bone font-mono text-sm"
+                    maxLength={20}
+                  />
+                )}
+              </StageSection>
+
+              <StageSection index={6}>
+                <button
+                  type="button"
+                  onClick={() => { markOnboardingDone(); setStep(2); }}
+                  className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
+                >
+                  RESERVE MY SLOT →
+                </button>
+              </StageSection>
+            </StageShell>
           </motion.div>
         )}
 
@@ -306,10 +300,8 @@ export default function Onboarding({ onEnter }) {
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -24 }}
-            className="flex-1 flex flex-col px-6 pt-6 pb-8"
+            className="flex-1 flex flex-col"
           >
-            <button type="button" onClick={() => setStep(1)} className="text-dim text-sm mb-4 text-left">← back</button>
-
             <Mascot variant={entryPaid ? "celebrating" : "excited"} size={64} />
             {(() => {
               const heading = getEntryHeading({ isFreeMode: isFree, alreadyPaid: entryPaid });
@@ -470,30 +462,61 @@ export default function Onboarding({ onEnter }) {
             key="done"
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="flex-1 flex flex-col items-center justify-center px-6 pb-10 text-center"
+            className="flex-1 flex flex-col"
           >
-            <Mascot variant="celebrating" size={80} />
-            <h2 className="font-display text-4xl text-bone mt-6">YOU&apos;RE IN</h2>
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-              <TrustBadge size="md" />
-              {phase === "prelaunch" && <EarlyBadge size="md" reservedAt={user?.reservedAt} />}
-            </div>
-            <div className="w-full mt-4 px-2">
-              <PushOptIn />
-            </div>
-            {phase === "prelaunch" && launchAt && (
-              <p className="text-dim font-mono text-sm mt-4">Day 1 starts in <Countdown targetIso={launchAt} className="text-amber" /></p>
-            )}
-            <p className="text-dim text-xs font-mono mt-2 max-w-xs">
-              The full prelaunch home — countdown, share link, leaderboard, daily prompt — is waiting in the lobby.
-            </p>
-            <button
-              type="button"
-              onClick={() => { markOnboardingDone(); onEnter(); }}
-              className="w-full mt-6 py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95"
+            <StageShell
+              onBack={() => setStep(2)}
+              faq
+              withAmbient
+              AmbientComponent={<AmbientBackdrop phase="live" />}
             >
-              {isLive ? "ENTER ARENA →" : "ENTER LOBBY →"}
-            </button>
+              {/* Celebration confetti — one-shot on step 3 mount */}
+              <StepThreeConfetti />
+
+              <StageSection index={0} className="flex flex-col items-center text-center pt-2">
+                <Mascot variant="celebrating" size={120} />
+                <motion.h2
+                  initial={{ scale: 0.5, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ delay: 0.2, type: "spring", damping: 12 }}
+                  className="font-display text-5xl text-bone mt-5 animate-glow"
+                >
+                  YOU&apos;RE IN
+                </motion.h2>
+                <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                  <TrustBadge size="md" />
+                  {phase === "prelaunch" && <EarlyBadge size="md" reservedAt={user?.reservedAt} />}
+                </div>
+              </StageSection>
+
+              <div className="mt-4 space-y-2.5 flex-1">
+                <StageSection index={1} className="bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
+                  <PushOptIn />
+                </StageSection>
+
+                {phase === "prelaunch" && launchAt && (
+                  <StageSection index={2} className="bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
+                    <LaunchCountdown targetIso={launchAt} />
+                  </StageSection>
+                )}
+
+                <StageSection index={3} className="text-center">
+                  <p className="text-dim text-xs font-mono max-w-xs mx-auto">
+                    The full prelaunch home — share link, leaderboard, daily prompt — is waiting in the lobby.
+                  </p>
+                </StageSection>
+
+                <StageSection index={4}>
+                  <button
+                    type="button"
+                    onClick={() => { markOnboardingDone(); onEnter(); }}
+                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_32px_rgba(255,26,26,0.4)]"
+                  >
+                    {isLive ? "ENTER ARENA →" : "ENTER LOBBY →"}
+                  </button>
+                </StageSection>
+              </div>
+            </StageShell>
           </motion.div>
         )}
       </AnimatePresence>
