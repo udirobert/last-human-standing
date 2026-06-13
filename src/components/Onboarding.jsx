@@ -428,7 +428,12 @@ export default function Onboarding({ onEnter }) {
               <div className="mb-4 space-y-3">
                 <p className="text-dim text-xs font-mono mb-2">Upgrade to verified human (recommended before Day 1):</p>
                 {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
-                <SelfVerify />
+                {import.meta.env.VITE_ENABLE_SELF === "true" && <SelfVerify />}
+                {!import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
+                  <p className="text-dim text-[10px] font-mono text-center">
+                    Humanity verification is offline in this build.
+                  </p>
+                )}
               </div>
             )}
 

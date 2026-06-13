@@ -48,7 +48,7 @@ Last Human Standing integrates key premium improvements inspired by modern, high
 1. **🤖 ARIA AI Companion (Character Chat)**: An interactive AI mascot companion (ARIA) with customizable personalities (`guide`, `mentor`, `rival`, `ally`) utilizing unified Venice/AISA One/Featherless API streams, designed to strategically coach and engage players.
 2. **🔊 Immersive Audio Layer (Sound Design)**: Zero-latency synthetic sound effects generated dynamically via the Web Audio API for highly responsive UI sounds (button click, success, milestone, errors, and custom mascot responses) without requiring audio asset downloads.
 3. **✨ Competitor-Optimized Onboarding Flow**: An expanded 9-stage onboarding flow designed to maximize user investment. Includes interactive profiling, name-based personalization throughout the experience, flexible subscription models, 7-day free trials, and an exit-intent modal that triggers a 70% discount offer.
-4. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID (live) and preparing Self Protocol (Celo Sepolia / Alfajores) with developer mock/verify endpoints, making the app highly versatile.
+4. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID and Self Protocol (both live). See [HUMANITY_PROVIDERS.md](./HUMANITY_PROVIDERS.md) for the integration shape, trust tiers, and the one env-var flip that takes Self from Celo Sepolia staging to Celo mainnet.
 
 ## World Stack usage
 

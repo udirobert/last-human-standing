@@ -11,6 +11,8 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      // No externals — bundle everything for the browser, including
+      // @selfxyz/qrcode (loaded lazily by SelfVerify.jsx).
       external: [],
       output: {
         manualChunks(id) {
@@ -35,6 +37,7 @@ export default defineConfig({
   test: {
     // Default env: jsdom for component tests; server tests use // @vitest-environment node
     environment: "jsdom",
+    setupFiles: ["./tests/setup.js"],
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],

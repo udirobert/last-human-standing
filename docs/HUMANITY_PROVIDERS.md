@@ -7,22 +7,17 @@ Last Human Standing uses a **pluggable humanity layer** so we are not locked to 
 | Provider | Chain / surface | Status | Notes |
 |----------|-----------------|--------|-------|
 | **World ID** | World App + browser (IDKit) | Live | Orb verification via `/api/idkit/verify`. Primary path for World cohort. |
+| **[Self Protocol](https://docs.self.xyz/)** | Celo + multi-chain ZK passports | Live (Celo Sepolia, mock passport) | Privacy-preserving proof-of-human. Production mainnet flips in via `SELF_MOCK_PASSPORT=false`. Self Pass supports passports/IDs from 60+ countries. |
 | **Wallet + WLD entry** | World Chain | Live | Sybil *cost* signal only — not proof of unique human without PoH. |
-
-## Planned
-
-| Provider | Chain / surface | Status | Why add it |
-|----------|-----------------|--------|------------|
-| **[Self Protocol](https://docs.self.xyz/)** | Celo (+ multi-chain ZK passports) | Planned | Privacy-preserving proof-of-human; strong fit for Celo-native and “verify once, play anywhere” positioning. Self Pass supports passports/IDs from 60+ countries. |
-| **Celo wallet path** | Celo | Planned | Lower-friction entry for users who already live on Celo; pair with Self verification instead of WLD-only browser path. |
+| **Celo wallet path** | Celo | Live | cUSD/USDC entry on Celo (browser path). Pair with Self verification instead of WLD-only browser path. |
 
 ## Trust tiers (product)
 
-1. **Verified human** — World ID (or future Self nullifier) on file → full voting + highest trust in audit.
+1. **Verified human** — World ID (or Self) nullifier on file → full voting + highest trust in audit. `TrustBadge` reads `humanityProvider` and shows "Verified · Self" vs "Verified · World ID".
 2. **Provisional** — paid entry, no PoH yet → can play; voting may be restricted (`VITE_REQUIRE_WORLD_ID_FOR_VOTING`).
 3. **Unverified** — not enrolled.
 
-UI surfaces this via `TrustBadge` and `useTrustTier()`.
+UI surfaces this via `TrustBadge` and `useTrustTier()`. `ModeBanner` shows the provider name on the verified tier so you can tell Self and World ID users apart at a glance.
 
 ## Recommended architecture (next sprint)
 
@@ -34,13 +29,14 @@ SelfVerify     ──►  POST /api/self/verify      ──►  users.humanity_p
 Browser pay    ──►  POST /api/pay/browser-confirm
 ```
 
-### Self integration sketch
+### Self integration (live)
 
-1. Register app in [Self developer docs](https://docs.self.xyz/self-pass/self-pass).
-2. Client runs Self Pass flow → obtains ZK proof + nullifier.
-3. Server verifies proof against Self verifier contract / API.
-4. Store **one nullifier per cohort** (same pattern as World ID) in `users.humanity_nullifier` with `humanity_provider = 'self'`.
-5. Reject duplicate nullifiers across paid cohort slots.
+1. Packages installed: `@selfxyz/core@1.2.0-beta.1`, `@selfxyz/qrcode@1.0.24`. Legacy Self Pass SDK — still fully supported per Self docs; Self Enterprise is the future but a bigger refactor.
+2. Client builds a `SelfApp` via `SelfAppBuilder` with the connected wallet as `userId` and `endpointType: "staging_https"`. Renders a `<SelfQRcodeWrapper />`. User scans with the Self app.
+3. Self relayer POSTs `{attestationId, proof, publicSignals, userContextData}` to `POST /api/self/verify`. The endpoint is **public** (no `requireAuth`) — the ZK proof is the auth, cryptographically bound to the wallet.
+4. Server runs `SelfBackendVerifier.verify(...)` and recovers the wallet from `result.userData.userIdentifier`. Upserts `users.humanity_nullifier` + `humanity_provider = "self"` and promotes the user to `tier = "verified"`.
+5. Duplicate nullifiers are rejected — one Self proof per cohort slot, same pattern as World ID.
+6. **To go from staging to mainnet:** set `SELF_MOCK_PASSPORT=false` and the verifier switches to the Celo mainnet hub automatically. No code change.
 
 ### Celo-specific notes
 

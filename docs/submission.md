@@ -84,7 +84,7 @@ A reusable **proof-of-presence** layer: brand activations, IRL events, retail lo
 - **🤖 ARIA AI Companion (Character Chat)** — Integrated an interactive AI companion (ARIA) with multiple configurable personalities (Guide, Mentor, Rival, Ally) powered by unified Venice/AISA One/Featherless APIs to support and guide survivors.
 - **🔊 Immersive Audio Layer (Sound Design)** — Fully custom, low-latency synthetic sound effects (clicks, success, milestone, errors, and mascot reactions) generated using the Web Audio API to deliver a premium gamey feel without network lag.
 - **✨ Competitor-Optimized Onboarding Flow** — Expanded 9-stage onboarding flow building user investment: customized mascot responses, survival style profiling, tiered plans, 7-day free trial on annual subscriptions, and a 70%-off Exit Intent retention modal.
-- **🛡️ Pluggable Multi-Provider Proof of Humanity** — Prepared a flexible, pluggable PoH architecture supporting World ID (live) and preparing Self Protocol (Celo Sepolia / Alfajores) with developer mock/verify endpoints and reusable database schema.
+- **🛡️ Pluggable Multi-Provider Proof of Humanity** — Extensible PoH architecture supporting World ID and Self Protocol (both live). Self is on Celo Sepolia staging with mock passports; flip `SELF_MOCK_PASSPORT=false` to verify real passports on Celo mainnet.
 - **Blind voting** — tallies hidden until you vote, removing anchoring bias
 - **🔥 Fire reactions** — non-binding style points on submissions
 - **🎭 Infiltrator Mode** — opt-in social deduction: submit borderline photos for immunity or double elimination risk
