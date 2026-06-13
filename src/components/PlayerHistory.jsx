@@ -10,9 +10,22 @@ export default function PlayerHistory({ onBack }) {
     initial: [],
   });
 
+  const { data: voterStats } = usePolling(
+    user?.address ? `/api/voter-stats/${user.address}` : null,
+    {
+      intervalMs: 60_000,
+      transform: (json) => json,
+      initial: null,
+    },
+  );
+
   const myCheckins = todayRes.filter(
     (c) => c.address?.toLowerCase() === user?.address?.toLowerCase(),
   );
+
+  const accuracyPct = voterStats?.accuracy != null
+    ? Math.round(voterStats.accuracy * 100)
+    : null;
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body">
@@ -21,17 +34,39 @@ export default function PlayerHistory({ onBack }) {
           <span className="text-dim text-lg">←</span>
         </button>
         <div>
-          <h2 className="font-display text-3xl text-bone tracking-wide">HISTORY</h2>
+          <h2 className="font-display text-3xl text-bone tracking-wide">TODAY</h2>
           <p className="font-mono text-dim text-xs">{user?.displayName ?? "Your record"}</p>
         </div>
       </div>
 
-      <div className="flex-1 px-5 pb-8">
+      <div className="flex-1 px-5 pb-8 space-y-3">
+        {/* Voter accuracy callout — the single most rewarding stat for
+            a returning player. Only shown once they've voted. */}
+        {voterStats && (voterStats.total ?? 0) > 0 && (
+          <div className="bg-smoke border border-amber/30 rounded-2xl p-4">
+            <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Your vote accuracy</p>
+            <div className="flex items-baseline gap-2">
+              <span className="font-display text-4xl text-amber leading-none">
+                {accuracyPct != null ? `${accuracyPct}%` : "—"}
+              </span>
+              <span className="font-mono text-dim text-xs">
+                ({voterStats.correct}/{voterStats.total} correct)
+              </span>
+            </div>
+            <p className="text-dim text-[11px] font-mono mt-2 leading-relaxed">
+              How often the crowd agreed with the final ruling on submissions you voted on.
+            </p>
+          </div>
+        )}
+
+        <p className="font-mono text-dim text-xs uppercase tracking-wider pt-2">
+          Today&apos;s check-ins
+        </p>
         {myCheckins.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-48 gap-3">
             <p className="text-4xl">📋</p>
             <p className="text-dim font-mono text-sm">No check-ins yet today.</p>
-            <p className="text-dim/70 font-mono text-xs text-center">Your past check-ins and rankings will appear here.</p>
+            <p className="text-dim/70 font-mono text-xs text-center">Race to the theme location before the cap fills.</p>
           </div>
         ) : (
           <div className="space-y-3">

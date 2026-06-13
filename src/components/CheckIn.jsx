@@ -55,7 +55,8 @@ export default function CheckIn({ onBack, onSubmit }) {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
 
-  // Auto-share on Farcaster after successful check-in
+  // Auto-share on Farcaster after a successful check-in. Delayed 4s so
+  // the composer doesn't pop over the user's "Back to game" tap.
   useEffect(() => {
     if (!isFarcaster || step !== 2 || !result?.survived || sharedRef.current) return;
     sharedRef.current = true;
@@ -70,7 +71,7 @@ export default function CheckIn({ onBack, onSubmit }) {
           embeds: [shareUrl],
         });
       } catch { /* user dismissed composer */ }
-    }, 1500);
+    }, 4000);
     return () => clearTimeout(timer);
   }, [isFarcaster, step, result, currentDay]);
 
@@ -285,7 +286,12 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               )}
 
-              {/* Infiltrator toggle */}
+              {/* Infiltrator toggle — submit a borderline photo for immunity
+                  if the crowd sides with you. Risky, but it can save your run. */}
+              <p className="text-dim text-[11px] font-mono mb-2 leading-relaxed">
+                🕶️ <span className="text-purple-300">Infiltrator</span> is a high-risk play: pick a
+                photo that could go either way. If the crowd trusts it, you earn immunity for tomorrow.
+              </p>
               <button
                 onClick={() => setInfiltratorMode(!infiltratorMode)}
                 className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
