@@ -723,7 +723,8 @@ app.get("/api/stats", async (req, res) => {
       cohort: {
         size: COHORT_CONFIG.size,
         paidSlots: COHORT_CONFIG.paidSlots,
-        freeSlots: COHORT_CONFIG.freeSlots,
+        freeSlots: freeSlotsFor(paidCount),
+        freeSlotsMax: COHORT_CONFIG.freeSlots,
         paidCount,
         freeCount,
       },
@@ -1206,6 +1207,7 @@ app.get("/api/game/state", async (req, res) => {
       cohortFull,
       cohort: {
         ...COHORT_CONFIG,
+        freeSlots: freeSlotsFor(split.paidCount),
         paidCount: split.paidCount,
         freeCount: split.freeCount,
       },
@@ -1377,7 +1379,8 @@ app.get("/api/cohort/roster", async (req, res) => {
         cohort: COHORT_CONFIG.cohort,
         size: COHORT_CONFIG.size,
         paidSlots: COHORT_CONFIG.paidSlots,
-        freeSlots: COHORT_CONFIG.freeSlots,
+        freeSlots: freeSlotsFor(paidCount),
+        freeSlotsMax: COHORT_CONFIG.freeSlots,
         paidCount,
         freeCount,
       },
