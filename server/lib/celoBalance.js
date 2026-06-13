@@ -18,7 +18,7 @@ const DEFAULT_CELO_RPC = "https://forno.celo.org";
 
 const CELO_TOKENS = {
   cUSD: {
-    address: "0x765DE816845861e75A25fCA122bb6898E8B2a1cF",
+    address: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
     decimals: 18,
   },
   USDC: {
@@ -87,6 +87,39 @@ async function celoBalance(holderAddress) {
   const hexWei = await ethGetBalance(holderAddress);
   if (!hexWei || hexWei === "0x") return 0;
   return Number(BigInt(hexWei)) / 1e18;
+}
+
+/**
+ * Debug: raw balanceOf calls against each token contract. Useful
+ * for diagnosing why the UI shows "—" when the explorer shows
+ * a real balance.
+ */
+export async function debugCeloBalances(address) {
+  const tokens = ["cUSD", "USDC", "CELO"];
+  const out = { address, results: {} };
+  for (const t of tokens) {
+    try {
+      const padded = address.replace("0x", "").toLowerCase().padStart(64, "0");
+      const data = t === "CELO"
+        ? null
+        : ERC20_BALANCE_OF_SELECTOR + padded;
+      const result = t === "CELO"
+        ? await ethGetBalance(address)
+        : await ethCall(CELO_TOKENS[t === "cUSD" ? "cUSD" : "USDC"].address, data);
+      out.results[t] = {
+        contract: t === "CELO" ? null : CELO_TOKENS[t === "cUSD" ? "cUSD" : "USDC"].address,
+        raw: result,
+        decimal: t === "CELO" ? 18 : (t === "cUSD" ? 18 : 6),
+        balance: result && result !== "0x"
+          ? Number(BigInt(result)) / 10 ** (t === "CELO" ? 18 : (t === "cUSD" ? 18 : 6))
+          : 0,
+        ok: !!(result && result !== "0x"),
+      };
+    } catch (e) {
+      out.results[t] = { error: String(e?.message ?? e), ok: false };
+    }
+  }
+  return out;
 }
 
 /**

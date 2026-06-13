@@ -10,6 +10,7 @@ import { rateLimit } from "./rateLimit.js";
 import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
 import { drawLottery, ALGORITHM_VERSION, freeSlotsFor } from "./lib/lottery.js";
+import { debugCeloBalances } from "./lib/celoBalance.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -1539,6 +1540,20 @@ async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
     lotteryInFlight = null;
   }
 }
+
+// =============== Debug endpoints (no auth) ===============
+// Used during launch diagnosis. Returns raw RPC results for the
+// Celo pool address so we can see why the UI shows "—".
+app.get("/api/debug/celo-balances", async (req, res) => {
+  try {
+    const address = String(req.query.address || "");
+    if (!address) return res.status(400).json({ error: "address_required" });
+    const result = await debugCeloBalances(address);
+    return res.json({ ok: true, ...result });
+  } catch (e) {
+    res.status(500).json({ error: "debug_failed", message: e instanceof Error ? e.message : String(e) });
+  }
+});
 
 app.get("/api/lottery/status", async (req, res) => {
   try {
