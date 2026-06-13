@@ -191,9 +191,9 @@ export default function Chat({ onBack }) {
             <div className="flex items-center gap-2 flex-wrap">
               {isMiniApp && onlineCount != null ? (
                 <span className="font-mono text-dim text-xs">{onlineCount} humans reserved</span>
-              ) : (
-                <span className="font-mono text-amber text-xs">Demo chat — simulated messages</span>
-              )}
+              ) : useMocks ? (
+                <span className="font-mono text-amber text-xs">Dev preview — simulated messages</span>
+              ) : null}
               {isMiniApp && (
                 <>
                   <span className="text-dim text-xs">·</span>
