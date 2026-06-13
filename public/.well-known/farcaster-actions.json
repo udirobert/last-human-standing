@@ -1,0 +1,14 @@
+{
+  "actions": [
+    {
+      "name": "Vote HUMAN/SUS",
+      "icon": "vote",
+      "description": "Vote HUMAN (real) or SUS (fake) on a Last Human Standing check-in",
+      "aboutUrl": "https://lasthumanstanding.thisyearnofear.com",
+      "action": {
+        "type": "post",
+        "url": "https://lasthumanstanding.thisyearnofear.com/api/farcaster/action/vote"
+      }
+    }
+  ]
+}

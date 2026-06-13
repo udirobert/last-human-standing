@@ -14,11 +14,15 @@ import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payment.js";
 import referralRoutes from "./routes/referral.js";
 import ariaRoutes from "./routes/aria.js";
+import activityRoutes from "./routes/activity.js";
+import farcasterRoutes from "./routes/farcaster.js";
+import shareRoutes from "./routes/share.js";
 import {
   ensureObjectBody, ensureString, ensureNumber, ensureBoolean,
   ensureEnum, ensureIsoDate, sendValidationError,
 } from "./lib/validators.js";
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
+import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
 function signRequest(signingKey, action, ttlSeconds = 300) {
   const nonce = randomId(16);
   const created_at = Math.floor(Date.now() / 1000);
@@ -170,6 +174,10 @@ setInterval(() => {
   autoAdvanceRounds().catch(() => {});
 }, 60_000).unref();
 
+// Start onchain vote relayer — reads from file-based queue, submits to VoteRegistry on Celo.
+// No-op (logs "vote_relayer_offline") if VOTE_REGISTRY_ADDRESS + CELO_SIGNING_KEY not set.
+const stopRelayer = startVoteRelayer({ log });
+
 const rateLimitStorage = supabaseAdmin
   ? {
       async hit({ key, now: currentNow, windowMs, limit }) {
@@ -217,7 +225,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
       frameSrc: ["'self'", "https://js.stripe.com"],
-      connectSrc: ["'self'", "https://worldchain-mainnet.g.alchemy.com", "https://*.supabase.co", "https://developer.worldcoin.org"],
+      connectSrc: ["'self'", "https://worldchain-mainnet.g.alchemy.com", "https://*.supabase.co", "https://developer.worldcoin.org", "https://api.neynar.com"],
       imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", "data:"],
@@ -864,6 +872,9 @@ app.post(
           return res.status(400).json({ error: "db_vote_failed", message: error.message });
         }
 
+        // Enqueue for onchain batch submission
+        try { enqueueVote(submissionId, req.user.address, vote); } catch {};
+
         // Anti-cheat: vote ring detection (scoped to this voter's history)
         const { data: voterVotes } = await supabaseAdmin
           .from("votes")
@@ -897,7 +908,7 @@ app.post(
           updateVoterAccuracy(submissionId, computed.status).catch(() => {});
         }
 
-        return res.json({ ok: true, votes: countedVotes, status: computed.status, voteQuorum: quorum });
+        return res.json({ ok: true, votes: countedVotes, status: computed.status, voteQuorum: quorum, onchain: Boolean(process.env.VOTE_REGISTRY_ADDRESS) });
       }
     } catch (error) {
       sendValidationError(res, error);
@@ -1170,7 +1181,17 @@ app.post(
         } else {
           log("checkin_survived", { address: req.user.address, day, rank: data?.rank });
         }
-        return res.json({ ok: true, rank: data.rank, survived: data.survived, distanceM: data.distance_m != null ? Math.round(data.distance_m) : null, survivalCap: cap, gpsShared: hasUserGps });
+
+        const { data: ckId } = await supabaseAdmin
+          .from("checkins")
+          .select("id")
+          .eq("address", req.user.address)
+          .eq("day", day)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        return res.json({ ok: true, rank: data.rank, survived: data.survived, distanceM: data.distance_m != null ? Math.round(data.distance_m) : null, survivalCap: cap, gpsShared: hasUserGps, checkinId: ckId?.id ?? null });
       }
 
       return res.status(501).json({ error: "supabase_not_configured", message: "Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable check-ins." });
@@ -1385,6 +1406,9 @@ app.use("/api", paymentRoutes({
 
 app.use("/api", referralRoutes({ supabaseAdmin, log, makeReferralCode, rateLimitStorage }));
 app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));
+app.use("/api", activityRoutes({ supabaseAdmin, log }));
+app.use("/", farcasterRoutes({ supabaseAdmin, log }));
+app.use("/api", shareRoutes({ supabaseAdmin, log }));
 
 export { app };
 

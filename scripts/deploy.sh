@@ -70,6 +70,7 @@ rsync -az --delete \
   --include='server/***' \
   --include='public/***' \
   --include='dist/***' \
+  --include='contracts/***' \
   --include='package.json' \
   --include='package-lock.json' \
   --exclude='*' \
