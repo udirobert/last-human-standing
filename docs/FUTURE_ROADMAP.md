@@ -41,7 +41,12 @@ Do not build these until we have data from 25+ real users playing through at lea
 - **Referral visualizations**: show invitation network trees
 - **Streak rewards**: bonus cosmetics for consecutive daily check-ins
 - **Shareable moments**: auto-generate highlight reels of best check-ins for social sharing
-- **Cross-platform sharing incentives**: WLD or cosmetics for Twitter/Farcaster shares
+
+### Farcaster Snaps (post-launch, week 2+)
+- Add a snap handler behind content negotiation on the share URL (HTML for browsers, snap JSON for the Farcaster client)
+- Snap UI: `item` for check-in header, `bar_chart` for live vote tallies, `toggle_group` for HUMAN/SUS, `button` with `submit` to a new `/api/snap/vote` endpoint
+- Gate behind a feature flag and a client-version check; re-evaluate when the beta spec graduates
+- See [FARCASTER.md](./FARCASTER.md#future-farcaster-snaps-post-launch-week-2) for the full plan and rationale
 
 ### Retention
 - **Achievement system**: badges for diverse locations, voting accuracy, infiltration mastery

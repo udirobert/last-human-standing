@@ -58,6 +58,10 @@ Last Human Standing integrates key premium improvements inspired by modern, high
 - **MiniKit Sign Message** — cryptographic stamp on every check-in
 - **World Chat (XMTP)** — coordination, trash talk, audit chatter
 
+## Farcaster
+
+The app also ships as a **Farcaster Mini App** (fka Warpcast). Signed manifest, modern `fc:miniapp` embed spec, in-app `composeCast` for sharing, and a Cast Action manifest kept as a no-cost fallback. Snaps are planned post-launch — see [FARCASTER.md](./FARCASTER.md) for what we ship, what we deliberately don't, and the snap integration plan.
+
 ## Local development
 
 ```bash
