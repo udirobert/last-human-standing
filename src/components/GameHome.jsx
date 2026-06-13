@@ -11,7 +11,7 @@ import ModeBanner from './ModeBanner.jsx';
 import ActivityFeed from './ActivityFeed.jsx';
 
 export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLeaderboard, onViewHistory }) {
-  const { user, isWorldApp, isMiniApp } = useWorld();
+  const { user, isWorldApp } = useWorld();
   const {
     phase, launchAt, currentDay,
     cohortSize, reservedCount, cohortFull,
@@ -59,7 +59,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
   const prizeWld = stats?.prizePool?.balanceWld ?? null;
   const prizeDisplay = prizeWld != null && prizeWld > 0
     ? `${prizeWld.toLocaleString(undefined, { maximumFractionDigits: 2 })} WLD`
-    : (reservedCount > 0 ? `${reservedCount} WLD` : '0 WLD');
+    : '— WLD';
   const prizeExplorer = stats?.prizePool?.explorerUrl ?? null;
 
   const isPrelaunch = phase === 'prelaunch';
@@ -96,7 +96,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
       <MissionBoard
         onCheckIn={onCheckIn}
         onViewFeed={onViewFeed}
-        isDemoMode={!isMiniApp}
       />
 
       <ActivityFeed />
@@ -226,7 +225,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewChat, onViewLead
         <div className="bg-smoke rounded-2xl p-4 border border-ember">
           <p className="text-dim text-xs font-mono mb-1">Survivors</p>
           <p className="font-display text-2xl text-bone leading-none">{activePlayers ?? '—'}</p>
-          <p className="text-[10px] font-mono text-dim mt-1">{eliminated} out</p>
+          <p className="text-[10px] font-mono text-dim mt-1">{eliminated} eliminated</p>
         </div>
       </div>
 

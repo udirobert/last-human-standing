@@ -309,19 +309,39 @@ export default function Onboarding({ onEnter }) {
 
             <Mascot variant={entryPaid ? "celebrating" : "excited"} size={64} />
             <h2 className="font-display text-4xl text-bone mt-4 mb-1">
-              {entryPaid ? "SPOT SECURED" : `RESERVE · ${ENTRY_FEE_WLD} WLD`}
+              {entryPaid
+                ? "SPOT SECURED"
+                : import.meta.env.VITE_FREE_ENTRY_MODE === "true"
+                  ? "RESERVE · FREE"
+                  : `RESERVE · ${ENTRY_FEE_WLD} WLD`}
             </h2>
             <p className="text-dim text-sm font-mono mb-4">
-              Your fee goes into the prize pool. One entry, one slot.
+              {entryPaid
+                ? "You're in. Come back when Day 1 opens."
+                : import.meta.env.VITE_FREE_ENTRY_MODE === "true"
+                  ? "Launch campaign — no payment required. One slot per wallet."
+                  : `Your ${ENTRY_FEE_WLD} WLD entry goes into the prize pool. One entry, one slot.`}
             </p>
             <TrustBadge size="md" className="mb-4" />
 
             <div className="bg-smoke border border-neon/30 rounded-2xl p-4 mb-4 space-y-3">
-              <p className="font-mono text-neon text-xs uppercase">Badges</p>
+              <p className="font-mono text-neon text-xs uppercase">Trust tiers</p>
               <ul className="text-dim text-xs font-mono space-y-2 list-disc pl-4">
-                <li><span className="text-amber">Basic</span> — paid, not yet verified (full access when configured)</li>
-                <li><span className="text-neon">Verified</span> — World ID or Self Protocol (Celo)</li>
+                <li>
+                  <span className="text-amber">Provisional</span> — wallet signed in, not yet verified
+                  (can play, can vote when configured)
+                </li>
+                <li>
+                  <span className="text-neon">Verified human</span> — World ID or Self Protocol
+                  (full trust, recommended before Day 1)
+                </li>
               </ul>
+              {tier === "unverified" && (
+                <p className="text-dim/80 text-[10px] font-mono">
+                  You're currently <span className="text-amber">unverified</span> — sign in and reserve
+                  a slot to unlock the Provisional tier.
+                </p>
+              )}
             </div>
 
             {!entryPaid && (

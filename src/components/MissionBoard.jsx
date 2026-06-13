@@ -13,7 +13,7 @@ function formatWindow(iso) {
   }
 }
 
-export default function MissionBoard({ onCheckIn, onViewFeed, isDemoMode }) {
+export default function MissionBoard({ onCheckIn, onViewFeed }) {
   const { phase, isLive, currentDay, round, you } = useRound();
 
   const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
@@ -55,12 +55,6 @@ export default function MissionBoard({ onCheckIn, onViewFeed, isDemoMode }) {
       animate={{ opacity: 1, y: 0 }}
       className="mx-5 mb-4 bg-smoke border border-neon/25 rounded-3xl p-5 relative overflow-hidden"
     >
-      {isDemoMode && (
-        <p className="absolute top-3 right-3 font-mono text-[10px] text-amber uppercase tracking-wider">
-          Demo data
-        </p>
-      )}
-
       <div className="flex items-start justify-between gap-2 mb-3">
         <div>
           <p className="font-mono text-neon text-xs tracking-widest uppercase">Today&apos;s mission · Day {currentDay ?? "—"}</p>

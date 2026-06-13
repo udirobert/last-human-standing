@@ -5,7 +5,7 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 
 export default function ModeBanner() {
-  const { isWorldApp, isFarcaster, installAttempted } = useWorld();
+  const { isWorldApp, isFarcaster, installAttempted, walletAuthed } = useWorld();
   const { isLoading, usesDemoState, refresh } = useRound();
   const { tier } = useTrustTier();
 
@@ -23,11 +23,18 @@ export default function ModeBanner() {
         tone: tier === "verified" ? "neon" : "amber",
       };
     }
+    // Browser: real player if signed in, otherwise needs-onboarding
+    if (walletAuthed) {
+      return {
+        label: tier === "verified" ? "Verified human" : "Browser",
+        tone: tier === "verified" ? "neon" : "indigo",
+      };
+    }
     return {
-      label: tier === "verified" ? "Verified" : "Demo mode",
+      label: "Not signed in",
       tone: "amber",
     };
-  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier]);
+  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier, walletAuthed]);
 
   const classes =
     mode.tone === "neon"
@@ -54,7 +61,7 @@ export default function ModeBanner() {
         >
           <RefreshCcw size={11} aria-hidden="true" />
           <span className="font-mono text-[10px] uppercase tracking-wider leading-none">
-            Demo round
+            Retry live state
           </span>
         </button>
       )}

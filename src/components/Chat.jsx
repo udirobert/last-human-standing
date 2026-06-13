@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CHAT_MESSAGES } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 
 const BOT_RESPONSES = [
@@ -13,6 +12,11 @@ const BOT_RESPONSES = [
   "real ones check in from a local spot. show some culture.",
 ];
 
+// Dev convenience: in development, fall back to simulated chat when not
+// in the mini app. In production, real lobby messages are the only thing
+// served to anyone — browser visitors are real players.
+const useMocks = import.meta.env.DEV;
+
 export default function Chat({ onBack }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -22,16 +26,16 @@ export default function Chat({ onBack }) {
   const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
   const [rosterCount, setRosterCount] = useState(0);
   const [sending, setSending] = useState(false);
-  const onlineCount = isMiniApp ? rosterCount : null;
+  const onlineCount = isMiniApp || useMocks ? rosterCount : null;
 
   // ---- Browser demo: seed fake messages + bot interval ----
   useEffect(() => {
-    if (isMiniApp) return;
-    setMessages(CHAT_MESSAGES);
+    if (!useMocks || isMiniApp) return;
+    import('../data/game').then(({ CHAT_MESSAGES }) => setMessages(CHAT_MESSAGES));
   }, [isMiniApp]);
 
   useEffect(() => {
-    if (isMiniApp) return;
+    if (!useMocks || isMiniApp) return;
     const interval = setInterval(() => {
       if (Math.random() > 0.7) {
         const users = ['0xGhost_4459', '0xHuman_7734', '0xLastOnes_8823', '0xSurvivor_2291', '0xNewbie_9001', '0xElite_0042'];
@@ -95,7 +99,9 @@ export default function Chat({ onBack }) {
     if (!input.trim()) return;
     const text = input.trim();
 
-    if (isMiniApp && walletAuthed) {
+    const shouldUseRealLobby = isMiniApp || !useMocks;
+
+    if (shouldUseRealLobby && walletAuthed) {
       // Real lobby message — post to server
       setSending(true);
       setMessages(m => [...m, {
@@ -165,7 +171,7 @@ export default function Chat({ onBack }) {
     }
   };
 
-  const canSend = isMiniApp
+  const canSend = isMiniApp || useMocks
     ? input.trim().length > 0 && walletAuthed
     : input.trim().length > 0 && toUser.trim().length > 0;
 
@@ -179,9 +185,7 @@ export default function Chat({ onBack }) {
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-3xl text-bone tracking-wide">
-                {isMiniApp ? 'SURVIVORS LOBBY' : 'WORLD CHAT'}
-              </h2>
+              <h2 className="font-display text-3xl text-bone tracking-wide">SURVIVORS LOBBY</h2>
               <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             </div>
             <div className="flex items-center gap-2 flex-wrap">
@@ -285,8 +289,8 @@ export default function Chat({ onBack }) {
       <div className="px-5 py-4 bg-ash border-t border-ember">
         <div className="flex gap-3 items-end">
           <div className="flex-1 space-y-2">
-            {/* Recipient field — only for browser demo (1:1 DM) */}
-            {!isMiniApp && (
+            {/* Recipient field — only for browser dev preview (1:1 DM via World Chat) */}
+            {!isMiniApp && useMocks && (
               <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
                 <span className="font-mono text-dim text-xs">@</span>
                 <input
@@ -305,7 +309,7 @@ export default function Chat({ onBack }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder={isMiniApp ? 'message the lobby...' : 'say something to the survivors...'}
+                placeholder={isMiniApp || useMocks ? 'message the lobby...' : 'message the lobby...'}
                 className="flex-1 bg-transparent text-bone text-sm font-body focus:outline-none placeholder:text-dim"
               />
             </div>

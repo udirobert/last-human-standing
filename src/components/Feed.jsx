@@ -21,17 +21,23 @@ const STATUS_LABELS = {
 
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
+// Dev convenience: in development, fall back to MOCK_SUBMISSIONS when
+// the user is NOT in the mini app. In production, always show real
+// data — browser visitors are real players.
+const useMocks = import.meta.env.DEV;
+
 export default function Feed({ onBack }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
   const { verification } = useRound();
-  const [submissions, setSubmissions] = useState(isMiniApp ? [] : MOCK_SUBMISSIONS);
+  const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
   const [fired, setFired] = useState({});
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [loading, setLoading] = useState(isMiniApp);
+  const [loading, setLoading] = useState(true);
   const [challengeToast, setChallengeToast] = useState(null);
+  const [loadError, setLoadError] = useState(null);
 
   const { canVote } = useTrustTier();
 
@@ -42,10 +48,14 @@ export default function Feed({ onBack }) {
     }
     try {
       const resp = await fetch("/api/feed", { credentials: "include" });
-      if (!resp.ok) return;
+      if (!resp.ok) {
+        setLoadError(`feed_${resp.status}`);
+        return;
+      }
+      setLoadError(null);
       const data = await resp.json();
       if (Array.isArray(data?.submissions)) {
-        if (!isMiniApp && data.submissions.length === 0) return;
+        if (useMocks && !isMiniApp && data.submissions.length === 0) return;
         setSubmissions(
           data.submissions.map((s) => ({
             id: s.id,
@@ -135,7 +145,12 @@ export default function Feed({ onBack }) {
       return;
     }
     const msg = `I’m challenging your check-in: "${sub.caption}". Reply with context / proof.`;
-    await sendWorldChat({ to: sub.username, message: msg });
+    try {
+      await sendWorldChat({ to: sub.username, message: msg });
+    } catch (e) {
+      setLoadError(`challenge_failed: ${e instanceof Error ? e.message : 'unknown'}`);
+      setTimeout(() => setLoadError(null), 4000);
+    }
   };
 
   const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
@@ -178,9 +193,16 @@ export default function Feed({ onBack }) {
       </div>
 
       <div className="px-5 space-y-4">
-        {!isMiniApp && (
+        {useMocks && !isMiniApp && (
           <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5">
-            Demo feed — sample submissions for browser preview. Live data appears in World App after check-ins.
+            Dev preview — sample submissions. Live data appears in production builds.
+          </p>
+        )}
+        {loadError && (
+          <p className="text-blood font-mono text-xs text-center py-2 border border-blood/30 rounded-xl bg-blood/5">
+            {loadError.startsWith("challenge_failed")
+              ? "Couldn't send challenge via World Chat."
+              : "Live feed unavailable. Retrying…"}
           </p>
         )}
         <VoteGateBanner />
@@ -189,7 +211,7 @@ export default function Feed({ onBack }) {
         )}
 
         {!loading && filtered.length === 0 && (
-          <div className="text-dim font-mono text-sm text-center py-12">No submissions yet for {TODAY_THEME.theme}.</div>
+          <div className="text-dim font-mono text-sm text-center py-12">No submissions yet for {TODAY_THEME.theme}. Be the first to check in.</div>
         )}
 
         <AnimatePresence>
