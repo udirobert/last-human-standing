@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Mascot from './Mascot';
+import FAQModal from './FAQModal.jsx';
+import AmbientBackdrop from './AmbientBackdrop.jsx';
 
 /**
  * Survival Profile Quiz - collects key user data naturally
@@ -138,7 +140,12 @@ export default function SurvivalProfile({ onComplete }) {
   };
 
   return (
-    <div className="flex flex-col items-center px-5 py-6 min-h-[500px]">
+    <div className="relative flex flex-col items-center px-5 py-6 min-h-[500px] overflow-hidden">
+      <AmbientBackdrop phase="prelaunch" />
+      <div className="absolute top-2 right-2 z-10">
+        <FAQModal />
+      </div>
+      <div className="relative z-10 w-full">
       <AnimatePresence mode="wait">
         {!showResult ? (
           <motion.div
@@ -228,6 +235,7 @@ export default function SurvivalProfile({ onComplete }) {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
