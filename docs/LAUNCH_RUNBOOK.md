@@ -113,6 +113,28 @@ Compare the output's `winners` list to the one in
 | Celo pot reads 0 forever | `CELO_RPC` rate-limited or unreachable | Set `CELO_RPC` to a paid provider (e.g. `https://celo-mainnet.g.alchemy.com/v2/...`); restart PM2 |
 | `/api/lottery/draw` returns 401 | `VITE_ADMIN_TOKEN` not set or wrong | Set it in the server env, restart PM2 |
 
+### Direct DB connection (verified 2026-06-13)
+
+The Supabase project is in `aws-0-eu-west-1`. The direct endpoint
+(port 5432) is connection-refused; the **pooler** is the working
+entry point.
+
+```bash
+PGPASSWORD='<DB_PASSWORD>' \
+  psql -h aws-0-eu-west-1.pooler.supabase.com -p 6543 \
+       -U postgres.emumokebsahapnqnstlr -d postgres
+```
+
+Other regions return `tenant/user not found` (misleading Supabase
+error — the project isn't there).
+
+For migrations in a hurry, use the bundled runner:
+
+```bash
+DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-west-1.pooler.supabase.com:6543/postgres' \
+  node scripts/migrate.mjs --reset
+```
+
 ## Post-launch
 
 - [ ] Update `docs/PRODUCTION_READY.md` with the actual cohort 1
