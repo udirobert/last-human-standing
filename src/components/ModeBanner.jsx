@@ -5,36 +5,23 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { useTrustTier } from "../hooks/useTrustTier.js";
 
 export default function ModeBanner() {
-  const { isWorldApp, isFarcaster, installAttempted, walletAuthed } = useWorld();
+  const { isWorldApp, isFarcaster, installAttempted, walletAuthed, humanityProvider } = useWorld();
   const { isLoading, usesDemoState, refresh } = useRound();
   const { tier } = useTrustTier();
 
   const mode = useMemo(() => {
     if (!installAttempted || isLoading) return { label: "Syncing", tone: "dim" };
-    if (isFarcaster) {
+    if (tier === "verified") {
       return {
-        label: tier === "verified" ? "Verified human" : "Farcaster",
-        tone: tier === "verified" ? "neon" : "indigo",
+        label: humanityProvider === "self" ? "Verified · Self" : "Verified · World ID",
+        tone: "neon",
       };
     }
-    if (isWorldApp) {
-      return {
-        label: tier === "verified" ? "Verified human" : "World App",
-        tone: tier === "verified" ? "neon" : "amber",
-      };
-    }
-    // Browser: real player if signed in, otherwise needs-onboarding
-    if (walletAuthed) {
-      return {
-        label: tier === "verified" ? "Verified human" : "Browser",
-        tone: tier === "verified" ? "neon" : "indigo",
-      };
-    }
-    return {
-      label: "Not signed in",
-      tone: "amber",
-    };
-  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier, walletAuthed]);
+    if (isFarcaster) return { label: "Farcaster", tone: "indigo" };
+    if (isWorldApp) return { label: "World App", tone: "amber" };
+    if (walletAuthed) return { label: "Browser", tone: "indigo" };
+    return { label: "Not signed in", tone: "amber" };
+  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier, walletAuthed, humanityProvider]);
 
   const classes =
     mode.tone === "neon"

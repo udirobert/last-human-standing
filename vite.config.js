@@ -11,7 +11,7 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
-      external: ["@selfxyz/qrcode"],
+      external: [],
       output: {
         manualChunks(id) {
           if (id.includes("node_modules/wagmi")) return "vendor-wagmi";

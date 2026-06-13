@@ -1,76 +1,122 @@
-import { useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
+import { useWorld } from "../world/WorldProvider.jsx";
 import { HUMANITY_PROVIDERS } from "../config/humanityProviders.js";
 
 const SELF_SCOPE = "last-human-standing";
+const SELF_APP_NAME = "Last Human Standing";
 
 /**
  * SelfVerify — Self Protocol (Celo) proof-of-humanity verification.
  *
- * When VITE_ENABLE_SELF=true and @selfxyz/qrcode is installed,
- * this renders a QR-based scan flow. Otherwise it shows a fallback
- * that triggers the Self relayer flow via POST /api/self/verify.
+ * Renders a QR code (and a deep-link button for mobile users who already
+ * have the Self app) using the official @selfxyz/qrcode SDK. When the
+ * user scans and the Self app submits a ZK proof, the relayer hits
+ * POST /api/self/verify on our backend, which verifies the proof and
+ * upserts the user's row. We poll /api/me to learn when it's done.
+ *
+ * Endpoint type: "staging_https" (Celo Sepolia, mock passports) for the
+ * launch; flip SELF_MOCK_PASSPORT=false on the server to use mainnet
+ * with real passports (one env var, no code change).
  */
 export default function SelfVerify() {
-  const [status, setStatus] = useState("idle"); // idle | scanning | verifying | verified | error
-  const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
+  const { user, refreshAuth } = useWorld();
+  const [pollVerified, setPollVerified] = useState(false);
+  const [qrError, setQrError] = useState(null);
+  const [modules, setModules] = useState(null);
 
   const selfEnabled = import.meta.env.VITE_ENABLE_SELF === "true";
   const self = HUMANITY_PROVIDERS.self;
+  const walletAddress = user?.address;
 
-  const handleVerify = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    setStatus("verifying");
-
-    try {
-      // Try to use Self QR code component if available
-      let proofPayload;
+  // Lazy-load the SDK so it doesn't bloat the main bundle.
+  useEffect(() => {
+    if (!selfEnabled) return;
+    let cancelled = false;
+    (async () => {
       try {
-        const { SelfApp, SelfAppQRCode } = await import("@selfxyz/qrcode");
-        // Use the app disclosure flow — user scans QR with Self app
-        proofPayload = await SelfAppQRCode.waitForProof();
+        const m = await import("@selfxyz/qrcode");
+        if (!cancelled) setModules(m);
       } catch {
-        // Fallback: send a minimal payload and let the server guide the flow
-        const resp = await fetch("/api/self/verify", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            scope: SELF_SCOPE,
-            // Server expects: attestationId, proof, publicSignals, nullifier
-            // Sent as empty; server's SelfBackendVerifier will guide the relayer
-          }),
-        });
-
-        if (!resp.ok) {
-          const json = await resp.json().catch(() => ({}));
-          // If server says self_not_configured, we need the client-side lib
-          if (json.error === "self_not_configured" || json.error === "self_verifier_unavailable") {
-            setError(`Self Protocol backend not ready. Set SELF_ENABLED=true and ensure @selfxyz/core is installed.`);
-            setStatus("error");
-            return;
-          }
-          throw new Error(json.error || "Verification request failed");
-        }
-
-        proofPayload = await resp.json();
+        if (!cancelled) setQrError("Self SDK not available. Install @selfxyz/qrcode.");
       }
+    })();
+    return () => { cancelled = true; };
+  }, [selfEnabled]);
 
-      if (proofPayload?.ok || proofPayload?.verified) {
-        setStatus("verified");
-      } else {
-        setError(proofPayload?.error || "Verification failed");
-        setStatus("error");
-      }
+  // Build the SelfApp config once we have the SDK and a wallet address.
+  // useMemo (not useEffect+setState) so the linter doesn't complain about
+  // setState in an effect — building the SelfApp is pure, no side effects.
+  const buildError = useMemo(() => {
+    if (!modules || !walletAddress || !selfEnabled) return null;
+    try {
+      const endpoint =
+        import.meta.env.VITE_SELF_VERIFY_ENDPOINT ||
+        `${window.location.origin}/api/self/verify`;
+      const app = new modules.SelfAppBuilder({
+        version: 2,
+        appName: SELF_APP_NAME,
+        scope: SELF_SCOPE,
+        endpoint,
+        userId: walletAddress,
+        endpointType: "staging_https", // staging for launch; flip server env to mainnet later
+        userIdType: "hex",
+        disclosures: {
+          minimumAge: 18,
+          nationality: true,
+          gender: true,
+        },
+      }).build();
+      return { app, error: null };
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Unknown error");
-      setStatus("error");
-    } finally {
-      setBusy(false);
+      return { app: null, error: e instanceof Error ? e.message : "Failed to build Self app" };
     }
+  }, [modules, walletAddress, selfEnabled]);
+
+  const selfApp = buildError?.app ?? null;
+  const buildErrMsg = buildError?.error ?? null;
+
+  // Poll /api/me while the QR is showing; flip to "verified" when the
+  // server has written the Self nullifier for our wallet.
+  useEffect(() => {
+    if (!selfApp || !walletAddress) return;
+    let stopped = false;
+    const tick = async () => {
+      try {
+        const resp = await fetch("/api/me", { credentials: "include" });
+        if (!resp.ok) return;
+        const json = await resp.json();
+        if (json.humanityProvider === "self" && json.humanityVerified) {
+          if (!stopped) {
+            setPollVerified(true);
+            refreshAuth?.();
+          }
+        }
+      } catch { /* keep polling */ }
+    };
+    const interval = setInterval(tick, 3000);
+    tick();
+    return () => { stopped = true; clearInterval(interval); };
+  }, [selfApp, walletAddress, refreshAuth]);
+
+  // Status is derived: build error > qr error > verified (poll or callback) > ready (built) > idle
+  const status = buildErrMsg || qrError
+    ? "error"
+    : pollVerified
+      ? "verified"
+      : selfApp
+        ? "ready"
+        : "idle";
+  const errorMessage = buildErrMsg || qrError;
+
+  const handleManualVerify = useCallback(() => {
+    setQrError("Scan the QR with the Self app, or tap the deep link below.");
   }, []);
+
+  const universalLink = useMemo(() => {
+    if (!selfApp || !modules) return null;
+    try { return modules.getUniversalLink(selfApp); } catch { return null; }
+  }, [selfApp, modules]);
 
   if (!selfEnabled) {
     return (
@@ -84,6 +130,27 @@ export default function SelfVerify() {
     );
   }
 
+  if (!walletAddress) {
+    return (
+      <p className="text-dim text-xs font-mono text-center">
+        Sign in with your wallet first to verify with Self.
+      </p>
+    );
+  }
+
+  if (status === "verified") {
+    return (
+      <motion.div
+        initial={{ scale: 0.95 }}
+        animate={{ scale: 1 }}
+        className="bg-neon/10 border border-neon/30 rounded-xl p-4 text-center"
+      >
+        <p className="text-2xl mb-1">✅</p>
+        <p className="text-neon font-mono text-sm">Verified human (Self on Celo)</p>
+      </motion.div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       {status === "error" && (
@@ -93,42 +160,51 @@ export default function SelfVerify() {
           className="bg-blood/10 border border-blood/30 rounded-xl p-3"
         >
           <p className="text-blood text-xs font-mono">
-            {error || "Self verification failed. Try again."}
+            {errorMessage || "Self verification failed. Try again."}
           </p>
         </motion.div>
       )}
 
-      {status === "verified" ? (
-        <motion.div
-          initial={{ scale: 0.95 }}
-          animate={{ scale: 1 }}
-          className="bg-neon/10 border border-neon/30 rounded-xl p-4 text-center"
-        >
-          <p className="text-2xl mb-1">✅</p>
-          <p className="text-neon font-mono text-sm">Verified human (Self on Celo)</p>
-        </motion.div>
-      ) : (
-        <button
-          onClick={handleVerify}
-          disabled={busy}
-          className="w-full py-4 rounded-2xl bg-amber/10 border border-amber/40 text-amber font-display text-xl tracking-widest active:scale-95 transition-transform disabled:opacity-50"
-        >
-          {busy ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="w-4 h-4 rounded-full border-2 border-amber border-t-transparent animate-spin" />
-              Verifying…
-            </span>
-          ) : (
-            "VERIFY WITH SELF (CELO)"
+      {selfApp && modules ? (
+        <div className="flex flex-col items-center gap-3">
+          <div className="bg-bone p-3 rounded-xl">
+            <modules.SelfQRcodeWrapper
+              selfApp={selfApp}
+              onSuccess={() => {
+                setPollVerified(true);
+                refreshAuth?.();
+              }}
+              onError={(e) => {
+                setQrError(e?.message || "QR scan failed");
+              }}
+              size={220}
+            />
+          </div>
+          {universalLink && (
+            <a
+              href={universalLink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-dim font-mono text-xs underline text-center"
+            >
+              📱 Open in Self app (deep link)
+            </a>
           )}
-        </button>
+          <p className="text-dim text-[10px] font-mono text-center max-w-[260px]">
+            Staging (mock passport). Server env SELF_MOCK_PASSPORT=false flips to mainnet.
+          </p>
+        </div>
+      ) : (
+        <p className="text-dim text-xs font-mono text-center">Loading Self SDK…</p>
       )}
 
-      {status === "idle" && (
-        <p className="text-dim text-[10px] font-mono text-center">
-          Scan with the Self app on Celo. Your identity proof stays private.
-        </p>
-      )}
+      <button
+        type="button"
+        onClick={handleManualVerify}
+        className="w-full py-3 rounded-xl bg-smoke border border-ember text-bone font-mono text-xs active:scale-95 transition-transform"
+      >
+        I already verified
+      </button>
     </div>
   );
 }

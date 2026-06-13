@@ -71,6 +71,7 @@ export function WorldProvider({ children }) {
   const [walletAuthed, setWalletAuthed] = useState(Boolean(persisted?.walletAuthed));
   const [entryPaid, setEntryPaid] = useState(Boolean(persisted?.entryPaid));
   const [worldIdVerified, setWorldIdVerified] = useState(Boolean(persisted?.worldIdVerified));
+  const [humanityProvider, setHumanityProvider] = useState(persisted?.humanityProvider ?? null);
   const [user, setUser] = useState(persisted?.user ?? null);
   const [farcasterUser, setFarcasterUser] = useState(persisted?.farcasterUser ?? null);
   const [lastError, setLastError] = useState(null);
@@ -93,6 +94,7 @@ export function WorldProvider({ children }) {
       const json = await resp.json();
       if (json.isPaid) setEntryPaid(true);
       if (json.worldIdVerified || json.humanityVerified) setWorldIdVerified(true);
+      if (json.humanityProvider) setHumanityProvider(json.humanityProvider);
       if (json.username || json.address) {
         setUser((u) => ({
           address: json.address,
@@ -428,8 +430,8 @@ export function WorldProvider({ children }) {
   }, [isFarcaster]);
 
   useEffect(() => {
-    persist({ walletAuthed, entryPaid, worldIdVerified, user, farcasterUser });
-  }, [walletAuthed, entryPaid, worldIdVerified, user, farcasterUser]);
+    persist({ walletAuthed, entryPaid, worldIdVerified, humanityProvider, user, farcasterUser });
+  }, [walletAuthed, entryPaid, worldIdVerified, humanityProvider, user, farcasterUser]);
 
   const platform = isWorldApp ? "world" : isFarcaster ? "farcaster" : "browser";
   const isMiniApp = isWorldApp || isFarcaster;
@@ -445,6 +447,7 @@ export function WorldProvider({ children }) {
     setWalletAuthed(false);
     setEntryPaid(false);
     setWorldIdVerified(false);
+    setHumanityProvider(null);
     setUser(null);
     setFarcasterUser(null);
     setLastError(null);
@@ -462,6 +465,7 @@ export function WorldProvider({ children }) {
       walletAuthed,
       entryPaid,
       worldIdVerified,
+      humanityProvider,
       user,
       farcasterUser,
       lastError,
@@ -484,6 +488,7 @@ export function WorldProvider({ children }) {
       walletAuthed,
       entryPaid,
       worldIdVerified,
+      humanityProvider,
       user,
       farcasterUser,
       lastError,

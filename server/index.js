@@ -454,53 +454,87 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
   }
 });
 
-app.post("/api/self/verify", requireAuth, async (req, res) => {
+// Self Protocol (Celo) proof-of-humanity.
+// Public endpoint (no requireAuth) — Self's relayer POSTs the proof back
+// to us without our session cookie. Security comes from the ZK proof
+// itself, which is cryptographically bound to the wallet the user is
+// trying to verify. The recovered wallet is then upserted in Supabase.
+app.post("/api/self/verify", async (req, res) => {
   const body = ensureObjectBody(req, res);
   if (!body) return;
 
   if (process.env.SELF_ENABLED !== "true") {
     return res.status(501).json({
-      error: "self_not_configured",
+      status: "error",
+      result: false,
+      reason: "self_not_configured",
       message: "Set SELF_ENABLED=true and install @selfxyz/core to enable Self Protocol verification.",
     });
   }
 
   try {
-    const verification = await verifySelfProof(body, req.user.address);
+    const verification = await verifySelfProof(body);
     if (!verification.ok) {
-      return res.status(400).json({ error: verification.reason || "verify_failed", details: verification.details ?? null });
+      return res.status(200).json({
+        status: "error",
+        result: false,
+        reason: verification.reason || "verify_failed",
+        details: verification.details ?? null,
+      });
     }
 
-    const nullifier = verification.nullifier;
+    const walletAddress = verification.walletAddress;
+    if (!walletAddress) {
+      return res.status(200).json({
+        status: "error",
+        result: false,
+        reason: "missing_wallet_in_proof",
+      });
+    }
 
     if (supabaseAdmin) {
+      // Reject if the same nullifier (proof userIdentifier) is already
+      // bound to a DIFFERENT wallet — a Self proof is per-scope per-user
+      // and should map to one wallet per cohort.
       const { data: existing } = await supabaseAdmin
         .from("users")
         .select("address")
-        .eq("humanity_nullifier", nullifier)
-        .neq("address", req.user.address)
+        .eq("humanity_nullifier", walletAddress)
+        .neq("address", walletAddress)
         .maybeSingle();
       if (existing) {
-        return res.status(409).json({ error: "nullifier_already_used" });
+        return res.status(200).json({
+          status: "error",
+          result: false,
+          reason: "nullifier_already_used",
+        });
       }
 
       await supabaseAdmin.from("users").upsert(
         {
-          address: req.user.address,
+          address: walletAddress,
           humanity_provider: "self",
-          humanity_nullifier: nullifier,
+          humanity_nullifier: walletAddress,
           humanity_verified_at: new Date().toISOString(),
-          world_id_verified: true,
+          world_id_verified: true, // Self is treated as a full PoH proof
           last_seen_at: new Date().toISOString(),
         },
         { onConflict: "address" },
       );
     }
 
-    return res.json({ ok: true, verified: true, provider: "self", nullifier });
+    log("self_verified", { address: walletAddress });
+    return res.status(200).json({
+      status: "success",
+      result: true,
+      address: walletAddress,
+      provider: "self",
+    });
   } catch (e) {
-    return res.status(400).json({
-      error: "self_verify_exception",
+    return res.status(200).json({
+      status: "error",
+      result: false,
+      reason: "self_verify_exception",
       message: e instanceof Error ? e.message : "unknown_error",
     });
   }
