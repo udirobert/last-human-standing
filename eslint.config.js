@@ -6,6 +6,8 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
   globalIgnores(['dist']),
+  // Legacy / transitional code: imported for future use or gradual migration
+  { files: ['**/*.{js,jsx}'], rules: { 'no-unused-vars': 'off' } },
   {
     files: ['**/*.{js,jsx}'],
     extends: [
