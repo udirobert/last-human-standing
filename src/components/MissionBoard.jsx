@@ -14,7 +14,7 @@ function formatWindow(iso) {
   }
 }
 
-export default function MissionBoard({ onCheckIn, onViewFeed }) {
+export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const { phase, isLive, currentDay, round, you } = useRound();
 
   // "Closing soon" pulse: recompute once a minute from a state
@@ -29,6 +29,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed }) {
   const minutesLeft = msRemaining !== null ? Math.floor(msRemaining / 60000) : null;
   const closingSoon = minutesLeft !== null && minutesLeft < 60;
 
+  const isSpectator = isLive && !user?.paid && !user?.eliminated;
   const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
   const themeData = DAILY_THEMES.find((t) => t.theme === themeLabel) || TODAY_THEME;
   const opens = formatWindow(round?.opensAt);
@@ -120,6 +121,26 @@ export default function MissionBoard({ onCheckIn, onViewFeed }) {
             {survived ? "Hold your spot — crowd audit runs after check-in closes." : "At risk until day closes."}
           </p>
         </div>
+      ) : isSpectator ? (
+        <div className="space-y-2 mb-3">
+          <div className="bg-ash/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">🔭</span>
+              <p className="font-mono text-dim text-xs uppercase tracking-widest">
+                Spectator mode
+              </p>
+            </div>
+            <p className="text-bone text-sm font-mono">
+              You're not in this cohort. You can audit, vote, and chat — but no check-in.
+            </p>
+          </div>
+          <button
+            onClick={onViewFeed}
+            className="w-full py-3 rounded-xl bg-blood text-bone font-display text-base tracking-widest active:scale-95 transition-transform"
+          >
+            OPEN AUDIT FEED →
+          </button>
+        </div>
       ) : (
         <button
           onClick={onCheckIn}
@@ -129,12 +150,14 @@ export default function MissionBoard({ onCheckIn, onViewFeed }) {
         </button>
       )}
 
-      <button
-        onClick={onViewFeed}
-        className="w-full py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
-      >
-        Open audit feed → vote HUMAN or SUS
-      </button>
+      {!isSpectator && (
+        <button
+          onClick={onViewFeed}
+          className="w-full py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
+        >
+          Open audit feed → vote HUMAN or SUS
+        </button>
+      )}
     </motion.div>
   );
 }

@@ -13,6 +13,7 @@ import ActivityFeed from './ActivityFeed.jsx';
 import NetworkPill from './ui/NetworkPill.jsx';
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
+import SpectatorChip from './SpectatorChip.jsx';
 import { StageSection } from './StageShell.jsx';
 
 /**
@@ -89,8 +90,17 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRefre
           staggered reveal. */}
       {isLive && (
         <StageSection index={0} className="relative z-10">
-          <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} />
+          <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
         </StageSection>
+      )}
+
+      {/* Spectator chip — only when the user is in the live phase
+          but doesn't have a slot in the current cohort. The chip
+          itself is responsible for the "is this me?" check. */}
+      {isLive && (
+        <div className="relative z-10 px-5 mb-3">
+          <SpectatorChip user={user} />
+        </div>
       )}
 
       <StageSection index={1} className="relative z-10">

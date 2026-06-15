@@ -112,6 +112,8 @@ export default function authRoutes({
       referralCode: userRecord?.referral_code ?? null,
       referralCount: userRecord?.referral_count ?? 0,
       reservedAt: userRecord?.reserved_at ?? null,
+      cohort: userRecord?.cohort ?? null,
+      entryKind: userRecord?.entry_kind ?? null,
     });
   });
 

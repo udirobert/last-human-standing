@@ -103,6 +103,8 @@ export function WorldProvider({ children }) {
           referralCode: json.referralCode ?? u?.referralCode ?? null,
           referralCount: json.referralCount ?? 0,
           reservedAt: json.reservedAt ?? null,
+          cohort: json.cohort ?? u?.cohort ?? null,
+          entryKind: json.entryKind ?? u?.entryKind ?? null,
         }));
       }
     } catch {
