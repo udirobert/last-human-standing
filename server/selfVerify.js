@@ -17,7 +17,7 @@ import { SelfBackendVerifier, AllIds, DefaultConfigStore } from "@selfxyz/core";
 
 export const SELF_SCOPE = process.env.SELF_SCOPE || "last-human-standing";
 const SELF_MOCK_PASSPORT = process.env.SELF_MOCK_PASSPORT !== "false";
-const SELF_EXCLUDED_COUNTRIES = (process.env.SELF_EXCLUDED_COUNTRIES || "IRN,PRK,RUS,SYR")
+const SELF_EXCLUDED_COUNTRIES = (process.env.SELF_EXCLUDED_COUNTRIES || "")
   .split(",")
   .map((c) => c.trim().toUpperCase())
   .filter(Boolean);
@@ -93,11 +93,14 @@ export async function verifySelfProof(payload) {
   }
 
   try {
+    const userContextData = typeof payload.userContextData === "string"
+      ? payload.userContextData
+      : "";
     const result = await verifier.verify(
       payload.attestationId,
       payload.proof,
       payload.publicSignals,
-      payload.userContextData || payload,
+      userContextData,
     );
 
     const valid = result?.isValidDetails?.isValid;
@@ -120,10 +123,18 @@ export async function verifySelfProof(payload) {
       details: result,
     };
   } catch (e) {
+    const msg = e instanceof Error ? e.message : "unknown_error";
+    const stack = e instanceof Error ? e.stack : "";
+    console.error(JSON.stringify({
+      time: new Date().toISOString(),
+      event: "self_verify_exception",
+      error: msg,
+      stack: stack?.split("\n").slice(0, 3).join("|"),
+    }));
     return {
       ok: false,
       reason: "verify_exception",
-      details: e instanceof Error ? e.message : "unknown_error",
+      details: msg,
     };
   }
 }

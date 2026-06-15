@@ -175,7 +175,8 @@ export default function SelfVerify() {
                 refreshAuth?.();
               }}
               onError={(e) => {
-                setQrError(e?.message || "QR scan failed");
+                const reason = e?.reason || e?.error_code || e?.message || "Something went wrong. Try again or use the deep link below.";
+                setQrError(reason);
               }}
               size={220}
             />

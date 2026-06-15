@@ -57,8 +57,8 @@ export function useTrustTier() {
             : reportedProvider === "world"
               ? "Verified · World ID"
               : "Verified",
-        provisional: "Provisional — verify to unlock full trust",
-        unverified: "Not enrolled",
+        provisional: "Provisional — signed in, verify to unlock full trust",
+        unverified: "Observer — sign in and reserve a slot to play",
       },
     };
   }, [walletAuthed, entryPaid, worldIdVerified, humanityProvider, isWorldApp, platform]);

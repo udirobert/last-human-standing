@@ -14,8 +14,8 @@ Last Human Standing uses a **pluggable humanity layer** so we are not locked to 
 ## Trust tiers (product)
 
 1. **Verified human** — World ID (or Self) nullifier on file → full voting + highest trust in audit. `TrustBadge` reads `humanityProvider` and shows "Verified · Self" vs "Verified · World ID".
-2. **Provisional** — paid entry, no PoH yet → can play; voting may be restricted (`VITE_REQUIRE_WORLD_ID_FOR_VOTING`).
-3. **Unverified** — not enrolled.
+2. **Provisional** — wallet signed in, no PoH yet → can play; voting may be restricted (`VITE_REQUIRE_WORLD_ID_FOR_VOTING`).
+3. **Observer** — not enrolled (free entry still available; reserve a slot to play).
 
 UI surfaces this via `TrustBadge` and `useTrustTier()`. `ModeBanner` shows the provider name on the verified tier so you can tell Self and World ID users apart at a glance.
 
@@ -38,6 +38,7 @@ Browser pay    ──►  POST /api/pay/browser-confirm
 4. Server runs `SelfBackendVerifier.verify(...)` and recovers the wallet from `result.userData.userIdentifier`. Upserts `users.humanity_nullifier` + `humanity_provider = "self"` and promotes the user to `tier = "verified"`.
 5. Duplicate nullifiers are rejected — one Self proof per cohort slot, same pattern as World ID.
 6. **To go from staging to mainnet:** set `SELF_MOCK_PASSPORT=false` and the verifier switches to the Celo mainnet hub automatically. No code change.
+7. **Forbidden countries list:** `SELF_EXCLUDED_COUNTRIES` can be set to a comma-separated list of ISO country codes (e.g. `IRN,PRK,RUS,SYR`) to reject passports from those countries. Default is empty — accepted on all origins. The circuit's embedded list must be a superset of the config list, otherwise `InvalidForbiddenCountriesList` is thrown. Mock passports (staging) do not embed a countries list, so this should be left empty in dev.
 
 ### Celo-specific notes
 
@@ -55,6 +56,7 @@ Browser pay    ──►  POST /api/pay/browser-confirm
 | `SELF_ENABLED` | Enable `POST /api/self/verify` on API |
 | `SELF_VERIFY_ENDPOINT` | Public URL Self relayers call (defaults to `PUBLIC_API_URL`) |
 | `SELF_MOCK_PASSPORT` | `true` for Celo Sepolia / mock passports |
+| `SELF_EXCLUDED_COUNTRIES` | Comma-sep ISO codes to reject (e.g. `IRN,PRK,RUS,SYR`). Keep empty for dev with mock passports. |
 | `VITE_USE_CELO_TESTNET` | Add Celo Alfajores to browser wagmi chains |
 
 ## Product stance

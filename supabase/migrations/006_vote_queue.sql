@@ -45,16 +45,16 @@ as $$
 begin
   return query
   with claimed as (
-    update public.vote_queue
+    update public.vote_queue vq
       set status = 'processing'
-      where id in (
+      where vq.id in (
         select id from public.vote_queue
           where status = 'pending'
           order by id asc
           limit p_batch_size
         for update skip locked
       )
-      returning id, submission_id, voter_address, vote
+      returning vq.id, vq.submission_id, vq.voter_address, vq.vote
   )
   select * from claimed;
 end;

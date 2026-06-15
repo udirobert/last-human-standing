@@ -644,8 +644,19 @@ app.post("/api/self/verify", async (req, res) => {
   }
 
   try {
+    log("self_verify_request", {
+      attestationId: body?.attestationId,
+      hasProof: !!body?.proof,
+      signalCount: body?.publicSignals?.length,
+      hasUserContext: typeof body?.userContextData === "string",
+    });
+
     const verification = await verifySelfProof(body);
     if (!verification.ok) {
+      log("self_verify_failed", {
+        reason: verification.reason,
+        details: verification.details,
+      });
       return res.status(200).json({
         status: "error",
         result: false,

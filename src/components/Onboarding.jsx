@@ -326,11 +326,10 @@ export default function Onboarding({ onEnter }) {
                   <ul className="text-dim text-xs font-mono space-y-2 list-disc pl-4 mt-2">
                     <li>
                       <span className="text-amber">Provisional</span> — wallet signed in, not yet verified
-                      (can play, can vote when configured)
                     </li>
                     <li>
-                      <span className="text-neon">Verified human</span> — World ID or Self Protocol
-                      (full trust, recommended before Day 1)
+                      <span className="text-neon">Verified human</span> — proof of personhood via World ID or Self Protocol
+                      (full access, recommended before Day 1)
                     </li>
                   </ul>
                   {tier === "unverified" && (
@@ -436,7 +435,7 @@ export default function Onboarding({ onEnter }) {
 
                 {!isFarcaster && entryPaid && tier !== "verified" && (
                   <StageSection index={5} className="space-y-3">
-                    <p className="text-dim text-xs font-mono mb-2">Upgrade to verified human (recommended before Day 1):</p>
+                    <p className="text-dim text-xs font-mono mb-2">Get verified (recommended before Day 1):</p>
                     {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
                     {import.meta.env.VITE_ENABLE_SELF === "true" && (
                       <Suspense fallback={<ScreenLoader kind="detail" />}>
