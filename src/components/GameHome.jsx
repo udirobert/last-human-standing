@@ -15,6 +15,8 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import SpectatorChip from './SpectatorChip.jsx';
 import { StageSection } from './StageShell.jsx';
+import GlitchTitle from './ui/GlitchTitle.jsx';
+import WaitlistCard from './WaitlistCard.jsx';
 
 /**
  * GameHome — the persistent home view. Two states:
@@ -82,7 +84,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRefre
             </button>
           </div>
         </div>
-        <h1 className="font-display text-4xl text-bone tracking-wide animate-glow">LAST HUMAN STANDING</h1>
+        <GlitchTitle text="LAST HUMAN STANDING" className="font-display text-4xl text-bone tracking-wide animate-glow" />
       </div>
 
       {/* Live state: MissionBoard is the primary CTA. Prelaunch: PrelaunchPanel.
@@ -162,6 +164,16 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRefre
       <StageSection index={4} className="relative z-10 px-5 mb-4">
         <PrizePots prizePool={stats?.prizePool} />
       </StageSection>
+
+      {/* Waitlist capture — visible during prelaunch so we don't
+          lose bounced visitors. Sits below the pots so it doesn't
+          fight the main CTAs. Also shown to spectators so anyone
+          who can't join the current cohort has a clear next step. */}
+      {(isPrelaunch || isLive) && !user?.paid && (
+        <StageSection index={5} className="relative z-10 px-5 mb-4">
+          <WaitlistCard source={isLive ? 'spectator' : 'welcome_screen'} />
+        </StageSection>
+      )}
 
     </div>
   );

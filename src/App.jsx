@@ -86,6 +86,27 @@ const SCREENS = {
       document.scrollingElement?.scrollTo?.({ top: 0, left: 0 });
     }, [screen]);
 
+    // Lightweight page-view ping. One row per navigation, captured
+    // on the server so we can tell if anyone saw the page even
+    // when they bounce. sendBeacon is used on unload so we don't
+    // block navigation.
+    useEffect(() => {
+      const body = JSON.stringify({
+        path: window.location.pathname + window.location.search,
+        referrer: document.referrer || null,
+      });
+      try {
+        if (navigator.sendBeacon) {
+          const blob = new Blob([body], { type: "application/json" });
+          navigator.sendBeacon("/api/track", blob);
+        } else {
+          fetch("/api/track", { method: "POST", body, keepalive: true }).catch(() => {});
+        }
+      } catch {
+        // best-effort
+      }
+    }, [screen]);
+
     const clearBadge = useCallback((tab) => {
       setBadges((b) => (b[tab] ? { ...b, [tab]: false } : b));
     }, []);

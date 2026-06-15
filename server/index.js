@@ -276,6 +276,108 @@ app.post("/api/report-error", async (req, res) => {
   res.json({ ok: true });
 });
 
+// Lightweight page-view ping. No PII captured, no auth required.
+// Logs a row in page_views (created by the 005 migration) so the
+// launch operator can see how many humans saw the page, when,
+// and on what route. Rate-limited to 30 / hour / IP to keep
+// noise out of the table.
+app.post(
+  "/api/track",
+  rateLimit({ keyFn: (req) => `track:${req.ip}`, limit: 30, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+    const path = ensureString(body.path, { field: "path", maxLength: 200 }) ?? null;
+    const referrer = ensureString(body.referrer, { field: "referrer", maxLength: 500 }) ?? null;
+    const sessionId = req.cookies?.[SESSION_COOKIE] ?? null;
+    const ua = (req.headers["user-agent"] || "").slice(0, 300);
+    const ipHash = crypto.createHash("sha256").update(req.ip || "").digest("hex").slice(0, 32);
+    if (supabaseAdmin) {
+      try {
+        await supabaseAdmin.from("cohort_page_views").insert({
+          path,
+          referrer,
+          session_id: sessionId,
+          ip_hash: ipHash,
+          user_agent: ua,
+        });
+      } catch (e) {
+        log?.("track_error", { error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    res.json({ ok: true });
+  },
+);
+
+// Waitlist signup. Public endpoint, no auth required. Captures
+// bounced visitors on the welcome screen / spectator UI so we
+// can ping them when cohort 1 is about to launch. Always
+// returns 200 with a generic { ok: true } so the API can't be
+// used to enumerate which handles/emails are already on the
+// list.
+app.post(
+  "/api/waitlist",
+  rateLimit({ keyFn: (req) => `waitlist:${req.ip}`, limit: 5, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+    const xHandleRaw = ensureString(body.x_handle, { field: "x_handle", maxLength: 50 }) ?? null;
+    const emailRaw = ensureString(body.email, { field: "email", maxLength: 200 }) ?? null;
+    const source = ensureString(body.source, { field: "source", maxLength: 50 }) ?? "welcome_screen";
+
+    if (!xHandleRaw && !emailRaw) {
+      // Don't expose a specific error — just succeed silently.
+      return res.json({ ok: true });
+    }
+
+    const xHandle = xHandleRaw ? xHandleRaw.replace(/^@/, "").toLowerCase() : null;
+    const email = emailRaw ? emailRaw.toLowerCase() : null;
+
+    if (xHandle && !/^[a-z0-9_]{1,15}$/.test(xHandle)) {
+      return res.json({ ok: true });
+    }
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      return res.json({ ok: true });
+    }
+
+    const ua = (req.headers["user-agent"] || "").slice(0, 300);
+    const ipHash = crypto.createHash("sha256").update(req.ip || "").digest("hex").slice(0, 32);
+
+    if (supabaseAdmin) {
+      try {
+        // Upsert on the unique index. If the row already exists
+        // we leave the original created_at alone but bump source
+        // so we know which surface they re-signed up from.
+        const conflictCol = xHandle ? "x_handle" : "email";
+        const conflictVal = xHandle || email;
+        const { data: existing } = await supabaseAdmin
+          .from("cohort_waitlist")
+          .select("id, x_handle, email, source")
+          .eq(conflictCol, conflictVal)
+          .maybeSingle();
+        if (existing) {
+          await supabaseAdmin
+            .from("cohort_waitlist")
+            .update({ source })
+            .eq("id", existing.id);
+        } else {
+          await supabaseAdmin.from("cohort_waitlist").insert({
+            x_handle: xHandle,
+            email,
+            source,
+            user_agent: ua,
+            ip_hash: ipHash,
+          });
+        }
+        log?.("waitlist_signup", { xHandle, email, source });
+      } catch (e) {
+        log?.("waitlist_error", { error: e instanceof Error ? e.message : String(e) });
+      }
+    }
+    res.json({ ok: true });
+  },
+);
+
 async function createNonceRecord(nonce) {
   if (!supabaseAdmin) return;
   await supabaseAdmin.from("siwe_nonces").upsert({

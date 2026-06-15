@@ -39,18 +39,46 @@ if ('serviceWorker' in navigator) {
 
 const queryClient = new QueryClient();
 
-createRoot(document.getElementById('root')).render(
+// Only mount the MiniKitProvider when we have a real World ID
+// app id AND we're inside a world-app or farcaster context.
+// Outside those, the provider logs "MiniKit is not installed"
+// and "App ID not provided during install" to the console on
+// every page load — those red errors scare non-World-App
+// visitors and make the app look broken. We only need the
+// provider when the WLD/cUSD payment paths or wallet auth are
+// actually going to run.
+function isMiniAppHost() {
+  if (typeof window === 'undefined') return false;
+  // World App injects a `world-app` global or sits on
+  // worldapp.org. Farcaster injects fc:frame.
+  return Boolean(
+    (window).__WORLD_APP__ ||
+      (window).Warpcast ||
+      window.location !== window.parent.location ||
+      /worldapp|farcaster|fc:frame|warpcast/i.test(window.location.search + ' ' + (document.referrer || '')),
+  );
+}
+
+const shouldMountMiniKit = Boolean(VITE_WORLD_ID_APP_ID) && isMiniAppHost();
+
+const appTree = (
   <StrictMode>
-    <MiniKitProvider appId={VITE_WORLD_ID_APP_ID}>
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <WorldProvider>
-            <RoundProvider>
-              <App />
-            </RoundProvider>
-          </WorldProvider>
-        </QueryClientProvider>
-      </WagmiProvider>
-    </MiniKitProvider>
-  </StrictMode>,
-)
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <WorldProvider>
+          <RoundProvider>
+            <App />
+          </RoundProvider>
+        </WorldProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
+  </StrictMode>
+);
+
+const wrappedTree = shouldMountMiniKit ? (
+  <MiniKitProvider appId={VITE_WORLD_ID_APP_ID}>{appTree}</MiniKitProvider>
+) : (
+  appTree
+);
+
+createRoot(document.getElementById('root')).render(wrappedTree);
