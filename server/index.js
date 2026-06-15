@@ -50,6 +50,15 @@ const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
+// Lazy lottery draw gating. The draw is held until EITHER
+// the cohort has at least LOTTERY_MIN_CANDIDATES free entries
+// OR LOTTERY_MAX_DELAY_HOURS has passed since T-0, whichever
+// comes first. This prevents the "empty launch draw" failure
+// mode where the lottery runs on zero entrants because no one
+// was signed up at the exact T-0 timestamp.
+const LOTTERY_MIN_CANDIDATES = Number(process.env.LOTTERY_MIN_CANDIDATES || 10);
+const LOTTERY_MAX_DELAY_HOURS = Number(process.env.LOTTERY_MAX_DELAY_HOURS || 6);
+
 const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
 const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
@@ -1239,14 +1248,40 @@ app.get("/api/game/state", async (req, res) => {
     // GAME_LAUNCH_AT triggers the deterministic draw. Idempotent:
     // subsequent calls (and concurrent calls) return the stored
     // result.
+    //
+    // The draw is HELD until either LOTTERY_MIN_CANDIDATES
+    // free-registered humans are signed up OR
+    // LOTTERY_MAX_DELAY_HOURS have passed since T-0. This
+    // prevents the empty-launch failure mode where the lottery
+    // runs on zero entrants at the exact T-0 timestamp.
     if (phase === "live" && supabaseAdmin) {
       try {
         const stored = await getStoredLotteryResult(COHORT_CONFIG.cohort);
         if (!stored) {
-          await drawAndStoreLottery({
-            cohort: COHORT_CONFIG.cohort,
-            drawnBy: "lazy",
-          });
+          const splitNow = await cohortSplitCount();
+          const freeCandidates = splitNow.freeCount;
+          const hoursPastLaunch =
+            (Date.now() - launchAtMs) / (1000 * 60 * 60);
+          const minMet = freeCandidates >= LOTTERY_MIN_CANDIDATES;
+          const delayMet = hoursPastLaunch >= LOTTERY_MAX_DELAY_HOURS;
+          if (minMet || delayMet) {
+            await drawAndStoreLottery({
+              cohort: COHORT_CONFIG.cohort,
+              drawnBy: "lazy",
+            });
+            log?.("lottery_lazy_drawn", {
+              freeCandidates,
+              hoursPastLaunch: Number(hoursPastLaunch.toFixed(2)),
+              trigger: minMet && delayMet ? "min+delay" : minMet ? "min" : "delay",
+            });
+          } else {
+            log?.("lottery_lazy_held", {
+              freeCandidates,
+              hoursPastLaunch: Number(hoursPastLaunch.toFixed(2)),
+              minCandidates: LOTTERY_MIN_CANDIDATES,
+              maxDelayHours: LOTTERY_MAX_DELAY_HOURS,
+            });
+          }
         }
       } catch (drawErr) {
         log?.("lottery_lazy_error", { error: drawErr instanceof Error ? drawErr.message : String(drawErr) });
@@ -1541,10 +1576,11 @@ async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
   }
 }
 
-// =============== Debug endpoints (no auth) ===============
-// Used during launch diagnosis. Returns raw RPC results for the
-// Celo pool address so we can see why the UI shows "—".
-app.get("/api/debug/celo-balances", async (req, res) => {
+// =============== Debug endpoints (admin only) ===============
+// Returns raw RPC results for the Celo pool address so we can
+// see why the UI shows "—". Gated by ADMIN_TOKEN or a valid
+// session cookie, since it exposes the prize-pool balances.
+app.get("/api/debug/celo-balances", requireAuth, async (req, res) => {
   try {
     const address = String(req.query.address || "");
     if (!address) return res.status(400).json({ error: "address_required" });
@@ -1577,6 +1613,20 @@ app.get("/api/lottery/status", async (req, res) => {
     // Live count so the client can show the right number of free
     // slots. Computed from the same logic the draw uses.
     const liveFreeSlots = await computeFreeLotterySlots(cohort);
+    // Lazy draw gating: estimate when the draw will actually
+    // fire. The draw fires when EITHER LOTTERY_MIN_CANDIDATES
+    // humans are signed up OR LOTTERY_MAX_DELAY_HOURS have
+    // passed since T-0. We surface the earlier of the two as
+    // nextDrawAtMs so the client can show a countdown.
+    const maxDelayMs = LOTTERY_MAX_DELAY_HOURS * 60 * 60 * 1000;
+    const candidatesMs = freeRegistered >= LOTTERY_MIN_CANDIDATES
+      ? now
+      : null;
+    const delayMs = pastLaunch && launchAtMs != null
+      ? launchAtMs + maxDelayMs
+      : null;
+    const nextDrawAtMs = [candidatesMs, delayMs].filter((v) => v != null).sort((a, b) => a - b)[0] ?? null;
+
     return res.json({
       ok: true,
       cohort,
@@ -1586,6 +1636,9 @@ app.get("/api/lottery/status", async (req, res) => {
       freeSlotsMax: COHORT_CONFIG.freeSlots,
       paidSlots: COHORT_CONFIG.paidSlots,
       freeRegistered: freeRegistered ?? 0,
+      minCandidates: LOTTERY_MIN_CANDIDATES,
+      maxDelayHours: LOTTERY_MAX_DELAY_HOURS,
+      nextDrawAt: nextDrawAtMs ? new Date(nextDrawAtMs).toISOString() : null,
       seed: stored?.seed ?? null,
       algorithmVersion: stored?.algorithm_version ?? ALGORITHM_VERSION,
       drawn: stored?.drawn ?? null,
