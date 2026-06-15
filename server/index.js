@@ -1765,6 +1765,8 @@ app.use("/api", paymentRoutes({
   consumePayReferenceRecord,
   createSessionRecord,
   setSessionCookie,
+  getSessionRecord,
+  SESSION_COOKIE,
   rateLimitStorage,
 }));
 

@@ -403,10 +403,13 @@ export default function Onboarding({ onEnter }) {
                           onClick={async () => {
                             try {
                               const resp = await fetch("/api/pay/free-entry", { method: "POST", credentials: "include" });
-                              if (!resp.ok) throw new Error("free_entry_failed");
-                              markBrowserPaid();
+                              if (!resp.ok) throw new Error(`free_entry_failed_${resp.status}`);
+                              const data = await resp.json().catch(() => ({}));
+                              markBrowserPaid(data.address);
                               markOnboardingDone();
-                            } catch { /* silent */ }
+                            } catch (e) {
+                              console.error("free entry failed:", e);
+                            }
                           }}
                           className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
                         >

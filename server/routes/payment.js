@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomBytes } from "node:crypto";
 import { rateLimit } from "../rateLimit.js";
 import { ensureObjectBody, ensureString, sendValidationError } from "../lib/validators.js";
 
@@ -146,6 +147,8 @@ export default function paymentRoutes({
   consumePayReferenceRecord,
   createSessionRecord,
   setSessionCookie,
+  getSessionRecord,
+  SESSION_COOKIE,
   rateLimitStorage,
 }) {
   const router = Router();
@@ -236,13 +239,29 @@ export default function paymentRoutes({
   });
 
   // ---------- POST /api/pay/free-entry (hackathon campaign mode) ----------
-  router.post("/pay/free-entry", requireAuth, async (req, res) => {
+  // Self-onboarding: if the user has no session, generate an
+  // anonymous guest account and set a session cookie. The free
+  // lottery is meant to be ultra-low-friction — no wallet required.
+  // The guest can later upgrade by connecting a real wallet (SIWE).
+  router.post("/pay/free-entry", async (req, res) => {
     if (process.env.FREE_ENTRY_MODE !== "true") {
       return res.status(501).json({ error: "free_entry_not_available" });
     }
-    await upsertPaidUser(req.user.address, { platform: "free_entry", entryKind: "free" });
-    log("free_entry", { address: req.user.address });
-    res.json({ ok: true, paid: true, entryKind: "free" });
+    let address = req.user?.address;
+    if (!address) {
+      const session = await getSessionRecord(req.cookies?.[SESSION_COOKIE]);
+      address = session?.address;
+    }
+    if (!address) {
+      // Random 20-byte hex address, no wallet attached yet.
+      address = "0x" + randomBytes(20).toString("hex");
+      const sessionId = await createSessionRecord(address);
+      setSessionCookie(res, sessionId);
+      log("free_entry_guest", { address });
+    }
+    await upsertPaidUser(address, { platform: "free_entry", entryKind: "free" });
+    log("free_entry", { address });
+    res.json({ ok: true, paid: true, entryKind: "free", address });
   });
 
   // ---------- POST /api/pay/browser-celo-confirm (Celo cUSD/USDC) ----------
