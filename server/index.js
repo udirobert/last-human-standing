@@ -27,6 +27,23 @@ import {
 } from "./lib/validators.js";
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
 import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
+
+// ─── Process-level error handlers ───────────────────────────────────────
+// Without these, an unhandled promise rejection or uncaught exception
+// kills the entire server process silently. We catch, log, and exit
+// gracefully so the process manager (PM2/Docker) can restart.
+process.on("unhandledRejection", (reason) => {
+  const msg = reason instanceof Error ? reason.stack || reason.message : String(reason);
+  console.error(JSON.stringify({ time: new Date().toISOString(), event: "unhandled_rejection", error: msg }));
+  // PM2 / Docker will restart — don't leave the process in an unknown state
+  process.exitCode = 1;
+});
+
+process.on("uncaughtException", (err) => {
+  console.error(JSON.stringify({ time: new Date().toISOString(), event: "uncaught_exception", error: err.stack || err.message }));
+  process.exitCode = 1;
+});
+
 const PORT = Number(process.env.PORT || 8787);
 const IS_PROD = process.env.NODE_ENV === "production";
 const supabaseAdmin = getSupabaseAdmin();
@@ -188,9 +205,9 @@ setInterval(() => {
   autoAdvanceRounds().catch(() => {});
 }, 60_000).unref();
 
-// Start onchain vote relayer — reads from file-based queue, submits to VoteRegistry on Celo.
-// No-op (logs "vote_relayer_offline") if VOTE_REGISTRY_ADDRESS + CELO_SIGNING_KEY not set.
-const stopRelayer = startVoteRelayer({ log });
+// Start onchain vote relayer — reads from vote_queue table, submits to VoteRegistry on Celo.
+// No-op (logs "vote_relayer_offline") if VOTE_REGISTRY_ADDRESS + CELO_SIGNING_KEY + Supabase not set.
+const stopRelayer = startVoteRelayer({ log, supabaseAdmin });
 
 const rateLimitStorage = supabaseAdmin
   ? {
@@ -260,8 +277,9 @@ app.use(cors({
 // Push notification routes
 app.use("/api/push", pushRoutes({ requireAuth, supabaseAdmin, log }));
 
-app.get("/api/health", (req, res) => {
-  res.json({ ok: true, time: new Date().toISOString(), supabase: Boolean(supabaseAdmin) });
+app.get("/api/health", async (req, res) => {
+  const dbHealth = await checkDatabaseHealth();
+  res.json({ ok: true, time: new Date().toISOString(), supabase: dbHealth.ok, dbError: dbHealth.error || null });
 });
 
 app.post("/api/report-error", async (req, res) => {
@@ -1100,14 +1118,22 @@ app.post(
       }
 
       if (supabaseAdmin) {
-        const { error } = await supabaseAdmin.from("votes").insert({ submission_id: submissionId, voter_address: req.user.address, vote });
-        if (error) {
-          if (String(error.message || "").includes("duplicate")) return res.status(409).json({ error: "already_voted" });
-          return res.status(400).json({ error: "db_vote_failed", message: error.message });
+        // Atomic vote insert + onchain queue in one Postgres transaction.
+        // The cast_vote RPC handles duplicate detection, vote insert, and
+        // enqueue for the onchain relayer — all-or-nothing.
+        const { data: castResult, error: castError } = await supabaseAdmin.rpc("cast_vote", {
+          p_submission_id: submissionId,
+          p_voter_address: req.user.address,
+          p_vote: vote,
+        });
+        if (castError) {
+          if (String(castError.message || "").includes("duplicate")) return res.status(409).json({ error: "already_voted" });
+          return res.status(400).json({ error: "db_vote_failed", message: castError.message });
         }
-
-        // Enqueue for onchain batch submission
-        try { enqueueVote(submissionId, req.user.address, vote); } catch (voteErr) { log?.warn?.("vote_enqueue_failed", { error: String(voteErr) }); };
+        if (!castResult?.[0]?.inserted) {
+          if (castResult?.[0]?.duplicate) return res.status(409).json({ error: "already_voted" });
+          return res.status(400).json({ error: "vote_insert_failed" });
+        }
 
         // Anti-cheat: vote ring detection (scoped to this voter's history)
         const { data: voterVotes } = await supabaseAdmin
@@ -1562,6 +1588,53 @@ app.get("/api/chat/messages", async (req, res) => {
   }
 });
 
+// ─── Startup validation ─────────────────────────────────────────────────
+// Validate required configuration at startup so missing env vars are
+// loud and obvious (not silently defaulted to broken behaviour).
+function validateEnv() {
+  const warnings = [];
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    warnings.push("SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY: DB writes will fail silently");
+  }
+  if (IS_PROD && !process.env.WORLD_DEV_PORTAL_API_KEY) {
+    warnings.push("WORLD_DEV_PORTAL_API_KEY: World App payment verification will fail");
+  }
+  if (IS_PROD && !process.env.WORLD_ID_RP_ID) {
+    warnings.push("WORLD_ID_RP_ID: World ID verification will not work");
+  }
+  if (IS_PROD && (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_SECRET)) {
+    warnings.push("VAPID keys: push notifications will fail");
+  }
+  if (IS_PROD && !process.env.ALLOWED_ORIGINS) {
+    warnings.push("ALLOWED_ORIGINS: CORS will reject all browser requests");
+  }
+  if (IS_PROD && !process.env.GAME_LAUNCH_AT) {
+    warnings.push("GAME_LAUNCH_AT: game will never enter live phase");
+  }
+  if (IS_PROD && !process.env.ADMIN_ADDRESS && !process.env.ADMIN_TOKEN) {
+    warnings.push("ADMIN_ADDRESS or ADMIN_TOKEN: no admin access configured");
+  }
+  for (const w of warnings) {
+    console.error(JSON.stringify({ time: new Date().toISOString(), event: "env_warning", warning: w }));
+  }
+  return warnings;
+}
+
+/**
+ * Health check with actual DB connectivity test.
+ * Returns { ok, supabase, error } for the /api/health endpoint.
+ */
+async function checkDatabaseHealth() {
+  if (!supabaseAdmin) return { ok: false, error: "supabase_not_configured" };
+  try {
+    const { error } = await supabaseAdmin.from("users").select("address", { count: "exact", head: true }).limit(1);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "unknown" };
+  }
+}
+
 // =============== Lottery ===============
 // Deterministic draw for the free cohort slots. Read-only status
 // endpoint for clients; admin-only draw endpoint. The lazy draw
@@ -1854,18 +1927,17 @@ app.post("/api/admin/close-day", requireAuth, requireAdmin, async (req, res) => 
     const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
 
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
-    await supabaseAdmin.from("checkins").update({ survived: false }).eq("day", day).gt("rank", cap);
-    const { data: ck } = await supabaseAdmin.from("checkins").select("address, rank").eq("day", day);
-    const survivorAddrs = new Set((ck || []).filter((r) => r.rank <= cap).map((r) => r.address.toLowerCase()));
 
-    const { data: paidUsersRows } = await supabaseAdmin.from("users").select("address, eliminated").eq("paid", true);
-    const toEliminate = (paidUsersRows || []).filter((u) => !u.eliminated && !survivorAddrs.has(u.address.toLowerCase())).map((u) => u.address);
-    if (toEliminate.length > 0) {
-      await supabaseAdmin.from("users").update({ eliminated: true, eliminated_at_day: day }).in("address", toEliminate);
-    }
+    // Atomic close-day via Postgres function — all updates (checkins, users,
+    // rounds) happen in a single transaction. Avoids partial-state bugs from
+    // the previous multi-query approach.
+    const { data, error } = await supabaseAdmin.rpc("close_day", {
+      p_day: day,
+      p_cap: cap,
+    });
+    if (error) return res.status(400).json({ error: "close_day_failed", message: error.message });
 
-    await supabaseAdmin.from("rounds").update({ status: "closed", updated_at: new Date().toISOString() }).eq("day", day);
-    return res.json({ ok: true, day, survivors: survivorAddrs.size, eliminated: toEliminate.length });
+    return res.json({ ok: true, day, ...data });
   } catch (error) {
     sendValidationError(res, error);
   }
@@ -1909,6 +1981,8 @@ app.use("/api", authRoutes({
   getUserRecord,
   isProd: IS_PROD,
   SESSION_COOKIE,
+  rateLimit,
+  rateLimitStorage,
 }));
 
 app.use("/api", paymentRoutes({
@@ -1930,6 +2004,32 @@ app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));
 app.use("/api", activityRoutes({ supabaseAdmin, log }));
 app.use("/", farcasterRoutes({ supabaseAdmin, log }));
 app.use("/api", shareRoutes({ supabaseAdmin, log }));
+
+// ─── Global error handlers ──────────────────────────────────────────────
+// 404 catch-all — any unmatched /api/* path returns JSON, not HTML.
+// We check req.path here instead of using a wildcard pattern because
+// Express 5 / path-to-regexp v8 removed the bare `*` token.
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return res.status(404).json({ error: "not_found", path: req.originalUrl });
+  }
+  next();
+});
+
+// Global Express error handler — catches errors thrown (or passed via next(err))
+// from any route above. Without this, Express 5's default handler sends
+// HTML stack traces, which leak internals in production.
+app.use((err, req, res, _next) => {
+  log("express_error", {
+    method: req.method,
+    path: req.originalUrl,
+    message: err instanceof Error ? err.message : String(err),
+  });
+  res.status(err.status || 500).json({
+    error: "internal_error",
+    message: IS_PROD ? "Something went wrong" : (err instanceof Error ? err.message : "unknown_error"),
+  });
+});
 
 export { app };
 

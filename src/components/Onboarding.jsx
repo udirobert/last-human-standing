@@ -24,6 +24,7 @@ import AmbientBackdrop from "./AmbientBackdrop.jsx";
 import StageShell, { StageSection, CohortTicker } from "./StageShell.jsx";
 import { RULE_ICON_MAP } from "./RuleIconMap.js";
 import StepThreeConfetti from "./StepThreeConfetti.jsx";
+import GlitchTitle from "./ui/GlitchTitle.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -148,14 +149,11 @@ export default function Onboarding({ onEnter }) {
             >
               <StageSection index={0} className="flex flex-col items-center text-center pt-2">
                 <Mascot variant="excited" size={120} />
-                <motion.h1
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.15, type: "spring", damping: 16 }}
+                <GlitchTitle
+                  text={"LAST HUMAN\nSTANDING"}
                   className="font-display text-5xl text-bone mt-5 leading-none tracking-wider animate-glow"
-                >
-                  LAST HUMAN<br />STANDING
-                </motion.h1>
+                  delay={0.15}
+                />
                 <p className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed">
                   Be one of 50 humans. Last survivor takes the on-chain pot.
                 </p>

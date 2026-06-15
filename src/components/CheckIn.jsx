@@ -8,6 +8,7 @@ import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
+import GlitchTitle from './ui/GlitchTitle.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
@@ -183,6 +184,19 @@ export default function CheckIn({ onBack, onSubmit }) {
   return (
     <div className="relative min-h-screen bg-ash flex flex-col font-body overflow-hidden">
       <AmbientBackdrop phase="live" />
+      
+      {/* Infiltrator threat visual overlay */}
+      <AnimatePresence>
+        {infiltratorMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 0.15 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 pointer-events-none z-30 bg-gradient-to-t from-purple-900/50 via-transparent to-purple-900/50 ring-8 ring-purple-500/20 ring-inset animate-pulse"
+          />
+        )}
+      </AnimatePresence>
+
       <input
         ref={fileRef}
         type="file"
@@ -203,7 +217,7 @@ export default function CheckIn({ onBack, onSubmit }) {
           <span className="text-dim text-lg">←</span>
         </button>
         <div className="flex-1">
-          <h2 className="font-display text-3xl text-bone tracking-wide">CHECK IN</h2>
+          <GlitchTitle text="CHECK IN" className="font-display text-3xl text-bone tracking-wide" />
           <p className="font-mono text-dim text-xs">Day {currentDay ?? '—'} · {theme || 'No round set'}</p>
         </div>
         <FAQModal />

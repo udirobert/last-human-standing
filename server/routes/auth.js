@@ -24,11 +24,19 @@ export default function authRoutes({
   getUserRecord,
   isProd,
   SESSION_COOKIE,
+  rateLimit,
+  rateLimitStorage,
 }) {
   const router = Router();
 
   // ---------- POST /api/nonce ----------
-  router.post("/nonce", async (req, res) => {
+  // Rate-limited to 20/hour/IP to prevent nonce enumeration.
+  // Nonces are one-time-use and short-lived (30 min), but without
+  // rate limiting an attacker could grind the /complete-siwe path.
+  router.post(
+    "/nonce",
+    rateLimit({ keyFn: (req) => `nonce:${req.ip}`, limit: 20, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
     const nonce = makeNonce();
     if (supabaseAdmin) {
       await supabaseAdmin.from("siwe_nonces").upsert({
@@ -41,7 +49,13 @@ export default function authRoutes({
   });
 
   // ---------- POST /api/complete-siwe ----------
-  router.post("/complete-siwe", async (req, res) => {
+  // Rate-limited to 10/min/IP to prevent brute-force SIWE completion
+  // attempts. Each completion consumes a nonce, so even if an attacker
+  // gets through the nonce gate, they're limited here too.
+  router.post(
+    "/complete-siwe",
+    rateLimit({ keyFn: (req) => `siwe:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
     const body = ensureObjectBody(req, res);
     if (!body) return;
     const { payload, nonce } = body;

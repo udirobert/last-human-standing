@@ -9,6 +9,7 @@ import { MiniKit } from "@worldcoin/minikit-js";
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
+import GlitchTitle from './ui/GlitchTitle.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -168,7 +169,7 @@ export default function Feed({ onBack }) {
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1">
-            <h2 className="font-display text-3xl text-bone tracking-wide">AUDIT FEED</h2>
+            <GlitchTitle text="AUDIT FEED" className="font-display text-3xl text-bone tracking-wide" />
             <div className="flex items-center gap-2">
               <p className="font-mono text-dim text-xs">Vote HUMAN or SUS</p>
               {import.meta.env.VITE_VOTE_REGISTRY_ADDRESS && (

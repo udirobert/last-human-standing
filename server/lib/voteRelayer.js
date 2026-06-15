@@ -1,7 +1,7 @@
-import { createPublicClient, createWalletClient, http } from "viem";
+import { createWalletClient, http } from "viem";
 import { celo } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
+import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -22,43 +22,96 @@ try {
   // No ABI available — relayer will skip onchain mode
 }
 
-function enqueueVote(submissionId, voterAddress, vote) {
-  const dir = resolve(__dirname, "../../.relayer");
-  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const path = resolve(dir, `queue.json`);
-  let queue = [];
-  try { queue = JSON.parse(readFileSync(path, "utf8")); } catch { /* fresh queue */ }
-  queue.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 8), submissionId, voterAddress, vote, ts: new Date().toISOString() });
-  writeFileSync(path, JSON.stringify(queue, null, 2));
+let _supabaseAdmin = null;
+
+/**
+ * Set the Supabase admin client for DB-backed queue operations.
+ * Called during server startup (import side-effect free by default).
+ */
+export function setRelayerSupabase(supabase) {
+  _supabaseAdmin = supabase;
 }
 
-function dequeueBatch(count) {
-  const dir = resolve(__dirname, "../../.relayer");
-  const path = resolve(dir, `queue.json`);
-  if (!existsSync(path)) return [];
-  try {
-    const queue = JSON.parse(readFileSync(path, "utf8"));
-    const batch = queue.slice(0, count);
-    const remaining = queue.slice(count);
-    writeFileSync(path, JSON.stringify(remaining, null, 2));
-    return batch;
-  } catch {
-    return [];
+/**
+ * Enqueue a vote for onchain submission via the vote_queue table.
+ * Crash-safe: vote and queue insert can be done atomically by the caller.
+ * Returns a promise that resolves when the row is inserted.
+ */
+export async function enqueueVote(submissionId, voterAddress, vote, supabaseClient) {
+  const db = supabaseClient || _supabaseAdmin;
+  if (!db) {
+    // No Supabase configured — silently skip onchain queueing.
+    // This is expected in dev/test mode or when Supabase is down.
+    return;
+  }
+  const { error } = await db.from("vote_queue").insert({
+    submission_id: submissionId,
+    voter_address: voterAddress,
+    vote,
+    status: "pending",
+  });
+  if (error) {
+    console.error(JSON.stringify({
+      time: new Date().toISOString(),
+      event: "vote_enqueue_error",
+      error: error.message,
+    }));
   }
 }
 
-function getQueueSize() {
-  const path = resolve(__dirname, "../../.relayer/queue.json");
-  try { return JSON.parse(readFileSync(path, "utf8")).length; } catch { return 0; }
+async function claimBatch(count) {
+  // Atomically claim N pending rows using a subquery + update.
+  // This avoids race conditions between multiple relayer instances.
+  const { data, error } = await _supabaseAdmin.rpc("claim_vote_queue_batch", {
+    p_batch_size: count,
+  });
+  if (error) {
+    console.error(JSON.stringify({
+      time: new Date().toISOString(),
+      event: "vote_claim_error",
+      error: error.message,
+    }));
+    return [];
+  }
+  return data || [];
 }
 
-export function startVoteRelayer({ log }) {
+async function markDone(id, txHash) {
+  await _supabaseAdmin
+    .from("vote_queue")
+    .update({ status: "done", tx_hash: txHash, processed_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+async function markFailed(id, errorMessage) {
+  await _supabaseAdmin
+    .from("vote_queue")
+    .update({ status: "failed", error_message: String(errorMessage).slice(0, 500), processed_at: new Date().toISOString() })
+    .eq("id", id);
+}
+
+async function getQueueSize() {
+  const { count } = await _supabaseAdmin
+    .from("vote_queue")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+  return count ?? 0;
+}
+
+export function startVoteRelayer({ log, supabaseAdmin }) {
   if (!VOTE_REGISTRY_ADDRESS || !CELO_SIGNING_KEY || !abi) {
     log("vote_relayer_offline", {
       reason: !VOTE_REGISTRY_ADDRESS ? "no_contract_address" : !CELO_SIGNING_KEY ? "no_signing_key" : "no_abi",
     });
     return;
   }
+
+  if (!supabaseAdmin) {
+    log("vote_relayer_offline", { reason: "no_supabase" });
+    return;
+  }
+
+  _supabaseAdmin = supabaseAdmin;
 
   const account = privateKeyToAccount(CELO_SIGNING_KEY);
   const walletClient = createWalletClient({
@@ -80,7 +133,7 @@ export function startVoteRelayer({ log }) {
     running = true;
 
     try {
-      const batch = dequeueBatch(BATCH_SIZE);
+      const batch = await claimBatch(BATCH_SIZE);
       if (!batch.length) {
         running = false;
         return;
@@ -94,19 +147,21 @@ export function startVoteRelayer({ log }) {
             address: VOTE_REGISTRY_ADDRESS,
             abi,
             functionName: "castRelayerVote",
-            args: [BigInt(v.submissionId), v.voterAddress, v.vote === "real"],
+            args: [BigInt(v.submission_id), v.voter_address, v.vote === "real"],
           });
-          log("vote_relayer_tx", { id: v.id, hash, submissionId: v.submissionId });
+          log("vote_relayer_tx", { id: v.id, hash, submissionId: v.submission_id });
+          await markDone(v.id, hash);
           await new Promise((r) => setTimeout(r, 100));
         } catch (err) {
           log("vote_relayer_tx_failed", {
             id: v.id,
             error: err instanceof Error ? err.message : "unknown",
           });
+          await markFailed(v.id, err instanceof Error ? err.message : "unknown");
         }
       }
 
-      const remaining = getQueueSize();
+      const remaining = await getQueueSize();
       if (remaining > 0) log("vote_relayer_queue_remaining", { count: remaining });
     } catch (err) {
       log("vote_relayer_error", { error: err instanceof Error ? err.message : "unknown" });
@@ -120,5 +175,3 @@ export function startVoteRelayer({ log }) {
 
   return () => clearInterval(interval);
 }
-
-export { enqueueVote };

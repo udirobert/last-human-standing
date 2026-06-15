@@ -260,6 +260,95 @@ begin
 end;
 $$;
 
+-- =============== Atomic vote insertion with onchain queue ===============
+-- Inserts a vote and enqueues it for onchain submission in one transaction.
+-- If the vote already exists (duplicate), returns false without error.
+create or replace function public.cast_vote(
+  p_submission_id bigint,
+  p_voter_address text,
+  p_vote text
+)
+returns table (
+  inserted boolean,
+  duplicate boolean,
+  vote_id bigint
+)
+language plpgsql
+security definer
+as $$
+begin
+  -- Check for duplicate
+  if exists (select 1 from public.votes where submission_id = p_submission_id and voter_address = p_voter_address) then
+    return query select false::boolean, true::boolean, null::bigint;
+    return;
+  end if;
+
+  -- Insert the vote
+  insert into public.votes (submission_id, voter_address, vote)
+    values (p_submission_id, p_voter_address, p_vote)
+    returning id into vote_id;
+
+  -- Enqueue for onchain submission (crash-safe, same transaction)
+  insert into public.vote_queue (submission_id, voter_address, vote, status)
+    values (p_submission_id, p_voter_address, p_vote, 'pending');
+
+  return query select true::boolean, false::boolean, vote_id;
+end;
+$$;
+
+-- =============== Atomic close-day for admin endpoint ===============
+-- Mirrors the logic in the admin close-day handler but runs atomically
+-- inside a single Postgres transaction. Returns the result summary.
+create or replace function public.close_day(p_day int, p_cap int)
+returns jsonb
+language plpgsql
+security definer
+as $$
+declare
+  result jsonb;
+  survivor_addrs text[];
+  to_eliminate text[];
+  user_row record;
+begin
+  -- Mark checkins beyond the cap as not survived
+  update public.checkins set survived = false where day = p_day and rank > p_cap;
+
+  -- Collect surviving addresses
+  survivor_addrs := array(
+    select lower(address) from public.checkins
+      where day = p_day and rank <= p_cap
+  );
+
+  -- Find paid, uneliminated users who did NOT check in (or were beyond cap)
+  to_eliminate := '{}'::text[];
+  for user_row in
+    select address from public.users where paid = true and eliminated = false
+  loop
+    if not (lower(user_row.address) = any (survivor_addrs)) then
+      to_eliminate := array_append(to_eliminate, user_row.address);
+    end if;
+  end loop;
+
+  if array_length(to_eliminate, 1) > 0 then
+    update public.users
+      set eliminated = true, eliminated_at_day = p_day
+      where address = any (to_eliminate);
+  end if;
+
+  -- Mark the round as closed
+  update public.rounds
+    set status = 'closed', updated_at = now()
+    where day = p_day;
+
+  result := jsonb_build_object(
+    'day', p_day,
+    'survivors', coalesce(cardinality(survivor_addrs), 0),
+    'eliminated', coalesce(cardinality(to_eliminate), 0)
+  );
+  return result;
+end;
+$$;
+
 -- =============== Anti-cheat flags ===============
 create table if not exists public.submission_flags (
   id uuid primary key default gen_random_uuid(),

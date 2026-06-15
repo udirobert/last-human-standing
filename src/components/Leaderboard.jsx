@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
 import { usePolling } from '../hooks/usePolling.js';
@@ -7,6 +7,9 @@ import { useWorld } from '../world/WorldProvider.jsx';
 import Countdown from './Countdown.jsx';
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
+import GlitchTitle from './ui/GlitchTitle.jsx';
+import Mascot from './Mascot.jsx';
+import { PROFILE_TYPES } from './SurvivalProfile.jsx';
 
 function shortAddr(addr) {
   if (!addr) return 'anon';
@@ -38,6 +41,7 @@ const ELIM_SCHEDULE = [
 
 export default function Leaderboard({ onBack }) {
   const [tab, setTab] = useState('today');
+  const [peekPlayer, setPeekPlayer] = useState(null);
   const { phase, launchAt, currentDay, round, reservedCount, cohortSize, cohortFull } = useRound();
   const { stats } = useStats();
   const { user } = useWorld();
@@ -83,7 +87,7 @@ export default function Leaderboard({ onBack }) {
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1">
-            <h2 className="font-display text-3xl text-bone tracking-wide">STANDINGS</h2>
+            <GlitchTitle text="STANDINGS" className="font-display text-3xl text-bone tracking-wide" />
             <p className="font-mono text-dim text-xs">
               {isLive ? `Day ${currentDay ?? '—'} · ${survivors.length}/${round?.survivalCap ?? '—'} arrived` : 'Pre-launch'}
             </p>
@@ -203,7 +207,8 @@ export default function Leaderboard({ onBack }) {
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.02 }}
-                className={`flex items-center gap-3 rounded-2xl p-3 ${
+                onClick={() => setPeekPlayer(r)}
+                className={`flex items-center gap-3 rounded-2xl p-3 cursor-pointer hover:border-amber/40 transition-all ${
                   isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                 }`}
               >
@@ -367,7 +372,8 @@ export default function Leaderboard({ onBack }) {
                 initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className={`flex items-center gap-3 rounded-2xl p-4 ${
+                onClick={() => setPeekPlayer(c)}
+                className={`flex items-center gap-3 rounded-2xl p-4 cursor-pointer hover:border-amber/40 transition-all ${
                   isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                 }`}
               >
@@ -407,7 +413,8 @@ export default function Leaderboard({ onBack }) {
                 initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
-                className="bg-smoke border border-ember rounded-2xl p-4 flex items-center gap-3 opacity-60"
+                onClick={() => setPeekPlayer(c)}
+                className="bg-smoke border border-ember rounded-2xl p-4 flex items-center gap-3 opacity-60 cursor-pointer hover:border-amber/40 hover:opacity-90 transition-all"
               >
                 <span className="text-2xl">💀</span>
                 <div className="flex-1">
@@ -420,6 +427,90 @@ export default function Leaderboard({ onBack }) {
           )}
         </div>
       )}
+
+      {/* Profile Peek Overlay */}
+      <AnimatePresence>
+        {peekPlayer && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPeekPlayer(null)}
+              className="fixed inset-0 bg-ash/80 z-40"
+            />
+            {/* Slide up card */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 250 }}
+              className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-smoke border-t border-ember rounded-t-3xl p-6 z-50 shadow-2xl"
+            >
+              <div className="w-12 h-1 bg-ember/60 rounded-full mx-auto mb-4" />
+              
+              {(() => {
+                const cleanAddr = peekPlayer.address?.toLowerCase().replace('0x', '') || '';
+                const charSum = cleanAddr.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
+                
+                const styles = ['adventurer', 'strategist', 'social', 'casual', 'spectator'];
+                const vibes = ['competitive', 'casual', 'glory', 'experience'];
+                const devices = ['phone', 'action', 'pro'];
+                
+                const style = styles[charSum % styles.length];
+                const vibe = vibes[(charSum >> 2) % vibes.length];
+                const device = devices[(charSum >> 4) % devices.length];
+                
+                const key = `${style}-${vibe}-${device}`;
+                const profileType = PROFILE_TYPES[key] || { name: 'The Survivor', emoji: '🎯', color: '#FFB800', tagline: 'Forgetting limits, adapting to survive.' };
+                
+                const mascotVariants = ['excited', 'celebrating', 'focused', 'neutral'];
+                const variant = mascotVariants[charSum % mascotVariants.length];
+                
+                return (
+                  <div className="flex flex-col items-center text-center">
+                    <Mascot variant={variant} size={100} />
+                    
+                    <h3 className="font-display text-3xl text-bone mt-4">
+                      {peekPlayer.username ? `@${peekPlayer.username}` : shortAddr(peekPlayer.address)}
+                    </h3>
+                    <p className="text-dim text-xs font-mono select-all mt-1">{peekPlayer.address}</p>
+                    
+                    <div className="mt-4 p-4 w-full bg-ash border border-ember rounded-2xl">
+                      <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Survival Type</p>
+                      <p className="font-display text-2xl" style={{ color: profileType.color }}>
+                        {profileType.emoji} {profileType.name}
+                      </p>
+                      <p className="text-bone/90 font-mono text-xs mt-2 italic">"{profileType.tagline}"</p>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 w-full mt-3">
+                      <div className="bg-ash border border-ember rounded-2xl p-3">
+                        <p className="text-dim text-[10px] font-mono uppercase">Status</p>
+                        <p className="text-neon font-mono text-sm mt-1">✓ Active Cohort</p>
+                      </div>
+                      <div className="bg-ash border border-ember rounded-2xl p-3">
+                        <p className="text-dim text-[10px] font-mono uppercase">Registered</p>
+                        <p className="text-bone font-mono text-sm mt-1">
+                          {peekPlayer.reserved_at ? relTime(peekPlayer.reserved_at) : 'Day 1'}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => setPeekPlayer(null)}
+                      className="mt-6 w-full py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
+                    >
+                      Close
+                    </button>
+                  </div>
+                );
+              })()}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
