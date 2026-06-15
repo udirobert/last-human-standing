@@ -1,6 +1,6 @@
 # UX Remediation Plan — prelaunch hardening
 
-> Target: 9/10 on every axis of the UX review, in time for the **2026-06-14 14:00 UTC** launch.
+> Target: 9/10 on every axis of the UX review, in time for the **2026-06-17 18:00 UTC** re-launch.
 > Constraints: existing Core Principles (enhancement-first, consolidation, DRY, modular, performant, organized).
 
 ## Audit findings (what exists today)

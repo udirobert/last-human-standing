@@ -1,8 +1,16 @@
-# Launch runbook — 2026-06-14 14:00 UTC
+# Launch runbook — 2026-06-17 18:00 UTC
 
 This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`
 and the lottery draws.
+
+> **Re-launch context.** The original June 14 launch ran with
+> zero signups. The lazy draw fired on an empty cohort and
+> produced an empty result. We've reset state, bumped
+> `GAME_LAUNCH_AT=2026-06-17T18:00:00Z`, and added lazy-draw
+> gating (see T-0 below) so the same thing can't happen
+> twice. The June 17 18:00 UTC timing targets Tuesday-evening
+> Europe / morning-US — peak crypto-twitter reach.
 
 ## Cohort model (recap)
 
@@ -25,10 +33,16 @@ signup between the lazy trigger and the actual draw is honoured.
 
 ## T-24h (now-ish)
 
-- [ ] **Apply the migration** in Supabase SQL editor:
-  `supabase/migrations/004_hybrid_cohort.sql`
-  This adds `entry_kind`, `entry_token`, `cohort` columns and the
-  `lottery_results` table.
+- [ ] **Apply the migrations** in Supabase. The `supabase` CLI
+  is the working path now (see "Migrations" section below):
+  ```bash
+  supabase login                            # one-time
+  supabase link --project-ref emumokebsahapnqnstlr
+  supabase db push                          # applies 002..005
+  ```
+  The chain is idempotent end-to-end. If a `create policy`
+  fails, wrap it in `drop policy if exists` first (the
+  Postgres `create policy` form has no native `if not exists`).
 - [ ] **Run the reset SQL** in `docs/LAUNCH_RESET.md` to clear
   stale dev-session data from the cohort.
 - [ ] **Build on the server, not locally.** The `VITE_FREE_ENTRY_MODE`
@@ -53,10 +67,37 @@ signup between the lazy trigger and the actual draw is honoured.
 - [ ] **Curl `/api/stats`** — should now return
   `prizePool.wld` AND `prizePool.celo`.
 
-## T-0 (14:00 UTC exactly)
+## T-0 (18:00 UTC exactly)
 
 The first call to `/api/game/state` after `GAME_LAUNCH_AT`
-triggers the **lazy lottery draw**. The draw is:
+may trigger the **lazy lottery draw** — but only if the
+gating conditions are met (see below).
+
+### Lazy-draw gating (new in this re-launch)
+
+The draw is **held** until EITHER:
+
+- `LOTTERY_MIN_CANDIDATES` (default 10) free-registered
+  humans have signed up, OR
+- `LOTTERY_MAX_DELAY_HOURS` (default 6) have passed since
+  `GAME_LAUNCH_AT`.
+
+The earlier of the two fires the draw. This is the fix for
+the June 14 launch's empty-draw failure mode. The
+`/api/lottery/status` response carries `minCandidates`,
+`maxDelayHours`, and `nextDrawAt` so the client can show a
+"lottery draws in N minutes" countdown once we're past T-0
+and the draw is still being held.
+
+While the draw is held, the pm2 logs will emit
+`lottery_lazy_held` events with `freeCandidates` and
+`hoursPastLaunch` so the operator can see why. When the
+draw fires, the trigger reason is logged as `min`, `delay`,
+or `min+delay`.
+
+### When the draw fires
+
+The draw is:
 
 - Deterministic (seed = `${GAME_LAUNCH_AT}:cohort-1:lottery`).
 - Replayable — anyone can re-run with the same seed.
@@ -65,16 +106,16 @@ triggers the **lazy lottery draw**. The draw is:
 Steps to monitor the draw:
 
 1. Curl `/api/lottery/status` — first call after T-0 will see
-   `status: "pending"`, then the next call sees `status: "drawn"`
-   with a non-null `drawn` array.
+   `status: "pending"` (draw held) or `status: "drawn"` (draw
+   already fired from an earlier `/api/game/state` call).
 2. Inspect the result in Supabase:
    ```sql
    select * from public.lottery_results where cohort = 1;
    ```
    The `drawn` JSONB array lists winners in selection order
    (rank 1, 2, 3, ...). The losers were moved to `cohort = 2`.
-3. If the draw didn't run (Supabase outage during T-0), trigger
-   it manually:
+3. If the draw didn't run by `T-0 + 6h` (Supabase outage or
+   nobody called `/api/game/state`), trigger it manually:
    ```bash
    curl -X POST -H "X-Admin-Token: $ADMIN_TOKEN" \
         https://lasthumanstanding.thisyearnofear.com/api/lottery/draw
@@ -86,10 +127,25 @@ Steps to monitor the draw:
   service is already wired, just trigger from
   `AdminDashboard → Push → Broadcast`. See
   `docs/PUSH_NOTIFICATIONS.md` for the template.
-- [ ] **Cohort-2 waitlist email** to the free lottery losers.
-  Easiest: query the `users` table for `cohort = 2 AND entry_kind = 'free'`
-  and send via your transactional email provider. (No automation
-  yet — pull the list, paste into your provider.)
+- [ ] **Cohort-2 waitlist ping** to the free lottery losers,
+  AND to the bounced visitors on the `cohort_waitlist` table.
+  The query is:
+  ```sql
+  -- Free lottery losers (now in cohort 2)
+  select address, username
+    from public.users
+   where cohort = 2 and entry_kind = 'free' and paid = true;
+
+  -- Bounced visitors (captured on the welcome screen)
+  select x_handle, email, source, created_at
+    from public.cohort_waitlist
+   order by created_at desc;
+  ```
+  The `cohort_waitlist` table is namespaced with a `cohort_`
+  prefix to avoid collision with a legacy `waitlist` table
+  from a previous project. Send via your transactional email
+  provider; for the X handles, a Twitter DM or a public tag
+  from the project's account both work.
 - [ ] **Smoke test**: open the page on a phone, sign in, check
   in at a place. The `phase: "live"` flag is now on.
 
@@ -106,7 +162,7 @@ import('./server/lib/lottery.js').then(({ drawLottery, lotterySeed, ALGORITHM_VE
   // For a re-run, export the candidate list from Supabase and pass it in.
   const candidates = [/* ...from supabase, ordered by reserved_at asc... */];
   const result = drawLottery(candidates, {
-    launchAtIso: '2026-06-14T14:00:00Z',
+    launchAtIso: '2026-06-17T18:00:00Z',
     cohort: 1,
     slots: 25,
   });
@@ -132,11 +188,16 @@ Compare the output's `winners` list to the one in
 | Celo pot reads 0 forever | `CELO_RPC` rate-limited or unreachable | Set `CELO_RPC` to a paid provider (e.g. `https://celo-mainnet.g.alchemy.com/v2/...`); restart PM2 |
 | `/api/lottery/draw` returns 401 | `VITE_ADMIN_TOKEN` not set or wrong | Set it in the server env, restart PM2 |
 
-### Direct DB connection (verified 2026-06-13)
+### Direct DB connection (verified 2026-06-15)
 
 The Supabase project is in `aws-0-eu-west-1`. The direct endpoint
 (port 5432) is connection-refused; the **pooler** is the working
-entry point.
+entry point. The service role JWT is **rejected** as the
+postgres password on the pooler (the project was created with
+a separate DB password).
+
+For ad-hoc queries, the working path is the `supabase` CLI
+(see T-24h above). For direct psql:
 
 ```bash
 PGPASSWORD='<DB_PASSWORD>' \
@@ -147,7 +208,13 @@ PGPASSWORD='<DB_PASSWORD>' \
 Other regions return `tenant/user not found` (misleading Supabase
 error — the project isn't there).
 
-For migrations in a hurry, use the bundled runner:
+If the `supabase` CLI is set up (it is, after
+`supabase login` + `supabase link`), the migration runner is
+the same `supabase db push` — that's how 005_waitlist was
+applied for the June 17 re-launch.
+
+For migrations in a hurry (e.g. emergency ALTER while supabase
+CLI is broken), fall back to psql with the DB password:
 
 ```bash
 DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-west-1.pooler.supabase.com:6543/postgres' \

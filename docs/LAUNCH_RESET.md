@@ -1,6 +1,13 @@
 # Launch reset — pre-flight SQL
 
-Run before 2026-06-14 14:00 UTC. Idempotent. Safe to re-run.
+Run before 2026-06-17 18:00 UTC. Idempotent. Safe to re-run.
+
+> **Re-launch context.** This reset was re-run on 2026-06-15
+> after the June 14 launch produced an empty lottery draw
+> (no signups at T-0). The cohort was emptied, the lottery
+> row deleted, and `GAME_LAUNCH_AT` was bumped to
+> 2026-06-17T18:00:00Z. The same SQL below is what you'd
+> re-run for any future reset.
 
 ## Clear stale dev-session cohort data
 
@@ -46,6 +53,38 @@ select table_name
 ```
 
 Expected: 1 row.
+
+## Verify the waitlist + page-view tables exist (005_waitlist)
+
+```sql
+select table_name
+  from information_schema.tables
+ where table_schema = 'public'
+   and table_name in ('cohort_waitlist', 'cohort_page_views');
+```
+
+Expected: 2 rows. Both are namespaced with `cohort_` to avoid
+collision with a legacy `waitlist` table from a previous project.
+The waitlist powers the "Notify me when cohort 1 launches"
+card on the welcome screen; the page-views table records every
+`/api/track` ping (hashed IP, no PII).
+
+## Verify the lazy-draw gating is wired
+
+The `/api/lottery/status` response should include:
+
+```bash
+curl -s https://lasthumanstanding.thisyearnofear.com/api/lottery/status
+```
+
+Look for:
+- `minCandidates`: 10 (the floor before the draw fires)
+- `maxDelayHours`: 6 (the max delay past T-0)
+- `nextDrawAt`: ISO timestamp of the earlier of the two triggers
+- `status: "scheduled"` (phase is still prelaunch)
+
+If `nextDrawAt` is null but `status` is `"pending"`, you're
+between T-0 and the gating fire — that's the normal held state.
 
 ## Sanity check the public roster before launch
 
