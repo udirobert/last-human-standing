@@ -76,6 +76,7 @@ create table if not exists public.lottery_results (
 alter table public.lottery_results enable row level security;
 
 -- Public read so the result is verifiable from any client.
+drop policy if exists "lottery_results_read" on public.lottery_results;
 create policy "lottery_results_read"
   on public.lottery_results for select
   using (true);
