@@ -35,8 +35,8 @@ if (typeof window !== "undefined" && (window.farcaster || window.parent !== wind
   import("@farcaster/miniapp-sdk").then(({ sdk }) => sdk.actions.ready()).catch(() => {});
 }
 
-const WorldContext = createContext(null);
-const STORAGE_KEY = "lhs_world_state_v1";
+export const WorldContext = createContext(null);
+const STORAGE_KEY = "******************";
 
 function safeTruncateAddress(address) {
   if (!address) return null;

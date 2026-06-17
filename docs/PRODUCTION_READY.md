@@ -107,7 +107,8 @@
 - **Live state**: "ENTER ARENA" CTA. Good. ✅
 - **"YOU'RE IN" confirmation**: After payment, shows email capture + referral link. Good virality hook. ✅
 - **Browser fallback**: Shows `BrowserWalletPay` component + "open in World App" CTA. Clear degradation. ✅
-- **Gap**: World ID verification is shown *after* payment for browser users (conditional on `requireWorldId`). This is good — payment is the primary action, PoH is secondary. But there's no visual indicator of *why* World ID matters at that point (trust tier, voting access).
+- **World ID verify-first placement** ✅ — the Reserve step now renders World ID + Self verify *before* the paid card, no longer gated on `entryPaid`. World App users can prove identity without paying first. World ID is hidden for Farcaster users (no World App); Self is shown to everyone. `WorldIdVerify` also gates the widget on a connected wallet address (`user?.address`) and renders an explicit "Connect wallet to verify" prompt otherwise — the Orb proof's `signal` is bound to the wallet, so an empty signal would produce an unverifiable proof.
+- **Gap**: there's no visual indicator of *why* World ID matters at the verify step (trust tier, voting access). Recommended: show the trust-tier ladder (`unverified → provisional → verified`) above the verify buttons so users understand what they're unlocking.
 - **Error recovery**: "Retry" button on wallet auth/pay errors. Good. ✅ No state reset between retries — users might need a "clear and start over" button if the error is persistent.
 
 ### 3c. Feed (Audit Layer) — 🟡 Voting UX good, trust badges missing

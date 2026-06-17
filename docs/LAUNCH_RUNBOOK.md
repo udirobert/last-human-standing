@@ -49,6 +49,20 @@ signup between the lazy trigger and the actual draw is honoured.
   flag is baked into the client bundle at build time. Local `.env`
   must match the server `.env` or the UI will lie. Easiest path:
   rsync `.env` to the server, then build in `/opt/last-human-standing/current`.
+- [ ] **World ID env vars (if enabling PoH on production)**:
+  ```bash
+  VITE_ENABLE_IDKIT=true
+  VITE_WORLD_ID_APP_ID=app_xxx             # from World Dev Portal
+  VITE_WORLD_ID_ACTION=last-human-standing
+  WORLD_ID_RP_ID=rp_xxx                    # server-only
+  WORLD_ID_SIGNING_KEY=0x...               # server-only, secp256k1
+  ```
+  All five must be set or users see the "World ID disabled"
+  message and can only verify via Self Protocol. The Orb
+  proof's `signal` is bound to the connected wallet, so
+  the client also refuses to open the widget until a wallet
+  is connected — a misconfiguration here manifests as users
+  seeing "Connect wallet to verify" with no obvious next step.
 - [ ] **Smoke-test the build**: load `/`, see the splash, see
   the FREE ENTRY button on step 2 of Onboarding, see the two-bar
   cohort card on GameHome.
@@ -200,7 +214,7 @@ For ad-hoc queries, the working path is the `supabase` CLI
 (see T-24h above). For direct psql:
 
 ```bash
-PGPASSWORD='<DB_PASSWORD>' \
+PGPASSWORD=<password-from-supabase-dashboard> \
   psql -h aws-0-eu-west-1.pooler.supabase.com -p 6543 \
        -U postgres.emumokebsahapnqnstlr -d postgres
 ```

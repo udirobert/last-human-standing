@@ -40,6 +40,27 @@ Browser pay    ──►  POST /api/pay/browser-confirm
 6. **To go from staging to mainnet:** set `SELF_MOCK_PASSPORT=false` and the verifier switches to the Celo mainnet hub automatically. No code change.
 7. **Forbidden countries list:** `SELF_EXCLUDED_COUNTRIES` can be set to a comma-separated list of ISO country codes (e.g. `IRN,PRK,RUS,SYR`) to reject passports from those countries. Default is empty — accepted on all origins. The circuit's embedded list must be a superset of the config list, otherwise `InvalidForbiddenCountriesList` is thrown. Mock passports (staging) do not embed a countries list, so this should be left empty in dev.
 
+### World ID UX invariants (current)
+
+The Orb proof is cryptographically bound to a `signal` string. The current
+implementation binds it to the connected wallet address so the resulting
+nullifier is per-person-per-wallet (the server stores `nullifier → wallet`).
+Two things follow from that and are easy to get wrong, so they're called
+out explicitly:
+
+1. **Never submit a proof without a connected wallet.** If the user clicks
+   "Verify World ID" before they have an address, `WorldIdVerify.jsx`
+   renders an explicit "Connect wallet to verify" button instead of opening
+   the widget. Opening the widget with an empty signal used to silently
+   produce a proof bound to nothing — the fix is to gate the widget on
+   `user?.address` and only hand `signal: walletAddress` to `orbLegacy`
+   once a wallet is on file.
+2. **Verification is offered before payment.** The Onboarding "Reserve"
+   step renders the World ID + Self verify card *before* the paid card and
+   is no longer gated on `entryPaid`. World App users can prove identity
+   in step 2 without first paying 1 WLD. Farcaster users only see Self
+   (World ID requires World App); non-Farcaster users see both.
+
 ### Celo-specific notes
 
 - Use **Celo Sepolia** for dev ([faucet](https://faucet.celo.org/celo-sepolia)).

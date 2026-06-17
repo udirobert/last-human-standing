@@ -24,8 +24,15 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 ### A) Pre-launch state (`phase = "prelaunch"`)
 
 1. Open the app — see **countdown to launch** + **cohort fill counter** ("34 of 50 reserved")
-2. Tap **RESERVE YOUR SLOT** → wallet auth (SIWE) → pay 1 WLD
+2. Tap **RESERVE YOUR SLOT** → optional **verify first** card (World ID + Self) → wallet auth (SIWE) → pay 1 WLD
 3. Confirmation: **"You're in. Day 1 starts in T-…"**
+
+> **Verify-first tip**: in the Reserve step, the World ID + Self verify card
+> renders *above* the paid card. Users can connect a wallet, prove identity,
+> and only then pay — which promotes them straight to the `verified` tier
+> instead of the `provisional` "paid but unverified" tier. If they skip
+> verify, they can still play but voting may be restricted when
+> `VITE_REQUIRE_WORLD_ID_FOR_VOTING=true`.
 
 ### B) Live state (`phase = "live"`)
 

@@ -340,10 +340,37 @@ export default function Onboarding({ onEnter }) {
                   )}
                 </StageSection>
 
+                {(tier !== "verified") && (
+                  <StageSection index={2} className="space-y-3">
+                    <div className="bg-smoke border border-neon/30 rounded-2xl p-4">
+                      <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
+                        Optional · verify first
+                      </p>
+                      <p className="text-dim text-xs font-mono mb-3">
+                        Get verified with World ID or Self before paying. Unlocks the highest trust
+                        tier and, if enabled, voting. You can also do this after reserving.
+                      </p>
+                      {!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
+                      {import.meta.env.VITE_ENABLE_SELF === "true" && (
+                        <div className={!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" ? "mt-3" : ""}>
+                          <Suspense fallback={<ScreenLoader kind="detail" />}>
+                            <SelfVerify />
+                          </Suspense>
+                        </div>
+                      )}
+                      {!isFarcaster && !import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
+                        <p className="text-dim text-[10px] font-mono text-center">
+                          Humanity verification is offline in this build.
+                        </p>
+                      )}
+                    </div>
+                  </StageSection>
+                )}
+
                 {!entryPaid && (
                   <>
                     {/* PAID CARD */}
-                    <StageSection index={2} className="bg-smoke border border-ember rounded-2xl p-5">
+                    <StageSection index={3} className="bg-smoke border border-ember rounded-2xl p-5">
                       <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1">
                         {ENTRY.paid.cardLabel}
                       </p>
@@ -389,7 +416,7 @@ export default function Onboarding({ onEnter }) {
 
                     {/* FREE CARD — only when free mode is on */}
                     {isFree && (
-                      <StageSection index={3} className="bg-smoke border border-neon/30 rounded-2xl p-5">
+                      <StageSection index={4} className="bg-smoke border border-neon/30 rounded-2xl p-5">
                         <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
                           {ENTRY.free.cardLabel}
                         </p>
@@ -417,7 +444,7 @@ export default function Onboarding({ onEnter }) {
 
                     {/* Observer peek — no signup. Browser only. */}
                     {!isWorldApp && (
-                      <StageSection index={4}>
+                      <StageSection index={5}>
                         <button
                           type="button"
                           onClick={() => { markOnboardingDone(); onEnter(); }}
@@ -431,23 +458,6 @@ export default function Onboarding({ onEnter }) {
                       </StageSection>
                     )}
                   </>
-                )}
-
-                {!isFarcaster && entryPaid && tier !== "verified" && (
-                  <StageSection index={5} className="space-y-3">
-                    <p className="text-dim text-xs font-mono mb-2">Get verified (recommended before Day 1):</p>
-                    {import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
-                    {import.meta.env.VITE_ENABLE_SELF === "true" && (
-                      <Suspense fallback={<ScreenLoader kind="detail" />}>
-                        <SelfVerify />
-                      </Suspense>
-                    )}
-                    {!import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
-                      <p className="text-dim text-[10px] font-mono text-center">
-                        Humanity verification is offline in this build.
-                      </p>
-                    )}
-                  </StageSection>
                 )}
 
                 {entryPaid && (
