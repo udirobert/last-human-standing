@@ -201,6 +201,63 @@ Compare the output's `winners` list to the one in
 | Paid users showing as `entry_kind: null` | Migration backfill missed them | `update public.users set entry_kind = 'paid', entry_token = 'wld' where paid = true and entry_kind is null` |
 | Celo pot reads 0 forever | `CELO_RPC` rate-limited or unreachable | Set `CELO_RPC` to a paid provider (e.g. `https://celo-mainnet.g.alchemy.com/v2/...`); restart PM2 |
 | `/api/lottery/draw` returns 401 | `VITE_ADMIN_TOKEN` not set or wrong | Set it in the server env, restart PM2 |
+| World ID verify hangs or `verify_failed` in pm2 logs | Mismatch between server `WORLD_ID_RP_ID` + `WORLD_ID_SIGNING_KEY` and the `app_id` registered in the World Dev Portal | Re-pull the rp_id / signing key from the Dev Portal and update `shared/.env`; rebuild and redeploy |
+| "World ID disabled" in the Onboarding verify card | `VITE_ENABLE_IDKIT=false` (or unset) on server, OR the client bundle was built without that flag | `sed -i 's/^VITE_ENABLE_IDKIT=.*/VITE_ENABLE_IDKIT=true/' /opt/last-human-standing/shared/.env`, then rebuild + redeploy — the VITE_ vars are baked at build time, not read at runtime |
+| Orb opens in World App but the resulting nullifier isn't bound to a wallet | Client was using an empty `signal` (no wallet address); known cause: `WorldIdVerify` rendered before the user had a wallet | Fixed in `22b8a9b` — the widget now gates on `user?.address` and renders "Connect wallet to verify" otherwise |
+
+## Post-deploy smoke test (World ID)
+
+After flipping `VITE_ENABLE_IDKIT=true` and rebuilding, the fastest way to
+confirm the fix is end-to-end:
+
+```bash
+# 1. Confirm the new bundle has the flag baked in (chunk hash may change
+#    between builds — match the pattern, not the exact hash):
+curl -s https://lasthumanstanding.thisyearnofear.com/ \
+  | grep -oE 'assets/humanityProviders-[^"]*\.js' \
+  | xargs -I {} curl -s https://lasthumanstanding.thisyearnofear.com/{} \
+  | grep -oE 'VITE_ENABLE_IDKIT:[^,}]{1,15}'
+# → expect: VITE_ENABLE_IDKIT:`true`
+```
+
+Then on a phone with World App installed:
+
+1. Open the mini app → RESERVE
+2. Tap the new "VERIFY WORLD ID" card (now sits **above** the paid card,
+   no longer gated on `entryPaid`)
+3. Tap "VERIFY WORLD ID" → orb opens in World App → completes
+4. Back in the app, the trust badge should read "Verified · World ID"
+5. Confirm server-side: `curl -b "<session-cookie>" https://lasthumanstanding.thisyearnofear.com/api/me | jq '{humanityVerified, humanityProvider}'`
+   should return `{ "humanityVerified": true, "humanityProvider": "worldcoin" }`
+
+## Known noisy log lines (not actionable)
+
+These appear in `pm2 logs last-human-standing` and are **not caused by
+deploys or the World ID fix** — they are pre-existing Supabase connection
+timeouts that the round scheduler and vote relayer recover from
+automatically:
+
+- `vote_claim_error` / `round_scheduler_error` with
+  `upstream connect error or disconnect/reset before headers. retried
+  and the latest reset reason: connection timeout` — Supabase pooler
+  blips, retried by the next tick. Ignore unless they appear in a
+  continuous stream (then check `CELO_RPC` rate limits and the Supabase
+  project status page).
+
+If a new deploy produces errors **other** than the above, the deploy is
+the likely cause — roll back with `bash scripts/deploy-rollback.sh`.
+
+## Operational notes
+
+- **API port**: production runs on `PORT=5300` (set in `shared/.env`).
+  The default in the code is 8787, so don't `curl localhost:8787` to
+  health-check prod — it's `localhost:5300`. The reverse proxy on
+  `lasthumanstanding.thisyearnofear.com` terminates TLS and forwards
+  to 5300.
+- **Deploy user**: pm2 processes run as the `deploy` user; the release
+  layout is owned by `deploy:root`. Don't `chown` the release dirs to
+  your own user or pm2 will fail to read the shared `node_modules`
+  symlink on the next restart.
 
 ### Direct DB connection (verified 2026-06-15)
 
