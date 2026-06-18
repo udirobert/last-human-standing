@@ -227,3 +227,41 @@ html, body {
 .hover-glow:hover {
   box-shadow: 0 0 15px currentColor;
 }
+
+/* ============================================================================
+ * Accessibility — motion + hover
+ *
+ * prefers-reduced-motion: reduce  → cap every animation/transition to ~0ms
+ *   so the layout still updates but no movement runs. Vestibular users no
+ *   longer get the welcome halo, shimmer, or pulse-glow loops.
+ *
+ * @media (hover: hover) and (pointer: fine)  → gated hover zone.
+ *   On coarse pointers (touch), Tailwind's :hover utilities can stick
+ *   after a tap on iOS Safari. We scope the visual hover changes to
+ *   fine pointers only; touch gets the press feedback (active:scale-*)
+ *   without the residual border/glow change.
+ * ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media not (hover: hover) {
+  /* Revert hover-driven border/glow changes on touch devices so :hover
+   * doesn't stick after a tap. Only the most common offenders are listed
+   * here; new hover utilities should follow the same pattern. */
+  .hover\:border-amber\/60:hover,
+  .hover\:border-ember:hover,
+  .hover\:text-bone:hover {
+    border-color: inherit;
+    color: inherit;
+  }
+}

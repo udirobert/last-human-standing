@@ -178,7 +178,7 @@ export default function Onboarding({ onEnter }) {
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${cohortPct}%` }}
-                          transition={{ duration: 0.8, ease: "easeOut" }}
+                          transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
                           className="h-full bg-amber rounded-full"
                         />
                       </div>
@@ -200,9 +200,9 @@ export default function Onboarding({ onEnter }) {
 
                 <StageSection index={6}>
                   <motion.button
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.85 }}
+                    initial={{ opacity: 0, transform: "translateY(12px)" }}
+                    animate={{ opacity: 1, transform: "translateY(0)" }}
+                    transition={{ delay: 0.85, duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     type="button"
                     onClick={() => setStep(1)}
                     className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
@@ -222,9 +222,9 @@ export default function Onboarding({ onEnter }) {
         {step === 1 && (
           <motion.div
             key="rules"
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -24 }}
+            initial={{ opacity: 0, transform: "translateX(24px)" }}
+            animate={{ opacity: 1, transform: "translateX(0)" }}
+            exit={{ opacity: 0, transform: "translateX(-24px)" }}
             className="flex-1 flex flex-col"
           >
             <StageShell
@@ -295,9 +295,9 @@ export default function Onboarding({ onEnter }) {
         {step === 2 && (
           <motion.div
             key="reserve"
-            initial={{ opacity: 0, x: 24 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -24 }}
+            initial={{ opacity: 0, transform: "translateX(24px)" }}
+            animate={{ opacity: 1, transform: "translateX(0)" }}
+            exit={{ opacity: 0, transform: "translateX(-24px)" }}
             className="flex-1 flex flex-col"
           >
             <StageShell

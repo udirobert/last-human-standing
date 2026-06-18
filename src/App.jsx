@@ -157,8 +157,8 @@ const SCREENS = {
             key="onboarding"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scale: 0.97 }}
-            transition={{ duration: 0.25 }}
+            exit={{ opacity: 0, transform: "scale(0.97)" }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
             <Onboarding onEnter={handleEnterGame} />
           </motion.div>
@@ -167,10 +167,10 @@ const SCREENS = {
         {screen === SCREENS.HOME && (
           <motion.div
             key="home"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, transform: "translateY(20px)" }}
+            animate={{ opacity: 1, transform: "translateY(0)" }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
             <GameHome
               onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
@@ -184,9 +184,9 @@ const SCREENS = {
         {screen === SCREENS.CHECKIN && (
           <motion.div
             key="checkin"
-            initial={{ y: '100%', opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: '100%', opacity: 0 }}
+            initial={{ transform: "translateY(100%)", opacity: 0 }}
+            animate={{ transform: "translateY(0)", opacity: 1 }}
+            exit={{ transform: "translateY(100%)", opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
           >
             <CheckIn onBack={() => setScreen(SCREENS.HOME)} onSubmit={() => { playSound('success'); setScreen(SCREENS.HOME); }} />
@@ -197,10 +197,10 @@ const SCREENS = {
           <Suspense fallback={<ScreenLoader kind="list" />}>
           <motion.div
             key="feed"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, transform: "translateX(30px)" }}
+            animate={{ opacity: 1, transform: "translateX(0)" }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
             <Feed onBack={() => handleNavChange('home')} />
           </motion.div>
@@ -211,10 +211,10 @@ const SCREENS = {
           <Suspense fallback={<ScreenLoader kind="chat" />}>
           <motion.div
             key="chat"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, transform: "translateX(30px)" }}
+            animate={{ opacity: 1, transform: "translateX(0)" }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
             <Chat onBack={() => handleNavChange('home')} />
           </motion.div>
@@ -225,10 +225,10 @@ const SCREENS = {
         <Suspense fallback={<ScreenLoader kind="list" />}>
         <motion.div
           key="leaderboard"
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, transform: "translateX(30px)" }}
+          animate={{ opacity: 1, transform: "translateX(0)" }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         >
           <Leaderboard onBack={() => handleNavChange('home')} />
         </motion.div>
@@ -242,7 +242,7 @@ const SCREENS = {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
+          transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
         >
           <AdminDashboard onBack={() => { setScreen(SCREENS.HOME); setNavTab('home'); }} />
         </motion.div>
@@ -253,10 +253,10 @@ const SCREENS = {
         <Suspense fallback={<ScreenLoader kind="detail" />}>
         <motion.div
           key="history"
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
+          initial={{ opacity: 0, transform: "translateX(30px)" }}
+          animate={{ opacity: 1, transform: "translateX(0)" }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         >
           <PlayerHistory onBack={() => handleNavChange('home')} />
         </motion.div>

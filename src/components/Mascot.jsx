@@ -1,4 +1,4 @@
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 /**
@@ -94,13 +94,19 @@ export default function Mascot({
   // Body motion per variant. Idle gets the most polish (eye
   // tracking + breathing); the others override with their own
   // animation.
+  // Cap variant repeat counts so the mascot eventually settles —
+  // an infinite bob is decorative noise on a 30s+ idle state.
+  // The `prefers-reduced-motion` media query kills them entirely.
+  const reduceMotion = useReducedMotion();
+  const variantLoop = reduceMotion ? 0 : 3;
+
   const motionAnimate =
     variant === "idle"
       ? { y: [0, -3, 0], scale: [1, 1.025, 1], rotate: [0, -1.5, 1.5, 0] }
       : undefined;
   const motionTransition =
     variant === "idle"
-      ? { duration: 3.4, repeat: Infinity, ease: "easeInOut" }
+      ? { duration: 3.4, repeat: variantLoop, ease: "easeInOut" }
       : undefined;
 
   const variantAnimate = {
@@ -108,56 +114,56 @@ export default function Mascot({
       y: [0, -14, 0, -6, 0],
       scale: [1, 1.1, 1, 1.05, 1],
       rotate: [0, -3, 3, 0],
-      transition: { duration: 0.6, repeat: Infinity },
+      transition: { duration: 0.6, repeat: variantLoop },
     },
     celebrating: {
       rotate: [-8, 8, -8, 8, 0],
       scale: [1, 1.18, 1, 1.1, 1],
-      transition: { duration: 0.5, repeat: Infinity },
+      transition: { duration: 0.5, repeat: variantLoop },
     },
     thinking: {
       x: [0, -3, 3, -1, 0],
       rotate: [0, -4, 4, 0],
-      transition: { duration: 1.5, repeat: Infinity },
+      transition: { duration: 1.5, repeat: variantLoop },
     },
     worried: {
       y: [0, 2, 0],
       scale: [1, 0.96, 1],
-      transition: { duration: 0.8, repeat: Infinity },
+      transition: { duration: 0.8, repeat: variantLoop },
     },
     winner: {
       y: [0, -10, 0, -4, 0],
       rotate: [-3, 3, -3, 0],
       scale: [1, 1.06, 1],
-      transition: { duration: 1, repeat: Infinity },
+      transition: { duration: 1, repeat: variantLoop },
     },
     sad: {
       y: [0, 2, 0],
       scale: [1, 0.95, 1],
-      transition: { duration: 2, repeat: Infinity },
+      transition: { duration: 2, repeat: variantLoop },
     },
     sleeping: {
       opacity: [1, 0.8, 1],
-      transition: { duration: 3, repeat: Infinity },
+      transition: { duration: 3, repeat: variantLoop },
     },
     determined: {
       y: [0, -6, 0],
       scale: [1, 1.05, 1],
-      transition: { duration: 0.8, repeat: Infinity },
+      transition: { duration: 0.8, repeat: variantLoop },
     },
     proud: {
       y: [0, -8, 0],
       rotate: [-2, 2, -2, 0],
-      transition: { duration: 1.2, repeat: Infinity },
+      transition: { duration: 1.2, repeat: variantLoop },
     },
     shocked: {
       scale: [1, 1.2, 1],
-      transition: { duration: 0.3, repeat: Infinity },
+      transition: { duration: 0.3, repeat: variantLoop },
     },
     cheering: {
       y: [0, -16, 0],
       rotate: [-8, 8, -8, 0],
-      transition: { duration: 0.5, repeat: Infinity },
+      transition: { duration: 0.5, repeat: variantLoop },
     },
   };
 
@@ -172,14 +178,20 @@ export default function Mascot({
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleTap}
     >
-      {/* Pulsing halo — gives the mascot a "presence" */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.6 }}
-        animate={{ opacity: [0.15, 0.4, 0.15], scale: [0.9, 1.1, 0.9] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className="absolute inset-0 rounded-full bg-amber-500/30 blur-2xl"
-        style={{ width: size * 1.4, height: size * 1.4, top: -size * 0.2, left: -size * 0.2 }}
-      />
+      {/* Pulsing halo — gives the mascot a "presence". Pulses twice
+          on mount then settles so it doesn't run forever on every
+          screen the mascot appears on. Killed entirely under
+          prefers-reduced-motion. blur-xl (20px) per the perf
+          ceiling in Emil's STANDARDS.md. */}
+      {reduceMotion ? null : (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: [0.15, 0.4, 0.15], scale: [0.9, 1.1, 0.9] }}
+          transition={{ duration: 3, repeat: 2, ease: [0.23, 1, 0.32, 1] }}
+          className="absolute inset-0 rounded-full bg-amber-500/30 blur-xl"
+          style={{ width: size * 1.4, height: size * 1.4, top: -size * 0.2, left: -size * 0.2 }}
+        />
+      )}
 
       <motion.div
         initial={{ scale: 0, rotate: -180, opacity: 0 }}
@@ -320,7 +332,7 @@ export default function Mascot({
                 y: [0, -30],
                 x: [0, (i - 2.5) * 15],
               }}
-              transition={{ duration: 1, repeat: Infinity, delay: i * 0.1 }}
+              transition={{ duration: 1, repeat: variantLoop, delay: i * 0.1 }}
               className="absolute"
               style={{ top: "50%", left: "50%" }}
             >
@@ -385,7 +397,7 @@ function Burst() {
             scale: 1,
             rotate: p.rotation,
           }}
-          transition={{ duration: 0.9, ease: "easeOut" }}
+          transition={{ duration: 0.9, ease: [0.23, 1, 0.32, 1] }}
           className="absolute top-1/2 left-1/2 text-base"
           style={{ color: COLORS[i % COLORS.length] }}
         >

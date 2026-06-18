@@ -25,14 +25,14 @@ export default function StepThreeConfetti() {
             initial={{ scale: 0, opacity: 0.6 }}
             animate={{ scale: 4, opacity: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.9, ease: "easeOut" }}
+            transition={{ duration: 0.9, ease: [0.23, 1, 0.32, 1] }}
             className="absolute top-1/2 left-1/2 w-32 h-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-amber"
           />
           <motion.div
             initial={{ scale: 0, opacity: 0.4 }}
             animate={{ scale: 5, opacity: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 1.0, ease: "easeOut", delay: 0.1 }}
+            transition={{ duration: 1.0, ease: [0.23, 1, 0.32, 1], delay: 0.1 }}
             className="absolute top-1/2 left-1/2 w-32 h-32 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-blood"
           />
 
@@ -53,7 +53,7 @@ export default function StepThreeConfetti() {
                   scale: 1,
                   rotate: ((i * 47) % 360) - 180,
                 }}
-                transition={{ duration: 1.0 + (i % 3) * 0.2, ease: "easeOut" }}
+                transition={{ duration: 1.0 + (i % 3) * 0.2, ease: [0.23, 1, 0.32, 1] }}
                 className="absolute top-1/2 left-1/2 text-lg"
                 style={{ color }}
               >
