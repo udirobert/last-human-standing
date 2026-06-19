@@ -130,8 +130,8 @@ export default function SelfVerify() {
         : "idle";
   const errorMessage = buildErrMsg || qrError;
 
-  const handleManualVerify = useCallback(() => {
-    setQrError("Scan the QR with the Self app, or tap the deep link below.");
+  const handleRetryStuck = useCallback(() => {
+    setStuck(false);
   }, []);
 
   const universalLink = useMemo(() => {
@@ -216,9 +216,11 @@ export default function SelfVerify() {
               📱 Open in Self app (deep link)
             </a>
           )}
-          <p className="text-dim text-[10px] font-mono text-center max-w-[260px]">
-            Staging (mock passport). Server env SELF_MOCK_PASSPORT=false flips to mainnet.
-          </p>
+          {import.meta.env.DEV && (
+            <p className="text-dim text-[10px] font-mono text-center max-w-[260px]">
+              Staging (mock passport) — flip server env SELF_MOCK_PASSPORT=false for mainnet.
+            </p>
+          )}
         </div>
       ) : (
         <p className="text-dim text-xs font-mono text-center">Loading Self SDK…</p>
@@ -231,21 +233,13 @@ export default function SelfVerify() {
           </p>
           <button
             type="button"
-            onClick={() => { setStuck(false); }}
+            onClick={handleRetryStuck}
             className="mt-2 text-amber font-mono text-[10px] underline decoration-dotted underline-offset-2"
           >
             I just verified — check again
           </button>
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={handleManualVerify}
-        className="w-full py-3 rounded-xl bg-smoke border border-ember text-bone font-mono text-xs active:scale-95 transition-transform"
-      >
-        I already verified
-      </button>
     </div>
   );
 }

@@ -131,7 +131,9 @@ function CountdownCard({ launchAt, split }) {
           tone="neon"
         />
         <p className="text-dim text-[10px] font-mono leading-relaxed">
-          {split.paidCount + split.freeCount} of {split.size} humans · 25 paid + 25 lottery
+          {(split.paidCount + split.freeCount) > 0
+            ? `${split.paidCount + split.freeCount} of ${split.size} humans · 25 paid + 25 lottery`
+            : `${split.size} humans · 25 paid + 25 lottery · be the first`}
         </p>
       </div>
     </div>

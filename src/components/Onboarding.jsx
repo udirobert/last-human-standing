@@ -169,10 +169,17 @@ export default function Onboarding({ onEnter }) {
                     <LaunchCountdown targetIso={launchAt} />
                     <div className="mt-3">
                       <p className="font-mono text-dim text-[10px] uppercase tracking-widest text-center mb-1">
-                        Cohort 1
+                        Cohort 1 · {cohortSize} humans
                       </p>
                       <p className="font-display text-3xl text-bone text-center tabular-nums">
-                        {reservedCount.toLocaleString()}<span className="text-dim text-lg"> / {cohortSize}</span>
+                        {reservedCount > 0 ? (
+                          <>
+                            {reservedCount.toLocaleString()}
+                            <span className="text-dim text-lg"> / {cohortSize} reserved</span>
+                          </>
+                        ) : (
+                          <span className="text-dim text-2xl">be the first</span>
+                        )}
                       </p>
                       <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
                         <motion.div
@@ -334,8 +341,7 @@ export default function Onboarding({ onEnter }) {
                   </ul>
                   {tier === "unverified" && (
                     <p className="text-dim/80 text-[10px] font-mono mt-2">
-                      You're currently <span className="text-amber">unverified</span> — sign in and reserve
-                      a slot to unlock the Provisional tier.
+                      Verify before Day 1 to qualify for the verified tier and unlock voting.
                     </p>
                   )}
                 </StageSection>
@@ -344,11 +350,10 @@ export default function Onboarding({ onEnter }) {
                   <StageSection index={2} className="space-y-3">
                     <div className="bg-smoke border border-neon/30 rounded-2xl p-4">
                       <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-                        Optional · verify first
+                        Verify before paying (recommended)
                       </p>
                       <p className="text-dim text-xs font-mono mb-3">
-                        Get verified with World ID or Self before paying. Unlocks the highest trust
-                        tier and, if enabled, voting. You can also do this after reserving.
+                        Get verified with World ID or Self. Unlocks the verified tier and voting. You can also do this after reserving.
                       </p>
                       {!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
                       {import.meta.env.VITE_ENABLE_SELF === "true" && (

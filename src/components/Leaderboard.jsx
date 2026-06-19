@@ -103,7 +103,11 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               ? <Countdown targetIso={launchAt} className="font-display text-4xl text-bone leading-none animate-glow" />
               : <p className="font-display text-2xl text-dim">TBA</p>}
             <div className="mt-3 flex items-center justify-between text-xs font-mono text-dim">
-              <span>{reservedCount.toLocaleString()} of {cohortSize} humans confirmed</span>
+              <span>
+                {reservedCount > 0
+                  ? `${reservedCount.toLocaleString()} of ${cohortSize} humans confirmed`
+                  : `${cohortSize} humans · be the first`}
+              </span>
               <span>{cohortPct}%</span>
             </div>
             <div className="mt-1 h-1.5 bg-ember rounded-full overflow-hidden">
