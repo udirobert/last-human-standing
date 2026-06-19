@@ -1,16 +1,23 @@
-# Launch runbook — 2026-06-17 18:00 UTC
+# Launch runbook — 2026-07-01 18:00 UTC
 
 This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`
 and the lottery draws.
 
-> **Re-launch context.** The original June 14 launch ran with
-> zero signups. The lazy draw fired on an empty cohort and
-> produced an empty result. We've reset state, bumped
-> `GAME_LAUNCH_AT=2026-06-17T18:00:00Z`, and added lazy-draw
-> gating (see T-0 below) so the same thing can't happen
-> twice. The June 17 18:00 UTC timing targets Tuesday-evening
-> Europe / morning-US — peak crypto-twitter reach.
+> **Re-launch context.** Two prior launches have been missed:
+> - **June 14** ran with zero signups; the lazy draw fired on
+>   an empty cohort and produced an empty result. State was
+>   reset, lazy-draw gating added, and the date bumped.
+> - **June 17** the second attempt also landed with zero
+>   signups — the app was still landing in a broken state for
+>   new users (World ID verify was a dead end, the post-payment
+>   placement was wrong, the empty states were text-only, and
+>   the offline / photo-upload / verify-success paths were
+>   silent). All of those are now fixed in release
+>   `20260619-094447` (see Post-launch release history).
+>
+> The new target is **Wednesday 2026-07-01 18:00 UTC** — peak
+> crypto-twitter reach for Europe-evening / US-morning.
 
 ## Cohort model (recap)
 
@@ -309,3 +316,4 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-06-17 | `20260617-163036` | World ID verify-first placement (signal bound to wallet, no-wallet guard, surfaced above paid card). |
 | 2026-06-18 | `20260618-202401` | Animation pass (a11y `prefers-reduced-motion`, eased `cubic-bezier(0.23,1,0.32,1)`, GPU `translateX/Y/scale` strings, capped mascot loops). |
 | 2026-06-19 | `20260619-094447` | Dead-end sweep: SpectatorChip `onReserve` wired, Feed/Leaderboard empty-state CTAs, Leaderboard "Today"/"Roster" aliasing removed, Feed retry (3× × 5s n backoff), ErrorBoundary Discord link, photo-upload failure surfaced, queued check-in chip on home, WorldIdVerify/SelfVerify celebrate trust upgrade, wallet auth error cause, SelfVerify 60s polling timeout, PushOptIn "Subscribed" beat, Onboarding lastError recovery, Chat [Lobby \| DM] mode toggle, `markQueuedCheckin`/`clearQueuedCheckin` exposed on `useWorld`. |
+| 2026-06-19 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-06-17T18:00:00Z` (missed) to `2026-07-01T18:00:00Z`. No code change. New seed: `2026-07-01T18:00:00Z:cohort-1:lottery`. |
