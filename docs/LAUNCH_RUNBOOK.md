@@ -301,3 +301,11 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
   version (unless we change it; the version is in
   `lottery_results.algorithm_version` so the history is
   preserved).
+
+## Release history
+
+| Date (UTC) | Release tag | Notes |
+|---|---|---|
+| 2026-06-17 | `20260617-163036` | World ID verify-first placement (signal bound to wallet, no-wallet guard, surfaced above paid card). |
+| 2026-06-18 | `20260618-202401` | Animation pass (a11y `prefers-reduced-motion`, eased `cubic-bezier(0.23,1,0.32,1)`, GPU `translateX/Y/scale` strings, capped mascot loops). |
+| 2026-06-19 | `20260619-094447` | Dead-end sweep: SpectatorChip `onReserve` wired, Feed/Leaderboard empty-state CTAs, Leaderboard "Today"/"Roster" aliasing removed, Feed retry (3× × 5s n backoff), ErrorBoundary Discord link, photo-upload failure surfaced, queued check-in chip on home, WorldIdVerify/SelfVerify celebrate trust upgrade, wallet auth error cause, SelfVerify 60s polling timeout, PushOptIn "Subscribed" beat, Onboarding lastError recovery, Chat [Lobby \| DM] mode toggle, `markQueuedCheckin`/`clearQueuedCheckin` exposed on `useWorld`. |
