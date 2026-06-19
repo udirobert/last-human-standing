@@ -38,13 +38,24 @@ class ErrorBoundary extends Component {
         <div className="min-h-screen bg-ash flex flex-col items-center justify-center p-8 text-center">
           <p className="text-4xl mb-4">💀</p>
           <p className="font-display text-2xl text-bone mb-2">Something broke</p>
-          <p className="text-dim font-mono text-xs mb-6">An unexpected error occurred.</p>
+          <p className="text-dim font-mono text-xs mb-2">We&apos;ve been notified and are looking at it.</p>
+          <p className="text-dim/70 font-mono text-[10px] mb-6 max-w-xs">
+            If this keeps happening, reach out on Discord — include the time it happened and what you were doing.
+          </p>
           <button
             onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
             className="px-6 py-3 rounded-xl bg-blood text-bone font-mono text-sm active:scale-95 transition-transform"
           >
             Reload app
           </button>
+          <a
+            href="https://discord.gg/last-human-standing"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 font-mono text-dim text-xs underline decoration-dotted underline-offset-2"
+          >
+            Report on Discord →
+          </a>
         </div>
       );
     }
@@ -176,6 +187,7 @@ const SCREENS = {
               onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
               onViewHistory={() => setScreen(SCREENS.HISTORY)}
+              onRouteToOnboarding={() => { setScreen(SCREENS.ONBOARDING); setNavTab('home'); }}
               onRefresh={handleRefresh}
             />
           </motion.div>
@@ -202,7 +214,10 @@ const SCREENS = {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
-            <Feed onBack={() => handleNavChange('home')} />
+            <Feed
+              onBack={() => handleNavChange('home')}
+              onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
+            />
           </motion.div>
           </Suspense>
         )}
@@ -230,7 +245,11 @@ const SCREENS = {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         >
-          <Leaderboard onBack={() => handleNavChange('home')} />
+          <Leaderboard
+            onBack={() => handleNavChange('home')}
+            onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
+            onRouteToOnboarding={() => { setScreen(SCREENS.ONBOARDING); setNavTab('home'); }}
+          />
         </motion.div>
         </Suspense>
       )}

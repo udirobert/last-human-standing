@@ -32,8 +32,8 @@ import WaitlistCard from './WaitlistCard.jsx';
  *     by the shared PrizePots component (so WLD + Celo are visible
  *     in the same place they appear in Onboarding)
  */
-export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRefresh }) {
-  const { user } = useWorld();
+export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRouteToOnboarding, onRefresh }) {
+  const { user, hasQueuedCheckin, clearQueuedCheckin } = useWorld();
   const {
     phase, launchAt, currentDay,
     cohortSize, reservedCount, cohortFull,
@@ -101,7 +101,29 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRefre
           itself is responsible for the "is this me?" check. */}
       {isLive && (
         <div className="relative z-10 px-5 mb-3">
-          <SpectatorChip user={user} />
+          <SpectatorChip
+            user={user}
+            onReserve={onRouteToOnboarding}
+          />
+        </div>
+      )}
+
+      {/* Queued check-in chip — visible after an offline submit so the
+          user knows their submission will land when they reconnect. */}
+      {hasQueuedCheckin && (
+        <div className="relative z-10 px-5 mb-3">
+          <div className="rounded-xl border border-amber/40 bg-amber/10 px-3 py-2 flex items-center gap-2">
+            <span className="text-amber text-sm">📡</span>
+            <p className="text-amber font-mono text-xs flex-1">
+              Check-in queued. Will submit when you reconnect.
+            </p>
+            <button
+              onClick={clearQueuedCheckin}
+              className="text-amber/70 font-mono text-[10px] underline decoration-dotted underline-offset-2"
+            >
+              Dismiss
+            </button>
+          </div>
         </div>
       )}
 

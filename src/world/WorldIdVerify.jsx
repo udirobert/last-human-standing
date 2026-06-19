@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { IDKitRequestWidget, orbLegacy } from "@worldcoin/idkit";
 import { useWorld } from "./WorldProvider.jsx";
+import { useDelight } from "../components/DelightProvider.jsx";
 
 // World ID 4.0 (current spec) — see docs.world.org/idkit/integrate.
 // Replaces the legacy IDKitWidget (3.0) flow. The new widget requires a
@@ -15,6 +16,7 @@ import { useWorld } from "./WorldProvider.jsx";
 // and is the most common cause of "I can't register with World ID".
 export default function WorldIdVerify() {
   const { setWorldIdVerified, user, walletAuth, walletAuthed } = useWorld();
+  const { celebrate, playSound } = useDelight();
 
   const appId = import.meta.env.VITE_WORLD_ID_APP_ID;
   const enabled = import.meta.env.VITE_ENABLE_IDKIT === "true";
@@ -26,6 +28,7 @@ export default function WorldIdVerify() {
   const [verifyError, setVerifyError] = useState(null);
   const [fetchingContext, setFetchingContext] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [walletError, setWalletError] = useState(null);
 
   const fetchRpContext = useCallback(async () => {
     setFetchingContext(true);
@@ -54,11 +57,20 @@ export default function WorldIdVerify() {
 
   const handleConnectWallet = useCallback(async () => {
     setConnecting(true);
+    setWalletError(null);
     try {
       await walletAuth();
-    } catch {
-      // walletAuth surfaces its own error via lastError in WorldProvider;
-      // swallow here so we don't double-render the message.
+    } catch (e) {
+      // Surface a short, human cause so the user can tell "no wallet"
+      // from "user rejected signature" without digging through devtools.
+      const msg = e instanceof Error ? e.message : String(e);
+      if (/no.*wallet|no.*provider|not.*detected/i.test(msg)) {
+        setWalletError("No wallet detected — open inside World App or a wallet browser.");
+      } else if (/reject|deny|user/i.test(msg)) {
+        setWalletError("Signature rejected — try again to verify.");
+      } else {
+        setWalletError(msg || "Wallet connect failed. Try again.");
+      }
     } finally {
       setConnecting(false);
     }
@@ -90,6 +102,11 @@ export default function WorldIdVerify() {
         >
           {connecting ? "CONNECTING…" : walletAuthed ? "WALLET READY" : "CONNECT WALLET TO VERIFY"}
         </button>
+        {walletError && (
+          <p className="text-blood font-mono text-xs text-center leading-relaxed">
+            {walletError}
+          </p>
+        )}
       </div>
     );
   }
@@ -128,6 +145,10 @@ export default function WorldIdVerify() {
           }}
           onSuccess={() => {
             setWorldIdVerified(true);
+            // Celebrate the trust upgrade — same grammar as the
+            // "YOU'RE IN" finale so the verify path doesn't feel flat.
+            playSound('victory');
+            celebrate(15);
           }}
           onError={(code) => {
             setVerifyError(String(code));

@@ -27,6 +27,7 @@ export default function Chat({ onBack }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [toUser, setToUser] = useState('andy');
+  const [chatMode, setChatMode] = useState('lobby'); // lobby | dm
   const bottomRef = useRef();
   const inputRef = useRef();
   const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
@@ -149,8 +150,9 @@ export default function Chat({ onBack }) {
         inputRef.current?.focus();
       }
 
-      // Also send via World Chat DM if a recipient is specified
-      if (toUser.trim()) {
+      // Also send via World Chat DM if the user is in DM mode with a
+      // recipient — Lobby-only messages don't go through World Chat.
+      if (chatMode === 'dm' && toUser.trim()) {
         try { await sendWorldChat({ to: toUser, message: text }); } catch { /* optional */ }
       }
     } else {
@@ -187,8 +189,8 @@ export default function Chat({ onBack }) {
     }
   };
 
-  const canSend = isMiniApp || useMocks
-    ? input.trim().length > 0 && walletAuthed
+  const canSend = chatMode === 'lobby'
+    ? input.trim().length > 0 && (isMiniApp || useMocks ? walletAuthed : true)
     : input.trim().length > 0 && toUser.trim().length > 0;
 
   return (
@@ -231,8 +233,12 @@ export default function Chat({ onBack }) {
         <span className="text-lg">💬</span>
         <p className="text-dim text-xs font-mono">
           {isMiniApp
-            ? 'Lobby chat — all survivors can see your messages. Tap send to broadcast.'
-            : 'Sends via World Chat (XMTP) · Pick a recipient username'}
+            ? (chatMode === 'lobby'
+                ? 'Lobby chat — all survivors can see your messages.'
+                : `Direct message via World Chat · to @${toUser}`)
+            : (chatMode === 'lobby'
+                ? 'Lobby chat — visible to all survivors.'
+                : `Sends via World Chat (XMTP) · to @${toUser}`)}
         </p>
       </div>
 
@@ -311,12 +317,33 @@ export default function Chat({ onBack }) {
 
       {/* Input */}
       <div className="px-5 py-4 bg-ash border-t border-ember">
+        {/* Mode toggle — Lobby (broadcast to survivors) or DM (private to a single recipient) */}
+        <div className="flex gap-2 mb-2.5">
+          <button
+            type="button"
+            onClick={() => setChatMode('lobby')}
+            className={`flex-1 py-2 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
+              chatMode === 'lobby' ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
+            }`}
+          >
+            🌍 Lobby
+          </button>
+          <button
+            type="button"
+            onClick={() => setChatMode('dm')}
+            className={`flex-1 py-2 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
+              chatMode === 'dm' ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
+            }`}
+          >
+            🔒 DM
+          </button>
+        </div>
         <div className="flex gap-3 items-end">
           <div className="flex-1 space-y-2">
-            {/* Recipient field — only for browser dev preview (1:1 DM via World Chat) */}
-            {!isMiniApp && useMocks && (
+            {/* Recipient field — only in DM mode (private 1:1 via World Chat) */}
+            {chatMode === 'dm' && !isMiniApp && (
               <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
-                <span className="font-mono text-dim text-xs">@</span>
+                <span className="font-mono text-dim text-xs">to @</span>
                 <input
                   type="text"
                   value={toUser}
@@ -333,7 +360,7 @@ export default function Chat({ onBack }) {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder={isMiniApp || useMocks ? 'message the lobby...' : 'message the lobby...'}
+                placeholder={chatMode === 'lobby' ? 'message the lobby...' : `message @${toUser || '…'}...`}
                 className="flex-1 bg-transparent text-bone text-sm font-body focus:outline-none placeholder:text-dim"
               />
             </div>
@@ -349,9 +376,13 @@ export default function Chat({ onBack }) {
           </button>
         </div>
         <p className="text-dim font-mono text-xs mt-2 text-center">
-          {isMiniApp
-            ? 'Messages visible to all survivors · also sends via World Chat'
-            : 'Uses MiniKit.chat() to send through World Chat'}
+          {chatMode === 'lobby'
+            ? (isMiniApp
+              ? 'Visible to all survivors · powered by XMTP'
+              : 'Visible to all survivors')
+            : (isMiniApp
+              ? `Private message to @${toUser} · via World Chat`
+              : `Private message via World Chat to @${toUser || '…'}`)}
         </p>
       </div>
     </div>

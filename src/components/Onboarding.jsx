@@ -473,7 +473,27 @@ export default function Onboarding({ onEnter }) {
                 )}
 
                 {lastError && (
-                  <p className="text-blood text-xs font-mono mt-3 text-center">{lastError}</p>
+                  <div className="mt-3 rounded-xl border border-blood/30 bg-blood/5 p-3 text-center">
+                    <p className="text-blood text-xs font-mono">{lastError}</p>
+                    <div className="mt-2 flex gap-2 justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setStep(0)}
+                        className="px-3 py-1.5 rounded-lg bg-smoke border border-ember text-bone font-mono text-[11px] active:scale-95 transition-transform"
+                      >
+                        ← TRY AGAIN
+                      </button>
+                      {entryPaid && (
+                        <button
+                          type="button"
+                          onClick={() => { markOnboardingDone(); setStep(3); }}
+                          className="px-3 py-1.5 rounded-lg bg-ember text-bone font-mono text-[11px] active:scale-95 transition-transform"
+                        >
+                          SKIP FOR NOW →
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 )}
               </div>
             </StageShell>

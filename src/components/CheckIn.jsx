@@ -22,9 +22,11 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [caption, setCaption] = useState('');
   const [result, setResult] = useState(null);
   const [submitError, setSubmitError] = useState(null);
+  const [photoUploadFailed, setPhotoUploadFailed] = useState(false);
   const [infiltratorMode, setInfiltratorMode] = useState(false);
   const [queuedCheckin, setQueuedCheckin] = useState(false);
   const { online, queueCheckin } = useOnlineStatus();
+  const { markQueuedCheckin, clearQueuedCheckin } = useWorld();
   const fileRef = useRef();
   const watchRef = useRef(null);
   const sharedRef = useRef(false);
@@ -97,6 +99,8 @@ export default function CheckIn({ onBack, onSubmit }) {
       } catch {
         // SW queue best-effort
       }
+      // Surface the queued state globally so home shows the chip.
+      markQueuedCheckin();
       return;
     }
 
@@ -122,9 +126,13 @@ export default function CheckIn({ onBack, onSubmit }) {
             .from(json.bucket)
             .uploadToSignedUrl(json.path, json.token, photoFile);
           if (!upErr) mediaPath = json.path;
+          else setPhotoUploadFailed(true);
+        } else {
+          setPhotoUploadFailed(true);
         }
       } catch (e) {
         console.warn('photo upload failed', e);
+        setPhotoUploadFailed(true);
       }
     }
 
@@ -174,6 +182,8 @@ export default function CheckIn({ onBack, onSubmit }) {
       } else {
         navigator.vibrate?.([200]);
       }
+      // Clear any previously-queued chip on successful live submit.
+      clearQueuedCheckin();
       setStep(2);
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'check-in failed');
@@ -423,6 +433,16 @@ export default function CheckIn({ onBack, onSubmit }) {
                       <p className="text-dim font-mono text-xs mt-2">No GPS · community votes decide · Day {currentDay}</p>
                     )}
                   </div>
+                  {photoUploadFailed && (
+                    <div className="w-full rounded-xl border border-amber/40 bg-amber/10 p-3">
+                      <p className="text-amber font-mono text-xs">
+                        Your photo didn&apos;t upload — voters will see this submission without a photo.
+                      </p>
+                      <p className="text-dim font-mono text-[10px] mt-1">
+                        Try again later from the feed. Your rank and submission are still valid.
+                      </p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <>

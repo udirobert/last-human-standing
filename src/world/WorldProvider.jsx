@@ -76,6 +76,13 @@ export function WorldProvider({ children }) {
   const [farcasterUser, setFarcasterUser] = useState(persisted?.farcasterUser ?? null);
   const [lastError, setLastError] = useState(null);
   const [hasWorldAppId, setHasWorldAppId] = useState(false);
+  const [hasQueuedCheckin, setHasQueuedCheckin] = useState(false);
+
+  // Surface queued check-ins globally so home can show a chip after the
+  // user navigates away from CheckIn. Cleared when the user submits
+  // successfully or manually dismisses.
+  const markQueuedCheckin = useCallback(() => setHasQueuedCheckin(true), []);
+  const clearQueuedCheckin = useCallback(() => setHasQueuedCheckin(false), []);
 
   const prizePoolAddress = import.meta.env.VITE_PRIZE_POOL_ADDRESS || "0x0000000000000000000000000000000000000000";
 
@@ -475,11 +482,14 @@ export function WorldProvider({ children }) {
       farcasterUser,
       lastError,
       prizePoolAddress,
+      hasQueuedCheckin,
       walletAuth,
       payEntryFee,
       signCheckIn,
       sendWorldChat,
       markBrowserPaid,
+      markQueuedCheckin,
+      clearQueuedCheckin,
       resetProgress,
       setWorldIdVerified: (val) => setWorldIdVerified(Boolean(val)),
     }),
@@ -498,11 +508,14 @@ export function WorldProvider({ children }) {
       farcasterUser,
       lastError,
       prizePoolAddress,
+      hasQueuedCheckin,
       walletAuth,
       payEntryFee,
       signCheckIn,
       sendWorldChat,
       markBrowserPaid,
+      markQueuedCheckin,
+      clearQueuedCheckin,
       resetProgress,
     ],
   );

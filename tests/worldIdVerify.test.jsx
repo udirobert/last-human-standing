@@ -12,6 +12,7 @@ vi.mock("@worldcoin/idkit", () => ({
 
 import WorldIdVerify from "../src/world/WorldIdVerify.jsx";
 import { WorldContext } from "../src/world/WorldProvider.jsx";
+import { DelightProvider } from "../src/components/DelightProvider.jsx";
 
 function renderWithContext(ctxValue) {
   const value = {
@@ -22,9 +23,11 @@ function renderWithContext(ctxValue) {
     ...ctxValue,
   };
   return render(
-    <WorldContext.Provider value={value}>
-      <WorldIdVerify />
-    </WorldContext.Provider>,
+    <DelightProvider>
+      <WorldContext.Provider value={value}>
+        <WorldIdVerify />
+      </WorldContext.Provider>
+    </DelightProvider>,
   );
 }
 
@@ -51,8 +54,9 @@ describe("WorldIdVerify", () => {
 
   it("hides entirely when VITE_ENABLE_IDKIT is not 'true'", () => {
     vi.stubEnv("VITE_ENABLE_IDKIT", "false");
-    const { container } = renderWithContext({ user: { address: "0xabc" } });
-    expect(container.firstChild).toBeNull();
+    renderWithContext({ user: { address: "0xabc" } });
+    expect(screen.queryByText(/verify world id/i)).toBeNull();
+    expect(screen.queryByText(/connect wallet to verify/i)).toBeNull();
   });
 
   it("falls back to a wallet-address signal once a user is connected", async () => {

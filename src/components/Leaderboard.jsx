@@ -39,7 +39,7 @@ const ELIM_SCHEDULE = [
   { day: 5, cap: 1, label: 'Final' },
 ];
 
-export default function Leaderboard({ onBack }) {
+export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) {
   const [tab, setTab] = useState('today');
   const [peekPlayer, setPeekPlayer] = useState(null);
   const { phase, launchAt, currentDay, round, reservedCount, cohortSize, cohortFull } = useRound();
@@ -167,7 +167,7 @@ export default function Leaderboard({ onBack }) {
               key={t.id}
               onClick={() => setTab(t.id)}
               className={`flex-1 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
-                (tab === t.id || (isPrelaunch && tab === 'today' && t.id === 'roster')) ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
+                tab === t.id ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
               }`}
             >
               {t.label}
@@ -196,7 +196,15 @@ export default function Leaderboard({ onBack }) {
           {!loading && roster.length === 0 && (
             <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
               <p className="text-dim text-sm font-mono">No reservations yet.</p>
-              <p className="text-bone text-xs font-mono mt-1">Be first.</p>
+              <p className="text-bone text-xs font-mono mt-1 mb-3">Be first.</p>
+              {onRouteToOnboarding && (
+                <button
+                  onClick={onRouteToOnboarding}
+                  className="px-5 py-2.5 rounded-xl bg-blood text-bone font-display text-sm tracking-widest active:scale-95 transition-transform"
+                >
+                  RESERVE A SLOT →
+                </button>
+              )}
             </div>
           )}
           {roster.map((r, i) => {
@@ -361,7 +369,15 @@ export default function Leaderboard({ onBack }) {
           {!loading && survivors.length === 0 && (
             <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
               <p className="text-dim text-sm font-mono">No one has checked in yet.</p>
-              <p className="text-bone text-xs font-mono mt-1">Be first.</p>
+              <p className="text-bone text-xs font-mono mt-1 mb-3">Be first.</p>
+              {onCheckIn && (
+                <button
+                  onClick={onCheckIn}
+                  className="px-5 py-2.5 rounded-xl bg-blood text-bone font-display text-sm tracking-widest active:scale-95 transition-transform animate-pulse-blood"
+                >
+                  CHECK IN NOW →
+                </button>
+              )}
             </div>
           )}
           {survivors.map((c, i) => {

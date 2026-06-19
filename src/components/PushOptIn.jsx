@@ -11,6 +11,7 @@ export default function PushOptIn() {
   const [status, setStatus] = useState("loading"); // loading | unsupported | unconfigured | off | on | error
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [justEnabled, setJustEnabled] = useState(false);
 
   // Fetch VAPID public key + status on mount
   useEffect(() => {
@@ -55,6 +56,10 @@ export default function PushOptIn() {
       // Subscribe via the service worker
       await subscribePush(publicKey);
       setStatus("on");
+      // Brief "Subscribed!" beat so the user gets explicit confirmation
+      // instead of a silent toggle flip.
+      setJustEnabled(true);
+      setTimeout(() => setJustEnabled(false), 2500);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
       setStatus("error");
@@ -99,6 +104,16 @@ export default function PushOptIn() {
           </p>
           {error && (
             <p className="text-blood text-[11px] font-mono mt-1">{error}</p>
+          )}
+          {justEnabled && (
+            <motion.p
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="text-neon text-[11px] font-mono mt-1"
+            >
+              ✓ Subscribed — we&apos;ll ping you when a round opens.
+            </motion.p>
           )}
         </div>
         <button

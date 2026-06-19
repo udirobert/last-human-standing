@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useWorld } from "../world/WorldProvider.jsx";
+import { useDelight } from "./DelightProvider.jsx";
 import { HUMANITY_PROVIDERS } from "../config/humanityProviders.js";
 
 const SELF_SCOPE = "last-human-standing";
@@ -21,9 +22,11 @@ const SELF_APP_NAME = "Last Human Standing";
  */
 export default function SelfVerify() {
   const { user, refreshAuth } = useWorld();
+  const { celebrate, playSound } = useDelight();
   const [pollVerified, setPollVerified] = useState(false);
   const [qrError, setQrError] = useState(null);
   const [modules, setModules] = useState(null);
+  const [stuck, setStuck] = useState(false);
 
   const selfEnabled = import.meta.env.VITE_ENABLE_SELF === "true";
   const self = HUMANITY_PROVIDERS.self;
@@ -77,11 +80,21 @@ export default function SelfVerify() {
   const buildErrMsg = buildError?.error ?? null;
 
   // Poll /api/me while the QR is showing; flip to "verified" when the
-  // server has written the Self nullifier for our wallet.
+  // server has written the Self nullifier for our wallet. Cap the poll
+  // at 60s — if the server never confirms, surface "still waiting" so
+  // the user isn't left in a permanent loading state with a leaked
+  // interval.
   useEffect(() => {
     if (!selfApp || !walletAddress) return;
     let stopped = false;
+    const startedAt = Date.now();
+    const TIMEOUT_MS = 60_000;
     const tick = async () => {
+      if (stopped) return;
+      if (Date.now() - startedAt > TIMEOUT_MS) {
+        if (!stopped) setStuck(true);
+        return;
+      }
       try {
         const resp = await fetch("/api/me", { credentials: "include" });
         if (!resp.ok) return;
@@ -89,6 +102,10 @@ export default function SelfVerify() {
         if (json.humanityProvider === "self" && json.humanityVerified) {
           if (!stopped) {
             setPollVerified(true);
+            // Celebrate the trust upgrade — same grammar as the
+            // "YOU'RE IN" finale so the verify path doesn't feel flat.
+            playSound('victory');
+            celebrate(15);
             refreshAuth?.();
           }
         }
@@ -97,6 +114,10 @@ export default function SelfVerify() {
     const interval = setInterval(tick, 3000);
     tick();
     return () => { stopped = true; clearInterval(interval); };
+    // celebrate/playSound come from useDelight; celebrate is recreated on
+    // every render (its closure reads confettiKey), so including them in
+    // deps would restart the poll on every render — disable the rule.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selfApp, walletAddress, refreshAuth]);
 
   // Status is derived: build error > qr error > verified (poll or callback) > ready (built) > idle
@@ -172,6 +193,10 @@ export default function SelfVerify() {
               selfApp={selfApp}
               onSuccess={() => {
                 setPollVerified(true);
+                // Celebrate the trust upgrade — same grammar as the
+                // "YOU'RE IN" finale so the verify path doesn't feel flat.
+                playSound('victory');
+                celebrate(15);
                 refreshAuth?.();
               }}
               onError={(e) => {
@@ -197,6 +222,21 @@ export default function SelfVerify() {
         </div>
       ) : (
         <p className="text-dim text-xs font-mono text-center">Loading Self SDK…</p>
+      )}
+
+      {stuck && !pollVerified && (
+        <div className="rounded-xl border border-amber/40 bg-amber/10 p-3 text-center">
+          <p className="text-amber font-mono text-xs">
+            Still waiting for Self proof. This usually takes 30–60 seconds.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setStuck(false); }}
+            className="mt-2 text-amber font-mono text-[10px] underline decoration-dotted underline-offset-2"
+          >
+            I just verified — check again
+          </button>
+        </div>
       )}
 
       <button

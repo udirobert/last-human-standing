@@ -30,7 +30,7 @@ const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 // data — browser visitors are real players.
 const useMocks = import.meta.env.DEV;
 
-export default function Feed({ onBack }) {
+export default function Feed({ onBack, onCheckIn }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
   const { verification, phase } = useRound();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
@@ -80,6 +80,7 @@ export default function Feed({ onBack }) {
       }
     } catch (error) {
       void error;
+      setLoadError("feed_network");
     } finally {
       setLoading(false);
     }
@@ -91,6 +92,24 @@ export default function Feed({ onBack }) {
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [loadFeed]);
+
+  // Auto-retry on network errors with a small backoff so the user
+  // doesn't see a permanent "Live feed unavailable" state when the
+  // cause is a transient Supabase blip. Capped at 3 attempts.
+  useEffect(() => {
+    if (!loadError || loadError === "challenge_failed") return undefined;
+    const retryable = loadError.startsWith("feed_network") || loadError.startsWith("feed_5");
+    if (!retryable) return undefined;
+    let attempt = 0;
+    const maxAttempts = 3;
+    const tick = () => {
+      attempt += 1;
+      if (attempt > maxAttempts) return;
+      setTimeout(() => loadFeed(), 5000 * attempt);
+    };
+    const id = setTimeout(tick, 5000);
+    return () => clearTimeout(id);
+  }, [loadError, loadFeed]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -209,7 +228,7 @@ export default function Feed({ onBack }) {
           <p className="text-blood font-mono text-xs text-center py-2 border border-blood/30 rounded-xl bg-blood/5">
             {loadError.startsWith("challenge_failed")
               ? "Couldn't send challenge via World Chat."
-              : "Live feed unavailable. Retrying…"}
+              : "Live feed unavailable. Retrying in a few seconds…"}
           </p>
         )}
         <VoteGateBanner />
@@ -218,7 +237,17 @@ export default function Feed({ onBack }) {
         )}
 
         {!loading && filtered.length === 0 && (
-          <div className="text-dim font-mono text-sm text-center py-12">No submissions yet for {TODAY_THEME.theme}. Be the first to check in.</div>
+          <div className="text-center py-12">
+            <p className="text-dim font-mono text-sm mb-4">No submissions yet for {TODAY_THEME.theme}.</p>
+            {onCheckIn && (
+              <button
+                onClick={onCheckIn}
+                className="px-6 py-3 rounded-2xl bg-blood text-bone font-display text-base tracking-widest active:scale-95 transition-transform animate-pulse-blood"
+              >
+                BE THE FIRST TO CHECK IN →
+              </button>
+            )}
+          </div>
         )}
 
         <AnimatePresence>
