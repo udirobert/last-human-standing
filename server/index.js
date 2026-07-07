@@ -367,7 +367,71 @@ setInterval(() => {
   cleanupPersistentState().catch(() => {});
   autoAdvanceRounds().catch(() => {});
   notifyClosingSoon().catch(() => {});
+  notifyRankSnapshot().catch(() => {});
 }, 60_000).unref();
+
+// Mid-day rank snapshot — fires once at ~50% through the check-in window.
+// Gives players a reason to re-open the app between check-in and close.
+let rankSnapshotFiredFor = new Set(); // day numbers we've already snapshotted
+
+async function notifyRankSnapshot() {
+  if (!supabaseAdmin) return;
+  const { data: rounds } = await supabaseAdmin
+    .from("rounds")
+    .select("day,opens_at,closes_at")
+    .eq("status", "open");
+  for (const r of rounds || []) {
+    if (rankSnapshotFiredFor.has(r.day)) continue;
+    if (!r.opens_at || !r.closes_at) continue;
+    const open = Date.parse(r.opens_at);
+    const close = Date.parse(r.closes_at);
+    const now = Date.now();
+    const midpoint = open + (close - open) * 0.5;
+    // Fire after the midpoint of the check-in window
+    if (now < midpoint) continue;
+
+    rankSnapshotFiredFor.add(r.day);
+
+    // Get current check-in count for context
+    const { count: checkinCount } = await supabaseAdmin
+      .from("checkins")
+      .select("address", { count: "exact", head: true })
+      .eq("day", r.day);
+
+    // Notify all active (non-eliminated) players
+    const { data: activePlayers } = await supabaseAdmin
+      .from("users")
+      .select("address")
+      .eq("paid", true)
+      .eq("eliminated", false);
+
+    for (const p of activePlayers || []) {
+      // Check if they've checked in today
+      const { data: ci } = await supabaseAdmin
+        .from("checkins")
+        .select("rank,survived")
+        .eq("day", r.day)
+        .eq("address", p.address)
+        .maybeSingle();
+
+      if (ci) {
+        // Already checked in — tell them their rank
+        sendPushToAddress(supabaseAdmin, p.address, {
+          title: `📊 Mid-day snapshot`,
+          body: `You're rank #${ci.rank ?? "?"}. ${checkinCount ?? "?"} humans checked in so far. Verdicts start landing soon.`,
+          data: { type: "rank_snapshot", day: r.day },
+        }).catch(() => {});
+      } else {
+        // Haven't checked in — nudge them
+        sendPushToAddress(supabaseAdmin, p.address, {
+          title: `⏰ Day ${r.day} is half over`,
+          body: `${checkinCount ?? "?"} humans already checked in. Don't get ranked out — check in now.`,
+          data: { type: "rank_snapshot", day: r.day },
+        }).catch(() => {});
+      }
+    }
+  }
+}
 
 // Start onchain vote relayer — reads from vote_queue table, submits to VoteRegistry on Celo.
 // No-op (logs "vote_relayer_offline") if VOTE_REGISTRY_ADDRESS + CELO_SIGNING_KEY + Supabase not set.
@@ -1563,6 +1627,54 @@ async function cohortSplitCount() {
 // read as a finished game). Cached 30s — this runs on every game/state poll.
 let endgameCache = { value: null, fetchedAt: 0 };
 
+// Last day-close stats — used by the DayRecap cinematic overlay.
+// Cached 10s (polled every 15s by clients).
+let lastDayCloseCache = { value: null, fetchedAt: 0 };
+
+async function getLastDayClose() {
+  if (!supabaseAdmin) return null;
+  if (Date.now() - lastDayCloseCache.fetchedAt < 10_000) return lastDayCloseCache.value;
+
+  // Find the most recent closed round
+  const { data: round } = await supabaseAdmin
+    .from("rounds")
+    .select("day,status,survival_cap,closing_notified_at")
+    .eq("status", "closed")
+    .order("day", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!round) {
+    lastDayCloseCache = { value: null, fetchedAt: Date.now() };
+    return null;
+  }
+
+  // Count survivors, eliminated, DQ'd for this day
+  const [survivorsRes, eliminatedRes, dqRes] = await Promise.all([
+    supabaseAdmin.from("checkins").select("address", { count: "exact", head: true }).eq("day", round.day).eq("survived", true),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("eliminated_at_day", round.day),
+    supabaseAdmin.from("checkins").select("address", { count: "exact", head: true }).eq("day", round.day).eq("dq", true),
+  ]);
+
+  // Count remaining active players
+  const { count: remaining } = await supabaseAdmin
+    .from("users")
+    .select("address", { count: "exact", head: true })
+    .eq("paid", true)
+    .eq("eliminated", false);
+
+  const value = {
+    day: round.day,
+    survivors: survivorsRes.count ?? 0,
+    eliminated: eliminatedRes.count ?? 0,
+    dq: dqRes.count ?? 0,
+    remaining: remaining ?? 0,
+    closedAt: round.closing_notified_at ?? null,
+  };
+  lastDayCloseCache = { value, fetchedAt: Date.now() };
+  return value;
+}
+
 async function getEndgame() {
   if (!supabaseAdmin) return null;
   if (Date.now() - endgameCache.fetchedAt < 30_000) return endgameCache.value;
@@ -1707,6 +1819,7 @@ app.get("/api/game/state", async (req, res) => {
       you,
       winner,
       payout: payoutInfo,
+      lastDayClose: phase === "live" || phase === "ended" ? await getLastDayClose() : null,
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
 

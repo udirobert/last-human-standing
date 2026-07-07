@@ -55,6 +55,7 @@ export default function Onboarding({ onEnter }) {
   const [authing, setAuthing] = useState(false);
   const [paying, setPaying] = useState(false);
   const [showPersonalize, setShowPersonalize] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [mascotName, setMascotName] = useState(() => {
     try { return localStorage.getItem("lhs_mascot_name") || ""; } catch { return ""; }
   });
@@ -160,12 +161,8 @@ export default function Onboarding({ onEnter }) {
               </StageSection>
 
               <div className="mt-5 space-y-3">
-                <StageSection index={1} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
-                  <DayTimeline />
-                </StageSection>
-
                 {phase === "prelaunch" && launchAt && (
-                  <StageSection index={2} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
+                  <StageSection index={1} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
                     <LaunchCountdown targetIso={launchAt} />
                     <div className="mt-3">
                       <p className="font-mono text-dim text-[10px] uppercase tracking-widest text-center mb-1">
@@ -193,20 +190,39 @@ export default function Onboarding({ onEnter }) {
                   </StageSection>
                 )}
 
-                <StageSection index={3} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
-                  <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">The pot</p>
-                  <PrizePots prizePool={pot} />
+                {/* Collapsible "how it works" — keeps the welcome screen clean */}
+                <StageSection index={2}>
+                  <button
+                    type="button"
+                    onClick={() => setShowDetails(!showDetails)}
+                    className="w-full py-3 rounded-xl bg-smoke/40 border border-ember/30 text-dim font-mono text-xs tracking-widest uppercase active:scale-95 transition-transform"
+                  >
+                    {showDetails ? "Hide details" : "How it works ▾"}
+                  </button>
                 </StageSection>
 
-                <StageSection index={4}>
-                  <CohortTicker pollMs={15000} />
-                </StageSection>
+                {showDetails && (
+                  <>
+                    <StageSection index={3} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
+                      <DayTimeline />
+                    </StageSection>
 
-                <StageSection index={5}>
-                  <DailyPrompt />
-                </StageSection>
+                    <StageSection index={4} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
+                      <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">The pot</p>
+                      <PrizePots prizePool={pot} />
+                    </StageSection>
 
-                <StageSection index={6}>
+                    <StageSection index={5}>
+                      <CohortTicker pollMs={15000} />
+                    </StageSection>
+
+                    <StageSection index={6}>
+                      <DailyPrompt />
+                    </StageSection>
+                  </>
+                )}
+
+                <StageSection index={7}>
                   <motion.button
                     initial={{ opacity: 0, transform: "translateY(12px)" }}
                     animate={{ opacity: 1, transform: "translateY(0)" }}
@@ -219,7 +235,7 @@ export default function Onboarding({ onEnter }) {
                   </motion.button>
                 </StageSection>
 
-                <StageSection index={7} className="flex justify-center">
+                <StageSection index={8} className="flex justify-center">
                   <TrustBadge size="sm" />
                 </StageSection>
               </div>
@@ -243,7 +259,8 @@ export default function Onboarding({ onEnter }) {
               AmbientComponent={<AmbientBackdrop phase={phase} />}
             >
               <StageSection index={0} className="text-center">
-                <h2 className="font-display text-4xl text-bone mb-1">THE RULES</h2>
+                <Mascot variant="idle" size={64} />
+                <h2 className="font-display text-4xl text-bone mb-1 mt-2">THE RULES</h2>
                 <p className="text-dim text-sm font-mono">Four steps. That's it.</p>
               </StageSection>
 

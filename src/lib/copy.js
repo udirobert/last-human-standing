@@ -54,25 +54,25 @@ export const RULES = [
   {
     n: "01",
     title: "RESERVE",
-    body: "Pay 1 WLD (World Chain) or 5 cUSD (Celo) to lock your slot — or enter free. 50 humans max.",
+    body: "Pay 1 WLD (World Chain) or 5 cUSD (Celo) to lock your slot — or enter free. 50 humans max. Your fee goes straight to the pot.",
     icon: "🎟",
   },
   {
     n: "02",
     title: "DAILY THEME",
-    body: "Find the place. Be first to check in.",
+    body: "Every day a new challenge drops — find the place, snap the proof. Be fast. Be real. Be first.",
     icon: "🌍",
   },
   {
     n: "03",
     title: "PROVE IT",
-    body: "Photo + crowd votes HUMAN or SUS.",
+    body: "The crowd votes HUMAN or SUS on your photo. Infiltrators try to fake it — can you spot them? Can they spot you?",
     icon: "📸",
   },
   {
     n: "04",
     title: "SURVIVE",
-    body: "Cap shrinks daily. Last one takes the pot.",
+    body: "Each day the cap shrinks. The crowd eliminates the weakest. Outlast them all and the pot is yours.",
     icon: "🏆",
   },
 ];

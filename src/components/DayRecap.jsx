@@ -5,56 +5,53 @@ import { useRound } from "../world/RoundProvider.jsx";
 /**
  * DayRecap — a cinematic full-screen overlay shown when a day closes.
  *
- * Triggered when the game state detects a day transition (currentDay
- * changes or a "day_closed" push notification arrives). Shows:
+ * Uses real stats from the game state (lastDayClose) to show:
  *   - "DAY X CLOSED" in large type
- *   - Survived / eliminated / DQ'd counts
- *   - Auto-dismisses after 4s or on tap
- *
- * This is the reality-show "previously on" beat that makes the
- * game feel like an event, not a form.
+ *   - Real survived / eliminated / DQ'd counts
+ *   - Remaining humans count
+ *   - Personal result (did YOU survive?)
+ *   - Auto-dismisses after 6s or on tap
  */
 const RECAP_KEY = "lhs_day_recap_seen";
 
 export default function DayRecap() {
-  const { phase, isLive, currentDay, round } = useRound();
+  const { isLive, currentDay, lastDayClose, you } = useRound();
   const [show, setShow] = useState(false);
-  const [recapDay, setRecapDay] = useState(null);
+  const [recapData, setRecapData] = useState(null);
 
   useEffect(() => {
-    if (!isLive || currentDay == null) return;
+    if (!isLive || !lastDayClose) return;
 
     try {
       const seen = localStorage.getItem(RECAP_KEY);
       const seenDay = seen ? parseInt(seen, 10) : null;
 
-      // Show recap if we haven't seen this day's close yet.
-      // We detect a "closed" day by checking if the round's closes_at
-      // has passed AND it's not the current open round.
-      // The simplest signal: if currentDay advanced past what we've seen.
-      if (seenDay != null && seenDay < currentDay) {
-        // We jumped forward — show recap for the day that just closed
-        setRecapDay(seenDay);
+      // Show recap if we haven't seen this day's close yet
+      if (seenDay == null || seenDay < lastDayClose.day) {
+        setRecapData(lastDayClose);
         setShow(true);
-        localStorage.setItem(RECAP_KEY, String(currentDay));
-      } else if (seenDay == null) {
-        // First time seeing the live game — mark current day as seen
-        localStorage.setItem(RECAP_KEY, String(currentDay));
+        localStorage.setItem(RECAP_KEY, String(lastDayClose.day));
       }
     } catch {
       // localStorage may be unavailable (private browsing)
     }
-  }, [isLive, currentDay]);
+  }, [isLive, lastDayClose]);
 
   // Listen for push notifications about day closes
   useEffect(() => {
     const handler = (event) => {
       const data = event?.data || {};
-      if (data.type === "day_closed" || data.type === "verdict_summary") {
+      if (data.type === "verdict" || data.type === "day_closed") {
         if (data.day != null) {
-          setRecapDay(data.day);
+          setRecapData({
+            day: data.day,
+            survivors: data.survivors ?? null,
+            eliminated: data.eliminated ?? null,
+            dq: data.dq ?? null,
+            remaining: data.remaining ?? null,
+          });
           setShow(true);
-          try { localStorage.setItem(RECAP_KEY, String(data.day + 1)); } catch { /* private browsing */ }
+          try { localStorage.setItem(RECAP_KEY, String(data.day)); } catch { /* private browsing */ }
         }
       }
     };
@@ -65,6 +62,17 @@ export default function DayRecap() {
   }, []);
 
   const dismiss = () => setShow(false);
+
+  const survived = recapData?.survivors ?? "—";
+  const eliminated = recapData?.eliminated ?? "—";
+  const dq = recapData?.dq ?? "—";
+  const remaining = recapData?.remaining ?? "—";
+  const day = recapData?.day ?? "—";
+
+  // Personal result
+  const youSurvived = you?.survivedToday === true;
+  const youEliminated = you?.isEliminated === true && you?.eliminatedAtDay === day;
+  const personalResult = youSurvived ? "survived" : youEliminated ? "eliminated" : null;
 
   return (
     <AnimatePresence>
@@ -83,30 +91,57 @@ export default function DayRecap() {
             className="text-center"
           >
             <p className="font-mono text-dim text-sm tracking-widest uppercase mb-3">
-              Day {recapDay ?? "—"} Closed
+              Day {day} Closed
             </p>
             <p className="font-display text-6xl text-bone leading-none mb-6 animate-glow">
               VERDICTS IN
             </p>
 
-            {/* Stats grid */}
+            {/* Personal result banner */}
+            {personalResult && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className={`mb-6 inline-block px-4 py-2 rounded-full border ${
+                  personalResult === "survived"
+                    ? "bg-neon/10 border-neon/40 text-neon"
+                    : "bg-blood/10 border-blood/40 text-blood"
+                }`}
+              >
+                <p className="font-mono text-sm font-bold">
+                  {personalResult === "survived" ? "✅ YOU SURVIVED" : "💀 YOU WERE ELIMINATED"}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Stats grid with real numbers */}
             <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
-              <RecapStat icon="✅" label="Survived" tone="neon" />
-              <RecapStat icon="💀" label="Eliminated" tone="blood" />
-              <RecapStat icon="🚫" label="DQ'd" tone="amber" />
+              <RecapStat icon="✅" label="Survived" value={survived} tone="neon" />
+              <RecapStat icon="💀" label="Eliminated" value={eliminated} tone="blood" />
+              <RecapStat icon="🚫" label="DQ'd" value={dq} tone="amber" />
             </div>
+
+            {/* Remaining humans */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="text-bone font-mono text-sm mt-6"
+            >
+              <span className="font-display text-2xl text-amber">{remaining}</span> humans remain
+            </motion.p>
 
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 1.5 }}
-              className="text-dim font-mono text-xs mt-8"
+              className="text-dim font-mono text-xs mt-6"
             >
               Tap to continue
             </motion.p>
           </motion.div>
 
-          {/* Auto-dismiss after 5s */}
           <AutoDismiss onDismiss={dismiss} />
         </motion.div>
       )}
@@ -114,7 +149,7 @@ export default function DayRecap() {
   );
 }
 
-function RecapStat({ icon, label, tone }) {
+function RecapStat({ icon, label, value, tone }) {
   const color =
     tone === "neon" ? "text-neon" :
     tone === "blood" ? "text-blood" :
@@ -122,7 +157,7 @@ function RecapStat({ icon, label, tone }) {
   return (
     <div className="bg-smoke/60 border border-ember/40 rounded-xl p-3">
       <p className="text-2xl mb-1">{icon}</p>
-      <p className={`font-display text-2xl ${color} leading-none`}>—</p>
+      <p className={`font-display text-2xl ${color} leading-none tabular-nums`}>{value}</p>
       <p className="text-dim text-[9px] font-mono uppercase mt-1">{label}</p>
     </div>
   );
@@ -130,7 +165,7 @@ function RecapStat({ icon, label, tone }) {
 
 function AutoDismiss({ onDismiss }) {
   useEffect(() => {
-    const t = setTimeout(onDismiss, 5000);
+    const t = setTimeout(onDismiss, 6000);
     return () => clearTimeout(t);
   }, [onDismiss]);
   return null;

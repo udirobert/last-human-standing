@@ -137,6 +137,21 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         >
           {youWon ? "SHARE YOUR VICTORY" : "SHARE THE RESULT"}
         </button>
+
+        {/* Next cohort CTA — keep players in the funnel */}
+        <div className="mt-4 bg-indigo/10 border border-indigo/40 rounded-2xl p-4 text-center">
+          <p className="font-mono text-indigo text-xs tracking-widest uppercase mb-1">Next cohort</p>
+          <p className="text-bone font-mono text-sm mb-3">
+            {youWon ? "Defend your title. The next game starts soon." : "You've seen the game. Now play it. Reserve your slot for cohort 2."}
+          </p>
+          <a
+            href={window.location.origin}
+            className="inline-block w-full py-3 rounded-xl bg-indigo/20 border border-indigo/50 text-indigo font-display text-sm tracking-widest active:scale-95 transition-transform"
+          >
+            RESERVE FOR COHORT 2 →
+          </a>
+        </div>
+
         <button
           onClick={onViewFeed}
           className="w-full mt-2 py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"

@@ -10,10 +10,12 @@ import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import GameMoment from './GameMoment.jsx';
+import { useDelight } from './DelightProvider.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn } = useWorld();
+  const { unlockAchievement, checkAchievement, playSound } = useDelight();
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
   const [gpsEnabled, setGpsEnabled] = useState(false);
@@ -205,9 +207,19 @@ export default function CheckIn({ onBack, onSubmit }) {
       // Haptic feedback: survived = celebration pulse, eliminated = single thud
       if (json.survived) {
         navigator.vibrate?.([30, 50, 100]);
+        playSound?.('victory');
       } else {
         navigator.vibrate?.([200]);
+        playSound?.('error');
       }
+
+      // Achievement unlocks
+      unlockAchievement?.('first_checkin');
+      if (json.survived) {
+        checkAchievement?.(currentDay >= 3, 'checkin_streak_3');
+        checkAchievement?.(currentDay >= 7, 'checkin_streak_7');
+      }
+
       // Clear any previously-queued chip on successful live submit.
       clearQueuedCheckin();
       setStep(2);

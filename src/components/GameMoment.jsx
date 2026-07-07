@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -182,16 +182,11 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
 }
 
 function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied }) {
-  const [showJury, setShowJury] = useState(false);
-
   // Haptic thud — heavy, single pulse
   useEffect(() => {
     if (navigator.vibrate) {
       navigator.vibrate([100, 50, 200]);
     }
-    // Reveal jury card after 2s
-    const t = setTimeout(() => setShowJury(true), 2000);
-    return () => clearTimeout(t);
   }, []);
 
   const daysSurvived = currentDay ?? "—";
@@ -218,19 +213,19 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         initial={{ scale: 3, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", duration: 0.8, bounce: 0 }}
-        className="mb-8 relative z-10"
+        className="mb-6 relative z-10"
       >
-        <span className="text-8xl">💀</span>
+        <span className="text-7xl">💀</span>
       </motion.div>
 
       {/* Eliminated text */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, type: "spring", duration: 0.5 }}
+        transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
         className="text-center relative z-10"
       >
-        <p className="font-display text-7xl text-blood leading-none mb-3 animate-glow">
+        <p className="font-display text-6xl text-blood leading-none mb-3 animate-glow">
           ELIMINATED
         </p>
         <p className="text-bone font-mono text-base mb-1">
@@ -241,47 +236,43 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         </p>
       </motion.div>
 
-      {/* Jury card — slides up after 2s */}
-      <AnimatePresence>
-        {showJury && (
-          <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
-            className="w-full max-w-sm mt-8 relative z-10"
+      {/* Jury card — appears immediately, part of the moment */}
+      <motion.div
+        initial={{ opacity: 0, y: 30, scale: 0.95 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ delay: 0.6, type: "spring", duration: 0.5, bounce: 0.2 }}
+        className="w-full max-w-sm mt-6 relative z-10"
+      >
+        <div className="bg-amber/10 border border-amber/40 rounded-2xl p-4 text-center">
+          <p className="font-mono text-amber text-sm uppercase tracking-widest mb-2">
+            ⚖️ You're the jury now
+          </p>
+          <p className="text-bone font-mono text-xs leading-relaxed mb-3">
+            Your votes decide who survives. Get 80% accuracy on 5+ votes and your
+            votes count <span className="text-amber">×2</span> — plus
+            lottery tickets for next cohort.
+          </p>
+          <button
+            onClick={onDismiss}
+            className="w-full py-3 rounded-xl bg-amber/20 border border-amber/50 text-amber font-display text-sm tracking-widest active:scale-[0.97] transition-transform"
           >
-            <div className="bg-amber/10 border border-amber/40 rounded-2xl p-4 text-center">
-              <p className="font-mono text-amber text-sm uppercase tracking-widest mb-2">
-                ⚖️ The jury needs you
-              </p>
-              <p className="text-bone font-mono text-xs leading-relaxed">
-                Your votes count now. Get 80% accuracy on 5+ votes and your
-                votes count <span className="text-amber">×2</span> — plus
-                lottery tickets for next cohort.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            OPEN THE AUDIT FEED →
+          </button>
+        </div>
+      </motion.div>
 
-      {/* Actions — appear with jury card */}
+      {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
-        animate={{ opacity: showJury ? 1 : 0 }}
-        transition={{ duration: 0.3 }}
-        className="w-full max-w-sm mt-6 space-y-3 relative z-10"
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8, duration: 0.3 }}
+        className="w-full max-w-sm mt-4 space-y-3 relative z-10"
       >
         <button
           onClick={onShare}
           className="w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-bone bg-indigo/20 border border-indigo/40"
         >
           {shareCopied ? "✓ COPIED" : "SHARE YOUR RUN"}
-        </button>
-        <button
-          onClick={onDismiss}
-          className="w-full py-4 rounded-2xl font-display text-2xl tracking-widest active:scale-[0.97] transition-transform text-bone bg-smoke border border-ember"
-        >
-          BACK TO GAME
         </button>
       </motion.div>
     </motion.div>

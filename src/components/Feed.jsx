@@ -10,6 +10,7 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
+import { useDelight } from './DelightProvider.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -25,6 +26,17 @@ const STATUS_LABELS = {
 
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
+// Detective title based on votes resolved + accuracy
+function getDetectiveTitle(resolved, accuracy) {
+  if (resolved < 5) return 'Rookie Juror';
+  const acc = accuracy ?? 0;
+  if (resolved >= 20 && acc >= 0.9) return 'Sherlock 🔍';
+  if (resolved >= 10 && acc >= 0.8) return 'Bloodhound 🐕';
+  if (resolved >= 10) return 'Seasoned Juror';
+  if (resolved >= 5) return 'Junior Detective';
+  return 'Rookie Juror';
+}
+
 // Dev convenience: in development, fall back to MOCK_SUBMISSIONS when
 // the user is NOT in the mini app. In production, always show real
 // data — browser visitors are real players.
@@ -32,10 +44,12 @@ const useMocks = import.meta.env.DEV;
 
 export default function Feed({ onBack, onCheckIn }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
-  const { verification, phase } = useRound();
+  const { verification, phase, you } = useRound();
+  const { unlockAchievement, checkAchievement, playSound } = useDelight();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
   const [voteMeta, setVoteMeta] = useState({});
+  const [voteFeedback, setVoteFeedback] = useState({}); // { id: { status, agree } }
   const [fired, setFired] = useState({});
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
@@ -134,6 +148,10 @@ export default function Feed({ onBack, onCheckIn }) {
       ),
     );
 
+    // Achievement: first vote
+    unlockAchievement?.('first_vote');
+    playSound?.('click');
+
     if (walletAuthed && entryPaid) {
       try {
         const resp = await fetch("/api/vote", {
@@ -146,6 +164,14 @@ export default function Feed({ onBack, onCheckIn }) {
           const data = await resp.json();
           if (data?.juryWeight) {
             setVoteMeta((m) => ({ ...m, [id]: { juryWeight: data.juryWeight } }));
+          }
+          // Post-vote feedback: if the verdict resolved, show whether you agreed
+          if (data?.status && data.status !== "pending") {
+            const agreed = (data.status === "verified" && type === "real") ||
+                           (data.status === "flagged" && type === "fake");
+            setVoteFeedback((f) => ({ ...f, [id]: { status: data.status, agreed } }));
+            // Auto-clear feedback after 4s
+            setTimeout(() => setVoteFeedback((f) => { const n = { ...f }; delete n[id]; return n; }), 4000);
           }
           if (data?.status || data?.voteQuorum) {
             setSubmissions((subs) =>
@@ -224,6 +250,22 @@ export default function Feed({ onBack, onCheckIn }) {
             {refreshing ? '...' : 'REFRESH'}
           </button>
         </div>
+
+        {/* Vote accuracy + detective title — visible when you have votes */}
+        {you?.votesResolved > 0 && (
+          <div className="mx-5 mb-3 bg-smoke/60 border border-ember/30 rounded-xl p-3 flex items-center justify-between">
+            <div>
+              <p className="font-mono text-[10px] tracking-widest uppercase text-dim mb-0.5">Your detective rank</p>
+              <p className="font-display text-sm text-bone">{getDetectiveTitle(you.votesResolved, you.voteAccuracy)}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-display text-xl text-neon tabular-nums">
+                {you.voteAccuracy != null ? `${Math.round(you.voteAccuracy * 100)}%` : '—'}
+              </p>
+              <p className="font-mono text-[9px] text-dim">{you.votesCorrect}/{you.votesResolved} correct</p>
+            </div>
+          </div>
+        )}
 
         {/* Voting guide — what to look for */}
         <div className="mx-5 mb-3 bg-amber/5 border border-amber/20 rounded-xl p-3">
@@ -334,6 +376,23 @@ export default function Feed({ onBack, onCheckIn }) {
                     <p className="text-amber font-mono text-[10px] mt-2 text-center">
                       ⚖️ Jury vote — counted ×{voteMeta[sub.id].juryWeight} (your accuracy earned it)
                     </p>
+                  )}
+
+                  {/* Post-vote feedback — shows if verdict resolved on your vote */}
+                  {voteFeedback[sub.id] && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`mt-2 py-2 px-3 rounded-xl text-center font-mono text-xs ${
+                        voteFeedback[sub.id].agreed
+                          ? 'bg-neon/10 border border-neon/30 text-neon'
+                          : 'bg-blood/10 border border-blood/30 text-blood'
+                      }`}
+                    >
+                      {voteFeedback[sub.id].agreed ? '✓ You were right!' : '✗ You were wrong'}
+                      {' · '}
+                      Verdict: {voteFeedback[sub.id].status === 'verified' ? 'HUMAN' : 'SUS'}
+                    </motion.div>
                   )}
 
                   {isExpanded && (
