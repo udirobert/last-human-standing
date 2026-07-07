@@ -66,10 +66,17 @@ signup between the lazy trigger and the actual draw is honoured.
   params have defaults.)
 - [ ] **Run the reset SQL** in `docs/LAUNCH_RESET.md` to clear
   stale dev-session data from the cohort.
-- [ ] **Build on the server, not locally.** The `VITE_FREE_ENTRY_MODE`
-  flag is baked into the client bundle at build time. Local `.env`
-  must match the server `.env` or the UI will lie. Easiest path:
-  rsync `.env` to the server, then build in `/opt/last-human-standing/current`.
+- [ ] **Deploy with `scripts/package-release.sh`** (the canonical
+  build + ship path). It pulls the public `VITE_` vars from the
+  server's `shared/.env` over SSH, builds the client locally with
+  them baked in, packages a source-free tarball (explicit allowlist:
+  `dist/`, `server/`, `scripts/`, `contracts/VoteRegistry.json`,
+  `package.json`, `package-lock.json`, `ecosystem.config.cjs`), scp's
+  it to the server, and invokes `scripts/deploy.sh` which extracts,
+  symlinks `node_modules` + `.env`, flips `current`, and restarts pm2.
+  Runtime secrets (`SUPABASE_SERVICE_ROLE_KEY`, `CELO_SIGNING_KEY`,
+  etc.) never transit — only the public `VITE_`-prefixed client vars.
+  Usage: `bash scripts/package-release.sh`
 - [ ] **World ID env vars (if enabling PoH on production)**:
   ```bash
   VITE_ENABLE_IDKIT=true
@@ -90,9 +97,9 @@ signup between the lazy trigger and the actual draw is honoured.
 
 ## T-1h
 
-- [ ] **Final deploy**: rebuild + scp tarball + `pm2 restart
-  last-human-standing --update-env`. Verify the new index bundle
-  is served.
+- [ ] **Final deploy**: `bash scripts/package-release.sh` —
+  builds + ships + restarts pm2 in one step. Verify the new index
+  bundle is served.
 - [ ] **Curl `/api/lottery/status`** — should return
   `status: "scheduled"`, `freeSlots: 25`, `freeRegistered: N`
   where N is the number of free entries so far.
@@ -332,4 +339,4 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-06-19 | `20260619-094447` | Dead-end sweep: SpectatorChip `onReserve` wired, Feed/Leaderboard empty-state CTAs, Leaderboard "Today"/"Roster" aliasing removed, Feed retry (3× × 5s n backoff), ErrorBoundary Discord link, photo-upload failure surfaced, queued check-in chip on home, WorldIdVerify/SelfVerify celebrate trust upgrade, wallet auth error cause, SelfVerify 60s polling timeout, PushOptIn "Subscribed" beat, Onboarding lastError recovery, Chat [Lobby \| DM] mode toggle, `markQueuedCheckin`/`clearQueuedCheckin` exposed on `useWorld`. |
 | 2026-06-19 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-06-17T18:00:00Z` (missed) to `2026-07-01T18:00:00Z`. No code change. New seed: `2026-07-01T18:00:00Z:cohort-1:lottery`. |
 | 2026-06-19 | `20260619-120552` | World ID custom QR + deep-link card (matches Self visual parity) via `useIDKitRequest`; Onboarding copy tightening (drop contradictory unverified line, "Verify before paying (recommended)" label); Self verify dev copy hidden in production; redundant "I already verified" button removed; cohort count UI rewrites when `reservedCount=0` ("be the first" instead of "0 / 50"); DB cleared of 25 stale free entries that were inflating `reservedCount`. **Deploy note:** tarball must include the `scripts/` directory (not just `dist/`, `src/`, etc.) — `deploy.sh` lives there and the next deploy reads it via the `current` symlink. If you forget, manually `tar -xzf scripts.tar.gz -C /opt/last-human-standing/current` from your local copy before re-running `deploy.sh`. |
-| 2026-07-07 | (pending) | **Engagement mechanics release** + `GAME_LAUNCH_AT` → `2026-07-14T18:00:00Z` (July 1 missed — API was 502ing). Migration 008 (apply FIRST): lethal votes — `close_day()` finalizes verdicts (weighted votes, ≥30% SUS with 3+ votes = flagged), DQs flagged survivors, promotes next-ranked check-ins, settles infiltrator immunity/burn, awards jury tickets, detects the winner; `advance_rounds()` now delegates to it (DRY). Server: jury votes count ×2 for accurate eliminated voters; `/api/feed` public read (infiltrator flag hidden); `ended` phase + `winner` in game state; pushes for survived/verdict/DQ/closing-soon/winner; free-entry rate-limited (3/h/IP); lottery v2 weighted by referrals + jury tickets. Client: `sw.js` finally renders pushes (`push`/`notificationclick` handlers); share-everywhere at the rank reveal (World App `navigator.share` + emoji strip); winner ceremony; Feed polls 30s + spectator reads; Chat de-theatered (no fake E2E/XMTP/verified chips) + browser chat fixed; RoundProvider now actually exposes `isLive` (MissionBoard was rendering null in live phase). Deleted: ExitIntentModal, SurvivalProfile, AIChatbot, AISettingsModal, CelebrationAnimation, useSocial, legacy shadowed `/api/waitlist`. Docs aligned with real mechanics. New seed: `2026-07-14T18:00:00Z:cohort-1:lottery`, algorithm `mulberry32-fy-weighted/v2`. |
+| 2026-07-07 | `20260707-191141` | **Engagement mechanics release** + `GAME_LAUNCH_AT` → `2026-07-14T18:00:00Z` (July 1 missed — API was 502ing). Migration 008 (apply FIRST): lethal votes — `close_day()` finalizes verdicts (weighted votes, ≥30% SUS with 3+ votes = flagged), DQs flagged survivors, promotes next-ranked check-ins, settles infiltrator immunity/burn, awards jury tickets, detects the winner; `advance_rounds()` now delegates to it (DRY). Server: jury votes count ×2 for accurate eliminated voters; `/api/feed` public read (infiltrator flag hidden); `ended` phase + `winner` in game state; pushes for survived/verdict/DQ/closing-soon/winner; free-entry rate-limited (3/h/IP); lottery v2 weighted by referrals + jury tickets. Client: `sw.js` finally renders pushes (`push`/`notificationclick` handlers); share-everywhere at the rank reveal (World App `navigator.share` + emoji strip); winner ceremony; Feed polls 30s + spectator reads; Chat de-theatered (no fake E2E/XMTP/verified chips) + browser chat fixed; RoundProvider now actually exposes `isLive` (MissionBoard was rendering null in live phase). Deleted: ExitIntentModal, SurvivalProfile, AIChatbot, AISettingsModal, CelebrationAnimation, useSocial, legacy shadowed `/api/waitlist`. Docs aligned with real mechanics. **Ops:** pm2 process was missing (502 root cause) — restored via `ecosystem.config.cjs` (fork mode); new canonical deploy script `scripts/package-release.sh` (builds locally with server VITE_ vars, ships source-free allowlisted tarball, invokes `deploy.sh`); vote relayer ABI (`contracts/VoteRegistry.json`) now shipped (was missing since June 19 — relayer was silently offline). New seed: `2026-07-14T18:00:00Z:cohort-1:lottery`, algorithm `mulberry32-fy-weighted/v2`. |
