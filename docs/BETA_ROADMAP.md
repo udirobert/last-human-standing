@@ -7,15 +7,15 @@
 ## Pre-Launch Checklist
 
 ### Infrastructure
-- [ ] Deploy Celo prize pool wallet (personal EOA is fine for beta)
-- [ ] Set `VITE_CELO_PRIZE_POOL_ADDRESS` in production `.env`
-- [ ] Set `COHORT_SIZE=25` in production `.env`
-- [ ] Set `GAME_LAUNCH_AT` to beta start date (3-5 days out)
-- [ ] Set `DAILY_SURVIVAL_CAP=12` for Day 1 (shrinks: 12 → 6 → 3 → 1)
-- [ ] Verify Supabase project is running and schema is applied
-- [ ] Verify storage bucket (`checkins`) exists
-- [ ] Set `ADMIN_TOKEN` to a strong random value
-- [ ] Generate and set VAPID keys for push notifications (optional but recommended)
+- [x] Deploy Celo prize pool wallet (personal EOA is fine for beta)
+- [x] Set `VITE_CELO_PRIZE_POOL_ADDRESS` in production `.env`
+- [ ] Set `COHORT_SIZE=25` in production `.env` *(currently 50)*
+- [x] Set `GAME_LAUNCH_AT` to beta start date — **2026-07-14T18:00:00Z**
+- [x] Set `DAILY_SURVIVAL_CAP` — now automatic via `survival_cap_for_day()` (25→12→6→3→1)
+- [x] Verify Supabase project is running and schema is applied
+- [x] Verify storage bucket (`checkins`) exists
+- [x] Set `ADMIN_TOKEN` to a strong random value
+- [x] Generate and set VAPID keys for push notifications
 
 ### Celo Payment Flow
 - [ ] Test cUSD payment on Celo Alfajores testnet first (`VITE_USE_CELO_TESTNET=true`)
@@ -25,11 +25,15 @@
 - [ ] Test voting flow after Celo payment
 
 ### Game Operations
-- [ ] Create Day 1 round via admin API before launch
-- [ ] Prepare 3-5 round themes in advance (AT A CAFE, AT A PARK, etc.)
+- [x] Create Day 1 round via admin API before launch — **all 5 rounds pre-created** (migration 010)
+- [x] Prepare 3-5 round themes in advance — Café, Park, Friend, Bookstore, Sunrise
 - [ ] Test admin close-day flow
 - [ ] Test auto-round scheduler (`advance_rounds` RPC)
-- [ ] Verify push notifications fire on round open/close
+- [x] Verify push notifications fire on round open/close
+- [x] **Wildcard revival** — jury votes one eliminated player back on Day 4
+- [x] **Streak bonuses** — 3-day streak = +1 jury ticket, 5-day = +3
+- [x] **Automatic winner payout** — `ariaBroadcastPayoutTx()` on winner detection
+- [x] **End-game tiebreaker** — `resolve_no_survivors()` if everyone eliminated
 
 ### User Experience
 - [ ] Test onboarding flow end-to-end on mobile (MetaMask + Celo)
@@ -42,12 +46,15 @@
 
 ## Beta Launch Steps
 
-1. **T-3 days**: Set `GAME_LAUNCH_AT`, create Day 1 round (status: `scheduled`)
-2. **T-0**: Share beta URL with 25 testers (Celo community + WLD team)
-3. **Day 1 opens**: Admin sets round status to `open` (or auto-scheduler handles it)
-4. **Day 1 closes**: Run `POST /api/admin/close-day` with `{"day": 1}`
-5. **Day 2+**: Create next round, shrink survival cap, repeat
-6. **Final day**: Last survivor wins the prize pool
+1. **T-3 days**: Set `GAME_LAUNCH_AT` (done — `2026-07-14T18:00:00Z`), rounds pre-created (migration 010)
+2. **T-1 day**: Seed the prize pool with cUSD/WLD, run reset SQL, smoke-test
+3. **T-0**: Share beta URL with 25 testers (Celo community + WLD team)
+4. **Day 1 opens**: Auto-scheduler opens the round at `opens_at`; cap = 25
+5. **Day 1 closes**: `advance_rounds()` calls `close_day()` — verdicts, DQ-and-replace, streak bonuses, eliminations
+6. **Day 2–3**: Cap decays to 12, then 6. Themes escalate (Park, Friend)
+7. **Day 4**: Cap = 3. After close, wildcard revival triggers — jury votes one player back
+8. **Day 5**: Cap = 1. Last survivor wins. Automatic payout via `ariaBroadcastPayoutTx()`
+9. **Post-game**: Winner ceremony with payout status + Celoscan link. Share result.
 
 ---
 

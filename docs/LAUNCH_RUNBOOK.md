@@ -25,6 +25,34 @@ and the lottery draws.
 > working push notifications, the public spectator feed, and
 > the ended-phase winner ceremony.
 
+## Pre-launch status (updated 2026-07-07)
+
+### Done — code-complete, tested, deployed
+
+- ✅ **Cap decay** (migration 009): `survival_cap_for_day()` — 25→12→6→3→1
+- ✅ **Round schedule** (migration 010): 5 daily rounds for July 14–19
+- ✅ **Streak tracking** (migration 011): `checkin_streak`, `award_streak_bonuses()`
+- ✅ **Wildcard revival** (migration 011): `revive_votes` table, `revive_player()`, UI (`WildcardPanel.jsx`)
+- ✅ **Winner payout** (migration 012): `payouts` table, automatic onchain payout via `ariaBroadcastPayoutTx()`, `/api/payout/status`, `/api/admin/retry-payout`
+- ✅ **End-game edge cases** (migration 012): `resolve_no_survivors()` tiebreaker
+- ✅ **Referral cap raised**: `TICKET_CAP_REFERRALS=50`, `TICKET_CAP_JURY=10`
+- ✅ **Voting hints**: "What to look for" guide above the feed
+- ✅ **Mid-day verdict moment**: "Verdicts are landing" banner in final hour
+- ✅ **Elimination ceremony**: survival summary, jury CTA, share copy
+- ✅ **Jury UI**: MissionBoard shows jury status, accuracy, tickets
+- ✅ **Onboarding pot display**: prize pot prominent on welcome + reserve
+- ✅ **All 133 tests passing**, lint clean, build succeeds
+- ✅ **Migrations 009–012 applied** to remote Supabase
+- ✅ **Deployed to production** (release `20260707-203843`)
+
+### Remaining — requires human action
+
+- ⬜ **Seed the prize pool**: transfer cUSD/WLD to the prize wallet before launch. With 25 paid entries at 1 WLD, the pot is ~$25 — insufficient for a 5-day engagement. Recommended: $500–1000 minimum, or raise the entry fee to 5 WLD.
+- ⬜ **Run the reset SQL** (`docs/LAUNCH_RESET.md`) to clear stale dev data
+- ⬜ **Dry-run the full game loop**: create a test round that opens/closes in minutes, submit check-ins, cast votes, trigger `close_day`, verify cap decay + verdicts + DQ-and-replace + streak bonuses + elimination + winner detection + payout
+- ⬜ **Set World ID env vars** if enabling PoH (see T-24h section)
+- ⬜ **Smoke-test the build** on a phone
+
 ## Cohort model (recap)
 
 25 paid (guaranteed) + 25 free (lottery), capped at 50. The
@@ -46,12 +74,12 @@ signup between the lazy trigger and the actual draw is honoured.
 
 ## T-24h (now-ish)
 
-- [ ] **Apply the migrations** in Supabase. The `supabase` CLI
+- [x] **Apply the migrations** in Supabase. The `supabase` CLI
   is the working path now (see "Migrations" section below):
   ```bash
   supabase login                            # one-time
   supabase link --project-ref emumokebsahapnqnstlr
-  supabase db push                          # applies 002..008
+  supabase db push                          # applies 002..012
   ```
   The chain is idempotent end-to-end. If a `create policy`
   fails, wrap it in `drop policy if exists` first (the
@@ -64,19 +92,22 @@ signup between the lazy trigger and the actual draw is honoured.
   named params — old DB + new server means every vote and
   close-day RPC fails. (Old server + new DB is fine: the new
   params have defaults.)
+
+  **Migrations 009–012 (applied 2026-07-07):**
+  - 009: Cap decay — `survival_cap_for_day(day)` SQL function
+    (Day 1→25, Day 2→12, Day 3→6, Day 4→3, Day 5+→1).
+  - 010: Round schedule — 5 daily rounds created for July 14–19.
+    Themes: Café → Park → Friend → Bookstore → Sunrise.
+  - 011: Streaks + wildcard — `checkin_streak` column,
+    `award_streak_bonuses()`, `revive_votes` table,
+    `revive_player()` function, `close_day` updated to call
+    streak bonuses.
+  - 012: Winner payout — `payouts` table, `resolve_no_survivors()`
+    tiebreaker, `record_winner()`, `game_winner` column on rounds.
 - [ ] **Run the reset SQL** in `docs/LAUNCH_RESET.md` to clear
   stale dev-session data from the cohort.
-- [ ] **Deploy with `scripts/package-release.sh`** (the canonical
-  build + ship path). It pulls the public `VITE_` vars from the
-  server's `shared/.env` over SSH, builds the client locally with
-  them baked in, packages a source-free tarball (explicit allowlist:
-  `dist/`, `server/`, `scripts/`, `contracts/VoteRegistry.json`,
-  `package.json`, `package-lock.json`, `ecosystem.config.cjs`), scp's
-  it to the server, and invokes `scripts/deploy.sh` which extracts,
-  symlinks `node_modules` + `.env`, flips `current`, and restarts pm2.
-  Runtime secrets (`SUPABASE_SERVICE_ROLE_KEY`, `CELO_SIGNING_KEY`,
-  etc.) never transit — only the public `VITE_`-prefixed client vars.
-  Usage: `bash scripts/package-release.sh`
+- [x] **Deploy with `scripts/package-release.sh`** (the canonical
+  build + ship path). Latest release: `20260707-203843`.
 - [ ] **World ID env vars (if enabling PoH on production)**:
   ```bash
   VITE_ENABLE_IDKIT=true
@@ -340,3 +371,5 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-06-19 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-06-17T18:00:00Z` (missed) to `2026-07-01T18:00:00Z`. No code change. New seed: `2026-07-01T18:00:00Z:cohort-1:lottery`. |
 | 2026-06-19 | `20260619-120552` | World ID custom QR + deep-link card (matches Self visual parity) via `useIDKitRequest`; Onboarding copy tightening (drop contradictory unverified line, "Verify before paying (recommended)" label); Self verify dev copy hidden in production; redundant "I already verified" button removed; cohort count UI rewrites when `reservedCount=0` ("be the first" instead of "0 / 50"); DB cleared of 25 stale free entries that were inflating `reservedCount`. **Deploy note:** tarball must include the `scripts/` directory (not just `dist/`, `src/`, etc.) — `deploy.sh` lives there and the next deploy reads it via the `current` symlink. If you forget, manually `tar -xzf scripts.tar.gz -C /opt/last-human-standing/current` from your local copy before re-running `deploy.sh`. |
 | 2026-07-07 | `20260707-191141` | **Engagement mechanics release** + `GAME_LAUNCH_AT` → `2026-07-14T18:00:00Z` (July 1 missed — API was 502ing). Migration 008 (apply FIRST): lethal votes — `close_day()` finalizes verdicts (weighted votes, ≥30% SUS with 3+ votes = flagged), DQs flagged survivors, promotes next-ranked check-ins, settles infiltrator immunity/burn, awards jury tickets, detects the winner; `advance_rounds()` now delegates to it (DRY). Server: jury votes count ×2 for accurate eliminated voters; `/api/feed` public read (infiltrator flag hidden); `ended` phase + `winner` in game state; pushes for survived/verdict/DQ/closing-soon/winner; free-entry rate-limited (3/h/IP); lottery v2 weighted by referrals + jury tickets. Client: `sw.js` finally renders pushes (`push`/`notificationclick` handlers); share-everywhere at the rank reveal (World App `navigator.share` + emoji strip); winner ceremony; Feed polls 30s + spectator reads; Chat de-theatered (no fake E2E/XMTP/verified chips) + browser chat fixed; RoundProvider now actually exposes `isLive` (MissionBoard was rendering null in live phase). Deleted: ExitIntentModal, SurvivalProfile, AIChatbot, AISettingsModal, CelebrationAnimation, useSocial, legacy shadowed `/api/waitlist`. Docs aligned with real mechanics. **Ops:** pm2 process was missing (502 root cause) — restored via `ecosystem.config.cjs` (fork mode); new canonical deploy script `scripts/package-release.sh` (builds locally with server VITE_ vars, ships source-free allowlisted tarball, invokes `deploy.sh`); vote relayer ABI (`contracts/VoteRegistry.json`) now shipped (was missing since June 19 — relayer was silently offline). New seed: `2026-07-14T18:00:00Z:cohort-1:lottery`, algorithm `mulberry32-fy-weighted/v2`. |
+| 2026-07-07 | `20260707-195013` | **Pre-launch polish release.** Migrations 009–011 applied. (1) Cap decay: `survival_cap_for_day()` SQL function (25→12→6→3→1) integrated into `advance_rounds()` and server logic — the marketing claim is now real. (2) Round schedule: 5 daily rounds created for July 14–19 with escalating themes (Café → Park → Friend → Bookstore → Sunrise). (3) Streak tracking: `checkin_streak` column, `award_streak_bonuses()` — 3-day streak = +1 jury ticket, 5-day = +3. (4) Wildcard revival: `revive_votes` table + `revive_player()` SQL function + `/api/revive-vote` + `/api/revive-votes` endpoints; triggered automatically after `close_day` on Day 4. (5) Referral cap raised: `TICKET_CAP=5` → `TICKET_CAP_REFERRALS=50` + `TICKET_CAP_JURY=10` — the viral loop is no longer kneecapped. (6) Voting hints: "What to look for" guide above the feed (GPS mismatch, stock/AI photos, no context, generic posts). (7) Mid-day verdict moment: pulsing "Verdicts are landing" banner in the final hour with CTA to the audit feed. (8) Elimination ceremony: survival summary ("You survived X days, Rank #Y of Z"), jury call-to-action card, better share copy. (9) Jury UI: MissionBoard shows jury status, vote accuracy, correct votes, jury ticket count. (10) Onboarding pot display: prize pot prominent on welcome + reserve screens. |
+| 2026-07-07 | `20260707-203843` | **Launch-critical fixes release.** Migration 012 applied. (1) Wildcard revival UI (`WildcardPanel.jsx`): jury members see a voting panel on Day 4 with live tallies, one vote per juror, auto-refreshes every 15s. (2) Automatic winner payout: when `close_day` detects a winner, server records the winner, checks for double-payout, fetches Celo prize pool balance, records a pending payout, and attempts the onchain transfer via `ariaBroadcastPayoutTx()`. On success: winner gets push notification with tx hash + broadcast announcement. On failure: payout marked failed, admin notified. New endpoints: `GET /api/payout/status` (public), `POST /api/admin/retry-payout` (admin). Payout status shown in winner ceremony UI with Celoscan link. (3) End-game edge cases: `resolve_no_survivors()` — if everyone gets eliminated (both finalists miss a day), picks the player with the longest check-in streak, then most jury tickets, then earliest reservation. `payouts` table for audit trail. `game_winner` column on rounds. (4) Survival summary in MissionBoard: eliminated players see a 3-stat grid (days survived, streak, top percentile) above the jury card. |
