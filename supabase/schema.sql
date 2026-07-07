@@ -128,6 +128,7 @@ create table if not exists public.votes (
 );
 
 alter table public.votes add column if not exists weight int not null default 1;
+alter table public.votes add column if not exists platform text default 'web';
 
 create unique index if not exists votes_unique_voter_per_submission
   on public.votes(submission_id, voter_address);

@@ -18,6 +18,8 @@ import SpectatorChip from './SpectatorChip.jsx';
 import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import WaitlistCard from './WaitlistCard.jsx';
+import ArsenalCard from './ArsenalCard.jsx';
+import DayRecap from './DayRecap.jsx';
 
 /**
  * GameHome — the persistent home view. Two states:
@@ -57,6 +59,9 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       {/* Phase-aware ambient backdrop — same palette as Onboarding */}
       <AmbientBackdrop phase={phase} />
 
+      {/* Day Recap cinematic — overlay shown when a day closes */}
+      <DayRecap />
+
       {/* FAQ button in top-right — consistent with onboarding */}
       <div className="absolute top-4 right-4 z-20">
         <FAQModal />
@@ -89,32 +94,29 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         <GlitchTitle text="LAST HUMAN STANDING" className="font-display text-4xl text-bone tracking-wide animate-glow" />
       </div>
 
-      {/* Live state: MissionBoard is the primary CTA. Prelaunch: PrelaunchPanel.
-          Both render through the same StageSection pattern for consistent
-          staggered reveal. */}
+      {/* === LIVE STATE: 3 clear priorities ===
+          1. Mission (check-in CTA + arsenal)
+          2. Your standing (survivors + pot)
+          3. The feed (what's happening)
+
+          Everything else (wildcard, spectator, waitlist) is
+          contextual and sits below the fold.
+      */}
+
+      {/* 1. MISSION — the primary CTA */}
       {(isLive || isEnded) && (
         <StageSection index={0} className="relative z-10">
           <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
         </StageSection>
       )}
 
-      {/* Wildcard revival panel — shown to jury members on Day 4 */}
-      {isLive && <WildcardPanel />}
-
-      {/* Spectator chip — only when the user is in the live phase
-          but doesn't have a slot in the current cohort. The chip
-          itself is responsible for the "is this me?" check. */}
-      {isLive && (
-        <div className="relative z-10 px-5 mb-3">
-          <SpectatorChip
-            user={user}
-            onReserve={onRouteToOnboarding}
-          />
-        </div>
+      {(isLive || isEnded) && (
+        <StageSection index={0} className="relative z-10">
+          <ArsenalCard />
+        </StageSection>
       )}
 
-      {/* Queued check-in chip — visible after an offline submit so the
-          user knows their submission will land when they reconnect. */}
+      {/* Queued check-in chip — contextual, between mission and stats */}
       {hasQueuedCheckin && (
         <div className="relative z-10 px-5 mb-3">
           <div className="rounded-xl border border-amber/40 bg-amber/10 px-3 py-2 flex items-center gap-2">
@@ -132,10 +134,52 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         </div>
       )}
 
-      <StageSection index={1} className="relative z-10">
-        <ActivityFeed />
-      </StageSection>
+      {/* 2. STANDING — survivors + pot in one compact row */}
+      {(isLive || isEnded) && (
+        <StageSection index={1} className="relative z-10">
+          <div className="px-5 grid grid-cols-2 gap-3 mb-3">
+            <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+              <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Survivors</p>
+              {activePlayers === null ? (
+                <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
+              ) : (
+                <p className="font-display text-2xl text-bone leading-none tabular-nums">
+                  {activePlayers}
+                </p>
+              )}
+              <p className="text-[10px] font-mono text-dim mt-1">{eliminated} eliminated</p>
+            </div>
+            <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+              <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Cohort 1</p>
+              {totalPlayers === 0 && activePlayers === null ? (
+                <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
+              ) : (
+                <p className="font-display text-2xl text-bone leading-none tabular-nums">
+                  {totalPlayers}<span className="text-dim text-sm"> / 50</span>
+                </p>
+              )}
+              <p className="text-[10px] font-mono text-dim mt-1">
+                {cohortSplit?.paidCount ?? 0} paid · {cohortSplit?.freeCount ?? 0} free
+              </p>
+            </div>
+          </div>
+        </StageSection>
+      )}
 
+      {(isLive || isEnded) && (
+        <StageSection index={2} className="relative z-10 px-5 mb-4">
+          <PrizePots prizePool={stats?.prizePool} />
+        </StageSection>
+      )}
+
+      {/* 3. THE FEED — what's happening right now */}
+      {(isLive || isEnded) && (
+        <StageSection index={3} className="relative z-10">
+          <ActivityFeed />
+        </StageSection>
+      )}
+
+      {/* === PRELAUNCH STATE === */}
       {isPrelaunch && (
         <StageSection index={2} className="relative z-10">
           <PrelaunchPanel
@@ -155,47 +199,51 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         </StageSection>
       )}
 
-      {/* Stats row — PrizePots replaces the WLD-only inline card. Celo
-          is now visible at the same level. Tap a pot to see the on-chain
-          address and explorer link. */}
-      <StageSection index={3} className="relative z-10">
-        <div className="px-5 grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
-            <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Survivors</p>
-            {activePlayers === null ? (
-              <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
-            ) : (
+      {/* Prelaunch stats + pots */}
+      {isPrelaunch && (
+        <StageSection index={3} className="relative z-10">
+          <div className="px-5 grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+              <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Reserved</p>
               <p className="font-display text-2xl text-bone leading-none tabular-nums">
-                {activePlayers}
+                {reservedCount}<span className="text-dim text-sm"> / {cohortSize}</span>
               </p>
-            )}
-            <p className="text-[10px] font-mono text-dim mt-1">{eliminated} eliminated</p>
-          </div>
-          <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
-            <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Cohort 1</p>
-            {totalPlayers === 0 && activePlayers === null ? (
-              <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
-            ) : (
-              <p className="font-display text-2xl text-bone leading-none tabular-nums">
-                {totalPlayers}<span className="text-dim text-sm"> / 50</span>
+              <p className="text-[10px] font-mono text-dim mt-1">
+                {cohortSplit?.paidCount ?? 0} paid · {cohortSplit?.freeCount ?? 0} free
               </p>
-            )}
-            <p className="text-[10px] font-mono text-dim mt-1">
-              {cohortSplit?.paidCount ?? 0} paid · {cohortSplit?.freeCount ?? 0} free
-            </p>
+            </div>
+            <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+              <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Status</p>
+              <p className="font-display text-2xl text-amber leading-none">
+                {cohortFull ? "FULL" : "OPEN"}
+              </p>
+              <p className="text-[10px] font-mono text-dim mt-1">
+                {cohortFull ? "Join the waitlist" : "Slots available"}
+              </p>
+            </div>
           </div>
+        </StageSection>
+      )}
+
+      {isPrelaunch && (
+        <StageSection index={4} className="relative z-10 px-5 mb-4">
+          <PrizePots prizePool={stats?.prizePool} />
+        </StageSection>
+      )}
+
+      {/* === CONTEXTUAL — below the fold === */}
+
+      {/* Wildcard revival — Day 4 jury vote */}
+      {isLive && <WildcardPanel />}
+
+      {/* Spectator chip */}
+      {isLive && (
+        <div className="relative z-10 px-5 mb-3">
+          <SpectatorChip user={user} onReserve={onRouteToOnboarding} />
         </div>
-      </StageSection>
+      )}
 
-      {/* Prize pots — tap to expand */}
-      <StageSection index={4} className="relative z-10 px-5 mb-4">
-        <PrizePots prizePool={stats?.prizePool} />
-      </StageSection>
-
-      {/* Waitlist capture — visible during prelaunch so we don't
-          lose bounced visitors. Sits below the pots so it doesn't
-          fight the main CTAs. Also shown to spectators so anyone
-          who can't join the current cohort has a clear next step. */}
+      {/* Waitlist capture */}
       {(isPrelaunch || isLive) && !user?.paid && (
         <StageSection index={5} className="relative z-10 px-5 mb-4">
           <WaitlistCard source={isLive ? 'spectator' : 'welcome_screen'} />

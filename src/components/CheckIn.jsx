@@ -9,6 +9,7 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
+import GameMoment from './GameMoment.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
@@ -347,34 +348,57 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               )}
 
-              {/* Infiltrator toggle — submit a borderline photo for immunity
-                  + a jury ticket if the crowd trusts you. Risky, but it pays. */}
-              <button
-                onClick={() => setInfiltratorMode(!infiltratorMode)}
-                className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
-                  infiltratorMode
-                    ? 'bg-purple-500/20 border-purple-400/40 text-purple-300'
-                    : 'bg-smoke border-ember text-dim'
-                }`}
-              >
-                {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity + a ticket)'}
-              </button>
+              {/* CHOOSE YOUR PATH — infiltrator mode is now a first-class
+                  choice, not a buried toggle. Two cards side by side. */}
+              <div className="mb-3">
+                <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-2 text-center">
+                  Choose your path
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {/* Honest */}
+                  <button
+                    onClick={() => setInfiltratorMode(false)}
+                    className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
+                      !infiltratorMode
+                        ? 'bg-neon/10 border-neon/50 text-neon'
+                        : 'bg-smoke border-ember text-dim'
+                    }`}
+                  >
+                    <p className="text-lg mb-0.5">🧍</p>
+                    <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
+                    <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
+                  </button>
+                  {/* Infiltrator */}
+                  <button
+                    onClick={() => setInfiltratorMode(true)}
+                    className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
+                      infiltratorMode
+                        ? 'bg-purple-500/20 border-purple-400/60 text-purple-300'
+                        : 'bg-smoke border-ember text-dim'
+                    }`}
+                  >
+                    <p className="text-lg mb-0.5">🎭</p>
+                    <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
+                    <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
+                  </button>
+                </div>
+              </div>
+
               {infiltratorMode && (
-                <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-3 mb-3 space-y-2">
-                  <p className="text-dim text-[11px] font-mono leading-relaxed">
-                    🕶️ <span className="text-purple-300">Infiltrator</span> is a high-risk, high-reward play: pick a
-                    photo that could go either way.
+                <div className="bg-purple-500/10 border border-purple-400/30 rounded-xl p-3 mb-3 space-y-2">
+                  <p className="text-purple-300 text-xs font-mono leading-relaxed">
+                    🕶️ Submit a photo that could go either way. The crowd votes.
                   </p>
-                  <div className="space-y-1.5">
-                    <p className="text-neon text-xs font-mono">
-                      ✅ Crowd votes HUMAN → immunity through tomorrow's cut + 1 jury ticket for the next cohort.
+                  <div className="space-y-1">
+                    <p className="text-neon text-[11px] font-mono">
+                      ✅ Trusted → immunity + 1 jury ticket
                     </p>
-                    <p className="text-blood text-xs font-mono">
-                      ❌ Crowd flags SUS → disqualified at the verdict, even if you ranked in. Immunity burned.
+                    <p className="text-blood text-[11px] font-mono">
+                      ❌ Flagged → DQ'd, immunity burned
                     </p>
                   </div>
                   <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20">
-                    💰 Bounty for voters: anyone who correctly flags an infiltrator earns +2 jury tickets (double the normal reward). So expect scrutiny.
+                    💰 Voters who catch you get +2 tickets. Expect scrutiny.
                   </p>
                 </div>
               )}
@@ -424,108 +448,14 @@ export default function CheckIn({ onBack, onSubmit }) {
           )}
 
           {step === 2 && result && (
-            <motion.div
-              key="done"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
-            >
-              {result.queued ? (
-                <>
-                  <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center">
-                    <span className="text-6xl">📡</span>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-display text-4xl text-amber mb-1">QUEUED</p>
-                    <p className="text-bone font-mono text-sm">Check-in saved offline</p>
-                    <p className="text-dim font-mono text-xs mt-2">It will be submitted automatically when you're back online.</p>
-                    {queuedCheckin && (
-                      <p className="text-amber font-mono text-xs mt-1">✓ Queued with service worker</p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { onSubmit && onSubmit(); onBack(); }}
-                    className="w-full py-4 rounded-2xl font-display text-2xl tracking-widest active:scale-95 transition-transform text-bone bg-smoke border border-ember"
-                  >
-                    BACK TO GAME
-                  </button>
-                </>
-              ) : result.survived ? (
-                <>
-                  <div className="w-28 h-28 rounded-full bg-neon/10 border-2 border-neon flex items-center justify-center animate-pulse-blood">
-                    <span className="text-6xl">✅</span>
-                  </div>
-                  <div className="text-center">
-                    <p className="font-display text-5xl text-neon mb-1">RANK #{result.rank}</p>
-                    <p className="text-bone font-mono text-sm">of {result.survivalCap} surviving today</p>
-                    {result.gpsShared && (
-                      <p className="text-dim font-mono text-xs mt-2">📍 GPS shared · Day {currentDay}</p>
-                    )}
-                    {!result.gpsShared && (
-                      <p className="text-dim font-mono text-xs mt-2">No GPS · community votes decide · Day {currentDay}</p>
-                    )}
-                  </div>
-                  {photoUploadFailed && (
-                    <div className="w-full rounded-xl border border-amber/40 bg-amber/10 p-3">
-                      <p className="text-amber font-mono text-xs">
-                        Your photo didn&apos;t upload — voters will see this submission without a photo.
-                      </p>
-                      <p className="text-dim font-mono text-[10px] mt-1">
-                        Try again later from the feed. Your rank and submission are still valid.
-                      </p>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  <div className="w-28 h-28 rounded-full bg-blood/10 border-2 border-blood flex items-center justify-center">
-                    <span className="text-6xl">💀</span>
-                  </div>
-                  <div className="text-center space-y-2">
-                    <p className="font-display text-5xl text-blood mb-1">ELIMINATED</p>
-                    <p className="text-bone font-mono text-sm">
-                      You survived {currentDay ?? "—"} day{Number(currentDay) !== 1 ? "s" : ""} · Rank #{result.rank} of {result.survivalCap}
-                    </p>
-                    <p className="text-dim font-mono text-xs">
-                      Out of 50 humans, you were in the last {Math.round((Number(currentDay) || 1) * 100 / 5)}%.
-                    </p>
-                  </div>
-
-                  {/* Jury call-to-action */}
-                  <div className="w-full bg-amber/10 border border-amber/30 rounded-xl p-3 text-center">
-                    <p className="font-mono text-amber text-xs uppercase tracking-widest mb-1">⚖️ The jury needs you</p>
-                    <p className="text-dim text-[11px] font-mono leading-relaxed">
-                      Your votes now count toward jury status. Get 80% accuracy on 5+ votes and your votes count ×2 — plus lottery tickets for the next cohort.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => shareResult(false)}
-                    className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40"
-                  >
-                    {shareCopied ? '✓ COPIED' : 'SHARE YOUR RUN'}
-                  </button>
-                </>
-              )}
-
-              <button
-                onClick={() => { onSubmit && onSubmit(); onBack(); }}
-                className="w-full py-4 rounded-2xl font-display text-2xl tracking-widest active:scale-95 transition-transform text-bone bg-smoke border border-ember"
-              >
-                BACK TO GAME
-              </button>
-
-              {result?.survived && (
-                <button
-                  type="button"
-                  onClick={() => shareResult(true)}
-                  className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
-                >
-                  {shareCopied ? '✓ COPIED' : isFarcaster ? 'SHARE ON FARCASTER' : 'SHARE YOUR RANK 🧍'}
-                </button>
-              )}
-            </motion.div>
+            <GameMoment
+              result={result}
+              currentDay={currentDay}
+              onDismiss={() => { onSubmit && onSubmit(); onBack(); }}
+              onShare={() => shareResult(result.survived)}
+              shareCopied={shareCopied}
+              photoUploadFailed={photoUploadFailed}
+            />
           )}
         </AnimatePresence>
       )}

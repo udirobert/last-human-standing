@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 /**
@@ -10,35 +10,85 @@ import { AnimatePresence, motion } from "framer-motion";
  * Reads:
  *   prizePool.wld  = { balance, explorerUrl }
  *   prizePool.celo = { cusd, address, explorerUrl }
+ *
+ * Also shows a "total pot" header with a live-updating total
+ * and a growth indicator (delta since last poll).
  */
 export default function PrizePots({ prizePool, className = "" }) {
+  // Track growth — hooks must run before any early return
+  const prevTotalRef = useRef(null);
+  const [growth, setGrowth] = useState(null);
+
+  // Compute total from prizePool (safe if null)
+  const wld = prizePool?.wld ?? {
+    address: prizePool?.address,
+    balance: prizePool?.balanceWld,
+    explorerUrl: prizePool?.explorerUrl,
+  };
+  const celo = prizePool?.celo;
+  const wldUsd = (wld?.balance ?? 0) * 1.2;
+  const celoUsd = celo?.cusd ?? 0;
+  const totalUsd = wldUsd + celoUsd;
+
+  useEffect(() => {
+    if (prevTotalRef.current != null && totalUsd > prevTotalRef.current) {
+      setGrowth(totalUsd - prevTotalRef.current);
+      const t = setTimeout(() => setGrowth(null), 3000);
+      return () => clearTimeout(t);
+    }
+    prevTotalRef.current = totalUsd;
+  }, [totalUsd]);
+
   if (!prizePool) return null;
 
-  const wld = prizePool.wld ?? {
-    address: prizePool.address,
-    balance: prizePool.balanceWld,
-    explorerUrl: prizePool.explorerUrl,
-  };
-  const celo = prizePool.celo;
-
   return (
-    <div className={`grid grid-cols-2 gap-2 ${className}`}>
-      <PotCard
-        chain="World Chain"
-        balance={wld?.balance}
-        suffix="WLD"
-        address={wld?.address}
-        explorerUrl={wld?.explorerUrl}
-        empty={!wld?.balance}
-      />
-      <PotCard
-        chain="Celo"
-        balance={celo?.cusd}
-        suffix="cUSD"
-        address={celo?.address}
-        explorerUrl={celo?.explorerUrl}
-        empty={!celo?.cusd}
-      />
+    <div className={className}>
+      {/* Total pot header */}
+      <div className="flex items-baseline justify-between mb-2 px-1">
+        <p className="text-dim text-[10px] font-mono uppercase tracking-widest">Total Pot</p>
+        <div className="flex items-baseline gap-2">
+          <motion.p
+            key={totalUsd.toFixed(2)}
+            initial={{ scale: 1.1, color: "#00FF94" }}
+            animate={{ scale: 1, color: "#F0EDE8" }}
+            transition={{ duration: 0.4 }}
+            className="font-display text-xl text-bone tabular-nums"
+          >
+            ${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </motion.p>
+          <AnimatePresence>
+            {growth != null && (
+              <motion.span
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className="text-neon text-[10px] font-mono"
+              >
+                +${growth.toFixed(2)}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <PotCard
+          chain="World Chain"
+          balance={wld?.balance}
+          suffix="WLD"
+          address={wld?.address}
+          explorerUrl={wld?.explorerUrl}
+          empty={!wld?.balance}
+        />
+        <PotCard
+          chain="Celo"
+          balance={celo?.cusd}
+          suffix="cUSD"
+          address={celo?.address}
+          explorerUrl={celo?.explorerUrl}
+          empty={!celo?.cusd}
+        />
+      </div>
     </div>
   );
 }

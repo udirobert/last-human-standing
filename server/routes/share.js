@@ -21,6 +21,37 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+// Render the elimination curve (50→25→12→6→3→1) as an SVG polyline.
+// Highlights the player's current day with a glowing dot.
+function renderEliminationCurve(day, survived) {
+  const caps = [50, 25, 12, 6, 3, 1];
+  const dayNum = Number(day) || 0;
+  const points = caps.map((cap, i) => {
+    const x = 300 + (i * 120);
+    const y = 540 - (cap * 3); // scale: 50→390, 1→537
+    return { x, y, cap, day: i + 1 };
+  });
+
+  const polyline = points
+    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+    .join(" ");
+
+  const dots = points
+    .map((p) => {
+      const isCurrent = p.day === dayNum;
+      const fill = isCurrent ? (survived ? C.neon : C.blood) : C.ember;
+      const r = isCurrent ? 8 : 4;
+      return `<circle cx="${p.x}" cy="${p.y}" r="${r}" fill="${fill}" ${isCurrent ? 'filter="url(#glow)"' : ""}/>`;
+    })
+    .join("");
+
+  const labels = points
+    .map((p) => `<text x="${p.x}" y="${p.y + 25}" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="11">${p.cap}</text>`)
+    .join("");
+
+  return `<polyline points="${points.map(p => `${p.x},${p.y}`).join(" ")}" fill="none" stroke="${C.ember}" stroke-width="2"/>${dots}${labels}`;
+}
+
 export default function shareRoutes({ supabaseAdmin }) {
   const router = Router();
 
@@ -73,16 +104,41 @@ export default function shareRoutes({ supabaseAdmin }) {
             <stop offset="0%" stop-color="${C.ash}"/>
             <stop offset="100%" stop-color="${C.smoke}"/>
           </linearGradient>
+          <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="${C.blood}"/>
+            <stop offset="100%" stop-color="${C.amber}"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
         </defs>
         <rect width="1200" height="630" fill="url(#bg)"/>
+        <rect x="0" y="0" width="1200" height="6" fill="url(#accent)"/>
         <rect x="40" y="40" width="1120" height="550" rx="24" fill="none" stroke="${C.ember}" stroke-width="2"/>
-        <text x="600" y="140" text-anchor="middle" fill="${C.blood}" font-family="monospace" font-size="20" letter-spacing="8">LAST HUMAN STANDING</text>
-        <text x="600" y="220" text-anchor="middle" fill="${C.bone}" font-family="sans-serif" font-size="52" font-weight="bold">${escapeHtml(name)}</text>
-        <text x="600" y="300" text-anchor="middle" fill="${C.amber}" font-family="monospace" font-size="64" font-weight="bold">RANK #${rank}</text>
-        <text x="600" y="370" text-anchor="middle" fill="${ck?.survived ? C.neon : C.blood}" font-family="monospace" font-size="28">${status}</text>
-        <line x1="400" y1="420" x2="800" y2="420" stroke="${C.ember}" stroke-width="1"/>
-        <text x="600" y="470" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="22">Day ${day}</text>
-        <text x="600" y="520" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="16">${origin.replace(/^https?:\/\//, "")}</text>
+
+        <!-- Brand -->
+        <text x="600" y="110" text-anchor="middle" fill="${C.blood}" font-family="monospace" font-size="18" letter-spacing="10" filter="url(#glow)">LAST HUMAN STANDING</text>
+
+        <!-- Status badge -->
+        <rect x="450" y="140" width="300" height="44" rx="22" fill="none" stroke="${ck?.survived ? C.neon : C.blood}" stroke-width="2"/>
+        <text x="600" y="170" text-anchor="middle" fill="${ck?.survived ? C.neon : C.blood}" font-family="monospace" font-size="20" font-weight="bold" letter-spacing="4">${status}</text>
+
+        <!-- Player name -->
+        <text x="600" y="260" text-anchor="middle" fill="${C.bone}" font-family="sans-serif" font-size="48" font-weight="bold">${escapeHtml(name)}</text>
+
+        <!-- Rank — big and bold -->
+        <text x="600" y="360" text-anchor="middle" fill="${C.amber}" font-family="monospace" font-size="80" font-weight="bold" filter="url(#glow)">RANK #${rank}</text>
+
+        <!-- Day -->
+        <line x1="450" y1="400" x2="750" y2="400" stroke="${C.ember}" stroke-width="1"/>
+        <text x="600" y="440" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="24">Day ${day}</text>
+
+        <!-- Elimination curve: 50→25→12→6→3→1 -->
+        ${renderEliminationCurve(day, ck?.survived)}
+
+        <!-- Footer -->
+        <text x="600" y="570" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="14">${origin.replace(/^https?:\/\//, "")} · 50 humans. One pot.</text>
       </svg>`;
 
       res.setHeader("Content-Type", "image/svg+xml");

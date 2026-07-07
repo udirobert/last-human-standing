@@ -54,7 +54,7 @@ export const RULES = [
   {
     n: "01",
     title: "RESERVE",
-    body: "Pay 1 WLD or enter free. 50 humans max.",
+    body: "Pay 1 WLD (World Chain) or 5 cUSD (Celo) to lock your slot — or enter free. 50 humans max.",
     icon: "🎟",
   },
   {

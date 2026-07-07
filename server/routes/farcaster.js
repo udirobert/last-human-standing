@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { getPublicOrigin } from "../lib/publicOrigin.js";
 
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 export default function farcasterRoutes({ supabaseAdmin, log }) {
   const router = Router();
 
@@ -174,6 +178,134 @@ export default function farcasterRoutes({ supabaseAdmin, log }) {
       res.json({ ok: true, votes: votes || [] });
     } catch {
       res.status(500).json({ error: "vote_history_failed" });
+    }
+  });
+
+  // === Farcaster Frame for in-feed voting ===
+  // Shows a submission photo with HUMAN/SUS buttons. Anyone scrolling
+  // Farcaster can vote without leaving their feed — pure distribution.
+  // GET returns the frame HTML; POST handles the vote.
+  router.get("/farcaster/frame/vote/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      if (!supabaseAdmin || !id) return res.status(404).end();
+
+      const { data: sub } = await supabaseAdmin
+        .from("submissions")
+        .select("id,address,username,day,caption,media_path,status")
+        .eq("id", id)
+        .maybeSingle();
+      if (!sub) return res.status(404).send("Not found");
+
+      const origin = getPublicOrigin(req) || "https://lasthumanstanding.thisyearnofear.com";
+      const name = sub.username || (sub.address ? `${sub.address.slice(0, 6)}…${sub.address.slice(-4)}` : "Player");
+
+      // Get photo URL
+      let photoUrl = null;
+      if (sub.media_path) {
+        const bucket = process.env.SUPABASE_BUCKET || "checkins";
+        const isPrivate = process.env.SUPABASE_BUCKET_PRIVATE === "true";
+        if (!isPrivate) {
+          photoUrl = supabaseAdmin.storage.from(bucket).getPublicUrl(sub.media_path).data.publicUrl;
+        } else {
+          const { data: signed } = await supabaseAdmin.storage
+            .from(bucket).createSignedUrl(sub.media_path, 60 * 60);
+          photoUrl = signed?.signedUrl ?? null;
+        }
+      }
+
+      const imageUrl = photoUrl || `${origin}/api/og-image/checkin/${id}`;
+      const postUrl = `${origin}/api/farcaster/frame/vote/${id}`;
+
+      res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(name)} — Day ${sub.day} · Vote HUMAN or SUS</title>
+  <meta name="fc:frame" content="vNext" />
+  <meta name="fc:frame:image" content="${imageUrl}" />
+  <meta name="fc:frame:button:1" content="🧍 HUMAN" />
+  <meta name="fc:frame:button:2" content="🎭 SUS" />
+  <meta name="fc:frame:post_url" content="${postUrl}" />
+  <meta property="og:title" content="${escapeHtml(name)} — Day ${sub.day}" />
+  <meta property="og:image" content="${imageUrl}" />
+</head>
+<body style="margin:0;background:#0D0D0D;color:#F0EDE8;font-family:monospace;display:flex;align-items:center;justify-content:center;min-height:100vh">
+  <div style="text-align:center;padding:24px">
+    <h1 style="color:#FF1A1A;font-size:14px;letter-spacing:4px">LAST HUMAN STANDING</h1>
+    <p style="font-size:20px">${escapeHtml(name)} — Day ${sub.day}</p>
+    ${photoUrl ? `<img src="${photoUrl}" alt="submission" style="max-width:400px;border-radius:16px;border:1px solid #2A2A2A;margin:16px 0"/>` : ""}
+    <p style="color:#888;font-size:14px">Vote HUMAN or SUS — the crowd decides who survives.</p>
+  </div>
+</body>
+</html>`);
+    } catch {
+      res.status(500).end();
+    }
+  });
+
+  // Handle Frame button votes
+  router.post("/farcaster/frame/vote/:id", async (req, res) => {
+    try {
+      const id = Number(req.params.id);
+      const { trustedData, untrustedData } = req.body;
+      if (!supabaseAdmin || !id) return res.status(404).json({ error: "not_found" });
+
+      // Determine vote from button index
+      const buttonIndex = untrustedData?.buttonIndex;
+      const vote = buttonIndex === 1 ? "real" : buttonIndex === 2 ? "fake" : null;
+      if (!vote) return res.status(400).json({ error: "invalid_button" });
+
+      // Try to validate via Neymar if available
+      let voterAddress = null;
+      if (trustedData?.messageBytes && NEYNAR_API_KEY) {
+        try {
+          const validateResp = await fetch(
+            "https://api.neynar.com/v2/farcaster/action/validate",
+            {
+              method: "POST",
+              headers: { "api_key": NEYNAR_API_KEY, "content-type": "application/json" },
+              body: JSON.stringify({ action_bytes: trustedData.messageBytes }),
+            },
+          );
+          if (validateResp.ok) {
+            const validated = await validateResp.json();
+            if (validated.valid) {
+              voterAddress = validated.interactor?.verifications?.[0]?.address?.toLowerCase();
+            }
+          }
+        } catch { /* validation optional for frame votes */ }
+      }
+
+      // Record vote (anonymous if no verification)
+      const voterKey = voterAddress || `fc:${untrustedData?.fid || "anon"}`;
+      const { data: existing } = await supabaseAdmin
+        .from("votes")
+        .select("id")
+        .eq("voter_address", voterKey)
+        .eq("submission_id", id)
+        .maybeSingle();
+
+      if (existing) {
+        return res.send(`<!DOCTYPE html><html><head><meta name="fc:frame" content="vNext"/><meta name="fc:frame:image" content="${getPublicOrigin(req)}/api/og-image/checkin/${id}"/><meta name="fc:frame:button:1" content="✓ Already voted"/></head><body></body></html>`);
+      }
+
+      await supabaseAdmin.from("votes").insert({
+        submission_id: id,
+        voter_address: voterKey,
+        vote,
+        platform: "farcaster_frame",
+      });
+
+      log("farcaster_frame_vote", { id, vote, voter: voterKey });
+
+      // Return a thank-you frame
+      const origin = getPublicOrigin(req);
+      res.send(`<!DOCTYPE html><html><head><meta name="fc:frame" content="vNext"/><meta name="fc:frame:image" content="${origin}/api/og-image/checkin/${id}"/><meta name="fc:frame:button:1" content="✓ Vote recorded — see more"/><meta name="fc:frame:post_url" content="${origin}"/></head><body></body></html>`);
+    } catch (e) {
+      log("farcaster_frame_vote_error", { error: String(e) });
+      res.status(500).json({ error: "vote_failed" });
     }
   });
 

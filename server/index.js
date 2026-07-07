@@ -181,7 +181,7 @@ async function autoAdvanceRounds() {
     }
     const result = data ?? { opened: [], closed: [], errors: [] };
 
-    // Notify subscribed users when rounds open
+    // Notify subscribing users when rounds open
     for (const r of result.opened ?? []) {
       log("round_auto_opened", { day: r.day });
       broadcastPush(supabaseAdmin, {
@@ -189,6 +189,20 @@ async function autoAdvanceRounds() {
         body: `Day ${r.day} check-in is now live. Find your spot.`,
         data: { type: "round_opened", day: r.day },
       }).catch((e) => log("push_error", { where: "round_opened", error: String(e) }));
+
+      // Seed chat with a daily theme prompt so the lobby isn't empty.
+      // Uses the round's prompt if available, falls back to a generic icebreaker.
+      try {
+        const themePrompt = r.prompt || `Day ${r.day} is live — where are you checking in?`;
+        const themeName = r.name || `Day ${r.day}`;
+        await supabaseAdmin.from("chat_messages").insert({
+          address: "0x0000000000000000000000000000000000000000",
+          username: "LHS_Bot",
+          message: `📍 ${themeName}: ${themePrompt}`,
+        });
+      } catch (e) {
+        log("chat_seed_error", { day: r.day, error: String(e) });
+      }
     }
 
     // Day-close ceremony: survivors, DQ'd, eliminated, verdict, winner.
@@ -1347,6 +1361,31 @@ app.post(
             await supabaseAdmin.rpc("award_jury_tickets", { p_submission_id: submissionId, p_final_status: computed.status });
           } catch (e) {
             log("jury_ticket_error", { submissionId, error: e instanceof Error ? e.message : String(e) });
+          }
+
+          // Vote feedback — notify each voter whether they were right.
+          // This closes the engagement loop: vote → verdict → feedback.
+          try {
+            const { data: allVotes } = await supabaseAdmin
+              .from("votes")
+              .select("voter_address,vote")
+              .eq("submission_id", submissionId);
+            const finalStatus = computed.status; // "verified" or "flagged"
+            for (const v of allVotes || []) {
+              const wasCorrect =
+                (finalStatus === "verified" && v.vote === "real") ||
+                (finalStatus === "flagged" && v.vote === "fake");
+              const stats = await getVoterStats(v.voter_address);
+              sendPushToAddress(supabaseAdmin, v.voter_address, {
+                title: wasCorrect ? "✅ You were right!" : "❌ You were wrong",
+                body: wasCorrect
+                  ? `+1 jury ticket. Accuracy: ${stats.accuracy ?? "—"}%`
+                  : `The crowd voted ${finalStatus}. Accuracy: ${stats.accuracy ?? "—"}%`,
+                data: { type: "vote_feedback", correct: wasCorrect, accuracy: stats.accuracy },
+              }).catch(() => {});
+            }
+          } catch (e) {
+            log("vote_feedback_error", { submissionId, error: String(e) });
           }
         }
 
