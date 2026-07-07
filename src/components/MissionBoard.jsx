@@ -144,6 +144,25 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       )}
       <p className="text-dim text-xs font-mono mb-4">{themeData.description}</p>
 
+      {/* Mid-day verdict moment: in the final hour, show a live banner */}
+      {closingSoon && !eliminated && (
+        <div className="mb-3 bg-amber/10 border border-amber/40 rounded-xl p-3 animate-pulse">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-base">⚡</span>
+            <p className="font-mono text-amber text-xs tracking-widest uppercase">Verdicts are landing</p>
+          </div>
+          <p className="text-dim text-[11px] font-mono leading-relaxed">
+            Final hour — submissions are being verified and flagged in real-time. Watch the audit feed to see the crowd's verdicts come in.
+          </p>
+          <button
+            onClick={onViewFeed}
+            className="w-full mt-2 py-2 rounded-lg bg-amber/20 border border-amber/40 text-amber font-mono text-xs active:scale-95 transition-transform"
+          >
+            WATCH LIVE VERDICTS →
+          </button>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-ash rounded-xl p-3 border border-ember">
           <p className="text-dim text-[10px] font-mono uppercase">Check-in window</p>
@@ -240,6 +259,11 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
                 ? "Hold your spot — the audit verdict lands when the window closes. Flagged players get replaced."
                 : "At risk until day closes — if the audit disqualifies a survivor, you inherit their slot."}
             </p>
+            {you?.checkinStreak >= 2 && (
+              <p className="text-amber text-[11px] font-mono mt-1.5">
+                🔥 {you.checkinStreak}-day streak · {you.checkinStreak >= 3 ? "+1 jury ticket bonus at day close" : "3-day streak earns a bonus ticket"}
+              </p>
+            )}
           </div>
         )
       ) : isSpectator ? (

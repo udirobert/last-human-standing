@@ -70,10 +70,10 @@ export default function CheckIn({ onBack, onSubmit }) {
     const rank = result?.rank ?? '?';
     const strip = survived
       ? `🧍 Day ${currentDay} · Rank #${rank}/${cap} · SURVIVED ✅`
-      : `💀 Day ${currentDay} · Rank #${rank} · ELIMINATED`;
+      : `💀 Survived ${currentDay ?? "?"} day${Number(currentDay) !== 1 ? "s" : ""} in Last Human Standing. The jury needs me now.`;
     const text = survived
       ? `${strip}\nLast Human Standing — one verified human takes the pot. Can you outlast me?`
-      : `${strip}\nLast Human Standing took me out. Avenge me.`;
+      : `${strip}\nI'm out. But my votes count double now. Next cohort, I go all the way.`;
     const url = result?.checkinId
       ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
       : window.location.origin;
@@ -481,17 +481,30 @@ export default function CheckIn({ onBack, onSubmit }) {
                   <div className="w-28 h-28 rounded-full bg-blood/10 border-2 border-blood flex items-center justify-center">
                     <span className="text-6xl">💀</span>
                   </div>
-                  <div className="text-center">
-                    <p className="font-display text-5xl text-blood mb-1">TOO LATE</p>
-                    <p className="text-bone font-mono text-sm">You arrived as #{result.rank} (cap was {result.survivalCap})</p>
-                    <p className="text-dim font-mono text-xs mt-2">You're out. Stay for the audit + chat.</p>
+                  <div className="text-center space-y-2">
+                    <p className="font-display text-5xl text-blood mb-1">ELIMINATED</p>
+                    <p className="text-bone font-mono text-sm">
+                      You survived {currentDay ?? "—"} day{Number(currentDay) !== 1 ? "s" : ""} · Rank #{result.rank} of {result.survivalCap}
+                    </p>
+                    <p className="text-dim font-mono text-xs">
+                      Out of 50 humans, you were in the last {Math.round((Number(currentDay) || 1) * 100 / 5)}%.
+                    </p>
                   </div>
+
+                  {/* Jury call-to-action */}
+                  <div className="w-full bg-amber/10 border border-amber/30 rounded-xl p-3 text-center">
+                    <p className="font-mono text-amber text-xs uppercase tracking-widest mb-1">⚖️ The jury needs you</p>
+                    <p className="text-dim text-[11px] font-mono leading-relaxed">
+                      Your votes now count toward jury status. Get 80% accuracy on 5+ votes and your votes count ×2 — plus lottery tickets for the next cohort.
+                    </p>
+                  </div>
+
                   <button
                     type="button"
                     onClick={() => shareResult(false)}
-                    className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
+                    className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40"
                   >
-                    {shareCopied ? '✓ COPIED' : 'SHARE YOUR ELIMINATION'}
+                    {shareCopied ? '✓ COPIED' : 'SHARE YOUR RUN'}
                   </button>
                 </>
               )}

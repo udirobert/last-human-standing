@@ -20,11 +20,16 @@
 import { createHash } from "node:crypto";
 
 // v2: weighted tickets. Each candidate gets 1 base ticket plus up to
-// TICKET_CAP bonus tickets each for referrals and jury tickets, so
-// sharing the game and voting well genuinely improve your odds while
-// staying deterministic and replayable from the public seed.
+// TICKET_CAP_REFERRALS bonus tickets for referrals and up to
+// TICKET_CAP_JURY bonus tickets for jury tickets, so sharing the game
+// and voting well genuinely improve your odds while staying deterministic
+// and replayable from the public seed.
+// Referral cap is high (50) to keep the viral loop alive — referring 50
+// people should give you a massive advantage, not the same 5 tickets as
+// someone who referred 5.
 export const ALGORITHM_VERSION = "mulberry32-fy-weighted/v2";
-export const TICKET_CAP = 5;
+export const TICKET_CAP_REFERRALS = 50;
+export const TICKET_CAP_JURY = 10;
 
 /** Hex-decode a string into a 32-bit unsigned integer. */
 function hexToU32(hex) {
@@ -84,7 +89,7 @@ export function shuffle(arr, rng) {
 export function ticketsFor(candidate) {
   const referrals = Math.max(0, Number(candidate?.referral_count) || 0);
   const jury = Math.max(0, Number(candidate?.jury_tickets) || 0);
-  return 1 + Math.min(referrals, TICKET_CAP) + Math.min(jury, TICKET_CAP);
+  return 1 + Math.min(referrals, TICKET_CAP_REFERRALS) + Math.min(jury, TICKET_CAP_JURY);
 }
 
 /**

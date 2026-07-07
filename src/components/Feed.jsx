@@ -224,6 +224,18 @@ export default function Feed({ onBack, onCheckIn }) {
             {refreshing ? '...' : 'REFRESH'}
           </button>
         </div>
+
+        {/* Voting guide — what to look for */}
+        <div className="mx-5 mb-3 bg-amber/5 border border-amber/20 rounded-xl p-3">
+          <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1.5">🔍 What to look for</p>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+            <p className="text-dim text-[10px] font-mono">📍 GPS mismatch or missing</p>
+            <p className="text-dim text-[10px] font-mono">🖼️ Stock photo / AI-generated</p>
+            <p className="text-dim text-[10px] font-mono">🚫 No context or landmarks</p>
+            <p className="text-dim text-[10px] font-mono">⏱️ Posted too fast / generic</p>
+          </div>
+          <p className="text-dim/70 text-[9px] font-mono mt-1.5">Vote SUS if something feels off. Correct votes earn jury tickets.</p>
+        </div>
       </div>
 
       <div className="px-5 space-y-4">

@@ -17,6 +17,7 @@ const DEFAULT_YOU = {
   voteAccuracy: null,
   votesCorrect: 0,
   votesResolved: 0,
+  checkinStreak: 0,
 };
 const DEFAULT_STATE = {
   phase: "prelaunch",

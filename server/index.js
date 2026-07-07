@@ -199,8 +199,29 @@ async function autoAdvanceRounds() {
         day: r.day, survivors: r.survivors, eliminated: r.eliminated,
         flagged: r.flagged ?? 0, dq: (r.dq || []).length, promoted: (r.promoted || []).length,
         remaining: r.remaining ?? null, winner: r.winner || null,
+        streak_bonuses: r.streak_bonuses ?? 0,
       });
       notifyDayClosed(r).catch((e) => log("push_error", { where: "round_closed", error: String(e) }));
+
+      // Wildcard revival: on Day 4, the jury votes one eliminated player
+      // back into the game. Triggered automatically after close_day.
+      if (r.day === 4 && supabaseAdmin && !r.winner) {
+        try {
+          const { data: reviveResult, error: reviveError } = await supabaseAdmin.rpc("revive_player", { p_day: r.day });
+          if (reviveError) {
+            log("revive_error", { day: r.day, error: reviveError.message });
+          } else if (reviveResult?.revived) {
+            log("revive_success", { day: r.day, revived: reviveResult.revived, votes: reviveResult.votes });
+            broadcastPush(supabaseAdmin, {
+              title: "Wildcard revival!",
+              body: "The jury has spoken — one eliminated player is back in the game.",
+              data: { type: "revival", day: r.day, revived: reviveResult.revived },
+            }).catch((e) => log("push_error", { where: "revival", error: String(e) }));
+          }
+        } catch (e) {
+          log("revive_error", { day: r.day, error: String(e) });
+        }
+      }
     }
 
     for (const r of result.errors ?? []) {
@@ -1344,6 +1365,61 @@ app.get("/api/voter-stats/:address", async (req, res) => {
   }
 });
 
+// Wildcard revival vote: jury members vote for an eliminated player to
+// revive on Day 4. One vote per juror per day.
+app.post("/api/revive-vote", requireAuth, async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  try {
+    const { candidateAddress, day } = req.body || {};
+    if (!candidateAddress || typeof candidateAddress !== "string") {
+      return res.status(400).json({ error: "missing_candidate" });
+    }
+    const pDay = Number(day) || 4;
+
+    // Only eliminated players (jury) can vote
+    const { data: voter } = await supabaseAdmin.from("users").select("eliminated,paid").eq("address", req.user.address).maybeSingle();
+    if (!voter?.paid || !voter?.eliminated) {
+      return res.status(403).json({ error: "not_jury" });
+    }
+
+    // Candidate must be eliminated
+    const { data: candidate } = await supabaseAdmin.from("users").select("eliminated,paid").eq("address", candidateAddress).maybeSingle();
+    if (!candidate?.paid || !candidate?.eliminated) {
+      return res.status(400).json({ error: "candidate_not_eliminated" });
+    }
+
+    const { error } = await supabaseAdmin.from("revive_votes").upsert(
+      { day: pDay, voter_address: req.user.address, candidate_address: candidateAddress },
+      { onConflict: "day,voter_address,candidate_address" },
+    );
+    if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
+    return res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: "revive_vote_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Get revive vote tally for the current day
+app.get("/api/revive-votes/:day", async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  try {
+    const day = Number(req.params.day) || 4;
+    const { data, error } = await supabaseAdmin
+      .from("revive_votes")
+      .select("candidate_address")
+      .eq("day", day);
+    if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+    const tally = {};
+    for (const v of data || []) {
+      const key = v.candidate_address.toLowerCase();
+      tally[key] = (tally[key] || 0) + 1;
+    }
+    return res.json({ ok: true, day, tally });
+  } catch (e) {
+    res.status(400).json({ error: "revive_tally_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
 function haversineMeters(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const toRad = (d) => (d * Math.PI) / 180;
@@ -1486,6 +1562,7 @@ app.get("/api/game/state", async (req, res) => {
       voteAccuracy: null,
       votesCorrect: 0,
       votesResolved: 0,
+      checkinStreak: 0,
     };
     if (address) {
       const u = await getUserRecord(address);
@@ -1508,6 +1585,7 @@ app.get("/api/game/state", async (req, res) => {
         voteAccuracy: stats.accuracy,
         votesCorrect: stats.correct,
         votesResolved: stats.total,
+        checkinStreak: u?.checkin_streak ?? 0,
       };
     }
 
@@ -1679,6 +1757,10 @@ app.post(
         } else {
           log("checkin_survived", { address: req.user.address, day, rank: data?.rank });
         }
+
+        // Track streak: update last_checkin_day so award_streak_bonuses
+        // can compute consecutive check-ins at day close.
+        await supabaseAdmin.from("users").update({ last_checkin_day: day }).eq("address", req.user.address);
 
         const { data: ckId } = await supabaseAdmin
           .from("checkins")

@@ -5,7 +5,8 @@ import {
   COHORT_FREE_SLOTS,
   COHORT_PAID_SLOTS,
   COHORT_SIZE,
-  TICKET_CAP,
+  TICKET_CAP_REFERRALS,
+  TICKET_CAP_JURY,
   drawLottery,
   freeSlotsFor,
   lotterySeed,
@@ -22,9 +23,9 @@ describe("lottery", () => {
   it("ticketsFor: 1 base + capped referral + capped jury tickets", () => {
     expect(ticketsFor({})).toBe(1);
     expect(ticketsFor({ referral_count: 3 })).toBe(4);
-    expect(ticketsFor({ referral_count: 99 })).toBe(1 + TICKET_CAP);
+    expect(ticketsFor({ referral_count: 99 })).toBe(1 + TICKET_CAP_REFERRALS);
     expect(ticketsFor({ referral_count: 2, jury_tickets: 2 })).toBe(5);
-    expect(ticketsFor({ referral_count: 99, jury_tickets: 99 })).toBe(1 + TICKET_CAP * 2);
+    expect(ticketsFor({ referral_count: 99, jury_tickets: 99 })).toBe(1 + TICKET_CAP_REFERRALS + TICKET_CAP_JURY);
   });
 
   it("weights the draw: heavy-ticket candidates win more often across seeds", () => {
