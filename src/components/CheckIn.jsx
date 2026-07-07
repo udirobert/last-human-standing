@@ -348,7 +348,7 @@ export default function CheckIn({ onBack, onSubmit }) {
               )}
 
               {/* Infiltrator toggle — submit a borderline photo for immunity
-                  if the crowd sides with you. Risky, but it can save your run. */}
+                  + a jury ticket if the crowd trusts you. Risky, but it pays. */}
               <button
                 onClick={() => setInfiltratorMode(!infiltratorMode)}
                 className={`w-full mb-3 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border ${
@@ -357,17 +357,24 @@ export default function CheckIn({ onBack, onSubmit }) {
                     : 'bg-smoke border-ember text-dim'
                 }`}
               >
-                {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity)'}
+                {infiltratorMode ? '🎭 Infiltrator mode ON — submit something borderline' : '🎭 Go Infiltrator? (risk it for immunity + a ticket)'}
               </button>
               {infiltratorMode && (
                 <div className="bg-purple-500/10 border border-purple-400/20 rounded-xl p-3 mb-3 space-y-2">
                   <p className="text-dim text-[11px] font-mono leading-relaxed">
-                    🕶️ <span className="text-purple-300">Infiltrator</span> is a high-risk play: pick a
-                    photo that could go either way. If the crowd trusts it, you earn immunity for tomorrow.
+                    🕶️ <span className="text-purple-300">Infiltrator</span> is a high-risk, high-reward play: pick a
+                    photo that could go either way.
                   </p>
-                  <p className="text-purple-300 text-xs font-mono">
-                    ⚡ Crowd votes you HUMAN → immunity through tomorrow's cut (skip a day, stay alive).
-                    Crowd flags you SUS → disqualified at the verdict, even if you ranked in. Choose wisely.
+                  <div className="space-y-1.5">
+                    <p className="text-neon text-xs font-mono">
+                      ✅ Crowd votes HUMAN → immunity through tomorrow's cut + 1 jury ticket for the next cohort.
+                    </p>
+                    <p className="text-blood text-xs font-mono">
+                      ❌ Crowd flags SUS → disqualified at the verdict, even if you ranked in. Immunity burned.
+                    </p>
+                  </div>
+                  <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20">
+                    💰 Bounty for voters: anyone who correctly flags an infiltrator earns +2 jury tickets (double the normal reward). So expect scrutiny.
                   </p>
                 </div>
               )}

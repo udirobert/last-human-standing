@@ -317,6 +317,11 @@ $$;
 -- Correct verdict votes earn jury_tickets (lottery weight for the next
 -- cohort). Called by close_day() for verdicts finalized at the cut, and
 -- by the server when a submission resolves mid-day via quorum.
+--
+-- Infiltrator bounty: voters who correctly flag an infiltrator get an
+-- EXTRA +1 ticket (on top of the normal correct-verdict ticket).
+-- Bluff reward: an infiltrator who is verified by the crowd gets +1
+-- ticket too (for the next cohort), making the bluff worth attempting.
 create or replace function public.award_jury_tickets(
   p_submission_id bigint,
   p_final_status text
@@ -327,10 +332,17 @@ security definer
 as $$
 declare
   n int := 0;
+  sub_is_infiltrator boolean;
+  sub_address text;
 begin
   if p_final_status not in ('verified', 'flagged') then
     return 0;
   end if;
+
+  select is_infiltrator, address into sub_is_infiltrator, sub_address
+    from public.submissions where id = p_submission_id;
+
+  -- Normal: correct verdict voters get +1 ticket
   update public.users u
     set jury_tickets = u.jury_tickets + 1
     where lower(u.address) in (
@@ -339,6 +351,28 @@ begin
       where v.submission_id = p_submission_id
         and v.vote = case when p_final_status = 'verified' then 'real' else 'fake' end
     );
+
+  -- Bounty: if the submission was an infiltrator and was flagged,
+  -- the voters who called it correctly get an EXTRA +1 ticket.
+  if sub_is_infiltrator and p_final_status = 'flagged' then
+    update public.users u
+      set jury_tickets = u.jury_tickets + 1
+      where lower(u.address) in (
+        select lower(v.voter_address)
+        from public.votes v
+        where v.submission_id = p_submission_id
+          and v.vote = 'fake'
+      );
+  end if;
+
+  -- Bluff reward: if the submission was an infiltrator and was verified,
+  -- the infiltrator themselves gets +1 jury ticket (for the next cohort).
+  if sub_is_infiltrator and p_final_status = 'verified' then
+    update public.users u
+      set jury_tickets = u.jury_tickets + 1
+      where lower(u.address) = lower(sub_address);
+  end if;
+
   get diagnostics n = row_count;
   return n;
 end;
@@ -611,10 +645,31 @@ drop policy if exists "checkins_service_delete" on storage.objects;
 create policy "checkins_service_delete" on storage.objects
   for delete using (bucket_id = 'checkins');
 
+-- =============== Cap decay: survival cap shrinks daily ===============
+-- Returns the survival cap for a given day number.
+-- Day 1: 25, Day 2: 12, Day 3: 6, Day 4: 3, Day 5+: 1
+-- Admin can still override per-round by setting survival_cap manually
+-- before the round opens; advance_rounds only sets it if it's still
+-- the default (25).
+create or replace function public.survival_cap_for_day(p_day int)
+returns int
+language sql
+immutable
+as $$
+  select case
+    when p_day <= 1 then 25
+    when p_day = 2 then 12
+    when p_day = 3 then 6
+    when p_day = 4 then 3
+    else 1
+  end;
+$$;
+
 -- =============== Distributed scheduler lock ===============
 -- pg_advisory_xact_lock is transaction-scoped: released on commit/rollback.
 -- Lock ID 42424201 chosen to not collide with create_checkin's 424242.
 -- This function advances rounds atomically — safe to call from multiple server instances.
+-- Sets the decayed survival cap when opening a round (only if admin hasn't overridden).
 create or replace function public.advance_rounds()
 returns jsonb
 language plpgsql
@@ -641,9 +696,19 @@ begin
       if round_row.status = 'scheduled' then
         opens_ms := trunc(Extract(epoch from round_row.opens_at)) * 1000;
         if now_ms >= opens_ms then
-          update public.rounds
-            set status = 'open', updated_at = now_iso
-            where day = round_row.day and status = 'scheduled';
+          -- Set the decayed cap if the admin hasn't overridden it
+          -- (default is 25; if it's still 25, apply the decay schedule).
+          if round_row.survival_cap = 25 then
+            update public.rounds
+              set status = 'open',
+                  survival_cap = public.survival_cap_for_day(round_row.day),
+                  updated_at = now_iso
+              where day = round_row.day and status = 'scheduled';
+          else
+            update public.rounds
+              set status = 'open', updated_at = now_iso
+              where day = round_row.day and status = 'scheduled';
+          end if;
           result := jsonb_set(result, '{opened}', result->'opened' || jsonb_build_array(jsonb_build_object('day', round_row.day)));
         end if;
 
@@ -652,7 +717,7 @@ begin
         if now_ms >= closes_ms then
           -- close_day is the single source of truth for the cut sequence
           -- (verdicts, DQ-and-replace, immunity, elimination, winner).
-          close_result := public.close_day(round_row.day, coalesce(round_row.survival_cap, 25));
+          close_result := public.close_day(round_row.day, coalesce(round_row.survival_cap, public.survival_cap_for_day(round_row.day)));
           result := jsonb_set(result, '{closed}', result->'closed' || jsonb_build_array(close_result));
         end if;
       end if;

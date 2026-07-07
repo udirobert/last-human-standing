@@ -193,8 +193,12 @@ export default function Onboarding({ onEnter }) {
                   </StageSection>
                 )}
 
-                <StageSection index={3} className="bg-smoke/40 rounded-2xl p-3 border border-ember/30 backdrop-blur-sm">
+                <StageSection index={3} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
+                  <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">What you're playing for</p>
                   <PrizePots prizePool={pot} />
+                  <p className="text-dim text-[10px] font-mono text-center mt-2">
+                    Last survivor takes the entire on-chain pot. 100% of entry fees go to the prize.
+                  </p>
                 </StageSection>
 
                 <StageSection index={4}>
@@ -374,6 +378,17 @@ export default function Onboarding({ onEnter }) {
 
                 {!entryPaid && (
                   <>
+                    {/* Prize reminder — show the pot right before the payment decision */}
+                    {pot && (
+                      <StageSection index={2} className="bg-smoke/60 rounded-2xl p-3 border border-amber/30">
+                        <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1.5 text-center">🏆 The pot you're playing for</p>
+                        <PrizePots prizePool={pot} />
+                        <p className="text-dim text-[10px] font-mono text-center mt-1.5">
+                          50 humans enter · 1 takes everything · 5 days of survival
+                        </p>
+                      </StageSection>
+                    )}
+
                     {/* PAID CARD */}
                     <StageSection index={3} className="bg-smoke border border-ember rounded-2xl p-5">
                       <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1">

@@ -11,8 +11,8 @@ import { motion } from "framer-motion";
 const STEPS = [
   { num: "01", emoji: "☕", keyword: "THEME DROPS", body: "Daily place type. Find it anywhere on Earth." },
   { num: "02", emoji: "📸", keyword: "SNAP IT", body: "Photo + optional GPS. Anywhere matching the theme." },
-  { num: "03", emoji: "🗳️", keyword: "VOTED IN", body: "Community votes HUMAN or SUS. Top 25 advance." },
-  { num: "04", emoji: "🏆", keyword: "LAST ONE", body: "Each day fewer survive. Winner takes the pot." },
+  { num: "03", emoji: "🗳️", keyword: "VOTED IN", body: "Community votes HUMAN or SUS. Cap shrinks daily." },
+  { num: "04", emoji: "🏆", keyword: "LAST ONE", body: "25→12→6→3→1. Winner takes the pot." },
 ];
 
 export default function DayTimeline() {

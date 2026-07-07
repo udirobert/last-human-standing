@@ -11,6 +11,12 @@ const DEFAULT_YOU = {
   rankToday: null,
   survivedToday: null,
   distanceToday: null,
+  juryTickets: 0,
+  isJury: false,
+  juryWeight: 1,
+  voteAccuracy: null,
+  votesCorrect: 0,
+  votesResolved: 0,
 };
 const DEFAULT_STATE = {
   phase: "prelaunch",

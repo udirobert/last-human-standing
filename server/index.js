@@ -86,6 +86,18 @@ const LOTTERY_MAX_DELAY_HOURS = Number(process.env.LOTTERY_MAX_DELAY_HOURS || 6)
 const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
 const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
+
+// Cap decay schedule: Day 1: 25, Day 2: 12, Day 3: 6, Day 4: 3, Day 5+: 1.
+// Mirrors the SQL function survival_cap_for_day() — used when the round
+// row doesn't have an explicit override (admin can set a custom cap
+// per-round and it will be respected).
+function survivalCapForDay(day) {
+  if (day <= 1) return 25;
+  if (day === 2) return 12;
+  if (day === 3) return 6;
+  if (day === 4) return 3;
+  return 1;
+}
 const CHECKIN_RADIUS_M = Number(process.env.CHECKIN_RADIUS_M || 100);
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || null;
 const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || null;
@@ -1468,10 +1480,18 @@ app.get("/api/game/state", async (req, res) => {
       rankToday: null,
       survivedToday: null,
       distanceToday: null,
+      juryTickets: 0,
+      isJury: false,
+      juryWeight: 1,
+      voteAccuracy: null,
+      votesCorrect: 0,
+      votesResolved: 0,
     };
     if (address) {
       const u = await getUserRecord(address);
       const ci = currentDay != null ? await userCheckinForDay(currentDay, address) : null;
+      const stats = await getVoterStats(address);
+      const isJury = Boolean(u?.eliminated) && stats.total >= JURY_MIN_RESOLVED && (stats.accuracy ?? 0) >= JURY_MIN_ACCURACY;
       you = {
         address,
         isAuthed: true,
@@ -1482,6 +1502,12 @@ app.get("/api/game/state", async (req, res) => {
         rankToday: ci?.rank ?? null,
         survivedToday: ci?.survived ?? null,
         distanceToday: ci?.distance_m ?? null,
+        juryTickets: u?.jury_tickets ?? 0,
+        isJury,
+        juryWeight: isJury ? JURY_WEIGHT : 1,
+        voteAccuracy: stats.accuracy,
+        votesCorrect: stats.correct,
+        votesResolved: stats.total,
       };
     }
 
@@ -1511,12 +1537,12 @@ app.get("/api/game/state", async (req, res) => {
             lng: round.lng != null ? Number(round.lng) : null,
             radiusM: round.radius_m ?? CHECKIN_RADIUS_M,
             gpsRequired: round.lat != null && round.lng != null,
-            survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP,
+            survivalCap: round.survival_cap ?? survivalCapForDay(currentDay),
             opensAt: round.opens_at,
             closesAt: round.closes_at,
             status: round.status,
             checkinCount,
-            slotsRemaining: Math.max(0, (round.survival_cap ?? DAILY_SURVIVAL_CAP) - checkinCount),
+            slotsRemaining: Math.max(0, (round.survival_cap ?? survivalCapForDay(currentDay)) - checkinCount),
           }
         : null,
       you,
@@ -1617,7 +1643,7 @@ app.post(
 
       const existing = await userCheckinForDay(day, req.user.address);
       if (existing) {
-        return res.json({ ok: true, alreadyCheckedIn: true, rank: existing.rank, survived: existing.survived, distanceM: existing.distance_m != null ? Math.round(existing.distance_m) : null, survivalCap: round.survival_cap ?? DAILY_SURVIVAL_CAP });
+        return res.json({ ok: true, alreadyCheckedIn: true, rank: existing.rank, survived: existing.survived, distanceM: existing.distance_m != null ? Math.round(existing.distance_m) : null, survivalCap: round.survival_cap ?? survivalCapForDay(round.day) });
       }
 
       // Anti-cheat: timing anomaly
@@ -1628,7 +1654,7 @@ app.post(
         if (timingReason) log("anticheat_flag", { reason: timingReason, address: req.user.address, day });
       }
 
-      const cap = round.survival_cap ?? DAILY_SURVIVAL_CAP;
+      const cap = round.survival_cap ?? survivalCapForDay(round.day);
       const username = userRec?.username ?? null;
 
       if (supabaseAdmin) {

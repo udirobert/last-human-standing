@@ -167,9 +167,56 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       </div>
 
       {eliminated ? (
-        <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 mb-3">
-          <p className="font-display text-xl text-blood">Eliminated</p>
-          <p className="text-dim text-xs font-mono mt-1">You can still audit, vote, and chat.</p>
+        <div className="bg-blood/10 border border-blood/30 rounded-xl p-4 mb-3 space-y-3">
+          <div>
+            <p className="font-display text-xl text-blood">Eliminated{you?.eliminatedAtDay ? ` · Day ${you.eliminatedAtDay}` : ""}</p>
+            <p className="text-dim text-xs font-mono mt-1">
+              You survived {you?.eliminatedAtDay ?? "—"} day{(you?.eliminatedAtDay ?? 0) !== 1 ? "s" : ""}. The game isn't over for you.
+            </p>
+          </div>
+
+          {/* Jury status card */}
+          <div className={`rounded-xl p-3 border ${you?.isJury ? "bg-amber/10 border-amber/40" : "bg-ash/60 border-ember/40"}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-base">{you?.isJury ? "⚖️" : "🗳️"}</span>
+              <p className={`font-mono text-xs uppercase tracking-widest ${you?.isJury ? "text-amber" : "text-dim"}`}>
+                {you?.isJury ? "Jury member" : "Voting — earn jury status"}
+              </p>
+            </div>
+            {you?.isJury ? (
+              <p className="text-amber text-sm font-mono">
+                Your votes count ×{you.juryWeight ?? 2}. Keep voting accurately to earn lottery tickets for the next cohort.
+              </p>
+            ) : (
+              <p className="text-dim text-xs font-mono">
+                Vote on {Math.max(0, 5 - (you?.votesResolved ?? 0))} more submission{Math.max(0, 5 - (you?.votesResolved ?? 0)) !== 1 ? "s" : ""} with ≥80% accuracy to become a juror. Jury votes count double.
+              </p>
+            )}
+          </div>
+
+          {/* Vote accuracy stats */}
+          {(you?.votesResolved ?? 0) > 0 && (
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+                <p className="text-dim text-[9px] font-mono uppercase">Accuracy</p>
+                <p className="text-bone font-display text-lg">
+                  {you?.voteAccuracy != null ? `${Math.round(you.voteAccuracy * 100)}%` : "—"}
+                </p>
+              </div>
+              <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+                <p className="text-dim text-[9px] font-mono uppercase">Correct</p>
+                <p className="text-bone font-display text-lg">{you?.votesCorrect ?? 0}</p>
+              </div>
+              <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+                <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
+                <p className="text-amber font-display text-lg">{you?.juryTickets ?? 0}</p>
+              </div>
+            </div>
+          )}
+
+          <p className="text-dim text-[11px] font-mono leading-relaxed">
+            🎫 Jury tickets weight your next cohort's lottery draw. Every correct verdict vote earns +1 ticket. Catch an infiltrator → +2 tickets.
+          </p>
         </div>
       ) : checkedIn ? (
         round?.status === "closed" ? (
@@ -180,7 +227,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             <p className="text-dim text-xs font-mono mt-1">
               {survived
                 ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}. Next theme drops soon.`
-                : "The crowd has spoken. You're on the jury now — accurate votes count double."}
+                : "The crowd has spoken. You're on the jury now — your votes count double and earn lottery tickets for the next cohort."}
             </p>
           </div>
         ) : (
