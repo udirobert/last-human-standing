@@ -15,7 +15,7 @@ function formatWindow(iso) {
 }
 
 export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
-  const { phase, isLive, isEnded, currentDay, round, you, winner } = useRound();
+  const { phase, isLive, isEnded, currentDay, round, you, winner, payout } = useRound();
 
   // "Closing soon" pulse: recompute once a minute from a state
   // variable so the JSX is render-pure. (Date.now() in render
@@ -104,6 +104,33 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             <p className="text-dim text-sm font-mono">One human took the pot. The next cohort is coming.</p>
           </>
         )}
+
+        {/* Payout status */}
+        {payout && (
+          <div className="mt-4 bg-ash/60 border border-ember/30 rounded-xl p-3 text-left">
+            <p className="font-mono text-dim text-[10px] uppercase tracking-widest mb-1">Prize payout</p>
+            {payout.status === "submitted" || payout.status === "confirmed" ? (
+              <>
+                <p className="text-neon font-mono text-sm">
+                  ✅ {payout.amount_usd} {payout.token} sent onchain
+                </p>
+                {payout.explorer_url && (
+                  <a href={payout.explorer_url} target="_blank" rel="noopener noreferrer"
+                     className="text-neon/70 font-mono text-xs underline mt-1 inline-block">
+                    View transaction →
+                  </a>
+                )}
+              </>
+            ) : payout.status === "pending" ? (
+              <p className="text-amber font-mono text-sm">⏳ Payout in progress…</p>
+            ) : payout.status === "failed" ? (
+              <p className="text-blood font-mono text-sm">
+                ⚠️ Payout pending manual review. The winner will receive their prize shortly.
+              </p>
+            ) : null}
+          </div>
+        )}
+
         <button
           onClick={shareWin}
           className="w-full mt-4 py-4 rounded-2xl bg-amber text-ash font-display text-xl tracking-widest active:scale-95 transition-transform"
@@ -192,6 +219,24 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             <p className="text-dim text-xs font-mono mt-1">
               You survived {you?.eliminatedAtDay ?? "—"} day{(you?.eliminatedAtDay ?? 0) !== 1 ? "s" : ""}. The game isn't over for you.
             </p>
+          </div>
+
+          {/* Survival summary stats */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+              <p className="text-dim text-[9px] font-mono uppercase">Days</p>
+              <p className="text-bone font-display text-lg">{you?.eliminatedAtDay ?? "—"}</p>
+            </div>
+            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+              <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
+              <p className="text-amber font-display text-lg">{you?.checkinStreak ?? 0}🔥</p>
+            </div>
+            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+              <p className="text-dim text-[9px] font-mono uppercase">Top %</p>
+              <p className="text-bone font-display text-lg">
+                {you?.eliminatedAtDay ? Math.round((Number(you.eliminatedAtDay) * 100) / 5) : "—"}%
+              </p>
+            </div>
           </div>
 
           {/* Jury status card */}

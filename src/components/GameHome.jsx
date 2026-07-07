@@ -9,6 +9,7 @@ import PrelaunchPanel from './prelaunch/PrelaunchPanel.jsx';
 import PrizePots from './prelaunch/PrizePots.jsx';
 import ModeBanner from './ModeBanner.jsx';
 import MissionBoard from './MissionBoard.jsx';
+import WildcardPanel from './WildcardPanel.jsx';
 import ActivityFeed from './ActivityFeed.jsx';
 import NetworkPill from './ui/NetworkPill.jsx';
 import FAQModal from './FAQModal.jsx';
@@ -96,6 +97,9 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
         </StageSection>
       )}
+
+      {/* Wildcard revival panel — shown to jury members on Day 4 */}
+      {isLive && <WildcardPanel />}
 
       {/* Spectator chip — only when the user is in the live phase
           but doesn't have a slot in the current cohort. The chip

@@ -30,6 +30,7 @@ const DEFAULT_STATE = {
   round: null,
   you: DEFAULT_YOU,
   winner: null,
+  payout: null,
   defaults: { survivalCap: 25, radiusM: 100 },
   verification: {
     voteQuorum: 25,
@@ -79,6 +80,7 @@ export function RoundProvider({ children }) {
           round: data.round ?? null,
           you: { ...DEFAULT_YOU, ...(data.you ?? {}) },
           winner: data.winner ?? null,
+          payout: data.payout ?? null,
           defaults: { ...DEFAULT_STATE.defaults, ...(data.defaults ?? {}) },
           verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },
         });

@@ -11,6 +11,7 @@ import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
 import { drawLottery, ALGORITHM_VERSION, freeSlotsFor } from "./lib/lottery.js";
 import { debugCeloBalances } from "./lib/celoBalance.js";
+import { ariaBroadcastPayoutTx } from "./lib/ariaAgent.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -220,6 +221,37 @@ async function autoAdvanceRounds() {
           }
         } catch (e) {
           log("revive_error", { day: r.day, error: String(e) });
+        }
+      }
+
+      // End-game: handle winner detection and automatic payout.
+      // close_day sets r.winner when remaining_active = 1.
+      // If remaining_active = 0 (everyone eliminated), resolve via tiebreaker.
+      if (supabaseAdmin) {
+        const remaining = r.remaining ?? null;
+        let winnerAddr = r.winner || null;
+
+        // Edge case: no survivors — pick the best eliminated player
+        if (remaining === 0 && !winnerAddr) {
+          try {
+            const { data: tiebreaker, error: tbError } = await supabaseAdmin.rpc("resolve_no_survivors", { p_day: r.day });
+            if (tbError) {
+              log("no_survivors_error", { day: r.day, error: tbError.message });
+            } else if (tiebreaker?.winner) {
+              winnerAddr = tiebreaker.winner;
+              log("no_survivors_resolved", { day: r.day, winner: winnerAddr, reason: tiebreaker.reason });
+              r.winner = winnerAddr;
+              r.remaining = 1;
+              notifyDayClosed(r).catch((e) => log("push_error", { where: "no_survivors", error: String(e) }));
+            }
+          } catch (e) {
+            log("no_survivors_error", { day: r.day, error: String(e) });
+          }
+        }
+
+        // Winner detected — record and attempt automatic payout
+        if (winnerAddr) {
+          handleWinnerPayout(r.day, winnerAddr).catch((e) => log("winner_payout_error", { day: r.day, error: String(e) }));
         }
       }
     }
@@ -1541,9 +1573,19 @@ app.get("/api/game/state", async (req, res) => {
 
     let round = null;
     let checkinCount = 0;
+    let payoutInfo = null;
     if (phase === "live" && currentDay != null) {
       round = await loadRound(currentDay);
       if (round) checkinCount = await checkinCountForDay(currentDay);
+    }
+    if (phase === "ended" && supabaseAdmin) {
+      const { data: payout } = await supabaseAdmin
+        .from("payouts")
+        .select("winner_address,amount_usd,token,tx_hash,explorer_url,status,created_at,day")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      payoutInfo = payout || null;
     }
 
     const address = await getOptionalAuthAddress(req);
@@ -1625,6 +1667,7 @@ app.get("/api/game/state", async (req, res) => {
         : null,
       you,
       winner,
+      payout: payoutInfo,
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
 
@@ -2202,9 +2245,131 @@ app.post("/api/admin/close-day", requireAuth, requireAdmin, async (req, res) => 
     endgameCache = { value: null, fetchedAt: 0 };
     notifyDayClosed(data).catch((e) => log("push_error", { where: "admin_close_day", error: String(e) }));
 
+    // Handle winner payout (same logic as autoAdvanceRounds)
+    if (data?.winner) {
+      handleWinnerPayout(data.day, data.winner).catch((e) => log("admin_payout_error", { error: String(e) }));
+    } else if (data?.remaining === 0) {
+      // Edge case: no survivors
+      try {
+        const { data: tiebreaker } = await supabaseAdmin.rpc("resolve_no_survivors", { p_day: day });
+        if (tiebreaker?.winner) {
+          log("admin_no_survivors_resolved", { day, winner: tiebreaker.winner });
+          await handleWinnerPayout(day, tiebreaker.winner).catch((e) => log("admin_payout_error", { error: String(e) }));
+        }
+      } catch (e) {
+        log("admin_no_survivors_error", { day, error: String(e) });
+      }
+    }
+
     return res.json({ ok: true, day, ...data });
   } catch (error) {
     sendValidationError(res, error);
+  }
+});
+
+// Extracted winner payout logic — shared between autoAdvanceRounds and admin close-day
+async function handleWinnerPayout(day, winnerAddr) {
+  if (!supabaseAdmin) return;
+  try {
+    await supabaseAdmin.rpc("record_winner", { p_day: day, p_winner_address: winnerAddr });
+    log("winner_recorded", { day, winner: winnerAddr });
+
+    // Prevent double-payout
+    const { data: existingPayout } = await supabaseAdmin
+      .from("payouts")
+      .select("id,status")
+      .eq("winner_address", winnerAddr)
+      .in("status", ["pending", "submitted", "confirmed"])
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPayout) {
+      log("payout_skipped", { winner: winnerAddr, reason: "already_pending_or_paid" });
+      return;
+    }
+
+    // Get prize pool balance
+    const celoPrizePoolAddress = process.env.VITE_CELO_PRIZE_POOL_ADDRESS;
+    let amountUsd = 0;
+    if (celoPrizePoolAddress) {
+      try {
+        const pot = await fetchCeloPot(celoPrizePoolAddress);
+        amountUsd = pot?.totalUsd ?? pot?.usd ?? 0;
+      } catch (e) {
+        log("payout_balance_error", { error: String(e) });
+      }
+    }
+
+    // Record pending payout
+    const { data: payoutRow } = await supabaseAdmin
+      .from("payouts")
+      .insert({ winner_address: winnerAddr, amount_usd: amountUsd, token: "cUSD", status: "pending", cohort: 1, day })
+      .select("id")
+      .single();
+    const payoutId = payoutRow?.id;
+
+    if (amountUsd > 0) {
+      log("payout_attempt", { winner: winnerAddr, amountUsd, payoutId });
+      const result = await ariaBroadcastPayoutTx({ winnerAddress: winnerAddr, amountUsd, token: "cUSD" });
+      if (result.ok) {
+        await supabaseAdmin.from("payouts").update({ status: "submitted", tx_hash: result.txHash, explorer_url: result.explorerUrl }).eq("id", payoutId);
+        log("payout_success", { winner: winnerAddr, txHash: result.txHash, amountUsd });
+        sendPushToAddress(supabaseAdmin, winnerAddr, {
+          title: "🏆 You won!", body: `Prize of ${amountUsd} cUSD sent. Tx: ${result.explorerUrl}`,
+          data: { type: "payout", txHash: result.txHash, amountUsd },
+        }).catch(() => {});
+      } else {
+        await supabaseAdmin.from("payouts").update({ status: "failed", error: result.reason }).eq("id", payoutId);
+        log("payout_failed", { winner: winnerAddr, reason: result.reason });
+      }
+    } else {
+      await supabaseAdmin.from("payouts").update({ status: "failed", error: "zero_prize_pool_balance" }).eq("id", payoutId);
+      log("payout_skipped", { winner: winnerAddr, reason: "zero_balance" });
+    }
+  } catch (e) {
+    log("winner_payout_error", { day, winner: winnerAddr, error: String(e) });
+  }
+}
+
+// Payout status endpoint — public, shows whether the winner has been paid
+app.get("/api/payout/status", async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("payouts")
+      .select("winner_address,amount_usd,token,tx_hash,explorer_url,status,created_at,day")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+    return res.json({ ok: true, payout: data || null });
+  } catch (e) {
+    return res.status(400).json({ error: "payout_status_failed", message: e instanceof Error ? e.message : "unknown" });
+  }
+});
+
+// Admin: retry a failed payout
+app.post("/api/admin/retry-payout", requireAuth, requireAdmin, async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+  try {
+    const winnerAddress = ensureString(body.winnerAddress, { field: "winnerAddress", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/ });
+    const amountUsd = typeof body.amountUsd === "number" ? body.amountUsd : 0;
+    const token = ensureString(body.token, { field: "token", maxLength: 16 }) || "cUSD";
+
+    const result = await ariaBroadcastPayoutTx({ winnerAddress, amountUsd, token });
+    if (result.ok) {
+      await supabaseAdmin.from("payouts")
+        .update({ status: "submitted", tx_hash: result.txHash, explorer_url: result.explorerUrl, error: null })
+        .eq("winner_address", winnerAddress)
+        .eq("status", "failed");
+      log("admin_retry_payout_success", { winnerAddress, txHash: result.txHash });
+      return res.json({ ok: true, ...result });
+    }
+    return res.json({ ok: false, error: result.reason });
+  } catch (e) {
+    return res.status(400).json({ error: "retry_payout_failed", message: e instanceof Error ? e.message : "unknown" });
   }
 });
 
