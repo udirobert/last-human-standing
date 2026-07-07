@@ -13,6 +13,31 @@ dist
 .junie/
 .bud/
 .qoder/
+.adal/
+.agents/
+.augment/
+.commandcode/
+.continue/
+.crush/
+.devin/
+.factory/
+.forge/
+.goose/
+.hermes/
+.kilocode/
+.kiro/
+.openhands/
+.pi/
+.qwen/
+.rovodev/
+.trae/
+.vibe/
+.windsurf/
+.zencoder/
+
+# Factory skills (installed per-environment, not project source)
+skills/
+skills-lock.json
 
 # Build outputs
 build/
