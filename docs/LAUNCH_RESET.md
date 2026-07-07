@@ -32,7 +32,7 @@ Expected result: 5 rows deleted.
 
 ## Reset game-progress state (between cohorts / re-launches)
 
-The lethal-votes release (migration 007) added per-game state that
+The lethal-votes release (migration 008) added per-game state that
 must be zeroed before a fresh cohort, or verdicts and immunity leak
 across games:
 
@@ -57,7 +57,7 @@ select column_name
    and table_name = 'users'
    and column_name in ('entry_kind', 'entry_token', 'cohort');
 
--- 007 columns must exist
+-- 008 columns must exist
 select column_name
   from information_schema.columns
  where table_schema = 'public'
