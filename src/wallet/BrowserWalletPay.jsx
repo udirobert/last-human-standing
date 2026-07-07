@@ -119,7 +119,7 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
           ))}
         </div>
         <p className="text-dim font-mono text-xs text-center">
-          Connect any wallet to pay the entry fee on {isCeloSelected ? "Celo" : "World Chain"}
+          Connect a wallet to pay on {isCeloSelected ? "Celo" : "World Chain"}
         </p>
         {connectors.map((connector) => (
           <button
@@ -147,10 +147,7 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
       {confirmed || isConfirmed ? (
         <div className="text-center py-3">
           <p className="text-xl">✅</p>
-          <p className="text-bone font-mono text-sm">Payment confirmed!</p>
-          <p className="text-dim font-mono text-xs mt-1">
-            Spot reserved — verify with World ID or Self Protocol before Day 1 for full trust.
-          </p>
+          <p className="text-bone font-mono text-sm">You're in!</p>
         </div>
       ) : (
         <>
@@ -175,13 +172,13 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
           <button
             onClick={handlePay}
             disabled={isSending || isConfirming}
-            className="w-full py-3 rounded-xl bg-blood text-bone font-display text-lg tracking-wide active:scale-95 transition-transform disabled:opacity-50"
+            className="w-full py-3 rounded-xl bg-blood text-bone font-display text-lg tracking-wide active:scale-[0.97] transition-transform disabled:opacity-50"
           >
             {isSending
               ? "Confirm in wallet…"
               : isConfirming
-              ? "Confirming on-chain…"
-              : `Pay ${selectedToken === "wld" ? "1 WLD → Reserve" : `5 ${selectedToken.toUpperCase()} → Reserve`} Spot`}
+              ? "Confirming…"
+              : `Pay ${selectedToken === "wld" ? "1 WLD →" : `5 ${selectedToken.toUpperCase()} →`}`}
           </button>
         </>
       )}
@@ -189,12 +186,6 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
       {error && (
         <p className="text-blood font-mono text-xs text-center">{error}</p>
       )}
-
-      <p className="text-dim font-mono text-[10px] text-center">
-        {isCeloSelected
-          ? "Celo payment — verify with Self Protocol for full trust level."
-          : "World Chain payment — World ID verification gives you full trust level."}
-      </p>
     </div>
   );
 }

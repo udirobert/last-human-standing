@@ -77,10 +77,7 @@ export default function PrelaunchPanel({
       {friendsInCohort != null && friendsInCohort > 0 && (
         <div className="bg-smoke/60 border border-neon/30 rounded-2xl px-4 py-3">
           <p className="font-mono text-neon text-sm">
-            🎉 {friendsInCohort} of your invites {friendsInCohort === 1 ? "is" : "are"} in the cohort
-          </p>
-          <p className="text-dim text-xs font-mono mt-1">
-            Top referrers get priority check-in on Day 1.
+            🎉 {friendsInCohort} {friendsInCohort === 1 ? "friend is" : "friends are"} in
           </p>
         </div>
       )}
@@ -88,10 +85,7 @@ export default function PrelaunchPanel({
       {friendsInCohort === 0 && referralCount > 0 && (
         <div className="bg-smoke/60 border border-ember/40 rounded-2xl px-4 py-3">
           <p className="font-mono text-bone text-sm">
-            Your invite is out there — share to your group chat
-          </p>
-          <p className="text-dim text-xs font-mono mt-1">
-            Friends who join via your link jump the waitlist.
+            Your invite is out — share it to your group chat
           </p>
         </div>
       )}
@@ -116,7 +110,6 @@ function CountdownCard({ launchAt, split }) {
         ? <Countdown targetIso={launchAt} className="font-display text-5xl text-bone leading-none animate-glow" />
         : <p className="font-display text-3xl text-dim">TBA</p>}
 
-      {/* Two-bar cohort: paid + free. Replaces the single "5 of 50" bar. */}
       <div className="mt-5 space-y-3">
         <CohortProgress
           label="Paid · guaranteed"
@@ -130,10 +123,10 @@ function CountdownCard({ launchAt, split }) {
           total={split.freeSlots}
           tone="neon"
         />
-        <p className="text-dim text-[10px] font-mono leading-relaxed">
+        <p className="text-dim text-[10px] font-mono">
           {(split.paidCount + split.freeCount) > 0
-            ? `${split.paidCount + split.freeCount} of ${split.size} humans · 25 paid + 25 lottery`
-            : `${split.size} humans · 25 paid + 25 lottery · be the first`}
+            ? `${split.paidCount + split.freeCount} of ${split.size} reserved`
+            : `be the first`}
         </p>
       </div>
     </div>

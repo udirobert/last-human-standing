@@ -117,18 +117,18 @@ export default function Onboarding({ onEnter }) {
 
   return (
     <div className="min-h-screen bg-ash flex flex-col font-body overflow-hidden">
-      <div className="flex items-center justify-center gap-2 pt-4 px-4">
-        {stepLabels.map((label, i) => (
-          <button
-            key={label}
-            type="button"
-            disabled={i > step}
-            onClick={() => i < step && setStep(i)}
-            className={`flex items-center gap-1 ${i <= step ? "opacity-100" : "opacity-30"}`}
-          >
-            <div className={`w-2 h-2 rounded-full ${i === step ? "bg-blood scale-125" : i < step ? "bg-neon" : "bg-ember"}`} />
-            <span className="font-mono text-[10px] text-dim hidden sm:inline">{label}</span>
-          </button>
+      {/* Minimal progress bar — 4 segments, no labels */}
+      <div className="flex items-center justify-center gap-1.5 pt-3 px-4">
+        {stepLabels.map((_, i) => (
+          <div
+            key={i}
+            className="h-1 rounded-full transition-all duration-300 ease-out"
+            style={{
+              width: i === step ? "24px" : "12px",
+              backgroundColor: i <= step ? "rgb(var(--color-blood))" : "rgb(var(--color-ember))",
+              opacity: i <= step ? 1 : 0.3,
+            }}
+          />
         ))}
       </div>
 
@@ -155,7 +155,7 @@ export default function Onboarding({ onEnter }) {
                   delay={0.15}
                 />
                 <p className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed">
-                  Be one of 50 humans. Last survivor takes the on-chain pot.
+                  50 humans. 5 days. Last one takes the pot.
                 </p>
               </StageSection>
 
@@ -194,11 +194,8 @@ export default function Onboarding({ onEnter }) {
                 )}
 
                 <StageSection index={3} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
-                  <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">What you're playing for</p>
+                  <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">The pot</p>
                   <PrizePots prizePool={pot} />
-                  <p className="text-dim text-[10px] font-mono text-center mt-2">
-                    Last survivor takes the entire on-chain pot. 100% of entry fees go to the prize.
-                  </p>
                 </StageSection>
 
                 <StageSection index={4}>
@@ -216,7 +213,7 @@ export default function Onboarding({ onEnter }) {
                     transition={{ delay: 0.85, duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
                     type="button"
                     onClick={() => setStep(1)}
-                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
+                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-[0.97] transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
                   >
                     HOW TO PLAY →
                   </motion.button>
@@ -233,9 +230,10 @@ export default function Onboarding({ onEnter }) {
         {step === 1 && (
           <motion.div
             key="rules"
-            initial={{ opacity: 0, transform: "translateX(24px)" }}
-            animate={{ opacity: 1, transform: "translateX(0)" }}
-            exit={{ opacity: 0, transform: "translateX(-24px)" }}
+            initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
+            animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
+            exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
             className="flex-1 flex flex-col"
           >
             <StageShell
@@ -246,7 +244,7 @@ export default function Onboarding({ onEnter }) {
             >
               <StageSection index={0} className="text-center">
                 <h2 className="font-display text-4xl text-bone mb-1">THE RULES</h2>
-                <p className="text-dim text-sm font-mono">Four steps. No fine print.</p>
+                <p className="text-dim text-sm font-mono">Four steps. That's it.</p>
               </StageSection>
 
               <div className="mt-4 space-y-2.5 flex-1">
@@ -294,7 +292,7 @@ export default function Onboarding({ onEnter }) {
                 <button
                   type="button"
                   onClick={() => { markOnboardingDone(); setStep(2); }}
-                  className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
+                  className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-[0.97] transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
                 >
                   RESERVE MY SLOT →
                 </button>
@@ -306,9 +304,10 @@ export default function Onboarding({ onEnter }) {
         {step === 2 && (
           <motion.div
             key="reserve"
-            initial={{ opacity: 0, transform: "translateX(24px)" }}
-            animate={{ opacity: 1, transform: "translateX(0)" }}
-            exit={{ opacity: 0, transform: "translateX(-24px)" }}
+            initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
+            animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
+            exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
             className="flex-1 flex flex-col"
           >
             <StageShell
@@ -332,36 +331,16 @@ export default function Onboarding({ onEnter }) {
               </StageSection>
 
               <div className="mt-3 space-y-3 flex-1">
-                <StageSection index={1} className="bg-smoke border border-neon/30 rounded-2xl p-4">
-                  <p className="font-mono text-neon text-xs uppercase">Trust tiers</p>
-                  <ul className="text-dim text-xs font-mono space-y-2 list-disc pl-4 mt-2">
-                    <li>
-                      <span className="text-amber">Provisional</span> — wallet signed in, not yet verified
-                    </li>
-                    <li>
-                      <span className="text-neon">Verified human</span> — proof of personhood via World ID or Self Protocol
-                      (full access, recommended before Day 1)
-                    </li>
-                  </ul>
-                  {tier === "unverified" && (
-                    <p className="text-dim/80 text-[10px] font-mono mt-2">
-                      Verify before Day 1 to qualify for the verified tier and unlock voting.
-                    </p>
-                  )}
-                </StageSection>
-
+                {/* Compact verify — one line + button, not a paragraph */}
                 {(tier !== "verified") && (
-                  <StageSection index={2} className="space-y-3">
-                    <div className="bg-smoke border border-neon/30 rounded-2xl p-4">
-                      <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-                        Verify before paying (recommended)
-                      </p>
-                      <p className="text-dim text-xs font-mono mb-3">
-                        Get verified with World ID or Self. Unlocks the verified tier and voting. You can also do this after reserving.
+                  <StageSection index={1} className="space-y-2">
+                    <div className="bg-smoke border border-neon/20 rounded-2xl p-3">
+                      <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-2">
+                        Verify to unlock voting
                       </p>
                       {!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
                       {import.meta.env.VITE_ENABLE_SELF === "true" && (
-                        <div className={!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" ? "mt-3" : ""}>
+                        <div className={!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" ? "mt-2" : ""}>
                           <Suspense fallback={<ScreenLoader kind="detail" />}>
                             <SelfVerify />
                           </Suspense>
@@ -369,7 +348,7 @@ export default function Onboarding({ onEnter }) {
                       )}
                       {!isFarcaster && !import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
                         <p className="text-dim text-[10px] font-mono text-center">
-                          Humanity verification is offline in this build.
+                          Verification offline in this build.
                         </p>
                       )}
                     </div>
@@ -378,24 +357,21 @@ export default function Onboarding({ onEnter }) {
 
                 {!entryPaid && (
                   <>
-                    {/* Prize reminder — show the pot right before the payment decision */}
+                    {/* Prize reminder */}
                     {pot && (
                       <StageSection index={2} className="bg-smoke/60 rounded-2xl p-3 border border-amber/30">
-                        <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1.5 text-center">🏆 The pot you're playing for</p>
+                        <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1.5 text-center">🏆 The pot</p>
                         <PrizePots prizePool={pot} />
-                        <p className="text-dim text-[10px] font-mono text-center mt-1.5">
-                          50 humans enter · 1 takes everything · 5 days of survival
-                        </p>
                       </StageSection>
                     )}
 
                     {/* PAID CARD */}
-                    <StageSection index={3} className="bg-smoke border border-ember rounded-2xl p-5">
-                      <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1">
-                        {ENTRY.paid.cardLabel}
-                      </p>
-                      <p className="font-display text-3xl text-amber mb-1">{ENTRY.paid.title}</p>
-                      <p className="text-dim text-xs font-mono mb-4">{ENTRY.paid.blurb}</p>
+                    <StageSection index={3} className="bg-smoke border border-ember rounded-2xl p-4">
+                      <div className="flex items-baseline justify-between mb-3">
+                        <p className="font-display text-2xl text-amber">{ENTRY.paid.title}</p>
+                        <p className="font-mono text-[10px] text-dim uppercase">{ENTRY.paid.cardLabel}</p>
+                      </div>
+                      <p className="text-dim text-xs font-mono mb-3">{ENTRY.paid.blurb}</p>
 
                       {isWorldApp ? (
                         <>
@@ -404,19 +380,19 @@ export default function Onboarding({ onEnter }) {
                               type="button"
                               onClick={handleWalletAuth}
                               disabled={authing}
-                              className="w-full py-4 rounded-2xl bg-neon/10 border border-neon/40 text-neon font-display text-xl mb-3 active:scale-95"
+                              className="w-full py-3.5 rounded-xl bg-neon/10 border border-neon/40 text-neon font-display text-lg mb-2 active:scale-[0.97] transition-transform"
                             >
                               {authing ? "CONNECTING…" : "CONNECT WALLET"}
                             </button>
                           ) : (
-                            <p className="text-neon font-mono text-xs text-center mb-3">✓ Wallet connected</p>
+                            <p className="text-neon font-mono text-xs text-center mb-2">✓ Connected</p>
                           )}
                           {walletAuthed && (
                             <button
                               type="button"
                               onClick={handlePay}
                               disabled={paying}
-                              className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 disabled:opacity-50"
+                              className="w-full py-3.5 rounded-xl bg-blood text-bone font-display text-xl tracking-widest active:scale-[0.97] disabled:opacity-50 transition-transform"
                             >
                               {paying ? "PROCESSING…" : `PAY ${ENTRY_FEE_WLD} WLD →`}
                             </button>
@@ -434,14 +410,14 @@ export default function Onboarding({ onEnter }) {
                       )}
                     </StageSection>
 
-                    {/* FREE CARD — only when free mode is on */}
+                    {/* FREE CARD */}
                     {isFree && (
-                      <StageSection index={4} className="bg-smoke border border-neon/30 rounded-2xl p-5">
-                        <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-                          {ENTRY.free.cardLabel}
-                        </p>
-                        <p className="font-display text-3xl text-neon mb-1">{ENTRY.free.title}</p>
-                        <p className="text-dim text-xs font-mono mb-4">{ENTRY.free.blurb}</p>
+                      <StageSection index={4} className="bg-smoke border border-neon/30 rounded-2xl p-4">
+                        <div className="flex items-baseline justify-between mb-3">
+                          <p className="font-display text-2xl text-neon">{ENTRY.free.title}</p>
+                          <p className="font-mono text-[10px] text-dim uppercase">{ENTRY.free.cardLabel}</p>
+                        </div>
+                        <p className="text-dim text-xs font-mono mb-3">{ENTRY.free.blurb}</p>
                         <button
                           type="button"
                           onClick={async () => {
@@ -455,26 +431,23 @@ export default function Onboarding({ onEnter }) {
                               console.error("free entry failed:", e);
                             }
                           }}
-                          className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
+                          className="w-full py-3.5 rounded-xl bg-neon text-ash font-display text-xl tracking-widest active:scale-[0.97] transition-transform"
                         >
                           {ENTRY.free.cta}
                         </button>
                       </StageSection>
                     )}
 
-                    {/* Observer peek — no signup. Browser only. */}
+                    {/* Observer peek */}
                     {!isWorldApp && (
                       <StageSection index={5}>
                         <button
                           type="button"
                           onClick={() => { markOnboardingDone(); onEnter(); }}
-                          className="w-full py-3 rounded-xl bg-ash border border-ember/50 text-dim font-mono text-sm hover:text-bone hover:border-ember active:scale-95 transition-all"
+                          className="w-full py-2.5 rounded-xl text-dim font-mono text-sm hover:text-bone active:scale-[0.97] transition-all"
                         >
-                          See how it works (no signup)
+                          Just looking? Browse the feed →
                         </button>
-                        <p className="text-dim/70 text-[10px] font-mono text-center mt-1.5">
-                          Browse the feed and leaderboard as an observer
-                        </p>
                       </StageSection>
                     )}
                   </>
@@ -485,7 +458,7 @@ export default function Onboarding({ onEnter }) {
                     <button
                       type="button"
                       onClick={() => { markOnboardingDone(); setStep(3); }}
-                      className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-95"
+                      className="w-full py-4 rounded-2xl bg-neon text-ash font-display text-2xl tracking-widest active:scale-[0.97] transition-transform"
                     >
                       CONTINUE →
                     </button>
@@ -525,6 +498,7 @@ export default function Onboarding({ onEnter }) {
             key="done"
             initial={{ opacity: 0, scale: 0.96 }}
             animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
             className="flex-1 flex flex-col"
           >
             <StageShell
@@ -565,7 +539,7 @@ export default function Onboarding({ onEnter }) {
 
                 <StageSection index={3} className="text-center">
                   <p className="text-dim text-xs font-mono max-w-xs mx-auto">
-                    The full prelaunch home — share link, leaderboard, daily prompt — is waiting in the lobby.
+                    Share your link, check the leaderboard, and wait for Day 1.
                   </p>
                 </StageSection>
 
@@ -573,7 +547,7 @@ export default function Onboarding({ onEnter }) {
                   <button
                     type="button"
                     onClick={() => { markOnboardingDone(); onEnter(); }}
-                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-95 transition-transform shadow-[0_0_32px_rgba(255,26,26,0.4)]"
+                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-[0.97] transition-transform shadow-[0_0_32px_rgba(255,26,26,0.4)]"
                   >
                     {isLive ? "ENTER ARENA →" : "ENTER LOBBY →"}
                   </button>

@@ -19,87 +19,80 @@ export const COHORT = {
 };
 
 export const ENTRY = {
-  // World Chain: 1 WLD = $1 at the time of writing. Celo: 5 cUSD or
-  // 5 USDC. All routes go into the single prize pot.
   paid: {
-    cardLabel: "Pay to guarantee",
-    title: "RESERVE A SLOT",
-    blurb: "1 WLD (World Chain) or 5 cUSD / 5 USDC (Celo). Guaranteed entry. All fees go to the prize pot.",
+    cardLabel: "Guaranteed",
+    title: "PAY 1 WLD",
+    blurb: "Guaranteed slot. Goes straight to the pot.",
     perChain: [
       { chain: "World Chain", token: "WLD", amount: "1" },
       { chain: "Celo", token: "cUSD", amount: "5" },
     ],
   },
   free: {
-    cardLabel: "Or enter free",
-    title: "ENTER FREE LOTTERY",
-    blurb: "No payment. Lottery drawn at launch. Free slots expand to fill any unfilled paid slots — up to 50.",
+    cardLabel: "Free",
+    title: "FREE LOTTERY",
+    blurb: "Drawn at launch. No payment.",
     cta: "JOIN FREE →",
   },
   fallback: {
     cardLabel: "Reserve",
     title: "RESERVE A SLOT",
-    blurb: "Pay the entry fee in WLD. One entry, one slot.",
+    blurb: "Pay the entry fee. One entry, one slot.",
   },
 };
 
 export const ENTRY_HEADING = {
-  // Top-level heading above the two cards.
   freeMode: "CHOOSE YOUR PATH",
-  freeModeSub: "Pay to guarantee a slot, or enter the free lottery. Free slots expand to fill any unfilled paid slots at launch — up to 50.",
+  freeModeSub: "Pay to guarantee, or try the free lottery.",
   paidMode: "RESERVE A SLOT",
-  paidModeSub: "Cohort cap is 50 humans, worldwide.",
+  paidModeSub: "50 humans. One pot. Last one standing.",
   alreadyPaid: "YOU'RE IN",
-  alreadyPaidSub: "Come back when Day 1 opens.",
+  alreadyPaidSub: "Day 1 opens soon.",
 };
 
 export const RULES = [
   {
     n: "01",
-    title: "RESERVE OR ENTER FREE",
-    body: "Pay 1 WLD / 5 cUSD / 5 USDC to guarantee a slot, or enter the free lottery. 25 paid + 25 lottery.",
+    title: "RESERVE",
+    body: "Pay 1 WLD or enter free. 50 humans max.",
     icon: "🎟",
   },
   {
     n: "02",
     title: "DAILY THEME",
-    body: "Find the place type anywhere on Earth. Race to be one of the first 25 to check in.",
+    body: "Find the place. Be first to check in.",
     icon: "🌍",
   },
   {
     n: "03",
     title: "PROVE IT",
-    body: "Photo + crowd vote HUMAN or SUS. Optional GPS for credibility.",
+    body: "Photo + crowd votes HUMAN or SUS.",
     icon: "📸",
   },
   {
     n: "04",
-    title: "LAST ONE WINS",
-    body: "Cap shrinks daily until one human takes the on-chain pot. All paid fees go in.",
+    title: "SURVIVE",
+    body: "Cap shrinks daily. Last one takes the pot.",
     icon: "🏆",
   },
 ];
 
 export const FAQS = [
   {
-    q: "Do I need crypto to play?",
-    a: "No — you can enter the free lottery. But paying 1 WLD or 5 cUSD / 5 USDC guarantees your slot and grows the prize pot.",
+    q: "Do I need crypto?",
+    a: "No — enter the free lottery. Paying 1 WLD guarantees your slot and grows the pot.",
   },
   {
-    q: "What does my fee pay for?",
-    a: "100% of paid entry fees go into the on-chain prize pot. The pot is split if a human wins, or rolled to the next cohort if not.",
+    q: "Where does my fee go?",
+    a: "100% into the on-chain prize pot. The last human takes it all.",
   },
   {
     q: "What if I miss a day?",
-    a: "You're eliminated — but you can still vote in the audit, hang out in the lobby, and watch the cohort play out.",
+    a: "You're out. But you join the jury — your votes count double.",
   },
   {
-    q: "What if the lottery doesn't fill?",
-    a: "Every free entrant who registered before launch is in. If fewer than 25 registered, all of them are in and the remaining spots stay open for paid entries.",
-  },
-  {
-    q: "Can I play from any country?",
-    a: "Yes. Themes are place types (a café, a park), not GPS pins. Find the place anywhere on Earth and take a photo.",
+    q: "Any country?",
+    a: "Yes. Themes are place types (café, park), not GPS pins. Find one anywhere.",
   },
 ];
 
