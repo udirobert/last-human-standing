@@ -35,6 +35,7 @@ export default function Feed({ onBack, onCheckIn }) {
   const { verification, phase } = useRound();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
+  const [voteMeta, setVoteMeta] = useState({});
   const [fired, setFired] = useState({});
   const [filter, setFilter] = useState('all');
   const [expandedId, setExpandedId] = useState(null);
@@ -45,11 +46,9 @@ export default function Feed({ onBack, onCheckIn }) {
 
   const { canVote } = useTrustTier();
 
+  // Public read — spectators and eliminated players watch the same feed.
+  // Only voting is gated (server-side + canVote), never watching.
   const loadFeed = useCallback(async () => {
-    if (!(walletAuthed && entryPaid)) {
-      setLoading(false);
-      return;
-    }
     try {
       const resp = await fetch("/api/feed", { credentials: "include" });
       if (!resp.ok) {
@@ -72,7 +71,6 @@ export default function Feed({ onBack, onCheckIn }) {
             status: s.status || "pending",
             mediaUrl: s.mediaUrl || null,
             fires: s.fires || 0,
-            infiltrator: s.is_infiltrator || false,
             accuracy: s.accuracy ?? null,
             voteQuorum: s.voteQuorum || s.vote_quorum || null,
           })),
@@ -84,13 +82,20 @@ export default function Feed({ onBack, onCheckIn }) {
     } finally {
       setLoading(false);
     }
-  }, [walletAuthed, entryPaid, isMiniApp]);
+  }, [isMiniApp]);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       loadFeed();
     }, 0);
     return () => clearTimeout(timeoutId);
+  }, [loadFeed]);
+
+  // The audit is a live spectacle — poll so vote counts and verdicts move
+  // without the user hammering REFRESH.
+  useEffect(() => {
+    const id = setInterval(() => loadFeed(), 30_000);
+    return () => clearInterval(id);
   }, [loadFeed]);
 
   // Auto-retry on network errors with a small backoff so the user
@@ -139,6 +144,9 @@ export default function Feed({ onBack, onCheckIn }) {
         });
         if (resp.ok) {
           const data = await resp.json();
+          if (data?.juryWeight) {
+            setVoteMeta((m) => ({ ...m, [id]: { juryWeight: data.juryWeight } }));
+          }
           if (data?.status || data?.voteQuorum) {
             setSubmissions((subs) =>
               subs.map((s) =>
@@ -239,13 +247,15 @@ export default function Feed({ onBack, onCheckIn }) {
         {!loading && filtered.length === 0 && (
           <div className="text-center py-12">
             <p className="text-dim font-mono text-sm mb-4">No submissions yet for {TODAY_THEME.theme}.</p>
-            {onCheckIn && (
+            {onCheckIn && walletAuthed && entryPaid ? (
               <button
                 onClick={onCheckIn}
                 className="px-6 py-3 rounded-2xl bg-blood text-bone font-display text-base tracking-widest active:scale-95 transition-transform animate-pulse-blood"
               >
                 BE THE FIRST TO CHECK IN →
               </button>
+            ) : (
+              <p className="text-dim font-mono text-xs">Submissions appear here the moment players check in.</p>
             )}
           </div>
         )}
@@ -286,7 +296,6 @@ export default function Feed({ onBack, onCheckIn }) {
                   </div>
 
                   <p className="text-bone text-sm leading-relaxed">{sub.caption}</p>
-                  {sub.infiltrator && <p className="text-purple-300 font-mono text-xs mt-2">🎭 Infiltrator mode</p>}
 
                   <div className="mt-3 h-1.5 bg-ash rounded-full overflow-hidden">
                     <div className="h-full bg-amber rounded-full" style={{ width: `${progress}%` }} />
@@ -309,6 +318,11 @@ export default function Feed({ onBack, onCheckIn }) {
                       SUS · {sub.votes.fake}
                     </button>
                   </div>
+                  {voteMeta[sub.id]?.juryWeight > 1 && (
+                    <p className="text-amber font-mono text-[10px] mt-2 text-center">
+                      ⚖️ Jury vote — counted ×{voteMeta[sub.id].juryWeight} (your accuracy earned it)
+                    </p>
+                  )}
 
                   {isExpanded && (
                     <div className="mt-4 space-y-3">

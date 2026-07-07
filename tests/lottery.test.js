@@ -5,16 +5,55 @@ import {
   COHORT_FREE_SLOTS,
   COHORT_PAID_SLOTS,
   COHORT_SIZE,
+  TICKET_CAP,
   drawLottery,
   freeSlotsFor,
   lotterySeed,
   seedToU32,
   shuffle,
+  ticketsFor,
 } from "../server/lib/lottery.js";
 
 describe("lottery", () => {
   it("exposes a stable algorithm version", () => {
-    expect(ALGORITHM_VERSION).toBe("mulberry32-fy/v1");
+    expect(ALGORITHM_VERSION).toBe("mulberry32-fy-weighted/v2");
+  });
+
+  it("ticketsFor: 1 base + capped referral + capped jury tickets", () => {
+    expect(ticketsFor({})).toBe(1);
+    expect(ticketsFor({ referral_count: 3 })).toBe(4);
+    expect(ticketsFor({ referral_count: 99 })).toBe(1 + TICKET_CAP);
+    expect(ticketsFor({ referral_count: 2, jury_tickets: 2 })).toBe(5);
+    expect(ticketsFor({ referral_count: 99, jury_tickets: 99 })).toBe(1 + TICKET_CAP * 2);
+  });
+
+  it("weights the draw: heavy-ticket candidates win more often across seeds", () => {
+    // One whale (max tickets) among 20 singles; across many independent
+    // seeds the whale should be drawn far more often than a single.
+    const candidates = [
+      { address: "0xwhale", referral_count: 5, jury_tickets: 5 },
+      ...Array.from({ length: 20 }, (_, i) => ({ address: `0xsingle${i}`, referral_count: 0 })),
+    ];
+    let whaleWins = 0;
+    const rounds = 200;
+    for (let i = 0; i < rounds; i += 1) {
+      const r = drawLottery(candidates, { launchAtIso: `2026-07-14T18:00:${String(i % 60).padStart(2, "0")}Z-${i}`, cohort: 1, slots: 3 });
+      if (r.drawn.some((d) => d.address === "0xwhale")) whaleWins += 1;
+    }
+    // 11 tickets vs 20 singles: whale expectation is ~80%+ for 3 slots;
+    // a uniform draw would give ~14%. 50% is a safe deterministic bound.
+    expect(whaleWins / rounds).toBeGreaterThan(0.5);
+  });
+
+  it("never draws the same address twice even with many tickets", () => {
+    const candidates = [
+      { address: "0xwhale", referral_count: 5, jury_tickets: 5 },
+      { address: "0xother", referral_count: 0 },
+    ];
+    const r = drawLottery(candidates, { launchAtIso: "2026-07-14T18:00:00Z", cohort: 1, slots: 2 });
+    const addrs = r.drawn.map((d) => d.address);
+    expect(new Set(addrs).size).toBe(addrs.length);
+    expect(addrs).toHaveLength(2);
   });
 
   it("computes a deterministic seed", () => {

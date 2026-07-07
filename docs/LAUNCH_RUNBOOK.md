@@ -1,10 +1,10 @@
-# Launch runbook — 2026-07-01 18:00 UTC
+# Launch runbook — 2026-07-14 18:00 UTC
 
 This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`
 and the lottery draws.
 
-> **Re-launch context.** Two prior launches have been missed:
+> **Re-launch context.** Three prior launches have been missed:
 > - **June 14** ran with zero signups; the lazy draw fired on
 >   an empty cohort and produced an empty result. State was
 >   reset, lazy-draw gating added, and the date bumped.
@@ -15,9 +15,15 @@ and the lottery draws.
 >   the offline / photo-upload / verify-success paths were
 >   silent). All of those are now fixed in release
 >   `20260619-094447` (see Post-launch release history).
+> - **July 1** was missed with the production API down (nginx
+>   502 — the PM2 process was not serving). Detected 2026-07-07.
 >
-> The new target is **Wednesday 2026-07-01 18:00 UTC** — peak
-> crypto-twitter reach for Europe-evening / US-morning.
+> The new target is **Tuesday 2026-07-14 18:00 UTC**, giving a
+> week of signup runway. This launch also ships the engagement
+> mechanics release: lethal votes (DQ-and-replace), real
+> infiltrator stakes, the jury system, weighted lottery v2,
+> working push notifications, the public spectator feed, and
+> the ended-phase winner ceremony.
 
 ## Cohort model (recap)
 
@@ -45,11 +51,19 @@ signup between the lazy trigger and the actual draw is honoured.
   ```bash
   supabase login                            # one-time
   supabase link --project-ref emumokebsahapnqnstlr
-  supabase db push                          # applies 002..005
+  supabase db push                          # applies 002..007
   ```
   The chain is idempotent end-to-end. If a `create policy`
   fails, wrap it in `drop policy if exists` first (the
   Postgres `create policy` form has no native `if not exists`).
+
+  **⚠️ Ordering: migration 007 MUST land before the new server
+  release is deployed.** 007 changes the `cast_vote` and
+  `close_day` function signatures (adds `p_weight` /
+  `p_flag_pct`) and the new server code calls them with the new
+  named params — old DB + new server means every vote and
+  close-day RPC fails. (Old server + new DB is fine: the new
+  params have defaults.)
 - [ ] **Run the reset SQL** in `docs/LAUNCH_RESET.md` to clear
   stale dev-session data from the cohort.
 - [ ] **Build on the server, not locally.** The `VITE_FREE_ENTRY_MODE`
@@ -183,7 +197,7 @@ import('./server/lib/lottery.js').then(({ drawLottery, lotterySeed, ALGORITHM_VE
   // For a re-run, export the candidate list from Supabase and pass it in.
   const candidates = [/* ...from supabase, ordered by reserved_at asc... */];
   const result = drawLottery(candidates, {
-    launchAtIso: '2026-06-17T18:00:00Z',
+    launchAtIso: '2026-07-14T18:00:00Z',
     cohort: 1,
     slots: 25,
   });
@@ -318,3 +332,4 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-06-19 | `20260619-094447` | Dead-end sweep: SpectatorChip `onReserve` wired, Feed/Leaderboard empty-state CTAs, Leaderboard "Today"/"Roster" aliasing removed, Feed retry (3× × 5s n backoff), ErrorBoundary Discord link, photo-upload failure surfaced, queued check-in chip on home, WorldIdVerify/SelfVerify celebrate trust upgrade, wallet auth error cause, SelfVerify 60s polling timeout, PushOptIn "Subscribed" beat, Onboarding lastError recovery, Chat [Lobby \| DM] mode toggle, `markQueuedCheckin`/`clearQueuedCheckin` exposed on `useWorld`. |
 | 2026-06-19 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-06-17T18:00:00Z` (missed) to `2026-07-01T18:00:00Z`. No code change. New seed: `2026-07-01T18:00:00Z:cohort-1:lottery`. |
 | 2026-06-19 | `20260619-120552` | World ID custom QR + deep-link card (matches Self visual parity) via `useIDKitRequest`; Onboarding copy tightening (drop contradictory unverified line, "Verify before paying (recommended)" label); Self verify dev copy hidden in production; redundant "I already verified" button removed; cohort count UI rewrites when `reservedCount=0` ("be the first" instead of "0 / 50"); DB cleared of 25 stale free entries that were inflating `reservedCount`. **Deploy note:** tarball must include the `scripts/` directory (not just `dist/`, `src/`, etc.) — `deploy.sh` lives there and the next deploy reads it via the `current` symlink. If you forget, manually `tar -xzf scripts.tar.gz -C /opt/last-human-standing/current` from your local copy before re-running `deploy.sh`. |
+| 2026-07-07 | (pending) | **Engagement mechanics release** + `GAME_LAUNCH_AT` → `2026-07-14T18:00:00Z` (July 1 missed — API was 502ing). Migration 007 (apply FIRST): lethal votes — `close_day()` finalizes verdicts (weighted votes, ≥30% SUS with 3+ votes = flagged), DQs flagged survivors, promotes next-ranked check-ins, settles infiltrator immunity/burn, awards jury tickets, detects the winner; `advance_rounds()` now delegates to it (DRY). Server: jury votes count ×2 for accurate eliminated voters; `/api/feed` public read (infiltrator flag hidden); `ended` phase + `winner` in game state; pushes for survived/verdict/DQ/closing-soon/winner; free-entry rate-limited (3/h/IP); lottery v2 weighted by referrals + jury tickets. Client: `sw.js` finally renders pushes (`push`/`notificationclick` handlers); share-everywhere at the rank reveal (World App `navigator.share` + emoji strip); winner ceremony; Feed polls 30s + spectator reads; Chat de-theatered (no fake E2E/XMTP/verified chips) + browser chat fixed; RoundProvider now actually exposes `isLive` (MissionBoard was rendering null in live phase). Deleted: ExitIntentModal, SurvivalProfile, AIChatbot, AISettingsModal, CelebrationAnimation, useSocial, legacy shadowed `/api/waitlist`. Docs aligned with real mechanics. New seed: `2026-07-14T18:00:00Z:cohort-1:lottery`, algorithm `mulberry32-fy-weighted/v2`. |

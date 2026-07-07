@@ -22,6 +22,7 @@ const DEFAULT_STATE = {
   currentDay: null,
   round: null,
   you: DEFAULT_YOU,
+  winner: null,
   defaults: { survivalCap: 25, radiusM: 100 },
   verification: {
     voteQuorum: 25,
@@ -70,6 +71,7 @@ export function RoundProvider({ children }) {
           currentDay: data.currentDay ?? null,
           round: data.round ?? null,
           you: { ...DEFAULT_YOU, ...(data.you ?? {}) },
+          winner: data.winner ?? null,
           defaults: { ...DEFAULT_STATE.defaults, ...(data.defaults ?? {}) },
           verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },
         });
@@ -118,6 +120,10 @@ export function RoundProvider({ children }) {
       isLoading: status === "loading",
       isReady: status === "ready",
       isError: status === "error",
+      // Phase flags — single source of truth for every consumer.
+      isPrelaunch: state.phase === "prelaunch",
+      isLive: state.phase === "live",
+      isEnded: state.phase === "ended",
       usesDemoState,
       lastUpdatedAt,
       refresh,

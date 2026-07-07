@@ -49,6 +49,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
 
   const isPrelaunch = phase === 'prelaunch';
   const isLive = phase === 'live';
+  const isEnded = phase === 'ended';
 
   return (
     <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
@@ -67,7 +68,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full animate-pulse ${isLive ? 'bg-neon' : 'bg-amber'}`} />
             <span className={`font-mono text-xs tracking-widest uppercase ${isLive ? 'text-neon' : 'text-amber'}`}>
-              {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : 'Ended'}
+              {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : '🏆 Ended'}
             </span>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -90,7 +91,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       {/* Live state: MissionBoard is the primary CTA. Prelaunch: PrelaunchPanel.
           Both render through the same StageSection pattern for consistent
           staggered reveal. */}
-      {isLive && (
+      {(isLive || isEnded) && (
         <StageSection index={0} className="relative z-10">
           <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
         </StageSection>

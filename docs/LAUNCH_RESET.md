@@ -1,6 +1,6 @@
 # Launch reset — pre-flight SQL
 
-Run before 2026-06-17 18:00 UTC. Idempotent. Safe to re-run.
+Run before 2026-07-14 18:00 UTC. Idempotent. Safe to re-run.
 
 > **Re-launch context.** This reset was re-run on 2026-06-15
 > after the June 14 launch produced an empty lottery draw
@@ -30,6 +30,23 @@ delete from public.users
 
 Expected result: 5 rows deleted.
 
+## Reset game-progress state (between cohorts / re-launches)
+
+The lethal-votes release (migration 007) added per-game state that
+must be zeroed before a fresh cohort, or verdicts and immunity leak
+across games:
+
+```sql
+update public.users
+   set eliminated = false,
+       eliminated_at_day = null,
+       immunity_until_day = null
+ where paid = true;
+-- jury_tickets intentionally NOT reset: they are the cross-cohort
+-- reward (lottery weight in the next draw). Zero them only on a
+-- full wipe: update public.users set jury_tickets = 0;
+```
+
 ## Verify the migration ran
 
 ```sql
@@ -39,9 +56,18 @@ select column_name
  where table_schema = 'public'
    and table_name = 'users'
    and column_name in ('entry_kind', 'entry_token', 'cohort');
+
+-- 007 columns must exist
+select column_name
+  from information_schema.columns
+ where table_schema = 'public'
+   and ((table_name = 'users' and column_name in ('immunity_until_day', 'jury_tickets'))
+     or (table_name = 'votes' and column_name = 'weight')
+     or (table_name = 'checkins' and column_name = 'dq')
+     or (table_name = 'rounds' and column_name = 'closing_notified_at'));
 ```
 
-Expected: 3 rows.
+Expected: 3 rows, then 5 rows.
 
 ## Verify the lottery_results table exists
 

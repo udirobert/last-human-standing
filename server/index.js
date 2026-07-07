@@ -67,6 +67,13 @@ const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
+// Jury: eliminated players keep playing as the audit jury. Their votes
+// count double once their accuracy record is good enough — this is what
+// keeps the 49 losers voting (the quorum math needs them).
+const JURY_WEIGHT = Number(process.env.JURY_WEIGHT || 2);
+const JURY_MIN_ACCURACY = Number(process.env.JURY_MIN_ACCURACY || 0.8);
+const JURY_MIN_RESOLVED = Number(process.env.JURY_MIN_RESOLVED || 5);
+
 // Lazy lottery draw gating. The draw is held until EITHER
 // the cohort has at least LOTTERY_MIN_CANDIDATES free entries
 // OR LOTTERY_MAX_DELAY_HOURS has passed since T-0, whichever
@@ -171,25 +178,17 @@ async function autoAdvanceRounds() {
       }).catch((e) => log("push_error", { where: "round_opened", error: String(e) }));
     }
 
-    // Notify eliminated users when rounds close
+    // Day-close ceremony: survivors, DQ'd, eliminated, verdict, winner.
+    if ((result.closed ?? []).length > 0) {
+      endgameCache = { value: null, fetchedAt: 0 };
+    }
     for (const r of result.closed ?? []) {
-      log("round_auto_closed", { day: r.day, survivors: r.survivors, eliminated: r.eliminated });
-      // Best-effort: fetch the list of eliminated addresses and notify each
-      try {
-        const { data: eliminatedRows } = await supabaseAdmin
-          .from("users")
-          .select("address")
-          .eq("eliminated_at_day", r.day);
-        for (const u of eliminatedRows || []) {
-          sendPushToAddress(supabaseAdmin, u.address, {
-            title: "Eliminated",
-            body: `Day ${r.day} is closed. You didn't make the cut.`,
-            data: { type: "eliminated", day: r.day },
-          }).catch(() => {});
-        }
-      } catch (e) {
-        log("push_error", { where: "round_closed", error: String(e) });
-      }
+      log("round_auto_closed", {
+        day: r.day, survivors: r.survivors, eliminated: r.eliminated,
+        flagged: r.flagged ?? 0, dq: (r.dq || []).length, promoted: (r.promoted || []).length,
+        remaining: r.remaining ?? null, winner: r.winner || null,
+      });
+      notifyDayClosed(r).catch((e) => log("push_error", { where: "round_closed", error: String(e) }));
     }
 
     for (const r of result.errors ?? []) {
@@ -200,9 +199,95 @@ async function autoAdvanceRounds() {
   }
 }
 
+// The verdict ceremony — the second dramatic beat of every day. Called by
+// the scheduler and the admin close-day endpoint with close_day()'s result.
+async function notifyDayClosed(r) {
+  if (!supabaseAdmin) return;
+  const day = r.day;
+  const dq = new Set((r.dq || []).map((a) => String(a).toLowerCase()));
+  const promoted = new Set((r.promoted || []).map((a) => String(a).toLowerCase()));
+
+  // Survivors get told they made it — the beat that was missing entirely.
+  const { data: survivorRows } = await supabaseAdmin
+    .from("checkins")
+    .select("address")
+    .eq("day", day)
+    .eq("survived", true);
+  for (const row of survivorRows || []) {
+    const body = promoted.has(row.address.toLowerCase())
+      ? `The audit saved you — a flagged player was disqualified and you inherited their slot. ${r.remaining ?? "?"} humans left.`
+      : `You made the cut. ${r.remaining ?? "?"} humans left — the next theme drops soon.`;
+    sendPushToAddress(supabaseAdmin, row.address, {
+      title: `You survived Day ${day} ✅`,
+      body,
+      data: { type: "survived", day },
+    }).catch(() => {});
+  }
+
+  // Eliminated (including DQ'd) get the jury hook, not just a shrug.
+  const { data: eliminatedRows } = await supabaseAdmin
+    .from("users")
+    .select("address")
+    .eq("eliminated_at_day", day);
+  for (const u of eliminatedRows || []) {
+    const wasDq = dq.has(u.address.toLowerCase());
+    sendPushToAddress(supabaseAdmin, u.address, {
+      title: wasDq ? "Disqualified by the crowd 🚫" : "Eliminated 💀",
+      body: wasDq
+        ? `The audit flagged your Day ${day} photo. You're out — but the jury needs you: accurate votes count double and earn lottery tickets for the next cohort.`
+        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double and earn lottery tickets for the next cohort.`,
+      data: { type: "eliminated", day },
+    }).catch(() => {});
+  }
+
+  // Everyone gets the verdict summary — the shared reveal moment.
+  broadcastPush(supabaseAdmin, {
+    title: `Day ${day} verdict is in`,
+    body: `${r.survivors ?? 0} survived · ${r.flagged ?? 0} flagged · ${(r.dq || []).length} disqualified. ${r.remaining ?? "?"} humans remain.`,
+    data: { type: "verdict", day },
+  }).catch(() => {});
+
+  if (r.winner) {
+    broadcastPush(supabaseAdmin, {
+      title: "🏆 We have a Last Human Standing",
+      body: "One human outlasted the cohort. Open the app for the ceremony.",
+      data: { type: "winner", day },
+    }).catch(() => {});
+  }
+}
+
+// "Final hour" urgency push — fired once per round (closing_notified_at
+// guards repeats), checked on the same 60s scheduler tick.
+async function notifyClosingSoon() {
+  if (!supabaseAdmin) return;
+  const nowIso = new Date().toISOString();
+  const soonIso = new Date(Date.now() + 60 * 60_000).toISOString();
+  const { data: rows } = await supabaseAdmin
+    .from("rounds")
+    .select("day,closes_at")
+    .eq("status", "open")
+    .is("closing_notified_at", null)
+    .gt("closes_at", nowIso)
+    .lte("closes_at", soonIso);
+  for (const r of rows || []) {
+    const { error } = await supabaseAdmin
+      .from("rounds")
+      .update({ closing_notified_at: nowIso })
+      .eq("day", r.day)
+      .is("closing_notified_at", null);
+    if (error) continue;
+    broadcastPush(supabaseAdmin, {
+      title: "⏳ Final hour",
+      body: `Day ${r.day} check-in closes soon. Don't get ranked out.`,
+      data: { type: "closing_soon", day: r.day },
+    }).catch(() => {});
+  }
+}
+
 setInterval(() => {
   cleanupPersistentState().catch(() => {});
   autoAdvanceRounds().catch(() => {});
+  notifyClosingSoon().catch(() => {});
 }, 60_000).unref();
 
 // Start onchain vote relayer — reads from vote_queue table, submits to VoteRegistry on Celo.
@@ -1057,16 +1142,16 @@ app.post("/api/checkin",
   }
 });
 
+// Public read — spectators (and share-link visitors) can watch the audit.
+// Voting still requires auth + entry. Note: is_infiltrator is deliberately
+// NOT exposed — announcing the bluff would kill the deduction game.
 app.get("/api/feed", async (req, res) => {
-  const address = await getOptionalAuthAddress(req);
-  if (!address) return res.json({ ok: true, submissions: [] });
-
   try {
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
 
     const { data: subs, error } = await supabaseAdmin
       .from("submissions")
-      .select("id,created_at,address,username,day,theme,caption,media_path,status,vote_quorum,is_infiltrator")
+      .select("id,created_at,address,username,day,theme,caption,media_path,status,vote_quorum")
       .order("created_at", { ascending: false })
       .limit(50);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
@@ -1074,12 +1159,13 @@ app.get("/api/feed", async (req, res) => {
     const ids = subs.map((s) => s.id);
     const voteCounts = new Map();
     if (ids.length > 0) {
-      const { data: agg, error: aggErr } = await supabaseAdmin.from("votes").select("submission_id,vote").in("submission_id", ids);
+      const { data: agg, error: aggErr } = await supabaseAdmin.from("votes").select("submission_id,vote,weight").in("submission_id", ids);
       if (!aggErr && Array.isArray(agg)) {
         for (const row of agg) {
           const cur = voteCounts.get(row.submission_id) || { real: 0, fake: 0 };
-          if (row.vote === "real") cur.real += 1;
-          if (row.vote === "fake") cur.fake += 1;
+          const w = Number(row.weight) || 1;
+          if (row.vote === "real") cur.real += w;
+          if (row.vote === "fake") cur.fake += w;
           voteCounts.set(row.submission_id, cur);
         }
       }
@@ -1129,6 +1215,17 @@ app.post(
       }
 
       if (supabaseAdmin) {
+        // Jury weight: eliminated players with a proven accuracy record
+        // count double. Computed at cast time and stored on the vote row.
+        let weight = 1;
+        const voterRec = await getUserRecord(req.user.address);
+        if (voterRec?.eliminated) {
+          const stats = await getVoterStats(req.user.address);
+          if (stats.total >= JURY_MIN_RESOLVED && (stats.accuracy ?? 0) >= JURY_MIN_ACCURACY) {
+            weight = JURY_WEIGHT;
+          }
+        }
+
         // Atomic vote insert + onchain queue in one Postgres transaction.
         // The cast_vote RPC handles duplicate detection, vote insert, and
         // enqueue for the onchain relayer — all-or-nothing.
@@ -1136,6 +1233,7 @@ app.post(
           p_submission_id: submissionId,
           p_voter_address: req.user.address,
           p_vote: vote,
+          p_weight: weight,
         });
         if (castError) {
           if (String(castError.message || "").includes("duplicate")) return res.status(409).json({ error: "already_voted" });
@@ -1164,22 +1262,30 @@ app.post(
         const countedVotes = { real: 0, fake: 0 };
         const { data: subVotes } = await supabaseAdmin
           .from("votes")
-          .select("vote")
+          .select("vote,weight")
           .eq("submission_id", submissionId);
         for (const v of subVotes || []) {
-          if (v.vote === "real") countedVotes.real += 1;
-          if (v.vote === "fake") countedVotes.fake += 1;
+          const w = Number(v.weight) || 1;
+          if (v.vote === "real") countedVotes.real += w;
+          if (v.vote === "fake") countedVotes.fake += w;
         }
 
-        const { data: subRow } = await supabaseAdmin.from("submissions").select("vote_quorum").eq("id", submissionId).single();
+        const { data: subRow } = await supabaseAdmin.from("submissions").select("vote_quorum,status").eq("id", submissionId).single();
         const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
         const computed = computeVoteStatus(countedVotes, quorum);
-        if (computed.status !== "pending") {
+        if (computed.status !== "pending" && subRow?.status === "pending") {
+          // First transition out of pending: lock the verdict and pay the
+          // jury. Later votes don't re-award (close_day only finalizes
+          // still-pending submissions, so no double-award there either).
           await supabaseAdmin.from("submissions").update({ status: computed.status }).eq("id", submissionId);
-          updateVoterAccuracy(submissionId, computed.status).catch(() => {});
+          try {
+            await supabaseAdmin.rpc("award_jury_tickets", { p_submission_id: submissionId, p_final_status: computed.status });
+          } catch (e) {
+            log("jury_ticket_error", { submissionId, error: e instanceof Error ? e.message : String(e) });
+          }
         }
 
-        return res.json({ ok: true, votes: countedVotes, status: computed.status, voteQuorum: quorum, onchain: Boolean(process.env.VOTE_REGISTRY_ADDRESS) });
+        return res.json({ ok: true, votes: countedVotes, status: computed.status, voteQuorum: quorum, juryWeight: weight, onchain: Boolean(process.env.VOTE_REGISTRY_ADDRESS) });
       }
     } catch (error) {
       sendValidationError(res, error);
@@ -1187,45 +1293,40 @@ app.post(
   },
 );
 
-async function updateVoterAccuracy(submissionId, finalStatus) {
-  if (!supabaseAdmin) return;
-  const correctVote = finalStatus === "verified" ? "real" : finalStatus === "flagged" ? "fake" : null;
-  if (!correctVote) return;
-  const { data: allVotes } = await supabaseAdmin.from("votes").select("voter_address,vote").eq("submission_id", submissionId);
-  if (!Array.isArray(allVotes)) return;
+// Single source of truth for a voter's accuracy record — used by the
+// /api/voter-stats route and by the jury-weight computation in /api/vote.
+async function getVoterStats(address) {
+  if (!supabaseAdmin) return { accuracy: null, correct: 0, total: 0 };
+  const { data: votes } = await supabaseAdmin.from("votes").select("submission_id,vote").eq("voter_address", address);
+  if (!votes?.length) return { accuracy: null, correct: 0, total: 0 };
 
-  const correctAddrs = allVotes.filter((v) => v.vote === correctVote).map((v) => v.voter_address);
-  const wrongAddrs = allVotes.filter((v) => v.vote !== correctVote).map((v) => v.voter_address);
+  const submissionIds = [...new Set(votes.map((v) => v.submission_id))];
+  const { data: subs } = await supabaseAdmin.from("submissions").select("id,status").in("id", submissionIds);
+  const statusById = new Map((subs || []).map((s) => [s.id, s.status]));
 
-  if (correctAddrs.length) {
-    await Promise.allSettled(correctAddrs.map((address) => supabaseAdmin.from("users").update({ last_seen_at: new Date().toISOString() }).eq("address", address)));
+  let total = 0;
+  let correct = 0;
+  for (const v of votes) {
+    const status = statusById.get(v.submission_id);
+    if (status !== "verified" && status !== "flagged") continue;
+    total += 1;
+    if ((status === "verified" && v.vote === "real") || (status === "flagged" && v.vote === "fake")) correct += 1;
   }
-  if (wrongAddrs.length) {
-    await Promise.allSettled(wrongAddrs.map((address) => supabaseAdmin.from("users").update({ last_seen_at: new Date().toISOString() }).eq("address", address)));
-  }
+  return { accuracy: total ? correct / total : null, correct, total };
 }
 
 app.get("/api/voter-stats/:address", async (req, res) => {
   try {
     const addr = req.params.address;
-    if (!supabaseAdmin) return res.json({ ok: true, address: addr, accuracy: null, correct: 0, total: 0 });
-    const { data: votes } = await supabaseAdmin.from("votes").select("submission_id,vote").eq("voter_address", addr);
-    if (!votes?.length) return res.json({ ok: true, address: addr, accuracy: null, correct: 0, total: 0 });
-
-    const submissionIds = [...new Set(votes.map((v) => v.submission_id))];
-    const { data: subs } = await supabaseAdmin.from("submissions").select("id,status").in("id", submissionIds);
-    const statusById = new Map((subs || []).map((s) => [s.id, s.status]));
-
-    let total = 0;
-    let correct = 0;
-    for (const v of votes) {
-      const status = statusById.get(v.submission_id);
-      if (status !== "verified" && status !== "flagged") continue;
-      total += 1;
-      if ((status === "verified" && v.vote === "real") || (status === "flagged" && v.vote === "fake")) correct += 1;
+    const stats = await getVoterStats(addr);
+    let juryTickets = 0;
+    let isJury = false;
+    if (supabaseAdmin) {
+      const { data: u } = await supabaseAdmin.from("users").select("jury_tickets,eliminated").eq("address", addr).maybeSingle();
+      juryTickets = u?.jury_tickets ?? 0;
+      isJury = Boolean(u?.eliminated) && stats.total >= JURY_MIN_RESOLVED && (stats.accuracy ?? 0) >= JURY_MIN_ACCURACY;
     }
-
-    return res.json({ ok: true, address: addr, accuracy: total ? correct / total : null, correct, total });
+    return res.json({ ok: true, address: addr, ...stats, juryTickets, isJury, juryWeight: isJury ? JURY_WEIGHT : 1 });
   } catch (e) {
     res.status(400).json({ error: "voter_stats_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
@@ -1298,6 +1399,39 @@ async function cohortSplitCount() {
   return { paidCount: paid.count ?? 0, freeCount: free.count ?? 0 };
 }
 
+// Endgame: the game is over when at most one active player remains AND at
+// least one round has actually closed (so a half-empty prelaunch doesn't
+// read as a finished game). Cached 30s — this runs on every game/state poll.
+let endgameCache = { value: null, fetchedAt: 0 };
+
+async function getEndgame() {
+  if (!supabaseAdmin) return null;
+  if (Date.now() - endgameCache.fetchedAt < 30_000) return endgameCache.value;
+
+  const [active, closed] = await Promise.all([
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("eliminated", false),
+    supabaseAdmin.from("rounds").select("day", { count: "exact", head: true }).eq("status", "closed"),
+  ]);
+  let value = null;
+  const activeCount = active.count ?? null;
+  if ((closed.count ?? 0) > 0 && activeCount != null && activeCount <= 1) {
+    let winner = null;
+    if (activeCount === 1) {
+      const { data } = await supabaseAdmin
+        .from("users")
+        .select("address,username")
+        .eq("paid", true)
+        .eq("eliminated", false)
+        .limit(1)
+        .maybeSingle();
+      if (data) winner = { address: data.address, username: data.username ?? null };
+    }
+    value = { ended: true, winner };
+  }
+  endgameCache = { value, fetchedAt: Date.now() };
+  return value;
+}
+
 app.get("/api/game/state", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
@@ -1306,9 +1440,15 @@ app.get("/api/game/state", async (req, res) => {
 
     let phase = "prelaunch";
     let currentDay = null;
+    let winner = null;
     if (launchAtMs && Date.now() >= launchAtMs) {
       phase = "live";
       currentDay = currentDayNumber(launchAtMs);
+      const endgame = await getEndgame();
+      if (endgame?.ended) {
+        phase = "ended";
+        winner = endgame.winner;
+      }
     }
 
     let round = null;
@@ -1380,6 +1520,7 @@ app.get("/api/game/state", async (req, res) => {
           }
         : null,
       you,
+      winner,
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
 
@@ -1695,10 +1836,11 @@ async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
 
     // Pull every free-registered candidate for this cohort. We sort
     // by reserved_at so the seed is the only source of randomness
-    // (the order is otherwise arbitrary).
+    // (the order is otherwise arbitrary). referral_count and
+    // jury_tickets weight the draw (lottery algorithm v2).
     const { data: candidates, error } = await supabaseAdmin
       .from("users")
-      .select("address, username, referral_count")
+      .select("address, username, referral_count, jury_tickets")
       .eq("paid", true)
       .eq("entry_kind", "free")
       .eq("cohort", cohort)
@@ -1939,14 +2081,18 @@ app.post("/api/admin/close-day", requireAuth, requireAdmin, async (req, res) => 
 
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
 
-    // Atomic close-day via Postgres function — all updates (checkins, users,
-    // rounds) happen in a single transaction. Avoids partial-state bugs from
-    // the previous multi-query approach.
+    // Atomic close-day via Postgres function — verdict finalization,
+    // DQ-and-replace, infiltrator immunity, elimination, and winner
+    // detection all happen in a single transaction.
     const { data, error } = await supabaseAdmin.rpc("close_day", {
       p_day: day,
       p_cap: cap,
+      p_flag_pct: FAKE_PCT_TO_FLAG,
     });
     if (error) return res.status(400).json({ error: "close_day_failed", message: error.message });
+
+    endgameCache = { value: null, fetchedAt: 0 };
+    notifyDayClosed(data).catch((e) => log("push_error", { where: "admin_close_day", error: String(e) }));
 
     return res.json({ ok: true, day, ...data });
   } catch (error) {
@@ -2010,7 +2156,7 @@ app.use("/api", paymentRoutes({
   rateLimitStorage,
 }));
 
-app.use("/api", referralRoutes({ supabaseAdmin, log, makeReferralCode, rateLimitStorage }));
+app.use("/api", referralRoutes({ supabaseAdmin }));
 app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));
 app.use("/api", activityRoutes({ supabaseAdmin, log }));
 app.use("/", farcasterRoutes({ supabaseAdmin, log }));

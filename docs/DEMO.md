@@ -41,7 +41,7 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 4. **Home** — today's **theme card**: challenge name, slots remaining (e.g., "12 / 25"), prompt, time window
 5. **Check in** → take a photo matching the theme → optionally share GPS for credibility → submit
 6. Server response: **"#7 of 25 surviving today"**
-7. **Audit feed** — vote HUMAN / SUS on photos; check voter accuracy and infiltrator reveals
+7. **Audit feed** — vote HUMAN / SUS on photos; check voter accuracy (the feed is publicly viewable — spectators can watch, voting requires entry)
 8. **Standings** — today's survivor list (rank, distance, photo thumb)
 9. **Chat** — open World Chat with another survivor
 
@@ -56,15 +56,18 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 - **Photo proof** (required) — primary verification; MiniKit Sign Message wraps the check-in payload; signature stored
 - **GPS metadata** (optional) — shown on submission cards as credibility signal; not a gate
 - **Rank assignment** — atomic on insert, unique constraint on `(day, address)`, ordered by `created_at`
-- **Crowd audit** — community votes HUMAN / SUS; DQ-and-replace at audit close (any top-N photo crossing the SUS-vote threshold is flagged and the next-ranked candidate is promoted)
-- **Infiltrator mode** — gamified social deduction where players can opt-in to submit borderline photos for immunity
+- **Crowd audit with consequences** — at day close, every pending submission is finalized (weighted votes; ≥30% SUS with 3+ votes = flagged); flagged survivors are DISQUALIFIED and the highest-ranked "too late" check-ins inherit their slots (DQ-and-replace)
+- **Infiltrator mode** — opt-in social deduction with real stakes: crowd votes you HUMAN → immunity through the next day's cut; crowd flags you → DQ'd and any held immunity is burned. Infiltrator status is hidden from the audit feed
+- **Jury system** — eliminated players keep playing as the jury: their votes count double once their audit accuracy is ≥80% (min 5 resolved votes), and every correct verdict vote earns a jury ticket that weights the next cohort's free-entry lottery
+- **Lottery v2** — entry tickets are weighted by referral count and jury tickets (deterministic, replayable)
+- **Endgame** — when one human remains, the game enters the `ended` phase and the app announces the winner
+- **Push notifications** — round open, 1-hour-left warning, you survived, audit verdict summary, eliminated, winner announced
 - **World ID** — optional gate for both check-in and voting
 
-### Premium Interactive Layer
+### Interactive Layer
 
-- **ARIA AI Strategy Guide** — Open the AI Chatbot component to chat with ARIA. Try switching personalities (`guide`, `mentor`, `rival`, `ally`) to see how ARIA adapts her style to strategically analyze the board or cheer you on. Real stream responses from Venice/AISA One/Featherless APIs can be turned on with key config.
-- **Dynamic Web Audio Soundscape** — Click various buttons (Survival styles, Onboarding checkmarks, AI chat triggers, and the Exit Intent modal) to experience zero-latency custom-synthesized SFX generated programmatically via Web Audio.
-- **Conversion-Optimized Onboarding** — Step through the 9-stage onboarding flow. Complete the motivation profiling, witness the personalized mascot responses, review the 6 tier subscription options (Annual with 7-day free trial, Monthly, One-Time), and try to close/exit the tab on the paywall step to trigger the 70% off Exit Intent discount modal.
+- **Onboarding** — a tight 4-step flow: Welcome → Rules → Reserve/pay 1 WLD → celebration. No subscriptions, no upsells.
+- **Dynamic Web Audio Soundscape** — Tap through the UI (onboarding steps, check-in, votes) to experience zero-latency custom-synthesized SFX generated programmatically via Web Audio.
 - **Extensible PoH (Self Protocol)** — Toggle the `VITE_ENABLE_SELF` flag to show the Celo/Self Protocol onboarding block, illustrating how the codebase supports pluggable humanity providers beyond World ID.
 
 ### Admin tooling
@@ -111,9 +114,9 @@ curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/close-day \
 1. Day 0: open reservations (`GAME_LAUNCH_AT` ~3 days out)
 2. Share the URL; reach `COHORT_SIZE` reservations OR wait for countdown
 3. Day 1: `POST /api/admin/round` with the day's theme/window/cap=25 (GPS coords optional for local events)
-4. After window closes: `POST /api/admin/close-day { day: 1 }`
+4. After window closes: `POST /api/admin/close-day { day: 1 }` — finalizes pending audit verdicts and runs DQ-and-replace
 5. Repeat with shrinking caps: 25 → 12 → 6 → 3 → 1
-6. Final survivor takes the pool; announce in chat
+6. When one human remains, the game enters the `ended` phase and the app announces the winner (push notification included)
 ---
 
 ## Celo Integration (for Onchain Agents Hackathon)

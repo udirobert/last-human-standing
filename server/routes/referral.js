@@ -1,45 +1,11 @@
 import { Router } from "express";
-import { rateLimit } from "../rateLimit.js";
-import { ensureObjectBody, ensureString, sendValidationError } from "../lib/validators.js";
 
-export default function referralRoutes({ supabaseAdmin, log, makeReferralCode, rateLimitStorage }) {
+export default function referralRoutes({ supabaseAdmin }) {
   const router = Router();
 
-  // ---------- POST /api/waitlist ----------
-  router.post("/waitlist",
-    rateLimit({ keyFn: (req) => `waitlist:${req.ip}`, limit: 5, windowMs: 60_000, storage: rateLimitStorage }),
-    async (req, res) => {
-    const body = ensureObjectBody(req, res);
-    if (!body) return;
-    try {
-      const email = ensureString(body.email, {
-        field: "email", required: true, maxLength: 255,
-        pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-      });
-      const referredBy = ensureString(body.referredBy, {
-        field: "referredBy", required: false, maxLength: 64,
-        pattern: /^LHS-[a-z0-9]+-[a-f0-9]+$/i,
-      });
-      const refCode = makeReferralCode(email.split("@")[0]);
-
-      if (supabaseAdmin) {
-        const { data, error } = await supabaseAdmin
-          .from("waitlist")
-          .upsert(
-            { email, referral_code: refCode, referred_by: referredBy || null },
-            { onConflict: "email", ignoreDuplicates: false },
-          )
-          .select("referral_code, referral_count")
-          .single();
-        if (error) return res.status(400).json({ error: "waitlist_failed", message: error.message });
-        if (referredBy) await supabaseAdmin.rpc("increment_referral", { ref_code: referredBy }).catch(() => {});
-        return res.json({ ok: true, referralCode: data.referral_code, referralCount: data.referral_count });
-      }
-      return res.json({ ok: true, referralCode: refCode, referralCount: 0 });
-    } catch (error) {
-      sendValidationError(res, error);
-    }
-  });
+  // NOTE: POST /api/waitlist lives in server/index.js (cohort_waitlist,
+  // x_handle/email, always-200 to prevent enumeration). A legacy
+  // email-only route here was shadowed by it and has been removed.
 
   // ---------- GET /api/referral-board ----------
   router.get("/referral-board", async (req, res) => {

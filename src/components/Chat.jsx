@@ -26,7 +26,7 @@ const useMocks = import.meta.env.DEV;
 export default function Chat({ onBack }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
-  const [toUser, setToUser] = useState('andy');
+  const [toUser, setToUser] = useState('');
   const [chatMode, setChatMode] = useState('lobby'); // lobby | dm
   const bottomRef = useRef();
   const inputRef = useRef();
@@ -62,9 +62,10 @@ export default function Chat({ onBack }) {
     return () => clearInterval(interval);
   }, [isMiniApp]);
 
-  // ---- Mini app: fetch real lobby messages ----
+  // ---- Fetch real lobby messages (mini app + browser) ----
   const loadMessages = useCallback(async () => {
-    if (!isMiniApp) {
+    if (useMocks && !isMiniApp) {
+      // Dev-only: the simulated-chat effects above own the message list.
       setChatLoading(false);
       return;
     }
@@ -80,7 +81,6 @@ export default function Chat({ onBack }) {
           msg: m.message,
           time: timeAgo(m.created_at),
           isSelf: user?.address && m.address?.toLowerCase() === user.address.toLowerCase(),
-          isVerified: true,
         })));
       }
     } catch (e) {
@@ -92,7 +92,7 @@ export default function Chat({ onBack }) {
 
   useEffect(() => {
     loadMessages();
-    if (!isMiniApp) return;
+    if (useMocks && !isMiniApp) return;
     const id = setInterval(loadMessages, 5000);
     return () => clearInterval(id);
   }, [loadMessages, isMiniApp]);
@@ -213,16 +213,7 @@ export default function Chat({ onBack }) {
               ) : useMocks ? (
                 <span className="font-mono text-amber text-xs">Dev preview — simulated messages</span>
               ) : null}
-              {isMiniApp && (
-                <>
-                  <span className="text-dim text-xs">·</span>
-                  <span className="font-mono text-dim text-xs">powered by XMTP</span>
-                </>
-              )}
             </div>
-          </div>
-          <div className="bg-neon/10 border border-neon/30 rounded-xl px-3 py-1">
-            <span className="font-mono text-neon text-xs">🔒 E2E</span>
           </div>
           <FAQModal />
         </div>
@@ -235,10 +226,10 @@ export default function Chat({ onBack }) {
           {isMiniApp
             ? (chatMode === 'lobby'
                 ? 'Lobby chat — all survivors can see your messages.'
-                : `Direct message via World Chat · to @${toUser}`)
+                : `Direct message via World Chat · to @${toUser || '…'}`)
             : (chatMode === 'lobby'
                 ? 'Lobby chat — visible to all survivors.'
-                : `Sends via World Chat (XMTP) · to @${toUser}`)}
+                : `Sends via World Chat · to @${toUser || '…'}`)}
         </p>
       </div>
 
@@ -259,8 +250,8 @@ export default function Chat({ onBack }) {
           <ScreenLoader kind="chat" />
         )}
 
-        {/* Empty state for mini app */}
-        {!chatLoading && isMiniApp && messages.length === 0 && (
+        {/* Empty state */}
+        {!chatLoading && messages.length === 0 && (
           <div className="text-center py-8">
             <span className="text-4xl block mb-3">🫂</span>
             <p className="text-bone font-mono text-sm mb-1">No messages yet</p>
@@ -302,12 +293,6 @@ export default function Chat({ onBack }) {
                 }`}>
                   <p className="text-sm leading-relaxed">{msg.msg}</p>
                 </div>
-                {(msg.isVerified || msg.isNew) && !msg.isSelf && msg.user !== 'system' && (
-                  <div className="flex items-center gap-1">
-                    <div className="w-1 h-1 rounded-full bg-neon animate-pulse" />
-                    <span className="font-mono text-neon text-xs">World ID verified</span>
-                  </div>
-                )}
               </div>
             </motion.div>
           ))}
@@ -341,7 +326,7 @@ export default function Chat({ onBack }) {
         <div className="flex gap-3 items-end">
           <div className="flex-1 space-y-2">
             {/* Recipient field — only in DM mode (private 1:1 via World Chat) */}
-            {chatMode === 'dm' && !isMiniApp && (
+            {chatMode === 'dm' && (
               <div className="bg-smoke border border-ember rounded-2xl px-4 py-2 flex items-center gap-2">
                 <span className="font-mono text-dim text-xs">to @</span>
                 <input
@@ -377,12 +362,8 @@ export default function Chat({ onBack }) {
         </div>
         <p className="text-dim font-mono text-xs mt-2 text-center">
           {chatMode === 'lobby'
-            ? (isMiniApp
-              ? 'Visible to all survivors · powered by XMTP'
-              : 'Visible to all survivors')
-            : (isMiniApp
-              ? `Private message to @${toUser} · via World Chat`
-              : `Private message via World Chat to @${toUser || '…'}`)}
+            ? 'Visible to all survivors'
+            : `Private message via World Chat to @${toUser || '…'}`}
         </p>
       </div>
     </div>

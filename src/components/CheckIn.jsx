@@ -61,24 +61,49 @@ export default function CheckIn({ onBack, onSubmit }) {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
 
+  // One share path for every surface: Farcaster gets composeCast, World App
+  // and mobile browsers get the native share sheet, desktop gets clipboard.
+  const [shareCopied, setShareCopied] = useState(false);
+
+  const buildShare = (survived) => {
+    const cap = result?.survivalCap ?? '?';
+    const rank = result?.rank ?? '?';
+    const strip = survived
+      ? `🧍 Day ${currentDay} · Rank #${rank}/${cap} · SURVIVED ✅`
+      : `💀 Day ${currentDay} · Rank #${rank} · ELIMINATED`;
+    const text = survived
+      ? `${strip}\nLast Human Standing — one verified human takes the pot. Can you outlast me?`
+      : `${strip}\nLast Human Standing took me out. Avenge me.`;
+    const url = result?.checkinId
+      ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
+      : window.location.origin;
+    return { text, url };
+  };
+
+  const shareResult = async (survived) => {
+    const { text, url } = buildShare(survived);
+    try {
+      if (isFarcaster) {
+        const { sdk } = await import("@farcaster/miniapp-sdk");
+        await sdk.actions.composeCast({ text, embeds: [url] });
+      } else if (navigator.share) {
+        await navigator.share({ text, url });
+      } else {
+        await navigator.clipboard.writeText(`${text}\n${url}`);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2500);
+      }
+    } catch { /* user dismissed the share sheet */ }
+  };
+
   // Auto-share on Farcaster after a successful check-in. Delayed 4s so
   // the composer doesn't pop over the user's "Back to game" tap.
   useEffect(() => {
     if (!isFarcaster || step !== 2 || !result?.survived || sharedRef.current) return;
     sharedRef.current = true;
-    const timer = setTimeout(async () => {
-      try {
-        const { sdk } = await import("@farcaster/miniapp-sdk");
-        const shareUrl = result.checkinId
-          ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
-          : window.location.origin;
-        await sdk.actions.composeCast({
-          text: `I just checked in to Round ${currentDay} of Last Human Standing! Can you survive the longest?`,
-          embeds: [shareUrl],
-        });
-      } catch { /* user dismissed composer */ }
-    }, 4000);
+    const timer = setTimeout(() => { shareResult(true); }, 4000);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFarcaster, step, result, currentDay]);
 
   const canSubmit = photoFile != null; // photo is the primary proof
@@ -341,8 +366,8 @@ export default function CheckIn({ onBack, onSubmit }) {
                     photo that could go either way. If the crowd trusts it, you earn immunity for tomorrow.
                   </p>
                   <p className="text-purple-300 text-xs font-mono">
-                    ⚡ If the crowd votes you HUMAN, you earn immunity tomorrow.
-                    If they vote you SUS, you get double elimination risk. Choose wisely.
+                    ⚡ Crowd votes you HUMAN → immunity through tomorrow's cut (skip a day, stay alive).
+                    Crowd flags you SUS → disqualified at the verdict, even if you ranked in. Choose wisely.
                   </p>
                 </div>
               )}
@@ -454,26 +479,13 @@ export default function CheckIn({ onBack, onSubmit }) {
                     <p className="text-bone font-mono text-sm">You arrived as #{result.rank} (cap was {result.survivalCap})</p>
                     <p className="text-dim font-mono text-xs mt-2">You're out. Stay for the audit + chat.</p>
                   </div>
-                  {isFarcaster && (
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          const { sdk } = await import("@farcaster/miniapp-sdk");
-                          const shareUrl = result.checkinId
-                            ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
-                            : window.location.origin;
-                          await sdk.actions.composeCast({
-                            text: `I got eliminated from Last Human Standing on Day ${currentDay}. Ready for round 2?`,
-                            embeds: [shareUrl],
-                          });
-                        } catch { /* user dismissed composer */ }
-                      }}
-                      className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
-                    >
-                      SHARE YOUR ELIMINATION
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => shareResult(false)}
+                    className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
+                  >
+                    {shareCopied ? '✓ COPIED' : 'SHARE YOUR ELIMINATION'}
+                  </button>
                 </>
               )}
 
@@ -484,24 +496,13 @@ export default function CheckIn({ onBack, onSubmit }) {
                 BACK TO GAME
               </button>
 
-              {isFarcaster && result?.survived && (
+              {result?.survived && (
                 <button
                   type="button"
-                  onClick={async () => {
-                    try {
-                      const { sdk } = await import("@farcaster/miniapp-sdk");
-                      const shareUrl = result.checkinId
-                        ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
-                        : window.location.origin;
-                      await sdk.actions.composeCast({
-                        text: `I just checked in to Round ${currentDay} of Last Human Standing! Can you survive the longest?`,
-                        embeds: [shareUrl],
-                      });
-                    } catch { /* user dismissed composer */ }
-                  }}
+                  onClick={() => shareResult(true)}
                   className="w-full py-3 rounded-2xl font-display text-lg tracking-widest active:scale-95 transition-transform text-bone bg-indigo/20 border border-indigo/40 mt-2"
                 >
-                  SHARE ON FARCASTER
+                  {shareCopied ? '✓ COPIED' : isFarcaster ? 'SHARE ON FARCASTER' : 'SHARE YOUR RANK 🧍'}
                 </button>
               )}
             </motion.div>

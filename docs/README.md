@@ -16,11 +16,12 @@ A cohort of N players (default 50) competes over ~5 days. Each day:
    - **GPS** (optional) — share your location for bonus credibility metadata
    - **Crowd** — community votes HUMAN / SUS (audit layer)
 4. The **first N arrivals** survive (e.g., first 25). Slow / no-show = eliminated.
-5. After the audit window, any survivor with too many "SUS" votes is disqualified and the next-ranked candidate is promoted.
-6. **Infiltrator Mode:** Players can optionally submit "SUS" photos for a chance at immunity (if they pass the crowd) or face double-elimination risk. Voters earn accuracy stats for catching them.
-7. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
+5. **Audit verdicts have consequences.** At day close, every pending submission is finalized (weighted votes; ≥30% SUS with 3+ votes = flagged). Flagged survivors are **disqualified** and the highest-ranked "too late" check-ins inherit their slots (DQ-and-replace).
+6. **Infiltrator Mode:** Opt in and let the crowd judge you. Voted HUMAN → immunity through the next day's cut. Flagged → DQ'd and any held immunity is burned. Infiltrator status is hidden from the audit feed. Voters earn accuracy stats for catching them.
+7. **Jury system:** Eliminated players keep playing as the jury — their votes count double once their audit accuracy is ≥80% (min 5 resolved votes), and every correct verdict vote earns a jury ticket that weights the next cohort's free-entry lottery.
+8. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
 
-The last verified human takes the on-chain prize pool.
+The last verified human takes the on-chain prize pool. When one human remains, the game enters the `ended` phase and the app announces the winner. The audit feed is publicly viewable — spectators can watch, but voting requires entry. Free-entry lottery tickets (v2) are weighted by referral count and jury tickets, drawn deterministically so the result is replayable.
 
 ### Why three witnesses
 
@@ -41,14 +42,11 @@ Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLO
 - Cohort caps at `COHORT_SIZE` (default 50).
 - When the cohort fills or the countdown hits zero, **Day 1** begins.
 
-## Premium Interactive & Personalized Features
+## Interactive & Personalized Features
 
-Last Human Standing integrates key premium improvements inspired by modern, high-conversion competitor design strategies:
-
-1. **🤖 ARIA AI Companion (Character Chat)**: An interactive AI mascot companion (ARIA) with customizable personalities (`guide`, `mentor`, `rival`, `ally`) utilizing unified Venice/AISA One/Featherless API streams, designed to strategically coach and engage players.
-2. **🔊 Immersive Audio Layer (Sound Design)**: Zero-latency synthetic sound effects generated dynamically via the Web Audio API for highly responsive UI sounds (button click, success, milestone, errors, and custom mascot responses) without requiring audio asset downloads.
-3. **✨ Competitor-Optimized Onboarding Flow**: An expanded 9-stage onboarding flow designed to maximize user investment. Includes interactive profiling, name-based personalization throughout the experience, flexible subscription models, 7-day free trials, and an exit-intent modal that triggers a 70% discount offer.
-4. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID and Self Protocol (both live). See [HUMANITY_PROVIDERS.md](./HUMANITY_PROVIDERS.md) for the integration shape, trust tiers, and the one env-var flip that takes Self from Celo Sepolia staging to Celo mainnet.
+1. **🔊 Immersive Audio Layer (Sound Design)**: Zero-latency synthetic sound effects generated dynamically via the Web Audio API for highly responsive UI sounds (button click, success, milestone, errors, and custom mascot responses) without requiring audio asset downloads.
+2. **✨ Focused Onboarding Flow**: A tight 4-step flow — Welcome → Rules → Reserve/pay 1 WLD → celebration. One decision, no subscriptions.
+3. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID and Self Protocol (both live). See [HUMANITY_PROVIDERS.md](./HUMANITY_PROVIDERS.md) for the integration shape, trust tiers, and the one env-var flip that takes Self from Celo Sepolia staging to Celo mainnet.
 
 ## World Stack usage
 
@@ -77,7 +75,7 @@ Copy `.env.example` → `.env`. New values for the cohort/geo model:
 
 ```bash
 # Pre-launch / cohort
-GAME_LAUNCH_AT=2026-05-01T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
+GAME_LAUNCH_AT=2026-07-14T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
 COHORT_SIZE=50                         # max reservations before pre-launch closes early
 
 # Daily round defaults
@@ -217,7 +215,11 @@ Web Push (VAPID) notifications are supported. When enabled:
 | Trigger | Notification |
 |---------|-------------|
 | Round opens | Broadcast to all subscribed users |
+| 1 hour left | Warning before the check-in window closes |
+| You survived | Per-user notification after day close |
+| Audit verdicts | Per-day verdict summary |
 | User eliminated | Per-user notification with day info |
+| Winner announced | Broadcast when one human remains |
 | Admin test | `POST /api/push/test` (admin-only) |
 
 ### Setup

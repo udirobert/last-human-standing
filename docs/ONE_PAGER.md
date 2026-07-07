@@ -24,17 +24,20 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 
 ## What's built today
 
-- **🤖 ARIA AI Companion (Character Chat)** — Integrated interactive AI guide (ARIA) with customizable personalities (Guide, Mentor, Rival, Ally) powered by unified Venice/AISA One/Featherless APIs to help players strategically navigate the game.
 - **🔊 Immersive Audio Layer (Sound Design)** — Synthetic Web Audio sound engine (button click, success, milestone, errors, and custom mascot soundscapes) for zero-latency game audio.
-- **✨ Competitor-Optimized Onboarding Flow** — Personalization-focused onboarding flow: 9 stages of user investment, survival profiling, multiple subscription models, 7-day free trials, and an exit-intent discount trigger (70% off).
+- **✨ Focused Onboarding Flow** — A tight 4-step flow: Welcome → Rules → Reserve/pay 1 WLD → celebration. No subscriptions.
 - **🛡️ Pluggable Multi-Provider Proof of Humanity** — Extensible PoH architecture supporting World ID and Self Protocol (both live). Self is on Celo Sepolia staging with mock passports; flip `SELF_MOCK_PASSPORT=false` to verify real passports on Celo mainnet.
 - **Pre-launch waitlist + countdown** — wallet auth + 1 WLD entry locks your slot in the cohort
 - **Cohort lifecycle** — `phase: 'prelaunch' | 'live' | 'ended'`, exposed via `/api/game/state`
 - **Daily round model** — admin sets theme/place type, time window, survival cap, prompt (GPS coords optional for local events)
 - **Theme-based check-in** — players check in from anywhere on Earth with a photo; GPS is optional metadata for credibility; server ranks by arrival, marks first N as survivors (atomic, unique on day+address)
 - **Photo + signed proof** — MiniKit Sign Message stamp on every check-in
-- **Audit voting** — community votes HUMAN or SUS; DQ-and-replace at audit close
-- **Infiltrator mode & Voter Accuracy** — gamified social deduction with real stakes for both submitters and voters
+- **Audit voting with consequences** — community votes HUMAN or SUS; at day close every pending submission is finalized (weighted votes; ≥30% SUS with 3+ votes = flagged), flagged survivors are disqualified, and the highest-ranked "too late" check-ins inherit their slots (DQ-and-replace). The feed is publicly viewable — spectators can watch; voting requires entry.
+- **Infiltrator mode** — opt-in social deduction with real stakes: voted HUMAN → immunity through the next day's cut; flagged → DQ'd and any held immunity burned. Infiltrator status is hidden from the audit feed.
+- **Jury system** — eliminated players keep playing as the jury: votes count double once audit accuracy is ≥80% (min 5 resolved votes), and every correct verdict vote earns a jury ticket that weights the next cohort's free-entry lottery.
+- **Lottery v2** — free-entry tickets weighted by referral count and jury tickets (deterministic, replayable draw).
+- **Endgame** — `ended` phase: when one human remains, the app announces the winner.
+- **Push notifications** — round open, 1-hour-left warning, you survived, audit verdict summary, eliminated, winner announced.
 - **Cap shrinks daily** — 25 → 12 → 6 → 3 → 1 (configurable per day)
 - **Live on-chain prize pool** — World Chain WLD balance shown live
 - **World Chat coordination** — challenge/message any survivor in-app
@@ -47,7 +50,7 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 2. **Day 1 opens**: location pin + prompt revealed
 3. **Check in**: snap a photo at any matching location worldwide → optional GPS for credibility → server returns "you're rank 7 of 25"
 4. **Audit**: other players vote HUMAN / SUS; chat lights up
-5. **Day closes**: survivors locked; eliminated players still vote on next day's audit
+5. **Day closes**: audit verdicts finalized (DQ-and-replace); eliminated players join the jury — accurate jurors' votes count double and correct verdicts earn lottery tickets
 
 ## Enterprise value
 

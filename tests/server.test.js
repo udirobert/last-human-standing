@@ -108,13 +108,15 @@ describe("server hardening", () => {
     expect([401, 501]).toContain(res.status);
   });
 
-  it("validates waitlist email input", async () => {
+  it("silently accepts invalid waitlist email (no enumeration)", async () => {
     const res = await request(app)
       .post("/api/waitlist")
       .send({ email: "not-an-email" });
 
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBe("invalid_email");
+    // The waitlist endpoint always returns a generic 200 so it can't be
+    // used to probe which emails/handles are on the list.
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
   });
 
   it("rejects protected routes without authentication", async () => {
@@ -164,15 +166,13 @@ describe("server hardening", () => {
     expect(typeof res.body.time).toBe("string");
   });
 
-  it("POST /api/waitlist accepts valid email and returns referral code", async () => {
+  it("POST /api/waitlist accepts valid email with a generic ok", async () => {
     const res = await request(app)
       .post("/api/waitlist")
       .send({ email: `test-${Date.now()}@example.com` });
 
     expect(res.status).toBe(200);
     expect(res.body.ok).toBe(true);
-    expect(typeof res.body.referralCode).toBe("string");
-    expect(res.body.referralCode).toMatch(/^LHS-/i);
   });
 
   it("POST /api/pay/browser-confirm accepts valid referral code", async () => {

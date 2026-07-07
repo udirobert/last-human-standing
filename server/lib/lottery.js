@@ -19,7 +19,12 @@
 
 import { createHash } from "node:crypto";
 
-export const ALGORITHM_VERSION = "mulberry32-fy/v1";
+// v2: weighted tickets. Each candidate gets 1 base ticket plus up to
+// TICKET_CAP bonus tickets each for referrals and jury tickets, so
+// sharing the game and voting well genuinely improve your odds while
+// staying deterministic and replayable from the public seed.
+export const ALGORITHM_VERSION = "mulberry32-fy-weighted/v2";
+export const TICKET_CAP = 5;
 
 /** Hex-decode a string into a 32-bit unsigned integer. */
 function hexToU32(hex) {
@@ -72,16 +77,32 @@ export function shuffle(arr, rng) {
 }
 
 /**
- * Draw winners from a list of free candidates.
+ * Number of lottery tickets a candidate holds: 1 base ticket plus up to
+ * TICKET_CAP each for referrals and jury tickets. Exported so the client
+ * and docs can show "your odds" from the same math.
+ */
+export function ticketsFor(candidate) {
+  const referrals = Math.max(0, Number(candidate?.referral_count) || 0);
+  const jury = Math.max(0, Number(candidate?.jury_tickets) || 0);
+  return 1 + Math.min(referrals, TICKET_CAP) + Math.min(jury, TICKET_CAP);
+}
+
+/**
+ * Draw winners from a list of free candidates, weighted by tickets.
  *
- * @param {Array<{address: string, username?: string|null, referral_count?: number}>} candidates
+ * Deterministic: the candidate list is expanded into a ticket pool (one
+ * entry per ticket, in input order), Fisher-Yates shuffled with the seeded
+ * PRNG, then deduped by address in shuffled order. Same seed + same
+ * candidate list => same winners, replayable by anyone.
+ *
+ * @param {Array<{address: string, username?: string|null, referral_count?: number, jury_tickets?: number}>} candidates
  * @param {{ launchAtIso: string, cohort: number, slots: number }} opts
  * @returns {{
  *   seed: string,
  *   algorithmVersion: string,
  *   slots: number,
  *   candidates: number,
- *   drawn: Array<{address: string, username: string|null, referral_count: number, rank: number}>,
+ *   drawn: Array<{address: string, username: string|null, referral_count: number, jury_tickets: number, tickets: number, rank: number}>,
  *   rolledToCohort2: typeof candidates
  * }}
  */
@@ -95,17 +116,34 @@ export function drawLottery(candidates, { launchAtIso, cohort, slots }) {
   const seed = lotterySeed({ launchAtIso, cohort });
   const rng = mulberry32(seedToU32(seed));
 
-  // Defensive copy so we don't mutate the caller's list.
-  const pool = candidates.map((c) => ({ ...c }));
-  shuffle(pool, rng);
+  // Expand into a ticket pool (defensive copies; input order preserved so
+  // the seed is the only source of randomness).
+  const tickets = [];
+  for (const c of candidates) {
+    const n = ticketsFor(c);
+    for (let i = 0; i < n; i += 1) tickets.push({ ...c });
+  }
+  shuffle(tickets, rng);
 
-  const drawn = pool.slice(0, slots).map((c, i) => ({
+  // Dedupe by address in shuffled order — first ticket drawn wins.
+  const seen = new Set();
+  const ordered = [];
+  for (const t of tickets) {
+    const key = String(t.address).toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    ordered.push(t);
+  }
+
+  const drawn = ordered.slice(0, slots).map((c, i) => ({
     address: c.address,
     username: c.username ?? null,
     referral_count: c.referral_count ?? 0,
+    jury_tickets: c.jury_tickets ?? 0,
+    tickets: ticketsFor(c),
     rank: i + 1,
   }));
-  const rolledToCohort2 = pool.slice(slots);
+  const rolledToCohort2 = ordered.slice(slots);
 
   return {
     seed,

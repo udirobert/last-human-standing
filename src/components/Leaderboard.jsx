@@ -9,7 +9,6 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import Mascot from './Mascot.jsx';
-import { PROFILE_TYPES } from './SurvivalProfile.jsx';
 
 function shortAddr(addr) {
   if (!addr) return 'anon';
@@ -470,63 +469,34 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             >
               <div className="w-12 h-1 bg-ember/60 rounded-full mx-auto mb-4" />
               
-              {(() => {
-                const cleanAddr = peekPlayer.address?.toLowerCase().replace('0x', '') || '';
-                const charSum = cleanAddr.split('').reduce((sum, char) => sum + char.charCodeAt(0), 0);
-                
-                const styles = ['adventurer', 'strategist', 'social', 'casual', 'spectator'];
-                const vibes = ['competitive', 'casual', 'glory', 'experience'];
-                const devices = ['phone', 'action', 'pro'];
-                
-                const style = styles[charSum % styles.length];
-                const vibe = vibes[(charSum >> 2) % vibes.length];
-                const device = devices[(charSum >> 4) % devices.length];
-                
-                const key = `${style}-${vibe}-${device}`;
-                const profileType = PROFILE_TYPES[key] || { name: 'The Survivor', emoji: '🎯', color: '#FFB800', tagline: 'Forgetting limits, adapting to survive.' };
-                
-                const mascotVariants = ['excited', 'celebrating', 'focused', 'neutral'];
-                const variant = mascotVariants[charSum % mascotVariants.length];
-                
-                return (
-                  <div className="flex flex-col items-center text-center">
-                    <Mascot variant={variant} size={100} />
-                    
-                    <h3 className="font-display text-3xl text-bone mt-4">
-                      {peekPlayer.username ? `@${peekPlayer.username}` : shortAddr(peekPlayer.address)}
-                    </h3>
-                    <p className="text-dim text-xs font-mono select-all mt-1">{peekPlayer.address}</p>
-                    
-                    <div className="mt-4 p-4 w-full bg-ash border border-ember rounded-2xl">
-                      <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Survival Type</p>
-                      <p className="font-display text-2xl" style={{ color: profileType.color }}>
-                        {profileType.emoji} {profileType.name}
-                      </p>
-                      <p className="text-bone/90 font-mono text-xs mt-2 italic">"{profileType.tagline}"</p>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 w-full mt-3">
-                      <div className="bg-ash border border-ember rounded-2xl p-3">
-                        <p className="text-dim text-[10px] font-mono uppercase">Status</p>
-                        <p className="text-neon font-mono text-sm mt-1">✓ Active Cohort</p>
-                      </div>
-                      <div className="bg-ash border border-ember rounded-2xl p-3">
-                        <p className="text-dim text-[10px] font-mono uppercase">Registered</p>
-                        <p className="text-bone font-mono text-sm mt-1">
-                          {peekPlayer.reserved_at ? relTime(peekPlayer.reserved_at) : 'Day 1'}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <button
-                      onClick={() => setPeekPlayer(null)}
-                      className="mt-6 w-full py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
-                    >
-                      Close
-                    </button>
+              <div className="flex flex-col items-center text-center">
+                <Mascot variant="neutral" size={100} />
+
+                <h3 className="font-display text-3xl text-bone mt-4">
+                  {peekPlayer.username ? `@${peekPlayer.username}` : shortAddr(peekPlayer.address)}
+                </h3>
+                <p className="text-dim text-xs font-mono select-all mt-1">{peekPlayer.address}</p>
+
+                <div className="grid grid-cols-2 gap-3 w-full mt-4">
+                  <div className="bg-ash border border-ember rounded-2xl p-3">
+                    <p className="text-dim text-[10px] font-mono uppercase">Status</p>
+                    <p className="text-neon font-mono text-sm mt-1">✓ Active Cohort</p>
                   </div>
-                );
-              })()}
+                  <div className="bg-ash border border-ember rounded-2xl p-3">
+                    <p className="text-dim text-[10px] font-mono uppercase">Registered</p>
+                    <p className="text-bone font-mono text-sm mt-1">
+                      {peekPlayer.reserved_at ? relTime(peekPlayer.reserved_at) : 'Day 1'}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setPeekPlayer(null)}
+                  className="mt-6 w-full py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
+                >
+                  Close
+                </button>
+              </div>
             </motion.div>
           </>
         )}

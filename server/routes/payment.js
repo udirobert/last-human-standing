@@ -243,7 +243,11 @@ export default function paymentRoutes({
   // anonymous guest account and set a session cookie. The free
   // lottery is meant to be ultra-low-friction — no wallet required.
   // The guest can later upgrade by connecting a real wallet (SIWE).
-  router.post("/pay/free-entry", async (req, res) => {
+  // Rate-limited per IP: without this, a cookie-clearing loop can mint
+  // unlimited guest entries and poison the "provably fair" lottery pool.
+  router.post("/pay/free-entry",
+    rateLimit({ keyFn: (req) => `freeentry:${req.ip}`, limit: 3, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
     if (process.env.FREE_ENTRY_MODE !== "true") {
       return res.status(501).json({ error: "free_entry_not_available" });
     }

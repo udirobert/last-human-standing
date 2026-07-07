@@ -22,6 +22,11 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
 
   const [screen, setScreenRaw] = useState(() => {
     try {
+      // Deep links win over persisted state: share landing pages and push
+      // notification clicks open /?screen=feed (etc.) to land on the drama.
+      const urlScreen = new URLSearchParams(window.location.search).get("screen");
+      if (urlScreen && isValid(urlScreen)) return urlScreen;
+
       const raw = localStorage.getItem(KEY);
       const parsed = raw ? JSON.parse(raw) : null;
       const s = parsed?.screen ?? fallback;

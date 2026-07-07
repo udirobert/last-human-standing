@@ -202,6 +202,54 @@ async function navigationFallback(request) {
   }
 }
 
+// ---------- Push notifications ----------
+// The server sends VAPID web-push payloads shaped by server/lib/push.js:
+// { title, body, icon, badge, data: { type, day } }. Without these two
+// listeners a delivered push never renders — this IS the retention loop.
+
+self.addEventListener("push", (event) => {
+  let payload;
+  try {
+    payload = event.data ? event.data.json() : {};
+  } catch {
+    payload = { body: event.data ? event.data.text() : "" };
+  }
+
+  const title = payload.title || "Last Human Standing";
+  const options = {
+    body: payload.body || "",
+    icon: payload.icon || "/favicon.svg",
+    badge: payload.badge || "/favicon.svg",
+    tag: payload.data?.type ? `lhs-${payload.data.type}-${payload.data.day ?? ""}` : undefined,
+    data: payload.data || {},
+    vibrate: [30, 50, 100],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  // Route by notification type: verdicts/eliminations land on the feed,
+  // everything else lands on home.
+  const type = event.notification.data?.type;
+  const targetPath = type === "verdict" || type === "eliminated" ? "/?screen=feed" : "/";
+
+  event.waitUntil(
+    (async () => {
+      const clientList = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+      for (const client of clientList) {
+        if ("focus" in client) {
+          client.postMessage({ type: "PUSH_CLICKED", data: event.notification.data || {} });
+          return client.focus();
+        }
+      }
+      return self.clients.openWindow(targetPath);
+    })(),
+  );
+});
+
 // ---------- Background sync (where supported) ----------
 
 self.addEventListener("sync", (event) => {

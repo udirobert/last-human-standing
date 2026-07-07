@@ -15,7 +15,7 @@ function formatWindow(iso) {
 }
 
 export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
-  const { phase, isLive, currentDay, round, you } = useRound();
+  const { phase, isLive, isEnded, currentDay, round, you, winner } = useRound();
 
   // "Closing soon" pulse: recompute once a minute from a state
   // variable so the JSX is render-pure. (Date.now() in render
@@ -57,6 +57,65 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         <div className="mt-3">
           <TrustBadge size="md" />
         </div>
+      </motion.div>
+    );
+  }
+
+  if (isEnded) {
+    const youWon = Boolean(
+      winner?.address && you?.address && winner.address.toLowerCase() === you.address.toLowerCase(),
+    );
+    const winnerName = winner?.username
+      ? `@${winner.username}`
+      : winner?.address
+        ? `${winner.address.slice(0, 6)}…${winner.address.slice(-4)}`
+        : null;
+    const shareWin = async () => {
+      const text = youWon
+        ? `🏆 I am the LAST HUMAN STANDING. I outlasted the whole cohort.`
+        : `🏆 ${winnerName ?? "One human"} just won Last Human Standing. Next cohort is coming — get in.`;
+      const url = window.location.origin;
+      try {
+        if (navigator.share) {
+          await navigator.share({ text, url });
+        } else {
+          await navigator.clipboard.writeText(`${text} ${url}`);
+        }
+      } catch { /* user dismissed the share sheet */ }
+    };
+    return (
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="mx-5 mb-4 bg-smoke border border-amber/40 rounded-3xl p-6 text-center"
+      >
+        <p className="text-6xl mb-3">🏆</p>
+        {youWon ? (
+          <>
+            <p className="font-display text-3xl text-amber mb-1">YOU ARE THE LAST HUMAN STANDING</p>
+            <p className="text-dim text-sm font-mono">The pot is yours. Payout lands from the prize wallet.</p>
+          </>
+        ) : (
+          <>
+            <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Game over</p>
+            <p className="font-display text-3xl text-bone mb-1">
+              {winnerName ? `${winnerName} outlasted everyone` : "The cohort has ended"}
+            </p>
+            <p className="text-dim text-sm font-mono">One human took the pot. The next cohort is coming.</p>
+          </>
+        )}
+        <button
+          onClick={shareWin}
+          className="w-full mt-4 py-4 rounded-2xl bg-amber text-ash font-display text-xl tracking-widest active:scale-95 transition-transform"
+        >
+          {youWon ? "SHARE YOUR VICTORY" : "SHARE THE RESULT"}
+        </button>
+        <button
+          onClick={onViewFeed}
+          className="w-full mt-2 py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
+        >
+          Relive the final audit →
+        </button>
       </motion.div>
     );
   }
@@ -113,14 +172,29 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           <p className="text-dim text-xs font-mono mt-1">You can still audit, vote, and chat.</p>
         </div>
       ) : checkedIn ? (
-        <div className="bg-neon/10 border border-neon/30 rounded-xl p-3 mb-3">
-          <p className="font-display text-xl text-neon">
-            {survived ? `Surviving · Rank #${rank ?? "—"}` : `Checked in · Rank #${rank ?? "—"}`}
-          </p>
-          <p className="text-dim text-xs font-mono mt-1">
-            {survived ? "Hold your spot — crowd audit runs after check-in closes." : "At risk until day closes."}
-          </p>
-        </div>
+        round?.status === "closed" ? (
+          <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3 mb-3`}>
+            <p className={`font-display text-xl ${survived ? "text-neon" : "text-blood"}`}>
+              {survived ? `Verdict is in — you made the cut ✅` : `Verdict is in — you're out 💀`}
+            </p>
+            <p className="text-dim text-xs font-mono mt-1">
+              {survived
+                ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}. Next theme drops soon.`
+                : "The crowd has spoken. You're on the jury now — accurate votes count double."}
+            </p>
+          </div>
+        ) : (
+          <div className="bg-neon/10 border border-neon/30 rounded-xl p-3 mb-3">
+            <p className="font-display text-xl text-neon">
+              {survived ? `Surviving · Rank #${rank ?? "—"}` : `Checked in · Rank #${rank ?? "—"}`}
+            </p>
+            <p className="text-dim text-xs font-mono mt-1">
+              {survived
+                ? "Hold your spot — the audit verdict lands when the window closes. Flagged players get replaced."
+                : "At risk until day closes — if the audit disqualifies a survivor, you inherit their slot."}
+            </p>
+          </div>
+        )
       ) : isSpectator ? (
         <div className="space-y-2 mb-3">
           <div className="bg-ash/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
