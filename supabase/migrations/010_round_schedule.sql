@@ -2,7 +2,7 @@
 --
 -- Creates the 5 daily rounds starting at GAME_LAUNCH_AT (2026-07-14T18:00:00Z).
 -- Each round is open for 24 hours. The survival cap is left at the default
--- (25) so advance_rounds() applies the decay schedule (25→12→6→3→1) when
+-- (40) so advance_rounds() applies the decay schedule (40→20→8→3→1) when
 -- the round opens. Admin can override per-round before opening.
 --
 -- Day themes are chosen to escalate in difficulty:
@@ -15,7 +15,7 @@
 -- Idempotent: only insert if the round doesn't already exist.
 insert into public.rounds (day, name, prompt, place_type, survival_cap, opens_at, closes_at, status)
 select
-  d.day, d.name, d.prompt, d.place_type, 25, d.opens_at, d.closes_at, 'scheduled'
+  d.day, d.name, d.prompt, d.place_type, 40, d.opens_at, d.closes_at, 'scheduled'
 from (values
   (1, 'AT A CAFÉ',      'Find a café anywhere in the world. Snap your proof.',         'AT A CAFÉ',
    '2026-07-14T18:00:00Z'::timestamptz, '2026-07-15T18:00:00Z'::timestamptz),

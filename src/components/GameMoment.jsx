@@ -331,11 +331,17 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
           <p className="font-mono text-amber text-sm uppercase tracking-widest mb-2">
             ⚖️ You're the jury now
           </p>
-          <p className="text-bone font-mono text-xs leading-relaxed mb-3">
+          <p className="text-bone font-mono text-xs leading-relaxed mb-2">
             Your votes decide who survives. Get 80% accuracy on 5+ votes and your
             votes count <span className="text-amber">×2</span> — plus
             lottery tickets for next cohort.
           </p>
+          {/* Wildcard hope — keeps eliminated players engaged */}
+          {Number(currentDay) < 4 && (
+            <p className="text-purple-300 font-mono text-[10px] leading-relaxed mb-2 pt-2 border-t border-amber/20">
+              🎭 Not over yet: on Day 4, the jury can revive one eliminated player. Keep voting to stay visible.
+            </p>
+          )}
           <button
             onClick={onDismiss}
             className="w-full py-3 rounded-xl bg-amber/20 border border-amber/50 text-amber font-display text-sm tracking-widest active:scale-[0.97] transition-transform"

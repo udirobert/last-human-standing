@@ -60,8 +60,8 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,h
   .filter(Boolean);
 
 const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200);
-const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 25);
-const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 10);
+const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 8);
+const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 5);
 const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 60);
 const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30);
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
@@ -86,16 +86,16 @@ const LOTTERY_MAX_DELAY_HOURS = Number(process.env.LOTTERY_MAX_DELAY_HOURS || 6)
 
 const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
-const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
+const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 40);
 
-// Cap decay schedule: Day 1: 25, Day 2: 12, Day 3: 6, Day 4: 3, Day 5+: 1.
+// Cap decay schedule: Day 1: 40, Day 2: 20, Day 3: 8, Day 4: 3, Day 5+: 1.
 // Mirrors the SQL function survival_cap_for_day() — used when the round
 // row doesn't have an explicit override (admin can set a custom cap
 // per-round and it will be respected).
 function survivalCapForDay(day) {
-  if (day <= 1) return 25;
-  if (day === 2) return 12;
-  if (day === 3) return 6;
+  if (day <= 1) return 40;
+  if (day === 2) return 20;
+  if (day === 3) return 8;
   if (day === 4) return 3;
   return 1;
 }
@@ -181,14 +181,51 @@ async function autoAdvanceRounds() {
     }
     const result = data ?? { opened: [], closed: [], errors: [] };
 
-    // Notify subscribing users when rounds open
+    // Notify subscribing users when rounds open — personalized per player
     for (const r of result.opened ?? []) {
       log("round_auto_opened", { day: r.day });
-      broadcastPush(supabaseAdmin, {
-        title: "New round open!",
-        body: `Day ${r.day} check-in is now live. Find your spot.`,
-        data: { type: "round_opened", day: r.day },
-      }).catch((e) => log("push_error", { where: "round_opened", error: String(e) }));
+      const themeName = r.name || `Day ${r.day}`;
+      const themePrompt = r.prompt || "Find your spot and snap your proof.";
+
+      // Personalized push: survivors get "you're still alive" + theme,
+      // eliminated players get "vote in the feed" nudge, new users get generic.
+      try {
+        const { data: allUsers } = await supabaseAdmin
+          .from("users")
+          .select("address,paid,eliminated,eliminated_at_day")
+          .eq("paid", true);
+
+        for (const u of allUsers || []) {
+          if (u.eliminated) {
+            // Jury member — nudge to vote
+            sendPushToAddress(supabaseAdmin, u.address, {
+              title: `⚖️ Day ${r.day} is live`,
+              body: `${themeName}: ${themePrompt} You're the jury — audit submissions in the feed.`,
+              data: { type: "round_opened_jury", day: r.day },
+            }).catch(() => {});
+          } else {
+            // Survivor — "you're still alive"
+            sendPushToAddress(supabaseAdmin, u.address, {
+              title: `☀️ Day ${r.day}: You're still in`,
+              body: `${themeName}: ${themePrompt} Check in before the cap shrinks.`,
+              data: { type: "round_opened_alive", day: r.day },
+            }).catch(() => {});
+          }
+        }
+        // Also notify non-paid users (lottery/waitlist) with the generic broadcast
+        broadcastPush(supabaseAdmin, {
+          title: "New round open!",
+          body: `Day ${r.day} check-in is now live. ${themeName}.`,
+          data: { type: "round_opened", day: r.day },
+        }).catch((e) => log("push_error", { where: "round_opened", error: String(e) }));
+      } catch (e) {
+        // Fallback to broadcast if personalized fails
+        broadcastPush(supabaseAdmin, {
+          title: "New round open!",
+          body: `Day ${r.day} check-in is now live. Find your spot.`,
+          data: { type: "round_opened", day: r.day },
+        }).catch(() => {});
+      }
 
       // Seed chat with a daily theme prompt so the lobby isn't empty.
       // Uses the round's prompt if available, falls back to a generic icebreaker.

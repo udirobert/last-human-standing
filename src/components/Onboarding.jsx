@@ -549,19 +549,24 @@ export default function Onboarding({ onEnter }) {
                   </StageSection>
                 )}
 
+                {/* Practice vote — teaches the mechanic before real voting */}
+                <StageSection index={3} className="bg-smoke/70 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
+                  <PracticeVote />
+                </StageSection>
+
                 {phase === "prelaunch" && launchAt && (
-                  <StageSection index={3} className="bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
+                  <StageSection index={4} className="bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
                     <LaunchCountdown targetIso={launchAt} />
                   </StageSection>
                 )}
 
-                <StageSection index={4} className="text-center">
+                <StageSection index={5} className="text-center">
                   <p className="text-dim text-xs font-mono max-w-xs mx-auto">
                     Share your link, check the leaderboard, and wait for Day 1.
                   </p>
                 </StageSection>
 
-                <StageSection index={5}>
+                <StageSection index={6}>
                   <button
                     type="button"
                     onClick={() => { markOnboardingDone(); onEnter(); }}
@@ -575,6 +580,102 @@ export default function Onboarding({ onEnter }) {
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/**
+ * PracticeVote — a sample submission that teaches the HUMAN/SUS voting
+ * mechanic before the player encounters real submissions. Shows one
+ * example, lets them vote, then reveals the answer with explanation.
+ */
+function PracticeVote() {
+  const [vote, setVote] = useState(null);
+  const [revealed, setRevealed] = useState(false);
+
+  // Sample: a real café photo with GPS and a specific caption
+  const sample = {
+    caption: "Flat white at my local in Lisbon. Day 1 lets go ☕",
+    location: "Lisbon, Portugal",
+    gpsShared: true,
+    mediaUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=300&fit=crop",
+    answer: "real",
+    explanation: "This was voted HUMAN. Real location, GPS shared, specific caption with city name. These are the signals voters look for.",
+  };
+
+  const handleVote = (v) => {
+    if (revealed) return;
+    setVote(v);
+    setRevealed(true);
+  };
+
+  const correct = vote === sample.answer;
+
+  return (
+    <div>
+      <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">
+        🔍 Practice vote
+      </p>
+      <p className="text-dim text-[10px] font-mono mb-3 text-center">
+        Try it — vote HUMAN or SUS. No stakes, just learning.
+      </p>
+
+      {/* Sample submission */}
+      <div className="bg-ash/60 rounded-xl overflow-hidden border border-ember/30">
+        <img
+          src={sample.mediaUrl}
+          alt="Café submission"
+          className="w-full h-40 object-cover"
+          loading="lazy"
+        />
+        <div className="p-3">
+          <p className="text-bone font-mono text-xs mb-1">{sample.caption}</p>
+          <p className="text-dim font-mono text-[10px]">
+            📍 {sample.location} {sample.gpsShared && "· GPS ✓"}
+          </p>
+        </div>
+      </div>
+
+      {/* Vote buttons or reveal */}
+      {!revealed ? (
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            onClick={() => handleVote("real")}
+            className="py-2.5 rounded-xl bg-neon/10 border border-neon/40 text-neon font-mono text-xs font-bold tracking-wide active:scale-95 transition-transform"
+          >
+            🧍 HUMAN
+          </button>
+          <button
+            onClick={() => handleVote("fake")}
+            className="py-2.5 rounded-xl bg-blood/10 border border-blood/40 text-blood font-mono text-xs font-bold tracking-wide active:scale-95 transition-transform"
+          >
+            🚫 SUS
+          </button>
+        </div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mt-3 space-y-2"
+        >
+          <div className={`rounded-xl p-3 text-center border ${
+            correct ? "bg-neon/10 border-neon/40" : "bg-blood/10 border-blood/40"
+          }`}>
+            <p className={`font-display text-sm ${correct ? "text-neon" : "text-blood"}`}>
+              {correct ? "✓ Correct!" : "✗ Not quite"}
+            </p>
+            <p className="text-dim text-[10px] font-mono mt-1 leading-relaxed">
+              {sample.explanation}
+            </p>
+          </div>
+          <button
+            onClick={() => { setVote(null); setRevealed(false); }}
+            className="w-full py-2 rounded-lg bg-smoke border border-ember text-dim font-mono text-[10px] active:scale-95 transition-transform"
+          >
+            ↻ Try again
+          </button>
+        </motion.div>
+      )}
     </div>
   );
 }

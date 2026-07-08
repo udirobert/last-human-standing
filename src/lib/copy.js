@@ -75,6 +75,12 @@ export const RULES = [
     body: "Each day the cap shrinks. The crowd eliminates the weakest. Outlast them all and the pot is yours.",
     icon: "🏆",
   },
+  {
+    n: "05",
+    title: "WILDCARD",
+    body: "Eliminated? On Day 4 the jury votes to revive one player. Keep voting — your detective rank makes you visible for revival.",
+    icon: "🎭",
+  },
 ];
 
 export const FAQS = [
@@ -88,7 +94,11 @@ export const FAQS = [
   },
   {
     q: "What if I miss a day?",
-    a: "You're out. But you join the jury — your votes count double.",
+    a: "You're out. But you join the jury — your votes count double. And on Day 4, the jury can revive one eliminated player back into the game.",
+  },
+  {
+    q: "Can I come back after being eliminated?",
+    a: "Yes! The Day 4 wildcard revival lets the jury vote one player back in. Keep voting accurately to stay visible — the jury favors players with high detective rank and long streaks.",
   },
   {
     q: "Any country?",

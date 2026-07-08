@@ -31,9 +31,9 @@ function relTime(iso) {
 
 // Default cap-shrink schedule for the pilot — shown as a roadmap during pre-launch.
 const ELIM_SCHEDULE = [
-  { day: 1, cap: 25, label: 'Day 1' },
-  { day: 2, cap: 12, label: 'Day 2' },
-  { day: 3, cap: 6, label: 'Day 3' },
+  { day: 1, cap: 40, label: 'Day 1' },
+  { day: 2, cap: 20, label: 'Day 2' },
+  { day: 3, cap: 8, label: 'Day 3' },
   { day: 4, cap: 3, label: 'Day 4' },
   { day: 5, cap: 1, label: 'Final' },
 ];

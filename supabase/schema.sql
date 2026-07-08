@@ -648,19 +648,19 @@ create policy "checkins_service_delete" on storage.objects
 
 -- =============== Cap decay: survival cap shrinks daily ===============
 -- Returns the survival cap for a given day number.
--- Day 1: 25, Day 2: 12, Day 3: 6, Day 4: 3, Day 5+: 1
+-- Day 1: 40, Day 2: 20, Day 3: 8, Day 4: 3, Day 5+: 1
 -- Admin can still override per-round by setting survival_cap manually
 -- before the round opens; advance_rounds only sets it if it's still
--- the default (25).
+-- the default (40).
 create or replace function public.survival_cap_for_day(p_day int)
 returns int
 language sql
 immutable
 as $$
   select case
-    when p_day <= 1 then 25
-    when p_day = 2 then 12
-    when p_day = 3 then 6
+    when p_day <= 1 then 40
+    when p_day = 2 then 20
+    when p_day = 3 then 8
     when p_day = 4 then 3
     else 1
   end;
@@ -698,8 +698,8 @@ begin
         opens_ms := trunc(Extract(epoch from round_row.opens_at)) * 1000;
         if now_ms >= opens_ms then
           -- Set the decayed cap if the admin hasn't overridden it
-          -- (default is 25; if it's still 25, apply the decay schedule).
-          if round_row.survival_cap = 25 then
+          -- (default is 40; if it's still 40, apply the decay schedule).
+          if round_row.survival_cap = 40 then
             update public.rounds
               set status = 'open',
                   survival_cap = public.survival_cap_for_day(round_row.day),
