@@ -342,6 +342,16 @@ async function notifyDayClosed(r) {
     data: { type: "verdict", day },
   }).catch(() => {});
 
+  // Day 1 → Day 2 transition: infiltrator mode unlocks. This is a reveal
+  // moment — the temptation to cheat emerges after you've played honestly.
+  if (day === 1 && !r.winner) {
+    broadcastPush(supabaseAdmin, {
+      title: `🎭 Infiltrator mode unlocked`,
+      body: `Day 2: Submit a photo that could go either way. Trick the crowd → immunity + jury tickets. Get caught → you're out.`,
+      data: { type: "infiltrator_unlocked", day: 2 },
+    }).catch(() => {});
+  }
+
   if (r.winner) {
     broadcastPush(supabaseAdmin, {
       title: "🏆 We have a Last Human Standing",
@@ -1306,6 +1316,10 @@ app.post("/api/checkin",
     const username = ensureString(body.username, { field: "username", required: false, maxLength: 64 });
     const isInfiltrator = ensureBoolean(body.isInfiltrator, { field: "isInfiltrator" });
 
+    // Day 1 is honest-only — establishes a baseline so infiltrator attempts
+    // on Day 2+ are detectable. Server-side guard prevents client bypass.
+    const effectiveInfiltrator = day >= 2 ? isInfiltrator : false;
+
     const ok = await verifyMessage({ address, message, signature });
     if (!ok) return res.status(401).json({ error: "invalid_signature" });
 
@@ -1321,7 +1335,7 @@ app.post("/api/checkin",
       media_path: mediaPath,
       vote_quorum: dynamicVoteQuorum,
       status: "pending",
-      is_infiltrator: isInfiltrator,
+      is_infiltrator: effectiveInfiltrator,
     };
 
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });

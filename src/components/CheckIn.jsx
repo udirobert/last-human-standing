@@ -28,6 +28,10 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [submitError, setSubmitError] = useState(null);
   const [photoUploadFailed, setPhotoUploadFailed] = useState(false);
   const [infiltratorMode, setInfiltratorMode] = useState(false);
+  // Day 1 is honest-only — establishes a baseline so infiltrator attempts
+  // on Day 2+ are actually detectable. Also protects new players from
+  // instant DQ on their first check-in.
+  const infiltratorUnlocked = (currentDay ?? 1) >= 2;
   const [queuedCheckin, setQueuedCheckin] = useState(false);
   const { online, queueCheckin } = useOnlineStatus();
   const { markQueuedCheckin, clearQueuedCheckin } = useWorld();
@@ -372,39 +376,53 @@ export default function CheckIn({ onBack, onSubmit }) {
               )}
 
               {/* CHOOSE YOUR PATH — infiltrator mode is now a first-class
-                  choice, not a buried toggle. Two cards side by side. */}
+                  choice, not a buried toggle. Two cards side by side.
+                  Day 1 is honest-only to establish a baseline. */}
               <div className="mb-3">
-                <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-2 text-center">
-                  Choose your path
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {/* Honest */}
-                  <button
-                    onClick={() => setInfiltratorMode(false)}
-                    className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
-                      !infiltratorMode
-                        ? 'bg-neon/10 border-neon/50 text-neon'
-                        : 'bg-smoke border-ember text-dim'
-                    }`}
-                  >
-                    <p className="text-lg mb-0.5">🧍</p>
-                    <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
-                    <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
-                  </button>
-                  {/* Infiltrator */}
-                  <button
-                    onClick={() => setInfiltratorMode(true)}
-                    className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
-                      infiltratorMode
-                        ? 'bg-purple-500/20 border-purple-400/60 text-purple-300'
-                        : 'bg-smoke border-ember text-dim'
-                    }`}
-                  >
-                    <p className="text-lg mb-0.5">🎭</p>
-                    <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
-                    <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
-                  </button>
-                </div>
+                {infiltratorUnlocked ? (
+                  <>
+                    <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-2 text-center">
+                      Choose your path
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {/* Honest */}
+                      <button
+                        onClick={() => setInfiltratorMode(false)}
+                        className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
+                          !infiltratorMode
+                            ? 'bg-neon/10 border-neon/50 text-neon'
+                            : 'bg-smoke border-ember text-dim'
+                        }`}
+                      >
+                        <p className="text-lg mb-0.5">🧍</p>
+                        <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
+                        <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
+                      </button>
+                      {/* Infiltrator */}
+                      <button
+                        onClick={() => setInfiltratorMode(true)}
+                        className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
+                          infiltratorMode
+                            ? 'bg-purple-500/20 border-purple-400/60 text-purple-300'
+                            : 'bg-smoke border-ember text-dim'
+                        }`}
+                      >
+                        <p className="text-lg mb-0.5">🎭</p>
+                        <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
+                        <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-smoke border border-neon/20 rounded-xl p-3 text-center">
+                    <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
+                      🧍 Day 1 · Honest check-in
+                    </p>
+                    <p className="text-dim text-[10px] font-mono leading-relaxed">
+                      Infiltrator mode unlocks on Day 2. Today, just play it straight — establish your baseline.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {infiltratorMode && (
