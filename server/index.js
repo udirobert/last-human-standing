@@ -308,14 +308,30 @@ async function notifyDayClosed(r) {
     .from("users")
     .select("address")
     .eq("eliminated_at_day", day);
+  const survivalCap = r.survivalCap ?? r.cap ?? null;
   for (const u of eliminatedRows || []) {
     const wasDq = dq.has(u.address.toLowerCase());
+    // Near-miss detection: was their rank within 3 of the cap?
+    let nearMissBody = "";
+    if (!wasDq && survivalCap != null) {
+      const { data: ci } = await supabaseAdmin
+        .from("checkins")
+        .select("rank")
+        .eq("day", day)
+        .eq("address", u.address)
+        .maybeSingle();
+      const rank = Number(ci?.rank) || 0;
+      if (rank > survivalCap && rank <= survivalCap + 3) {
+        const spotsAway = rank - survivalCap;
+        nearMissBody = ` So close — ${spotsAway} ${spotsAway === 1 ? "spot" : "spots"} from survival. The next cohort is calling.`;
+      }
+    }
     sendPushToAddress(supabaseAdmin, u.address, {
       title: wasDq ? "Disqualified by the crowd 🚫" : "Eliminated 💀",
       body: wasDq
         ? `The audit flagged your Day ${day} photo. You're out — but the jury needs you: accurate votes count double and earn lottery tickets for the next cohort.`
-        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double and earn lottery tickets for the next cohort.`,
-      data: { type: "eliminated", day },
+        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double and earn lottery tickets for the next cohort.${nearMissBody}`,
+      data: { type: "eliminated", day, near_miss: Boolean(nearMissBody) },
     }).catch(() => {});
   }
 
@@ -414,6 +430,14 @@ async function notifyRankSnapshot() {
         .eq("address", p.address)
         .maybeSingle();
 
+      // Get their streak for loss aversion messaging
+      const { data: userRec } = await supabaseAdmin
+        .from("users")
+        .select("checkin_streak")
+        .eq("address", p.address)
+        .maybeSingle();
+      const streak = userRec?.checkin_streak ?? 0;
+
       if (ci) {
         // Already checked in — tell them their rank
         sendPushToAddress(supabaseAdmin, p.address, {
@@ -422,11 +446,14 @@ async function notifyRankSnapshot() {
           data: { type: "rank_snapshot", day: r.day },
         }).catch(() => {});
       } else {
-        // Haven't checked in — nudge them
+        // Haven't checked in — nudge them with streak loss aversion
+        const streakWarning = streak >= 2
+          ? `🔥 Your ${streak}-day streak is at risk. Don't lose it — check in now.`
+          : `${checkinCount ?? "?"} humans already checked in. Don't get ranked out — check in now.`;
         sendPushToAddress(supabaseAdmin, p.address, {
-          title: `⏰ Day ${r.day} is half over`,
-          body: `${checkinCount ?? "?"} humans already checked in. Don't get ranked out — check in now.`,
-          data: { type: "rank_snapshot", day: r.day },
+          title: streak >= 2 ? `🔥 Don't lose your streak` : `⏰ Day ${r.day} is half over`,
+          body: streakWarning,
+          data: { type: "rank_snapshot", day: r.day, streak_at_risk: streak >= 2 },
         }).catch(() => {});
       }
     }
@@ -1400,6 +1427,34 @@ app.post(
         if (ringReason) {
           log("anticheat_flag", { reason: ringReason, address: req.user.address, submissionId });
           await flagSubmission(supabaseAdmin, submissionId, ringReason, { voter: req.user.address });
+        }
+
+        // Reciprocity: notify the submission owner that someone voted on their photo.
+        // This creates a social obligation to return the favor — "they voted on mine,
+        // I should vote on theirs." Only fires once per submission (first vote only)
+        // to avoid spamming the owner.
+        try {
+          const { data: sub } = await supabaseAdmin
+            .from("submissions")
+            .select("address,day")
+            .eq("id", submissionId)
+            .maybeSingle();
+          if (sub?.address && sub.address.toLowerCase() !== req.user.address.toLowerCase()) {
+            // Check if this is the first vote on this submission (reciprocity is strongest on first interaction)
+            const { count: voteCount } = await supabaseAdmin
+              .from("votes")
+              .select("id", { count: "exact", head: true })
+              .eq("submission_id", submissionId);
+            if (voteCount === 1) {
+              sendPushToAddress(supabaseAdmin, sub.address, {
+                title: `👁️ Someone's auditing your photo`,
+                body: `A voter just rated your Day ${sub.day ?? "?"} submission. Return the favor — audit theirs in the feed.`,
+                data: { type: "reciprocity_vote", submissionId, day: sub.day },
+              }).catch(() => {});
+            }
+          }
+        } catch (e) {
+          log("reciprocity_notify_error", { submissionId, error: String(e) });
         }
 
         const countedVotes = { real: 0, fake: 0 };

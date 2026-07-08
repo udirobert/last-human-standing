@@ -191,6 +191,12 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
 
   const daysSurvived = currentDay ?? "—";
   const percentile = Math.round((Number(currentDay) || 1) * 100 / 5);
+  const rank = Number(result.rank) || 0;
+  const cap = Number(result.survivalCap) || 0;
+  // Near-miss: were you within 3 spots of the survival cap?
+  const nearMiss = rank > cap && rank <= cap + 3;
+  // How close were you? (spots away from survival)
+  const spotsAway = rank > cap ? rank - cap : 0;
 
   return (
     <motion.div
@@ -234,6 +240,20 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         <p className="text-dim font-mono text-sm">
           Rank #{result.rank} of {result.survivalCap} · Top {percentile}%
         </p>
+
+        {/* Near-miss banner — the most powerful re-engagement trigger */}
+        {nearMiss && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5, type: "spring", bounce: 0.3 }}
+            className="mt-3 inline-block px-4 py-2 rounded-full bg-amber/15 border border-amber/50"
+          >
+            <p className="font-mono text-amber text-xs tracking-wide">
+              So close — {spotsAway} {spotsAway === 1 ? "spot" : "spots"} from survival
+            </p>
+          </motion.div>
+        )}
       </motion.div>
 
       {/* Jury card — appears immediately, part of the moment */}
@@ -268,9 +288,20 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         transition={{ delay: 0.8, duration: 0.3 }}
         className="w-full max-w-sm mt-4 space-y-3 relative z-10"
       >
+        {/* Near-miss CTA — channel the frustration into the next cohort */}
+        {nearMiss && (
+          <button
+            onClick={onShare}
+            className="w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-amber bg-amber/10 border border-amber/40"
+          >
+            {shareCopied ? "✓ COPIED" : "🔥 CLAIM YOUR COMEBACK"}
+          </button>
+        )}
         <button
           onClick={onShare}
-          className="w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-bone bg-indigo/20 border border-indigo/40"
+          className={`w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-bone ${
+            nearMiss ? "bg-smoke/60 border border-ember/40 text-sm" : "bg-indigo/20 border border-indigo/40"
+          }`}
         >
           {shareCopied ? "✓ COPIED" : "SHARE YOUR RUN"}
         </button>
