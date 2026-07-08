@@ -69,6 +69,11 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
     transform: (json) => json.board ?? [],
     initial: [],
   });
+  const { data: detectiveBoard } = usePolling('/api/detective-board', {
+    intervalMs: 30_000,
+    transform: (json) => json.board ?? [],
+    initial: [],
+  });
   const loading = ckLoading;
 
   const survivors = checkins.filter((c) => c.survived);
@@ -164,6 +169,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             : [
                 { id: 'today', label: 'Today' },
                 { id: 'late', label: 'Too late' },
+                { id: 'detectives', label: 'Detectives' },
               ]
           ).map((t) => (
             <button
@@ -443,6 +449,63 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 <p className="font-mono text-dim text-xs">{c.distance_m != null ? `${Math.round(c.distance_m)}m` : ''}</p>
               </motion.div>
             ))
+          )}
+        </div>
+      )}
+
+      {isLive && tab === 'detectives' && (
+        <div className="px-5 space-y-2">
+          <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1">
+            Top detectives · min 5 votes
+          </p>
+          {detectiveBoard.length === 0 ? (
+            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
+              <p className="text-2xl mb-2">🔍</p>
+              <p className="text-dim text-sm font-mono">No detectives yet.</p>
+              <p className="text-bone text-xs font-mono mt-1">
+                Vote on 5 submissions to earn your rank.
+              </p>
+            </div>
+          ) : (
+            detectiveBoard.map((d, i) => {
+              const isYou = myAddr && d.address?.toLowerCase() === myAddr;
+              const rank = i + 1;
+              const title =
+                d.accuracy >= 90 ? 'Sherlock' :
+                d.accuracy >= 75 ? 'Bloodhound' :
+                d.accuracy >= 60 ? 'Junior Detective' :
+                'Rookie Juror';
+              return (
+                <motion.div
+                  key={d.address}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className={`flex items-center gap-3 rounded-2xl p-4 ${
+                    isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg ${
+                    rank <= 3 ? 'text-amber' : 'text-dim'
+                  }`}>
+                    {rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono text-sm ${isYou ? 'text-blood' : 'text-bone'}`}>
+                        {d.username || shortAddr(d.address)}
+                      </span>
+                      {isYou && <span className="font-mono text-blood text-xs">(you)</span>}
+                    </div>
+                    <p className="text-dim text-xs font-mono mt-0.5">{title}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-display text-xl text-neon tabular-nums">{d.accuracy}%</p>
+                    <p className="text-dim text-[9px] font-mono">{d.correct}/{d.total} · {d.juryTickets}⚖️</p>
+                  </div>
+                </motion.div>
+              );
+            })
           )}
         </div>
       )}

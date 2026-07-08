@@ -1058,6 +1058,37 @@ async function verifyWldTransfer(txHash, senderAddress, prizePoolAddress) {
   }
 }
 
+// Infiltrator success rate — cached 60s, used by the CheckIn screen
+// to show players the odds before they choose infiltrator mode.
+let infiltratorStatsCache = { value: null, fetchedAt: 0 };
+async function getInfiltratorStats() {
+  if (!supabaseAdmin) return null;
+  if (Date.now() - infiltratorStatsCache.fetchedAt < 60_000) return infiltratorStatsCache.value;
+
+  const { data: infiltrators } = await supabaseAdmin
+    .from("submissions")
+    .select("id,status")
+    .eq("is_infiltrator", true)
+    .in("status", ["verified", "flagged"]);
+
+  const total = infiltrators?.length ?? 0;
+  const succeeded = infiltrators?.filter(s => s.status === "verified").length ?? 0;
+  const successRate = total > 0 ? Math.round((succeeded / total) * 100) : null;
+
+  const value = { total, succeeded, successRate };
+  infiltratorStatsCache = { value, fetchedAt: Date.now() };
+  return value;
+}
+
+app.get("/api/infiltrator-stats", async (req, res) => {
+  try {
+    const stats = await getInfiltratorStats();
+    res.json({ ok: true, ...stats });
+  } catch (e) {
+    res.json({ ok: true, total: 0, succeeded: 0, successRate: null });
+  }
+});
+
 app.get("/api/stats", async (req, res) => {
   try {
     const prizePoolAddress = process.env.VITE_PRIZE_POOL_ADDRESS;
@@ -1588,6 +1619,117 @@ app.get("/api/voter-stats/:address", async (req, res) => {
     return res.json({ ok: true, address: addr, ...stats, juryTickets, isJury, juryWeight: isJury ? JURY_WEIGHT : 1 });
   } catch (e) {
     res.status(400).json({ error: "voter_stats_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Detective leaderboard — ranked by vote accuracy (min 5 resolved votes).
+// Drives jury engagement by making voting competitive.
+app.get("/api/detective-board", async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.json({ ok: true, board: [] });
+
+    // Get all voters with their votes
+    const { data: allVotes } = await supabaseAdmin
+      .from("votes")
+      .select("voter_address,submission_id,vote");
+
+    if (!allVotes?.length) return res.json({ ok: true, board: [] });
+
+    // Get all submissions to determine which votes were "resolved" (verified/flagged)
+    const submissionIds = [...new Set(allVotes.map(v => v.submission_id))];
+    const { data: subs } = await supabaseAdmin
+      .from("submissions")
+      .select("id,status")
+      .in("id", submissionIds);
+
+    const statusById = new Map((subs || []).map(s => [s.id, s.status]));
+
+    // Compute accuracy per voter
+    const voterMap = new Map(); // address -> { total, correct }
+    for (const v of allVotes) {
+      const status = statusById.get(v.submission_id);
+      if (status !== "verified" && status !== "flagged") continue;
+      const entry = voterMap.get(v.voter_address) || { total: 0, correct: 0 };
+      entry.total += 1;
+      if ((status === "verified" && v.vote === "real") || (status === "flagged" && v.vote === "fake")) {
+        entry.correct += 1;
+      }
+      voterMap.set(v.voter_address, entry);
+    }
+
+    // Filter to voters with >= 5 resolved votes, compute accuracy, sort
+    const MIN_VOTES = 5;
+    const board = [];
+    for (const [address, { total, correct }] of voterMap) {
+      if (total < MIN_VOTES) continue;
+      board.push({ address, total, correct, accuracy: Math.round((correct / total) * 100) });
+    }
+    board.sort((a, b) => b.accuracy - a.accuracy || b.total - a.total);
+
+    // Enrich with username and jury tickets (top 20 only)
+    const top20 = board.slice(0, 20);
+    if (top20.length > 0) {
+      const addresses = top20.map(b => b.address);
+      const { data: users } = await supabaseAdmin
+        .from("users")
+        .select("address,username,jury_tickets")
+        .in("address", addresses);
+      const userMap = new Map((users || []).map(u => [u.address.toLowerCase(), u]));
+      for (const b of top20) {
+        const u = userMap.get(b.address.toLowerCase());
+        b.username = u?.username ?? null;
+        b.juryTickets = u?.jury_tickets ?? 0;
+      }
+    }
+
+    res.json({ ok: true, board: top20 });
+  } catch (e) {
+    res.status(400).json({ error: "detective_board_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Vote breakdown for a player's submission on a specific day.
+// Used by the elimination moment to show "why was I eliminated."
+app.get("/api/my-verdict/:day", requireAuth, async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const day = Number(req.params.day) || 0;
+    const { data: sub } = await supabaseAdmin
+      .from("submissions")
+      .select("id,status,day,theme,caption,is_infiltrator")
+      .eq("address", req.user.address)
+      .eq("day", day)
+      .maybeSingle();
+    if (!sub) return res.json({ ok: true, verdict: null });
+
+    const { data: votes } = await supabaseAdmin
+      .from("votes")
+      .select("vote,weight")
+      .eq("submission_id", sub.id);
+    let real = 0, fake = 0;
+    for (const v of votes || []) {
+      const w = Number(v.weight) || 1;
+      if (v.vote === "real") real += w;
+      if (v.vote === "fake") fake += w;
+    }
+    const total = real + fake;
+    const realPct = total > 0 ? Math.round((real / total) * 100) : null;
+    const fakePct = total > 0 ? Math.round((fake / total) * 100) : null;
+
+    res.json({
+      ok: true,
+      verdict: {
+        submissionId: sub.id,
+        status: sub.status,
+        day: sub.day,
+        theme: sub.theme,
+        caption: sub.caption,
+        wasInfiltrator: sub.is_infiltrator,
+        votes: { real, fake, total, realPct, fakePct },
+      },
+    });
+  } catch (e) {
+    res.status(400).json({ error: "verdict_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

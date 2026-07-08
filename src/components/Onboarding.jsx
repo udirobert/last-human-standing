@@ -348,30 +348,6 @@ export default function Onboarding({ onEnter }) {
               </StageSection>
 
               <div className="mt-3 space-y-3 flex-1">
-                {/* Compact verify — one line + button, not a paragraph */}
-                {(tier !== "verified") && (
-                  <StageSection index={1} className="space-y-2">
-                    <div className="bg-smoke border border-neon/20 rounded-2xl p-3">
-                      <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-2">
-                        Verify to unlock voting
-                      </p>
-                      {!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
-                      {import.meta.env.VITE_ENABLE_SELF === "true" && (
-                        <div className={!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" ? "mt-2" : ""}>
-                          <Suspense fallback={<ScreenLoader kind="detail" />}>
-                            <SelfVerify />
-                          </Suspense>
-                        </div>
-                      )}
-                      {!isFarcaster && !import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
-                        <p className="text-dim text-[10px] font-mono text-center">
-                          Verification offline in this build.
-                        </p>
-                      )}
-                    </div>
-                  </StageSection>
-                )}
-
                 {!entryPaid && (
                   <>
                     {/* Prize reminder */}
@@ -548,19 +524,44 @@ export default function Onboarding({ onEnter }) {
                   <PushOptIn />
                 </StageSection>
 
+                {/* Verification power-up — reframed as a benefit, not a gate */}
+                {tier !== "verified" && (
+                  <StageSection index={2} className="bg-smoke/70 rounded-2xl p-4 border border-neon/30 backdrop-blur-sm">
+                    <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
+                      ⚡ Power-up: Verify your humanity
+                    </p>
+                    <p className="text-dim text-[11px] font-mono mb-3 leading-relaxed">
+                      Verified humans get <span className="text-neon">×2 voting power</span> as jury members and priority for cohort 2. Takes 30 seconds.
+                    </p>
+                    {!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" && <WorldIdVerify />}
+                    {import.meta.env.VITE_ENABLE_SELF === "true" && (
+                      <div className={!isFarcaster && import.meta.env.VITE_ENABLE_IDKIT === "true" ? "mt-2" : ""}>
+                        <Suspense fallback={<ScreenLoader kind="detail" />}>
+                          <SelfVerify />
+                        </Suspense>
+                      </div>
+                    )}
+                    {!isFarcaster && !import.meta.env.VITE_ENABLE_IDKIT && !import.meta.env.VITE_ENABLE_SELF && (
+                      <p className="text-dim text-[10px] font-mono text-center">
+                        Verification offline in this build.
+                      </p>
+                    )}
+                  </StageSection>
+                )}
+
                 {phase === "prelaunch" && launchAt && (
-                  <StageSection index={2} className="bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
+                  <StageSection index={3} className="bg-smoke/70 rounded-2xl p-3 border border-ember/40 backdrop-blur-sm">
                     <LaunchCountdown targetIso={launchAt} />
                   </StageSection>
                 )}
 
-                <StageSection index={3} className="text-center">
+                <StageSection index={4} className="text-center">
                   <p className="text-dim text-xs font-mono max-w-xs mx-auto">
                     Share your link, check the leaderboard, and wait for Day 1.
                   </p>
                 </StageSection>
 
-                <StageSection index={4}>
+                <StageSection index={5}>
                   <button
                     type="button"
                     onClick={() => { markOnboardingDone(); onEnter(); }}

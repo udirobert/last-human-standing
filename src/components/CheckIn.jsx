@@ -16,6 +16,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn } = useWorld();
   const { unlockAchievement, checkAchievement, playSound } = useDelight();
+  const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
   const [gpsEnabled, setGpsEnabled] = useState(false);
@@ -62,6 +63,16 @@ export default function CheckIn({ onBack, onSubmit }) {
 
   useEffect(() => {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
+  }, []);
+
+  // Fetch infiltrator success rate for the path choice
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/infiltrator-stats", { credentials: "include" })
+      .then(r => r.json())
+      .then(data => { if (!cancelled) setInfiltratorStats(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
   }, []);
 
   // One share path for every surface: Farcaster gets composeCast, World App
@@ -409,6 +420,25 @@ export default function CheckIn({ onBack, onSubmit }) {
                       ❌ Flagged → DQ'd, immunity burned
                     </p>
                   </div>
+
+                  {/* Live success rate — turns a blind gamble into a calculated risk */}
+                  {infiltratorStats?.successRate != null && (
+                    <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20">
+                      📊 {infiltratorStats.successRate}% of infiltrators succeeded ({infiltratorStats.succeeded}/{infiltratorStats.total} attempts)
+                    </p>
+                  )}
+
+                  {/* Strategy examples — what "could go either way" means */}
+                  <div className="pt-1 border-t border-purple-400/20 space-y-1">
+                    <p className="text-dim text-[9px] font-mono uppercase tracking-widest mb-1">Strategy</p>
+                    <p className="text-neon/70 text-[10px] font-mono leading-relaxed">
+                      ✓ A real café photo from a different angle — looks staged but is genuine
+                    </p>
+                    <p className="text-blood/70 text-[10px] font-mono leading-relaxed">
+                      ✗ An obvious stock photo — voters spot it instantly
+                    </p>
+                  </div>
+
                   <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20">
                     💰 Voters who catch you get +2 tickets. Expect scrutiny.
                   </p>

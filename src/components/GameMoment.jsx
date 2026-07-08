@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 /**
@@ -189,6 +189,18 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
     }
   }, []);
 
+  // Fetch the vote breakdown for this day's submission — "why was I eliminated"
+  const [verdict, setVerdict] = useState(null);
+  useEffect(() => {
+    if (!currentDay) return;
+    let cancelled = false;
+    fetch(`/api/my-verdict/${currentDay}`, { credentials: "include" })
+      .then(r => r.json())
+      .then(data => { if (!cancelled) setVerdict(data?.verdict ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [currentDay]);
+
   const daysSurvived = currentDay ?? "—";
   const percentile = Math.round((Number(currentDay) || 1) * 100 / 5);
   const rank = Number(result.rank) || 0;
@@ -197,6 +209,9 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
   const nearMiss = rank > cap && rank <= cap + 3;
   // How close were you? (spots away from survival)
   const spotsAway = rank > cap ? rank - cap : 0;
+  // Was the elimination due to being flagged (DQ'd) vs ranked out?
+  const wasFlagged = verdict?.status === "flagged";
+  const wasInfiltrator = verdict?.wasInfiltrator;
 
   return (
     <motion.div
@@ -255,6 +270,55 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
           </motion.div>
         )}
       </motion.div>
+
+      {/* Verdict breakdown — "why was I eliminated" closure */}
+      {verdict && verdict.votes?.total > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, type: "spring", duration: 0.5 }}
+          className="w-full max-w-sm mt-4 relative z-10"
+        >
+          <div className="bg-smoke/80 border border-ember/40 rounded-2xl p-4">
+            <p className="font-mono text-dim text-[10px] uppercase tracking-widest mb-2 text-center">
+              {wasFlagged ? "Your submission was flagged" : "The verdict on your photo"}
+            </p>
+            {wasInfiltrator && (
+              <p className="text-purple-300 font-mono text-[10px] text-center mb-2">
+                🕶️ Infiltrator attempt — {wasFlagged ? "caught" : "trusted"}
+              </p>
+            )}
+            {/* Vote bar */}
+            <div className="flex h-6 rounded-lg overflow-hidden border border-ember/30">
+              {verdict.votes.realPct != null && verdict.votes.realPct > 0 && (
+                <div
+                  className="bg-neon/40 flex items-center justify-center"
+                  style={{ width: `${verdict.votes.realPct}%` }}
+                >
+                  <span className="text-neon font-mono text-[10px]">{verdict.votes.realPct}%</span>
+                </div>
+              )}
+              {verdict.votes.fakePct != null && verdict.votes.fakePct > 0 && (
+                <div
+                  className="bg-blood/40 flex items-center justify-center"
+                  style={{ width: `${verdict.votes.fakePct}%` }}
+                >
+                  <span className="text-blood font-mono text-[10px]">{verdict.votes.fakePct}%</span>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between mt-1.5">
+              <p className="text-neon font-mono text-[10px]">🧍 HUMAN · {verdict.votes.real}</p>
+              <p className="text-blood font-mono text-[10px]">SUS · {verdict.votes.fake}</p>
+            </div>
+            {wasFlagged && (
+              <p className="text-dim text-[10px] font-mono mt-2 text-center leading-relaxed">
+                The crowd voted SUS. {wasInfiltrator ? "Your bluff was called." : "Next time, try adding GPS or a landmark for credibility."}
+              </p>
+            )}
+          </div>
+        </motion.div>
+      )}
 
       {/* Jury card — appears immediately, part of the moment */}
       <motion.div
