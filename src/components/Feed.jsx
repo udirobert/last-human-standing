@@ -267,6 +267,14 @@ export default function Feed({ onBack, onCheckIn }) {
           </div>
         )}
 
+        {/* Dunning-Kruger challenge — for authed players who haven't voted yet */}
+        {you?.isAuthed && (you?.votesResolved ?? 0) === 0 && canVote && (
+          <div className="mx-5 mb-3 bg-blood/5 border border-blood/30 rounded-xl p-3 text-center">
+            <p className="font-display text-sm text-bone mb-1">Think you can spot the infiltrators?</p>
+            <p className="text-dim text-[10px] font-mono">Vote on 5 submissions to earn your detective rank. Get 80% accuracy and your votes count ×2.</p>
+          </div>
+        )}
+
         {/* Voting guide — what to look for */}
         <div className="mx-5 mb-3 bg-amber/5 border border-amber/20 rounded-xl p-3">
           <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1.5">🔍 What to look for</p>

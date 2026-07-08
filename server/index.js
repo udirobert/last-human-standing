@@ -1297,6 +1297,42 @@ app.post("/api/checkin",
     const { data, error } = await supabaseAdmin.from("submissions").insert(payloadToStore).select("*").single();
     if (error) return res.status(400).json({ error: "db_insert_failed", message: error.message });
 
+    // Social FOMO: notify the referrer that their referral just checked in.
+    // "Your referral is playing — are you?" creates social pressure to stay engaged.
+    try {
+      const { data: userRec } = await supabaseAdmin
+        .from("users")
+        .select("referred_by")
+        .eq("address", req.user.address)
+        .maybeSingle();
+      const referrerCode = userRec?.referred_by;
+      if (referrerCode) {
+        // Find the referrer's address by their referral code
+        const { data: referrer } = await supabaseAdmin
+          .from("users")
+          .select("address")
+          .eq("referral_code", referrerCode)
+          .maybeSingle();
+        if (referrer?.address && referrer.address.toLowerCase() !== req.user.address.toLowerCase()) {
+          // Only notify on the referrer's first check-in of the day (avoid spam)
+          const { count: refCheckinsToday } = await supabaseAdmin
+            .from("submissions")
+            .select("id", { count: "exact", head: true })
+            .eq("address", req.user.address)
+            .eq("day", day);
+          if (refCheckinsToday === 1) {
+            sendPushToAddress(supabaseAdmin, referrer.address, {
+              title: `👥 Your referral is playing`,
+              body: `Someone you invited just checked in for Day ${day}. Don't let them outlast you.`,
+              data: { type: "referral_checkin", day },
+            }).catch(() => {});
+          }
+        }
+      }
+    } catch (e) {
+      log("referral_fomo_notify_error", { address: req.user.address, error: String(e) });
+    }
+
     let mediaUrl = null;
     if (data.media_path) {
       if (SUPABASE_BUCKET_PRIVATE) {

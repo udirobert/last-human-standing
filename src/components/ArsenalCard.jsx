@@ -39,6 +39,10 @@ export default function ArsenalCard() {
     },
   ];
 
+  // Sunk cost framing: "X days invested" makes the accumulated effort visible
+  // at every glance, not just when the streak is at risk.
+  const daysInvested = you?.eliminatedAtDay ?? (you?.checkinStreak ?? 0);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -68,6 +72,12 @@ export default function ArsenalCard() {
           </div>
         ))}
       </div>
+      {/* Sunk cost footer — makes accumulated investment visible at every glance */}
+      {daysInvested > 0 && (
+        <p className="text-dim/70 text-[9px] font-mono mt-2 text-center border-t border-ember/20 pt-2">
+          {daysInvested} day{daysInvested !== 1 ? "s" : ""} invested — don't lose your progress
+        </p>
+      )}
     </motion.div>
   );
 }

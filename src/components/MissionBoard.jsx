@@ -89,19 +89,74 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         animate={{ opacity: 1, scale: 1 }}
         className="mx-5 mb-4 bg-smoke border border-amber/40 rounded-3xl p-6 text-center"
       >
-        <p className="text-6xl mb-3">🏆</p>
+        {/* Winner trophy with cinematic glow */}
+        <motion.div
+          initial={{ scale: 0, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", duration: 0.8, bounce: 0.4 }}
+          className="mb-3"
+        >
+          <span className="text-7xl inline-block">🏆</span>
+        </motion.div>
+
         {youWon ? (
           <>
-            <p className="font-display text-3xl text-amber mb-1">YOU ARE THE LAST HUMAN STANDING</p>
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="font-display text-3xl text-amber mb-1 animate-glow"
+            >
+              YOU ARE THE LAST HUMAN STANDING
+            </motion.p>
             <p className="text-dim text-sm font-mono">The pot is yours. Payout lands from the prize wallet.</p>
+
+            {/* Winner's personal stats — the "end" in peak-end rule */}
+            <div className="mt-4 grid grid-cols-3 gap-2 bg-ash/60 rounded-xl p-3">
+              <div>
+                <p className="font-display text-2xl text-amber">{currentDay ?? 5}</p>
+                <p className="text-dim text-[9px] font-mono uppercase">Days</p>
+              </div>
+              <div>
+                <p className="font-display text-2xl text-amber">{you?.checkinStreak ?? 0}🔥</p>
+                <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
+              </div>
+              <div>
+                <p className="font-display text-2xl text-amber">{you?.juryTickets ?? 0}</p>
+                <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
+              </div>
+            </div>
           </>
         ) : (
           <>
             <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Game over</p>
-            <p className="font-display text-3xl text-bone mb-1">
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="font-display text-3xl text-bone mb-1"
+            >
               {winnerName ? `${winnerName} outlasted everyone` : "The cohort has ended"}
-            </p>
+            </motion.p>
             <p className="text-dim text-sm font-mono">One human took the pot. The next cohort is coming.</p>
+
+            {/* Your run recap — make the end feel personal */}
+            {you?.isAuthed && (
+              <div className="mt-4 grid grid-cols-3 gap-2 bg-ash/60 rounded-xl p-3">
+                <div>
+                  <p className="font-display text-2xl text-bone">{you?.eliminatedAtDay ?? currentDay ?? "—"}</p>
+                  <p className="text-dim text-[9px] font-mono uppercase">Days</p>
+                </div>
+                <div>
+                  <p className="font-display text-2xl text-bone">{you?.checkinStreak ?? 0}🔥</p>
+                  <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
+                </div>
+                <div>
+                  <p className="font-display text-2xl text-bone">{you?.juryTickets ?? 0}</p>
+                  <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
+                </div>
+              </div>
+            )}
           </>
         )}
 
