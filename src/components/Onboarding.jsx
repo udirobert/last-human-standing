@@ -25,6 +25,7 @@ import StageShell, { StageSection, CohortTicker } from "./StageShell.jsx";
 import { RULE_ICON_MAP } from "./RuleIconMap.js";
 import StepThreeConfetti from "./StepThreeConfetti.jsx";
 import GlitchTitle from "./ui/GlitchTitle.jsx";
+import MotifFrieze from "./ui/MotifFrieze.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -158,6 +159,10 @@ export default function Onboarding({ onEnter }) {
                 <p className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed">
                   50 humans. 5 days. Last one takes the pot.
                 </p>
+                {/* Warm hand-painted human moments on the very first screen —
+                    the human counterweight to the cold hero, and a preview of
+                    the daily themes (docs/ART_DIRECTION.md). */}
+                <MotifFrieze className="mt-6 w-full" />
               </StageSection>
 
               <div className="mt-5 space-y-3">
