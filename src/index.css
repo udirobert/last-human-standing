@@ -44,9 +44,33 @@ html, body {
    on step 0) escapes the 430px game shell to become a full, responsive,
    cinematic experience. The game shell is untouched.
    ========================================================================== */
+/* `overscroll-behavior: none` above exists to stop mobile pull-to-refresh
+   bounce on the short, single-viewport GAME screens. The landing is real,
+   tall, scrollable content — that property was fully suppressing wheel-
+   driven scroll on it (confirmed empirically: toggling it to `auto` was the
+   only fix that unblocked desktop mouse-wheel scrolling). Restore normal
+   scroll behavior specifically while the landing is showing. html AND body
+   are both toggled from JS (Onboarding.jsx) since either can be the actual
+   scrolling box depending on browser. */
+html.landing-mode,
+body.landing-mode {
+  overscroll-behavior: auto;
+}
 body.landing-mode #root {
   max-width: 100%;
   box-shadow: none; /* no framed-panel treatment; the landing is full-bleed */
+  /* #root's own solid #0D0D0D (below, for the game shell) was painting over
+     the warm html/body gradient everywhere below LandingHero's own gradient
+     (which only covers the first viewport). This was THE actual remaining
+     cause of "still looks black once you scroll" — confirmed by walking the
+     paint chain at a scrolled hit-point and finding this exact rgb(13,13,13). */
+  background: transparent;
+}
+/* The Onboarding wrapper's solid near-black bg-ash was ALSO painting over it
+   at the next layer down. Let the warm html/body gradient show through
+   continuously for the whole landing, not just the hero. */
+body.landing-mode .onboarding-shell {
+  background: transparent;
 }
 body.landing-mode #root::before {
   display: none; /* the 430px-wide game noise strip has no place on the full-bleed landing */
@@ -64,8 +88,17 @@ body.landing-mode .tip-toast {
    ========================================================================== */
 @media (min-width: 480px) {
   html, body {
-    /* warm charcoal surface, not cold black */
-    background: radial-gradient(130% 100% at 50% -10%, #171310 0%, #0d0b09 55%, #070605 100%);
+    /* A genuinely warm, lit room — not merely "less black". The previous
+       stops (#17/#0d/#07) were still all in the near-black luminance range
+       regardless of their brown hue, and read as gloomy/foreboding rather
+       than warm. Confirmed by eye against the live site before committing.
+       background-attachment: fixed keeps the glow anchored to the VIEWPORT —
+       without it, the gradient sizes to the full (tall, scrollable) document
+       and reaches its near-black outer stop within the first screen, so
+       everything below just renders flat near-black regardless of the warmer
+       stops defined here. */
+    background: radial-gradient(140% 100% at 50% -10%, #3d2a1a 0%, #24170f 55%, #150e09 100%);
+    background-attachment: fixed;
   }
   /* warm paper grain across the whole surface (shows in the gutters) */
   body::before {
@@ -86,7 +119,7 @@ body.landing-mode .tip-toast {
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    background: radial-gradient(46% 55% at 50% 42%, rgba(255, 184, 0, 0.05), transparent 72%);
+    background: radial-gradient(50% 60% at 50% 40%, rgba(255, 184, 0, 0.12), transparent 72%);
   }
   /* lift the app off the surface: soft cast shadow + hairline warm edge */
   #root {

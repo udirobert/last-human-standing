@@ -91,8 +91,17 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
         justifyItems: "center",
         alignItems: "center",
         minHeight: "100svh",
-        overflowX: "hidden",
-        background: "radial-gradient(125% 90% at 50% 6%, #221812 0%, #150f0b 46%, #090705 100%)",
+        // NOTE: no overflow-x here. Setting only overflow-x (without overflow-y)
+        // makes the browser compute overflow-y as `auto`, silently turning this
+        // section into its own scroll container — one of several nested ones
+        // that, combined with overscroll-behavior:none, fully blocked desktop
+        // wheel scroll on the landing. The ambient motif layer below already
+        // clips its own horizontal bleed, so this isn't needed for that either.
+        // A genuinely warm, lit room — not merely "less black". The previous
+        // stops (#22/#15/#09) were still all in the near-black luminance
+        // range regardless of their brown hue, and read as gloomy rather than
+        // warm. Confirmed by eye against the live site before committing.
+        background: "radial-gradient(130% 95% at 50% 0%, #4a3221 0%, #2e2013 45%, #1a120c 100%)",
       }}
     >
       {/* warm paper grain */}
@@ -102,21 +111,24 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
         style={{ opacity: 0.05, mixBlendMode: "soft-light", backgroundImage: PAPER_GRAIN, backgroundSize: "300px 300px" }}
       />
 
-      {/* ambient world — bounded + clipped so it can never expand the page */}
+      {/* ambient world — bounded + clipped so it can never expand the page.
+          Opacity raised from ~0.12-0.16 (near-invisible ghosts) to 0.32 so
+          this actually reads as a living, warm world rather than vanishing
+          into the backdrop. */}
       <div aria-hidden="true" className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
-        <div className="absolute left-[3%] top-[15%]" style={{ opacity: 0.16 }}>
+        <div className="absolute left-[3%] top-[15%]" style={{ opacity: 0.32 }}>
           <ThemeMotif emoji="🌳" size={92} />
         </div>
-        <div className="absolute right-[5%] bottom-[11%]" style={{ opacity: 0.16 }}>
+        <div className="absolute right-[5%] bottom-[11%]" style={{ opacity: 0.32 }}>
           <DozingCat size={90} />
         </div>
-        <div className="hidden sm:block absolute right-[6%] top-[13%]" style={{ opacity: 0.14 }}>
+        <div className="hidden sm:block absolute right-[6%] top-[13%]" style={{ opacity: 0.3 }}>
           <CoffeeBrew size={78} />
         </div>
-        <div className="hidden sm:block absolute left-[7%] bottom-[14%]" style={{ opacity: 0.14 }}>
+        <div className="hidden sm:block absolute left-[7%] bottom-[14%]" style={{ opacity: 0.3 }}>
           <ThemeMotif emoji="🍜" size={74} />
         </div>
-        <div className="hidden md:block absolute left-1/2 top-[7%] -translate-x-1/2" style={{ opacity: 0.12 }}>
+        <div className="hidden md:block absolute left-1/2 top-[7%] -translate-x-1/2" style={{ opacity: 0.28 }}>
           <ThemeMotif emoji="🌅" size={80} />
         </div>
       </div>

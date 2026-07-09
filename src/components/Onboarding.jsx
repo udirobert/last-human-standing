@@ -76,7 +76,11 @@ export default function Onboarding({ onEnter }) {
   // game shell (see index.css body.landing-mode). Other steps stay phone-width.
   useEffect(() => {
     document.body.classList.toggle("landing-mode", step === 0);
-    return () => document.body.classList.remove("landing-mode");
+    document.documentElement.classList.toggle("landing-mode", step === 0);
+    return () => {
+      document.body.classList.remove("landing-mode");
+      document.documentElement.classList.remove("landing-mode");
+    };
   }, [step]);
 
   // Fetch live prize pot for the welcome screen. Best-effort; tolerates
@@ -125,27 +129,31 @@ export default function Onboarding({ onEnter }) {
   const stepLabels = ["Welcome", "Rules", "Reserve", "Done"];
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col font-body overflow-hidden">
-      {/* Minimal progress bar — 4 segments, no labels */}
-      <div className="flex items-center justify-center gap-1.5 pt-3 px-4">
-        {stepLabels.map((_, i) => (
-          <div
-            key={i}
-            className="h-1 rounded-full transition-all duration-300 ease-out"
-            style={{
-              width: i === step ? "24px" : "12px",
-              backgroundColor: i <= step ? "rgb(var(--color-blood))" : "rgb(var(--color-ember))",
-              opacity: i <= step ? 1 : 0.3,
-            }}
-          />
-        ))}
-      </div>
+    <div className="onboarding-shell min-h-screen bg-ash flex flex-col font-body overflow-hidden">
+      {/* Minimal progress bar — 4 segments, no labels. Hidden on step 0: the
+          cinematic landing is the trailer before the step flow begins, and
+          this cold system-chrome strip has no business poking above it. */}
+      {step !== 0 && (
+        <div className="flex items-center justify-center gap-1.5 pt-3 px-4">
+          {stepLabels.map((_, i) => (
+            <div
+              key={i}
+              className="h-1 rounded-full transition-all duration-300 ease-out"
+              style={{
+                width: i === step ? "24px" : "12px",
+                backgroundColor: i <= step ? "rgb(var(--color-blood))" : "rgb(var(--color-ember))",
+                opacity: i <= step ? 1 : 0.3,
+              }}
+            />
+          ))}
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {step === 0 && (
           <motion.div
             key="welcome"
-            className="w-full max-w-full overflow-x-hidden"
+            className="w-full max-w-full"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
