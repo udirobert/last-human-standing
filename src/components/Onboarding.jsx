@@ -25,6 +25,7 @@ import StageShell, { StageSection, CohortTicker } from "./StageShell.jsx";
 import { RULE_ICON_MAP } from "./RuleIconMap.js";
 import StepThreeConfetti from "./StepThreeConfetti.jsx";
 import LandingHero from "./ui/LandingHero.jsx";
+import DailyProofs from "./ui/DailyProofs.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -160,9 +161,14 @@ export default function Onboarding({ onEnter }) {
               }
             />
 
+            {/* The daily-theme wheel — the game's premise, shown in paint. */}
+            <div id="daily-proofs" className="pt-8 pb-4">
+              <DailyProofs />
+            </div>
+
             {/* How it works — surfaced (was hidden behind a collapsible), a
                 centered column inside the full-bleed landing. */}
-            <section id="how-it-works" className="max-w-[560px] mx-auto px-5 pb-20 pt-4 space-y-3">
+            <section id="how-it-works" className="max-w-[560px] mx-auto px-5 pb-20 pt-6 space-y-3">
               <p className="font-display text-3xl text-bone text-center tracking-wide mb-1">HOW IT WORKS</p>
               <StageSection index={0} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
                 <DayTimeline />

@@ -51,6 +51,10 @@ body.landing-mode #root {
 body.landing-mode #root::before {
   display: none; /* the 430px-wide game noise strip has no place on the full-bleed landing */
 }
+/* Survival tips are a game affordance — never over the landing's conversion CTAs */
+body.landing-mode .tip-toast {
+  display: none;
+}
 
 /* ============================================================================
    Desktop environment — mobile (≤ 479px) stays edge-to-edge and untouched.

@@ -48,10 +48,10 @@ export function TipToast({ tip, onDismiss }) {
   }, [onDismiss]);
 
   return (
-    <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
-      <div className="bg-gray-800 border border-gray-700 rounded-xl px-5 py-3 shadow-2xl max-w-sm">
-        <div className="text-xs text-amber-500 mb-1">💀 SURVIVAL TIP</div>
-        <div className="text-gray-200 text-sm">{tip}</div>
+    <div className="tip-toast fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up px-4">
+      <div className="bg-smoke border border-ember rounded-xl px-5 py-3 shadow-2xl max-w-sm">
+        <div className="text-xs text-amber font-mono tracking-widest uppercase mb-1">💀 Survival tip</div>
+        <div className="text-bone text-sm font-body">{tip}</div>
       </div>
     </div>
   );
