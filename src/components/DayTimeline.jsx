@@ -1,55 +1,59 @@
 import { motion } from "framer-motion";
 
 /**
- * Visual 4-step "how a day looks" timeline. Each step is a
- * connected node with an emoji, a keyword, and a single line of
- * body. Steps animate in sequence on mount with framer-motion
- * stagger.
- *
- * Pure: takes no data, just renders the canonical 4 steps.
+ * DayTimeline — "how it works" as a warm, editorial numbered flow for the
+ * landing narrative (docs/ART_DIRECTION.md). Four beats of a single day, big
+ * amber numerals down a connecting rail. Replaced the old cold ash-circle +
+ * emoji row. Animates in on scroll.
  */
 const STEPS = [
-  { num: "01", emoji: "☕", keyword: "THEME DROPS", body: "Daily place type. Find it anywhere on Earth." },
-  { num: "02", emoji: "📸", keyword: "SNAP IT", body: "Photo + optional GPS. Anywhere matching the theme." },
-  { num: "03", emoji: "🗳️", keyword: "VOTED IN", body: "Community votes HUMAN or SUS. Cap shrinks daily." },
-  { num: "04", emoji: "🏆", keyword: "LAST ONE", body: "25→12→6→3→1. Winner takes the pot." },
+  {
+    num: "01",
+    title: "A theme drops",
+    body: "Every morning a real-world place lands — a café, a park, a sunrise. Find it anywhere on Earth.",
+  },
+  {
+    num: "02",
+    title: "Snap your proof",
+    body: "A photo, optionally GPS-stamped, inside the check-in window. That's your proof you're still here.",
+  },
+  {
+    num: "03",
+    title: "The crowd votes",
+    body: "Everyone judges each proof — human or sus. The survival cap shrinks a little more every day.",
+  },
+  {
+    num: "04",
+    title: "Last human standing",
+    body: "50 → 25 → 12 → 6 → 3 → 1. Outlast the crowd for five days and the whole pot is yours.",
+  },
 ];
 
 export default function DayTimeline() {
   return (
     <div className="w-full">
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="font-mono text-amber text-[10px] tracking-widest uppercase mb-3 text-center"
-      >
-        A day in the life
-      </motion.p>
-      <div className="grid grid-cols-4 gap-2">
-        {STEPS.map((step, i) => (
-          <motion.div
-            key={step.num}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.12, type: "spring", damping: 18 }}
-            className="relative flex flex-col items-center"
-          >
-            {/* Connecting line on the right (except the last) */}
-            {i < STEPS.length - 1 && (
-              <div className="absolute top-5 left-1/2 w-full h-px bg-gradient-to-r from-amber/40 to-ember/20" aria-hidden />
-            )}
-            <div className="relative z-10 w-10 h-10 rounded-full bg-ash border border-amber/40 flex items-center justify-center text-xl shadow-[0_0_12px_rgba(255,184,0,0.2)]">
-              {step.emoji}
-            </div>
-            <p className="font-mono text-amber text-[9px] tracking-widest mt-2 text-center">
-              {step.keyword}
-            </p>
-            <p className="font-mono text-dim text-[10px] mt-1 text-center leading-tight px-1">
-              {step.body}
-            </p>
-          </motion.div>
-        ))}
-      </div>
+      {STEPS.map((step, i) => (
+        <motion.div
+          key={step.num}
+          initial={{ opacity: 0, x: -12 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, margin: "-40px" }}
+          transition={{ delay: i * 0.08, type: "spring", damping: 20 }}
+          className="flex gap-4"
+        >
+          {/* numeral + connecting rail */}
+          <div className="flex flex-col items-center">
+            <span className="font-display text-amber leading-none" style={{ fontSize: 34 }}>
+              {step.num}
+            </span>
+            {i < STEPS.length - 1 && <span className="w-px flex-1 my-1 bg-gradient-to-b from-amber/40 to-ember/10" />}
+          </div>
+          <div className={i < STEPS.length - 1 ? "pb-5" : ""}>
+            <p className="font-display text-bone text-xl tracking-wide leading-none">{step.title}</p>
+            <p className="font-body text-dim text-sm mt-1.5 leading-snug">{step.body}</p>
+          </div>
+        </motion.div>
+      ))}
     </div>
   );
 }

@@ -5,7 +5,6 @@ import { useRound } from "../world/RoundProvider.jsx";
 import Countdown from "./Countdown.jsx";
 import Mascot from "./Mascot.jsx";
 import TrustBadge from "./TrustBadge.jsx";
-import DailyPrompt from "./prelaunch/DailyPrompt.jsx";
 import EarlyBadge from "./prelaunch/EarlyBadge.jsx";
 import WorldIdVerify from "../world/WorldIdVerify.jsx";
 const SelfVerify = lazy(() => import("./SelfVerify.jsx"));
@@ -26,6 +25,7 @@ import { RULE_ICON_MAP } from "./RuleIconMap.js";
 import StepThreeConfetti from "./StepThreeConfetti.jsx";
 import LandingHero from "./ui/LandingHero.jsx";
 import DailyProofs from "./ui/DailyProofs.jsx";
+import ShrinkingPot from "./ui/ShrinkingPot.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -166,40 +166,39 @@ export default function Onboarding({ onEnter }) {
               <DailyProofs />
             </div>
 
-            {/* How it works — surfaced (was hidden behind a collapsible), a
-                centered column inside the full-bleed landing. */}
-            <section id="how-it-works" className="max-w-[560px] mx-auto px-5 pb-20 pt-6 space-y-3">
-              <p className="font-display text-3xl text-bone text-center tracking-wide mb-1">HOW IT WORKS</p>
-              <StageSection index={0} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
-                <DayTimeline />
-              </StageSection>
+            {/* How it works — the day's four beats. */}
+            <section id="how-it-works" className="max-w-[560px] mx-auto px-5 pt-6 pb-10">
+              <p className="font-display text-3xl text-bone text-center tracking-wide mb-5">HOW IT WORKS</p>
+              <DayTimeline />
+            </section>
 
-              <StageSection index={1} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
-                <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">The pot</p>
+            {/* The stakes — 50 → 1, and the pot. */}
+            <div className="pb-10">
+              <ShrinkingPot prizePool={pot} />
+            </div>
+
+            {/* On-chain detail + live proof + reserve. */}
+            <section className="max-w-[560px] mx-auto px-5 pb-20 space-y-3">
+              <div className="bg-smoke/40 rounded-2xl p-4 border border-ember/30">
+                <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">
+                  The pot, on-chain
+                </p>
                 <PrizePots prizePool={pot} />
-              </StageSection>
+              </div>
 
-              <StageSection index={2}>
-                <CohortTicker pollMs={15000} />
-              </StageSection>
+              <CohortTicker pollMs={15000} />
 
-              <StageSection index={3}>
-                <DailyPrompt />
-              </StageSection>
+              <motion.button
+                type="button"
+                onClick={() => setStep(1)}
+                className="w-full py-5 rounded-2xl bg-amber text-[#1a1206] font-body font-semibold text-lg active:scale-[0.97] transition-transform shadow-[0_10px_30px_-8px_rgba(255,184,0,0.5)]"
+              >
+                Reserve your slot →
+              </motion.button>
 
-              <StageSection index={4} className="pt-2">
-                <motion.button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="w-full py-5 rounded-2xl bg-amber text-[#1a1206] font-body font-semibold text-lg active:scale-[0.97] transition-transform shadow-[0_10px_30px_-8px_rgba(255,184,0,0.5)]"
-                >
-                  Reserve your slot →
-                </motion.button>
-              </StageSection>
-
-              <StageSection index={5} className="flex justify-center">
+              <div className="flex justify-center pt-1">
                 <TrustBadge size="sm" />
-              </StageSection>
+              </div>
             </section>
           </motion.div>
         )}
