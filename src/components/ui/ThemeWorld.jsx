@@ -1,6 +1,15 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import ThemeMotif from "./ThemeMotif.jsx";
+
+/**
+ * Living gouache clips per theme (Phase 1, baked + committed under /public).
+ * Seeded from each theme's painted motif so the video inherits the hand.
+ * Poster-first + lazy; a theme with no entry just uses the painted motif.
+ */
+const THEME_ASSETS = {
+  1: { video: "/motifs/cafe/cafe.mp4", poster: "/motifs/cafe/cafe-poster.jpg" }, // AT A CAFÉ
+};
 
 /**
  * ThemeWorld — the "dive into a theme" detail, opened by tapping a card in
@@ -18,6 +27,17 @@ import ThemeMotif from "./ThemeMotif.jsx";
  */
 export default function ThemeWorld({ theme, layoutId, onClose }) {
   const reduce = useReducedMotion();
+  const asset = THEME_ASSETS[theme.id];
+  const saveData = typeof navigator !== "undefined" && navigator.connection?.saveData;
+  const showVideo = Boolean(asset) && !reduce && !saveData;
+  // After the shared-element morph settles, dissolve the flat motif to reveal
+  // the living scene beneath — the "bloom" from icon to world.
+  const [bloom, setBloom] = useState(false);
+  useEffect(() => {
+    if (!asset) return undefined;
+    const t = setTimeout(() => setBloom(true), reduce ? 200 : 520);
+    return () => clearTimeout(t);
+  }, [asset, reduce]);
 
   // Escape to close; lock background scroll while open.
   useEffect(() => {
@@ -56,17 +76,46 @@ export default function ThemeWorld({ theme, layoutId, onClose }) {
         transition={{ type: "spring", duration: 0.45, bounce: 0.18 }}
         style={{ transformOrigin: "center" }}
       >
-        {/* HERO SLOT — Phase 1 living clip drops in here behind a motif poster. */}
-        <div className="relative mx-auto mb-4 flex items-center justify-center" style={{ minHeight: 150 }}>
-          <div
-            className="absolute inset-x-8 bottom-3 h-16 rounded-full blur-2xl"
-            style={{ background: `${theme.color}22` }}
-            aria-hidden="true"
-          />
-          <motion.div layout={!reduce} layoutId={layoutId} transition={spring} className="relative">
-            <ThemeMotif emoji={theme.emoji} size={132} label={theme.theme} />
-          </motion.div>
-        </div>
+        {/* HERO — living gouache scene (poster-first) that the flat motif blooms into. */}
+        {asset ? (
+          <div className="relative mx-auto mb-4 w-full aspect-square max-h-[340px] rounded-2xl overflow-hidden border border-ember/40">
+            <img src={asset.poster} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />
+            {showVideo && (
+              <video
+                className="absolute inset-0 w-full h-full object-cover"
+                src={asset.video}
+                poster={asset.poster}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="none"
+              />
+            )}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.div
+                layout={!reduce}
+                layoutId={layoutId}
+                animate={{ opacity: bloom ? 0 : 1 }}
+                transition={{ layout: spring, opacity: { duration: 0.4, ease: [0.23, 1, 0.32, 1] } }}
+                className="relative"
+              >
+                <ThemeMotif emoji={theme.emoji} size={132} label={theme.theme} />
+              </motion.div>
+            </div>
+          </div>
+        ) : (
+          <div className="relative mx-auto mb-4 flex items-center justify-center" style={{ minHeight: 150 }}>
+            <div
+              className="absolute inset-x-8 bottom-3 h-16 rounded-full blur-2xl"
+              style={{ background: `${theme.color}22` }}
+              aria-hidden="true"
+            />
+            <motion.div layout={!reduce} layoutId={layoutId} transition={spring} className="relative">
+              <ThemeMotif emoji={theme.emoji} size={132} label={theme.theme} />
+            </motion.div>
+          </div>
+        )}
 
         <p className="font-mono uppercase text-[11px] tracking-[0.2em]" style={{ color: theme.color }}>
           Today's proof
