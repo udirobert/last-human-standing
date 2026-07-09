@@ -11,9 +11,9 @@ import DozingCat from "./DozingCat.jsx";
  * A soft warm glow lights them from below and a faint shelf grounds them, so
  * the cluster reads as a lovingly-arranged still life, not a row of icons.
  */
-export default function MotifFrieze({ className = "" }) {
+export default function MotifFrieze({ className = "", style }) {
   return (
-    <div className={`relative ${className}`}>
+    <div className={`relative ${className}`} style={style}>
       {/* warm light pooling under the shelf */}
       <div className="absolute inset-x-4 bottom-1 h-14 bg-amber/15 blur-2xl rounded-full pointer-events-none" />
       <div className="relative flex items-end justify-center gap-1">

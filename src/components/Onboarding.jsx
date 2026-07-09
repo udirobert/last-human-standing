@@ -24,8 +24,7 @@ import AmbientBackdrop from "./AmbientBackdrop.jsx";
 import StageShell, { StageSection, CohortTicker } from "./StageShell.jsx";
 import { RULE_ICON_MAP } from "./RuleIconMap.js";
 import StepThreeConfetti from "./StepThreeConfetti.jsx";
-import GlitchTitle from "./ui/GlitchTitle.jsx";
-import MotifFrieze from "./ui/MotifFrieze.jsx";
+import LandingHero from "./ui/LandingHero.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -71,6 +70,13 @@ export default function Onboarding({ onEnter }) {
   const [referredBy] = useState(() => {
     try { return new URLSearchParams(window.location.search).get("ref") || null; } catch { return null; }
   });
+
+  // Step 0 is the full-bleed cinematic landing; it breaks out of the 430px
+  // game shell (see index.css body.landing-mode). Other steps stay phone-width.
+  useEffect(() => {
+    document.body.classList.toggle("landing-mode", step === 0);
+    return () => document.body.classList.remove("landing-mode");
+  }, [step]);
 
   // Fetch live prize pot for the welcome screen. Best-effort; tolerates
   // the endpoint being down by leaving pot as null (UI shows "loading…").
@@ -138,113 +144,57 @@ export default function Onboarding({ onEnter }) {
         {step === 0 && (
           <motion.div
             key="welcome"
+            className="w-full max-w-full overflow-x-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col"
           >
-            <StageShell
-              onBack={null}
-              faq
-              withAmbient
-              AmbientComponent={<AmbientBackdrop phase={phase} />}
-            >
-              <StageSection index={0} className="flex flex-col items-center text-center pt-2">
-                <Mascot variant="excited" size={120} />
-                <GlitchTitle
-                  text={"LAST HUMAN\nSTANDING"}
-                  className="font-display text-5xl text-bone mt-5 leading-none tracking-wider animate-glow"
-                  delay={0.15}
-                />
-                <p className="text-bone font-mono text-sm mt-3 max-w-xs leading-relaxed">
-                  50 humans. 5 days. Last one takes the pot.
-                </p>
-                {/* Warm hand-painted human moments on the very first screen —
-                    the human counterweight to the cold hero, and a preview of
-                    the daily themes (docs/ART_DIRECTION.md). */}
-                <MotifFrieze className="mt-6 w-full" />
+            {/* Full-bleed cinematic hero — the trailer (docs/ART_DIRECTION.md). */}
+            <LandingHero
+              targetIso={launchAt}
+              reservedCount={reservedCount}
+              cohortSize={cohortSize}
+              onReserve={() => setStep(1)}
+              onDetails={() =>
+                document.getElementById("how-it-works")?.scrollIntoView({ behavior: "smooth" })
+              }
+            />
+
+            {/* How it works — surfaced (was hidden behind a collapsible), a
+                centered column inside the full-bleed landing. */}
+            <section id="how-it-works" className="max-w-[560px] mx-auto px-5 pb-20 pt-4 space-y-3">
+              <p className="font-display text-3xl text-bone text-center tracking-wide mb-1">HOW IT WORKS</p>
+              <StageSection index={0} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
+                <DayTimeline />
               </StageSection>
 
-              <div className="mt-5 space-y-3">
-                {phase === "prelaunch" && launchAt && (
-                  <StageSection index={1} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
-                    <LaunchCountdown targetIso={launchAt} />
-                    <div className="mt-3">
-                      <p className="font-mono text-dim text-[10px] uppercase tracking-widest text-center mb-1">
-                        Cohort 1 · {cohortSize} humans
-                      </p>
-                      <p className="font-display text-3xl text-bone text-center tabular-nums">
-                        {reservedCount > 0 ? (
-                          <>
-                            {reservedCount.toLocaleString()}
-                            <span className="text-dim text-lg"> / {cohortSize} reserved</span>
-                          </>
-                        ) : (
-                          <span className="text-dim text-2xl">be the first</span>
-                        )}
-                      </p>
-                      <div className="mt-2 h-1.5 bg-ember rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${cohortPct}%` }}
-                          transition={{ duration: 0.8, ease: [0.23, 1, 0.32, 1] }}
-                          className="h-full bg-amber rounded-full"
-                        />
-                      </div>
-                    </div>
-                  </StageSection>
-                )}
+              <StageSection index={1} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
+                <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">The pot</p>
+                <PrizePots prizePool={pot} />
+              </StageSection>
 
-                {/* Collapsible "how it works" — keeps the welcome screen clean */}
-                <StageSection index={2}>
-                  <button
-                    type="button"
-                    onClick={() => setShowDetails(!showDetails)}
-                    className="w-full py-3 rounded-xl bg-smoke/40 border border-ember/30 text-dim font-mono text-xs tracking-widest uppercase active:scale-95 transition-transform"
-                  >
-                    {showDetails ? "Hide details" : "How it works ▾"}
-                  </button>
-                </StageSection>
+              <StageSection index={2}>
+                <CohortTicker pollMs={15000} />
+              </StageSection>
 
-                {showDetails && (
-                  <>
-                    <StageSection index={3} className="bg-smoke/60 rounded-2xl p-4 border border-ember/40 backdrop-blur-sm">
-                      <DayTimeline />
-                    </StageSection>
+              <StageSection index={3}>
+                <DailyPrompt />
+              </StageSection>
 
-                    <StageSection index={4} className="bg-smoke/40 rounded-2xl p-4 border border-ember/30 backdrop-blur-sm">
-                      <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2 text-center">The pot</p>
-                      <PrizePots prizePool={pot} />
-                    </StageSection>
+              <StageSection index={4} className="pt-2">
+                <motion.button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="w-full py-5 rounded-2xl bg-amber text-[#1a1206] font-body font-semibold text-lg active:scale-[0.97] transition-transform shadow-[0_10px_30px_-8px_rgba(255,184,0,0.5)]"
+                >
+                  Reserve your slot →
+                </motion.button>
+              </StageSection>
 
-                    <StageSection index={5}>
-                      <CohortTicker pollMs={15000} />
-                    </StageSection>
-
-                    <StageSection index={6}>
-                      <DailyPrompt />
-                    </StageSection>
-                  </>
-                )}
-
-                <StageSection index={7}>
-                  <motion.button
-                    initial={{ opacity: 0, transform: "translateY(12px)" }}
-                    animate={{ opacity: 1, transform: "translateY(0)" }}
-                    transition={{ delay: 0.85, duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
-                    type="button"
-                    onClick={() => setStep(1)}
-                    className="w-full py-5 rounded-2xl bg-blood text-bone font-display text-2xl tracking-widest active:scale-[0.97] transition-transform shadow-[0_0_24px_rgba(255,26,26,0.3)]"
-                  >
-                    HOW TO PLAY →
-                  </motion.button>
-                </StageSection>
-
-                <StageSection index={8} className="flex justify-center">
-                  <TrustBadge size="sm" />
-                </StageSection>
-              </div>
-            </StageShell>
+              <StageSection index={5} className="flex justify-center">
+                <TrustBadge size="sm" />
+              </StageSection>
+            </section>
           </motion.div>
         )}
 
