@@ -95,7 +95,8 @@
 
 ## 3. UI/UX — 🟡 Strong aesthetic, flow gaps and empty states
 
-### 3a. Visual design — ✅ Distinctive, consistent
+### 3a. Visual design — ✅ Distinctive, consistent (superseded — see below)
+> **Update (2026-07-09):** later playtest feedback found this aesthetic reads as *cold and robotic* — the opposite of "Last Human Standing." See [ART_DIRECTION.md](./ART_DIRECTION.md) for the diagnosis and the hand-painted human-motif language now layered on top. The system chrome below is kept intentionally; it's now one half of a deliberate cold-machine/warm-human contrast rather than the whole aesthetic.
 - **Aesthetic**: "Terminal horror meets cyberpunk" — `font-display`, `font-body`, `font-mono` tiering. Bone/blood/neon/ember palette. Very distinctive and memorable.
 - **Animations**: Framer Motion throughout — page transitions, card animations, countdown pulse. Premium feel.
 - **Mobile-first**: ✅ Touch targets generous, thumb-zone navigation, bottom nav.

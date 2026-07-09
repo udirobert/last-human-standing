@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
+import StreakBloom from "./ui/StreakBloom.jsx";
 
 /**
  * ArsenalCard — makes the player's "currency" visible.
@@ -30,7 +31,7 @@ export default function ArsenalCard() {
 
   const stats = [
     { label: "Jury Tickets", value: juryTickets, icon: "⚖️", tone: "amber" },
-    { label: "Streak", value: `${streak}🔥`, tone: "neon" },
+    { label: "Streak", value: `${streak}`, tone: "neon" },
     { label: "Referrals", value: referrals, tone: "bone" },
     {
       label: "Vote Accuracy",
@@ -52,11 +53,15 @@ export default function ArsenalCard() {
     >
       <div className="flex items-center justify-between mb-2">
         <p className="font-mono text-[10px] text-dim uppercase tracking-widest">Your Arsenal</p>
-        {isJury && (
-          <span className="font-mono text-[9px] text-amber bg-amber/10 px-2 py-0.5 rounded-full border border-amber/30">
-            ⚖️ JURY · ×2
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {isJury && (
+            <span className="font-mono text-[9px] text-amber bg-amber/10 px-2 py-0.5 rounded-full border border-amber/30">
+              ⚖️ JURY · ×2
+            </span>
+          )}
+          {/* The streak, growing — a plant tended by showing up (docs/ART_DIRECTION.md) */}
+          {streak > 0 && <StreakBloom streak={streak} size={38} className="-my-2 shrink-0" />}
+        </div>
       </div>
       <div className="grid grid-cols-4 gap-2">
         {stats.map((s) => (

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import DozingCat from "./ui/DozingCat.jsx";
 
 /**
  * SpectatorChip — a small affordance that surfaces when the user
@@ -27,8 +28,8 @@ export default function SpectatorChip({
   if (isEliminated) return null;
 
   const label = isCohort2Priority
-    ? "🎟 Cohort 2 priority"
-    : "🔭 Spectator";
+    ? "Cohort 2 priority"
+    : "Spectator";
 
   const sub = isCohort2Priority
     ? "You're first in line for cohort 2 when signups open"
@@ -46,19 +47,25 @@ export default function SpectatorChip({
         } transition-colors active:scale-[0.99]`}
         aria-expanded={expanded}
       >
-        <div className="flex items-center justify-between gap-2">
-          <span
-            className={`font-mono text-[11px] tracking-widest ${
-              isCohort2Priority ? "text-amber" : "text-dim"
-            }`}
-          >
-            {label}
-          </span>
-          <span className="text-dim text-[10px] font-mono">
-            {expanded ? "−" : "+"}
-          </span>
+        <div className="flex items-center gap-2.5">
+          {/* A cat, keeping you company while you watch (docs/ART_DIRECTION.md) */}
+          <DozingCat size={46} className="-my-1 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-2">
+              <span
+                className={`font-mono text-[11px] tracking-widest ${
+                  isCohort2Priority ? "text-amber" : "text-dim"
+                }`}
+              >
+                {label}
+              </span>
+              <span className="text-dim text-[10px] font-mono">
+                {expanded ? "−" : "+"}
+              </span>
+            </div>
+            <p className="text-dim text-[10px] font-mono mt-0.5">{sub}</p>
+          </div>
         </div>
-        <p className="text-dim text-[10px] font-mono mt-0.5">{sub}</p>
       </button>
       {expanded && isSpectator && onReserve && (
         <button

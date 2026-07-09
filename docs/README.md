@@ -47,6 +47,7 @@ Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLO
 1. **🔊 Immersive Audio Layer (Sound Design)**: Zero-latency synthetic sound effects generated dynamically via the Web Audio API for highly responsive UI sounds (button click, success, milestone, errors, and custom mascot responses) without requiring audio asset downloads.
 2. **✨ Focused Onboarding Flow**: A tight 4-step flow — Welcome → Rules → Reserve/pay 1 WLD → celebration. One decision, no subscriptions.
 3. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID and Self Protocol (both live). See [HUMANITY_PROVIDERS.md](./HUMANITY_PROVIDERS.md) for the integration shape, trust tiers, and the one env-var flip that takes Self from Celo Sepolia staging to Celo mainnet.
+4. **🎨 Hand-painted human motifs**: A gouache-on-paper artefact language (coffee, a growing streak plant, a dozing cat, a full daily-theme wheel) layered against the cold system chrome — the visual argument for "last *human* standing." See [ART_DIRECTION.md](./ART_DIRECTION.md) for the thesis, the shared material, and what's next.
 
 ## World Stack usage
 

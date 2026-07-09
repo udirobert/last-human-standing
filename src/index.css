@@ -38,6 +38,49 @@ html, body {
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
 }
 
+/* ============================================================================
+   Desktop environment — mobile (≤ 479px) stays edge-to-edge and untouched.
+   On wider screens the 430px app was a column floating in a black void; this
+   turns the void into a warm, paper-textured surface and frames the app as a
+   hand-made object resting on it. Immersive, crafted — same soul as the motifs.
+   ========================================================================== */
+@media (min-width: 480px) {
+  html, body {
+    /* warm charcoal surface, not cold black */
+    background: radial-gradient(130% 100% at 50% -10%, #171310 0%, #0d0b09 55%, #070605 100%);
+  }
+  /* warm paper grain across the whole surface (shows in the gutters) */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.06;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0.62 0 0 0 0 0.5 0 0 0 0 0.34 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 300px 300px;
+  }
+  /* a soft warm halo behind the column so it feels lit, not stranded */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(46% 55% at 50% 42%, rgba(255, 184, 0, 0.05), transparent 72%);
+  }
+  /* lift the app off the surface: soft cast shadow + hairline warm edge */
+  #root {
+    position: relative;
+    z-index: 1;
+    box-shadow:
+      0 30px 90px -24px rgba(0, 0, 0, 0.8),
+      0 4px 24px -8px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(240, 237, 232, 0.06);
+  }
+}
+
 .font-display {
   font-family: 'Bebas Neue', cursive;
 }
@@ -216,6 +259,50 @@ html, body {
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
+}
+
+/* Reduced-motion fallback for BubbleLoader — a calm surface-tension breathe */
+@keyframes bubble-breathe {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50%      { transform: scale(1.04); opacity: 1; }
+}
+
+/* Gouache coffee — soft steam wisps rising off the cup (see CoffeeBrew.jsx) */
+@keyframes steam-rise-a {
+  0%   { transform: translateY(6px) scaleY(0.8); opacity: 0; }
+  25%  { opacity: 0.55; }
+  100% { transform: translateY(-26px) scaleY(1.15); opacity: 0; }
+}
+@keyframes steam-rise-b {
+  0%   { transform: translateY(6px) scaleY(0.8); opacity: 0; }
+  30%  { opacity: 0.45; }
+  100% { transform: translateY(-30px) scaleY(1.2); opacity: 0; }
+}
+.steam-a { animation: steam-rise-a 3.4s ease-out infinite; transform-origin: center bottom; }
+.steam-b { animation: steam-rise-b 4.1s ease-out infinite 0.8s; transform-origin: center bottom; }
+.steam-c { animation: steam-rise-a 3.8s ease-out infinite 1.6s; transform-origin: center bottom; }
+@media (prefers-reduced-motion: reduce) {
+  .steam-a, .steam-b, .steam-c { animation: none; opacity: 0.32; }
+}
+
+/* StreakBloom — a whisper-slow living sway (see StreakBloom.jsx) */
+@keyframes bloom-sway {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50%      { transform: rotate(1.6deg); }
+}
+.bloom-sway { animation: bloom-sway 6.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .bloom-sway { animation: none; }
+}
+
+/* DozingCat — the slow breath of a sleeping cat (see DozingCat.jsx) */
+@keyframes cat-breathe {
+  0%, 100% { transform: scaleY(1); }
+  50%      { transform: scaleY(1.035); }
+}
+.cat-breathe { animation: cat-breathe 4s ease-in-out infinite; transform-origin: 70px 84px; }
+@media (prefers-reduced-motion: reduce) {
+  .cat-breathe { animation: none; }
 }
 
 /* Button press effect */

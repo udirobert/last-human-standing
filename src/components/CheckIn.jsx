@@ -9,12 +9,14 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
+import BubbleLoader from './ui/BubbleLoader.jsx';
+import ThemeMotif from './ui/ThemeMotif.jsx';
 import GameMoment from './GameMoment.jsx';
 import { useDelight } from './DelightProvider.jsx';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
-  const { isFarcaster, farcasterUser, signCheckIn } = useWorld();
+  const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
   const { unlockAchievement, checkAchievement, playSound } = useDelight();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
@@ -305,7 +307,9 @@ export default function CheckIn({ onBack, onSubmit }) {
               <div className="bg-smoke border border-ember rounded-3xl p-6 mb-5">
                 <p className="font-mono text-dim text-xs tracking-widest uppercase mb-1">Today's challenge</p>
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-4xl">{themeData.emoji}</span>
+                  {/* Hand-painted proof-of-presence artefact per theme; falls back
+                      to the emoji for any theme not yet painted. */}
+                  <ThemeMotif emoji={themeData.emoji} size={64} label={theme} className="-my-2 shrink-0" />
                   <p className="font-display text-2xl text-bone">{theme}</p>
                 </div>
                 <p className="text-dim text-sm font-mono">{themeData.description}</p>
@@ -499,7 +503,8 @@ export default function CheckIn({ onBack, onSubmit }) {
               animate={{ opacity: 1 }}
               className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
             >
-              <div className="w-24 h-24 rounded-full border-4 border-blood border-t-transparent animate-spin" />
+              {/* Your bubble — seeded from your identity, so it's always yours. */}
+              <BubbleLoader size={112} seed={user?.username || user?.address} />
               <div className="text-center">
                 <p className="font-display text-3xl text-bone">SUBMITTING</p>
                 <p className="text-dim font-mono text-sm mt-1">Recording your check-in…</p>

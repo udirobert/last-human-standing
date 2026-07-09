@@ -8,6 +8,7 @@ import Countdown from './Countdown.jsx';
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
+import BubbleLoader from './ui/BubbleLoader.jsx';
 import Mascot from './Mascot.jsx';
 
 function shortAddr(addr) {
@@ -371,8 +372,8 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
       {isLive && tab === 'today' && (
         <div className="px-5 space-y-2">
           {loading && checkins.length === 0 && (
-            <div className="text-center py-6">
-              <div className="w-6 h-6 mx-auto rounded-full border-2 border-blood border-t-transparent animate-spin" />
+            <div className="py-6">
+              <BubbleLoader size={56} seed={user?.username || user?.address} />
             </div>
           )}
           {!loading && survivors.length === 0 && (
