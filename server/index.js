@@ -11,7 +11,7 @@ import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
 import { drawLottery, ALGORITHM_VERSION, freeSlotsFor } from "./lib/lottery.js";
 import { debugCeloBalances } from "./lib/celoBalance.js";
-import { ariaBroadcastPayoutTx } from "./lib/ariaAgent.js";
+import { ariaBroadcastPayoutTx, ariaSuggestNextRound } from "./lib/ariaAgent.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -2596,6 +2596,31 @@ app.get("/api/checkins/today", async (req, res) => {
     return res.json({ ok: true, day, checkins: data || [] });
   } catch (e) {
     res.status(400).json({ error: "checkins_today_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Suggests (does not create) tomorrow's theme — a random pick from the 10
+// curated themes, excluding whichever were used in the last 5 rounds, via
+// ariaSuggestNextRound. The admin still reviews and submits via
+// POST /api/admin/round; this only pre-fills the form. Closes the gap
+// between the landing copy ("you won't know until it drops") and reality
+// (themes were previously picked ad hoc by whoever filled in the form).
+app.get("/api/admin/suggest-round", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const day = Number(req.query.day) || 1;
+    let previousThemes = [];
+    if (supabaseAdmin) {
+      const { data } = await supabaseAdmin
+        .from("rounds")
+        .select("name")
+        .order("day", { ascending: false })
+        .limit(5);
+      previousThemes = (data || []).map((r) => r.name).filter(Boolean);
+    }
+    const suggestion = await ariaSuggestNextRound({ day, previousThemes });
+    return res.json({ ok: true, suggestion });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 

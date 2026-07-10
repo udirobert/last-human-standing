@@ -225,24 +225,38 @@ export async function ariaBroadcastPayoutTx({ winnerAddress, amountUsd, token = 
  * survival cap, GPS pin (optional). This is the *suggestion* — admins
  * still confirm via /api/admin/round.
  */
+// Kept self-contained (not imported from src/data/game.js) deliberately:
+// the deploy pipeline (scripts/package-release.sh) ships server/ and the
+// built dist/ as separate, source-free artifacts — src/ never reaches
+// production, so a cross-import here would work in dev and silently break
+// on the server. Prompts are purpose-written, not derived from the theme
+// name (`${theme.toLowerCase()}` reads as "show us your at a park").
+const THEMES = [
+  { theme: "AT A CAFÉ", prompt: "Show us a café — anywhere in the world." },
+  { theme: "AT A PARK", prompt: "Show us a park — touch grass, prove it." },
+  { theme: "AT A GYM", prompt: "Show us the gym — no pain, no proof." },
+  { theme: "WITH A FRIEND", prompt: "Show us a friend — prove you have at least one." },
+  { theme: "OUTSIDE AT SUNRISE", prompt: "Show us the sunrise — early humans only." },
+  { theme: "AT A BOOKSTORE", prompt: "Show us a bookstore — rare breed, show yourself." },
+  { theme: "EATING SOMETHING", prompt: "Show us a meal — humans gotta eat." },
+  { theme: "ON PUBLIC TRANSIT", prompt: "Show us your commute — we see you." },
+  { theme: "AT A GROCERY STORE", prompt: "Show us the grocery store — domestic, but make it survival." },
+  { theme: "AT A BEACH OR WATER", prompt: "Show us water — a lake, a pond, even your bathtub. Coastal not required." },
+];
+
 export async function ariaSuggestNextRound({ day, previousThemes = [] }) {
   // Pick a theme that hasn't been used in the last 5 days
-  const themes = [
-    "AT A CAFÉ", "AT A PARK", "AT A GYM", "WITH A FRIEND",
-    "OUTSIDE AT SUNRISE", "AT A BOOKSTORE", "EATING SOMETHING",
-    "ON PUBLIC TRANSIT", "AT A GROCERY STORE", "AT A BEACH OR WATER",
-  ];
-  const freshThemes = themes.filter((t) => !previousThemes.slice(-5).includes(t));
-  const theme = freshThemes[Math.floor(Math.random() * freshThemes.length)] || themes[0];
+  const fresh = THEMES.filter((t) => !previousThemes.slice(-5).includes(t.theme));
+  const pick = fresh[Math.floor(Math.random() * fresh.length)] || THEMES[0];
 
   // Cap shrinks daily
   const survivalCap = Math.max(1, Math.ceil(50 / 2 ** (day - 1)));
 
   return {
     day,
-    theme,
-    place_type: theme,
-    prompt: `Show us your ${theme.toLowerCase()} — anywhere in the world.`,
+    theme: pick.theme,
+    place_type: pick.theme,
+    prompt: pick.prompt,
     survival_cap: survivalCap,
     duration_hours: 4,
     gps_optional: true,

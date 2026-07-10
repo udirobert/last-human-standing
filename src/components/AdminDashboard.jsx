@@ -42,6 +42,7 @@ export default function AdminDashboard() {
     status: 'scheduled',
   });
   const [submittingRound, setSubmittingRound] = useState(false);
+  const [suggesting, setSuggesting] = useState(false);
 
   const isAdmin = ADMIN_ADDRESS && user?.address?.toLowerCase() === ADMIN_ADDRESS.toLowerCase();
 
@@ -67,6 +68,26 @@ export default function AdminDashboard() {
     if (!isAdmin) return;
     loadAll();
   }, [isAdmin, loadAll]);
+
+  // Pulls a random unused-recently theme via ariaSuggestNextRound and
+  // pre-fills the form. Admin still reviews/edits before submitting —
+  // this only removes the "what should today's theme be" guesswork.
+  const handleSuggestTheme = async () => {
+    setSuggesting(true);
+    try {
+      const res = await adminFetch(`/api/admin/suggest-round?day=${Number(newRound.day) || 1}`);
+      if (res.ok && res.suggestion) {
+        const s = res.suggestion;
+        setNewRound((prev) => ({ ...prev, name: s.theme, place_type: s.place_type, prompt: s.prompt }));
+      } else {
+        setError(res.error || 'Failed to suggest a theme');
+      }
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSuggesting(false);
+    }
+  };
 
   const handleCreateRound = async (e) => {
     e.preventDefault();
@@ -162,7 +183,7 @@ export default function AdminDashboard() {
          ) : tabs === 'overview' ? (
            <OverviewPanel data={data} />
          ) : tabs === 'rounds' ? (
-           <RoundsPanel data={data} newRound={newRound} setNewRound={setNewRound} onSubmit={handleCreateRound} submitting={submittingRound} />
+           <RoundsPanel data={data} newRound={newRound} setNewRound={setNewRound} onSubmit={handleCreateRound} submitting={submittingRound} onSuggestTheme={handleSuggestTheme} suggesting={suggesting} />
          ) : tabs === 'players' ? (
            <PlayersPanel users={data.users} />
          ) : tabs === 'flags' ? (
@@ -228,12 +249,22 @@ function StatCard({ label, value, className = '' }) {
   );
 }
 
-function RoundsPanel({ data, newRound, setNewRound, onSubmit, submitting }) {
+function RoundsPanel({ data, newRound, setNewRound, onSubmit, submitting, onSuggestTheme, suggesting }) {
   const { rounds } = data;
   return (
     <div className="space-y-4">
       <div className="bg-smoke border border-ember rounded-2xl p-4">
-        <h3 className="font-display text-lg text-bone mb-4">Create / Schedule Round</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-display text-lg text-bone">Create / Schedule Round</h3>
+          <button
+            type="button"
+            onClick={onSuggestTheme}
+            disabled={suggesting}
+            className="text-xs font-mono px-3 py-1.5 rounded-full bg-amber/10 text-amber border border-amber/30 active:scale-95 disabled:opacity-50"
+          >
+            {suggesting ? 'Picking…' : '🎲 Suggest theme'}
+          </button>
+        </div>
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <Input label="Day" type="number" value={newRound.day} onChange={e => setNewRound({...newRound, day: e.target.value})} min={1} required />

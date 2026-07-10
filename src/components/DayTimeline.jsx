@@ -1,33 +1,17 @@
 import { motion } from "framer-motion";
+import { DAILY_LOOP } from "../lib/copy.js";
 
 /**
  * DayTimeline — "how it works" as a warm, editorial numbered flow for the
  * landing narrative (docs/ART_DIRECTION.md). Four beats of a single day, big
  * amber numerals down a connecting rail. Replaced the old cold ash-circle +
  * emoji row. Animates in on scroll.
+ *
+ * Copy lives in lib/copy.js (DAILY_LOOP) — the documented single source of
+ * truth for "how to play" — not hardcoded here, so this can't drift from
+ * RULES/FAQS again.
  */
-const STEPS = [
-  {
-    num: "01",
-    title: "A theme drops",
-    body: "Every morning a real-world place lands — a café, a park, a sunrise. Find it anywhere on Earth.",
-  },
-  {
-    num: "02",
-    title: "Snap your proof",
-    body: "A photo, optionally GPS-stamped, inside the check-in window. That's your proof you're still here.",
-  },
-  {
-    num: "03",
-    title: "The crowd votes",
-    body: "Everyone judges each proof — human or sus. The survival cap shrinks a little more every day.",
-  },
-  {
-    num: "04",
-    title: "Last human standing",
-    body: "50 → 25 → 12 → 6 → 3 → 1. Outlast the crowd for five days and the whole pot is yours.",
-  },
-];
+const STEPS = DAILY_LOOP;
 
 export default function DayTimeline() {
   return (

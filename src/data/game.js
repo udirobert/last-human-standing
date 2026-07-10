@@ -8,7 +8,7 @@ export const DAILY_THEMES = [
   { id: 7, theme: "EATING SOMETHING", emoji: "🍜", description: "Humans gotta eat. Prove it.", color: "#FF6B00" },
   { id: 8, theme: "ON PUBLIC TRANSIT", emoji: "🚇", description: "We see you, commuter", color: "#AA55FF" },
   { id: 9, theme: "AT A GROCERY STORE", emoji: "🛒", description: "Domestic. But make it survival", color: "#00FF94" },
-  { id: 10, theme: "AT A BEACH OR WATER", emoji: "🌊", description: "Coastal humans only (for now)", color: "#00C8FF" },
+  { id: 10, theme: "AT A BEACH OR WATER", emoji: "🌊", description: "Any water counts — a lake, a pond, even your bathtub. Coastal not required.", color: "#00C8FF" },
 ];
 
 export const TODAY_THEME = DAILY_THEMES[Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % DAILY_THEMES.length];

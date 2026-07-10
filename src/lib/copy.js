@@ -83,6 +83,40 @@ export const RULES = [
   },
 ];
 
+/**
+ * The daily loop, for the landing's "How It Works" narrative (DayTimeline).
+ * Kept in sync with the real close_day() mechanic (supabase/migrations/
+ * 008_lethal_votes.sql): survival is a HYBRID of rank (the fastest N
+ * check-ins provisionally survive) and crowd vote (a flagged submission is
+ * disqualified and backfilled by the next-fastest check-in) — not pure
+ * speed and not pure judgment. Also: don't promise a specific reveal
+ * mechanism (time of day, "random") that the system doesn't actually
+ * guarantee — promise what's true regardless of mechanism: you don't know
+ * in advance.
+ */
+export const DAILY_LOOP = [
+  {
+    num: "01",
+    title: "A theme drops",
+    body: "A real-world place is announced — you won't know which until it does. Find it anywhere on Earth, your way.",
+  },
+  {
+    num: "02",
+    title: "Snap yourself there",
+    body: "A selfie, optionally GPS-stamped, inside the check-in window. That's your proof you're still here.",
+  },
+  {
+    num: "03",
+    title: "Speed and trust",
+    body: "The fastest check-ins provisionally survive — but the crowd still judges every photo. Get flagged as fake, and a slower, more convincing survivor takes your slot.",
+  },
+  {
+    num: "04",
+    title: "Last human standing",
+    body: "50 → 25 → 12 → 6 → 3 → 1. Outlast the crowd for five days and the whole pot is yours.",
+  },
+];
+
 export const FAQS = [
   {
     q: "Do I need crypto?",
