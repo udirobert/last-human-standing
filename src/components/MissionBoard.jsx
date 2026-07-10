@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { DAILY_THEMES, TODAY_THEME } from "../data/game";
 import { missionMantra } from "../lib/copy.js";
+import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
 import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
 
@@ -13,6 +14,180 @@ function formatWindow(iso) {
   } catch {
     return null;
   }
+}
+
+function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
+  const youWon = Boolean(
+    winner?.address && you?.address && winner.address.toLowerCase() === you.address.toLowerCase(),
+  );
+  const winnerName = winner?.username
+    ? `@${winner.username}`
+    : winner?.address
+      ? `${winner.address.slice(0, 6)}…${winner.address.slice(-4)}`
+      : null;
+  const winCardName = youWon
+    ? (winner?.username ? `@${winner.username}` : "You")
+    : (winnerName ?? "One human");
+
+  const [winCardSrc, setWinCardSrc] = useState(null);
+  useEffect(() => {
+    try {
+      setWinCardSrc(momentCardDataUrl("win", {
+        name: winCardName,
+        day: currentDay ?? 5,
+        originHost: window.location.host,
+      }));
+    } catch {
+      setWinCardSrc(null);
+    }
+  }, [winCardName, currentDay]);
+
+  const shareWin = async () => {
+    const text = youWon
+      ? `I am the LAST HUMAN STANDING. I outlasted the whole cohort.`
+      : `${winCardName} just won Last Human Standing. Next cohort is coming — get in.`;
+    const url = `${window.location.origin}/api/share/winner`;
+    await shareMoment("win", {
+      name: winCardName,
+      day: currentDay ?? 5,
+      text,
+      url,
+    });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="mx-5 mb-4 bg-smoke border border-amber/40 rounded-3xl p-6 text-center"
+    >
+      <motion.div
+        initial={{ scale: 0, rotate: -20 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ type: "spring", duration: 0.8, bounce: 0.4 }}
+        className="mb-3"
+      >
+        <span className="text-7xl inline-block">🏆</span>
+      </motion.div>
+
+      {youWon ? (
+        <>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="font-display text-3xl text-amber mb-1 animate-glow"
+          >
+            YOU ARE THE LAST HUMAN STANDING
+          </motion.p>
+          <p className="text-dim text-sm font-mono">The pot is yours. Payout lands from the prize wallet.</p>
+          <div className="mt-4 grid grid-cols-3 gap-2 bg-ash/60 rounded-xl p-3">
+            <div>
+              <p className="font-display text-2xl text-amber">{currentDay ?? 5}</p>
+              <p className="text-dim text-[9px] font-mono uppercase">Days</p>
+            </div>
+            <div>
+              <p className="font-display text-2xl text-amber">{you?.checkinStreak ?? 0}</p>
+              <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
+            </div>
+            <div>
+              <p className="font-display text-2xl text-amber">{you?.juryTickets ?? 0}</p>
+              <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Game over</p>
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            className="font-display text-3xl text-bone mb-1"
+          >
+            {winnerName ? `${winnerName} outlasted everyone` : "The cohort has ended"}
+          </motion.p>
+          <p className="text-dim text-sm font-mono">One human took the pot. The next cohort is coming.</p>
+          {you?.isAuthed && (
+            <div className="mt-4 grid grid-cols-3 gap-2 bg-ash/60 rounded-xl p-3">
+              <div>
+                <p className="font-display text-2xl text-bone">{you?.eliminatedAtDay ?? currentDay ?? "—"}</p>
+                <p className="text-dim text-[9px] font-mono uppercase">Days</p>
+              </div>
+              <div>
+                <p className="font-display text-2xl text-bone">{you?.checkinStreak ?? 0}</p>
+                <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
+              </div>
+              <div>
+                <p className="font-display text-2xl text-bone">{you?.juryTickets ?? 0}</p>
+                <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {winCardSrc && (
+        <img
+          src={winCardSrc}
+          alt="Winner moment card"
+          className="w-full mt-4 rounded-xl border border-ember/50"
+        />
+      )}
+
+      {payout && (
+        <div className="mt-4 bg-ash/60 border border-ember/30 rounded-xl p-3 text-left">
+          <p className="font-mono text-dim text-[10px] uppercase tracking-widest mb-1">Prize payout</p>
+          {payout.status === "submitted" || payout.status === "confirmed" ? (
+            <>
+              <p className="text-neon font-mono text-sm">
+                ✅ {payout.amount_usd} {payout.token} sent onchain
+              </p>
+              {payout.explorer_url && (
+                <a href={payout.explorer_url} target="_blank" rel="noopener noreferrer"
+                   className="text-neon/70 font-mono text-xs underline mt-1 inline-block">
+                  View transaction →
+                </a>
+              )}
+            </>
+          ) : payout.status === "pending" ? (
+            <p className="text-amber font-mono text-sm">⏳ Payout in progress…</p>
+          ) : payout.status === "failed" ? (
+            <p className="text-blood font-mono text-sm">
+              ⚠️ Payout pending manual review. The winner will receive their prize shortly.
+            </p>
+          ) : null}
+        </div>
+      )}
+
+      <button
+        onClick={shareWin}
+        className="w-full mt-4 py-4 rounded-2xl bg-amber text-ash font-display text-xl tracking-widest active:scale-95 transition-transform"
+      >
+        {youWon ? "SHARE YOUR VICTORY CARD" : "SHARE THE RESULT"}
+      </button>
+
+      <div className="mt-4 bg-indigo/10 border border-indigo/40 rounded-2xl p-4 text-center">
+        <p className="font-mono text-indigo text-xs tracking-widest uppercase mb-1">Next cohort</p>
+        <p className="text-bone font-mono text-sm mb-3">
+          {youWon ? "Defend your title. The next game starts soon." : "You've seen the game. Now play it. Reserve your slot for cohort 2."}
+        </p>
+        <a
+          href={window.location.origin}
+          className="inline-block w-full py-3 rounded-xl bg-indigo/20 border border-indigo/50 text-indigo font-display text-sm tracking-widest active:scale-95 transition-transform"
+        >
+          RESERVE FOR COHORT 2 →
+        </a>
+      </div>
+
+      <button
+        onClick={onViewFeed}
+        className="w-full mt-2 py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
+      >
+        Relive the final audit →
+      </button>
+    </motion.div>
+  );
 }
 
 export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
@@ -63,158 +238,14 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   }
 
   if (isEnded) {
-    const youWon = Boolean(
-      winner?.address && you?.address && winner.address.toLowerCase() === you.address.toLowerCase(),
-    );
-    const winnerName = winner?.username
-      ? `@${winner.username}`
-      : winner?.address
-        ? `${winner.address.slice(0, 6)}…${winner.address.slice(-4)}`
-        : null;
-    const shareWin = async () => {
-      const text = youWon
-        ? `🏆 I am the LAST HUMAN STANDING. I outlasted the whole cohort.`
-        : `🏆 ${winnerName ?? "One human"} just won Last Human Standing. Next cohort is coming — get in.`;
-      const url = window.location.origin;
-      try {
-        if (navigator.share) {
-          await navigator.share({ text, url });
-        } else {
-          await navigator.clipboard.writeText(`${text} ${url}`);
-        }
-      } catch { /* user dismissed the share sheet */ }
-    };
     return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="mx-5 mb-4 bg-smoke border border-amber/40 rounded-3xl p-6 text-center"
-      >
-        {/* Winner trophy with cinematic glow */}
-        <motion.div
-          initial={{ scale: 0, rotate: -20 }}
-          animate={{ scale: 1, rotate: 0 }}
-          transition={{ type: "spring", duration: 0.8, bounce: 0.4 }}
-          className="mb-3"
-        >
-          <span className="text-7xl inline-block">🏆</span>
-        </motion.div>
-
-        {youWon ? (
-          <>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="font-display text-3xl text-amber mb-1 animate-glow"
-            >
-              YOU ARE THE LAST HUMAN STANDING
-            </motion.p>
-            <p className="text-dim text-sm font-mono">The pot is yours. Payout lands from the prize wallet.</p>
-
-            {/* Winner's personal stats — the "end" in peak-end rule */}
-            <div className="mt-4 grid grid-cols-3 gap-2 bg-ash/60 rounded-xl p-3">
-              <div>
-                <p className="font-display text-2xl text-amber">{currentDay ?? 5}</p>
-                <p className="text-dim text-[9px] font-mono uppercase">Days</p>
-              </div>
-              <div>
-                <p className="font-display text-2xl text-amber">{you?.checkinStreak ?? 0}🔥</p>
-                <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
-              </div>
-              <div>
-                <p className="font-display text-2xl text-amber">{you?.juryTickets ?? 0}</p>
-                <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Game over</p>
-            <motion.p
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="font-display text-3xl text-bone mb-1"
-            >
-              {winnerName ? `${winnerName} outlasted everyone` : "The cohort has ended"}
-            </motion.p>
-            <p className="text-dim text-sm font-mono">One human took the pot. The next cohort is coming.</p>
-
-            {/* Your run recap — make the end feel personal */}
-            {you?.isAuthed && (
-              <div className="mt-4 grid grid-cols-3 gap-2 bg-ash/60 rounded-xl p-3">
-                <div>
-                  <p className="font-display text-2xl text-bone">{you?.eliminatedAtDay ?? currentDay ?? "—"}</p>
-                  <p className="text-dim text-[9px] font-mono uppercase">Days</p>
-                </div>
-                <div>
-                  <p className="font-display text-2xl text-bone">{you?.checkinStreak ?? 0}🔥</p>
-                  <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
-                </div>
-                <div>
-                  <p className="font-display text-2xl text-bone">{you?.juryTickets ?? 0}</p>
-                  <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
-                </div>
-              </div>
-            )}
-          </>
-        )}
-
-        {/* Payout status */}
-        {payout && (
-          <div className="mt-4 bg-ash/60 border border-ember/30 rounded-xl p-3 text-left">
-            <p className="font-mono text-dim text-[10px] uppercase tracking-widest mb-1">Prize payout</p>
-            {payout.status === "submitted" || payout.status === "confirmed" ? (
-              <>
-                <p className="text-neon font-mono text-sm">
-                  ✅ {payout.amount_usd} {payout.token} sent onchain
-                </p>
-                {payout.explorer_url && (
-                  <a href={payout.explorer_url} target="_blank" rel="noopener noreferrer"
-                     className="text-neon/70 font-mono text-xs underline mt-1 inline-block">
-                    View transaction →
-                  </a>
-                )}
-              </>
-            ) : payout.status === "pending" ? (
-              <p className="text-amber font-mono text-sm">⏳ Payout in progress…</p>
-            ) : payout.status === "failed" ? (
-              <p className="text-blood font-mono text-sm">
-                ⚠️ Payout pending manual review. The winner will receive their prize shortly.
-              </p>
-            ) : null}
-          </div>
-        )}
-
-        <button
-          onClick={shareWin}
-          className="w-full mt-4 py-4 rounded-2xl bg-amber text-ash font-display text-xl tracking-widest active:scale-95 transition-transform"
-        >
-          {youWon ? "SHARE YOUR VICTORY" : "SHARE THE RESULT"}
-        </button>
-
-        {/* Next cohort CTA — keep players in the funnel */}
-        <div className="mt-4 bg-indigo/10 border border-indigo/40 rounded-2xl p-4 text-center">
-          <p className="font-mono text-indigo text-xs tracking-widest uppercase mb-1">Next cohort</p>
-          <p className="text-bone font-mono text-sm mb-3">
-            {youWon ? "Defend your title. The next game starts soon." : "You've seen the game. Now play it. Reserve your slot for cohort 2."}
-          </p>
-          <a
-            href={window.location.origin}
-            className="inline-block w-full py-3 rounded-xl bg-indigo/20 border border-indigo/50 text-indigo font-display text-sm tracking-widest active:scale-95 transition-transform"
-          >
-            RESERVE FOR COHORT 2 →
-          </a>
-        </div>
-
-        <button
-          onClick={onViewFeed}
-          className="w-full mt-2 py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
-        >
-          Relive the final audit →
-        </button>
-      </motion.div>
+      <EndedCeremony
+        winner={winner}
+        you={you}
+        payout={payout}
+        currentDay={currentDay}
+        onViewFeed={onViewFeed}
+      />
     );
   }
 

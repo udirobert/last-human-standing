@@ -27,6 +27,7 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 - **🔊 Immersive Audio Layer (Sound Design)** — Synthetic Web Audio sound engine (button click, success, milestone, errors, and custom mascot soundscapes) for zero-latency game audio.
 - **✨ Focused Onboarding Flow** — Welcome → Rules → Reserve → celebration. Core loop only; twists unlock per day via `RuleReveal` (Day 2 infiltrator, Day 4 wildcard, Day 5 finale).
 - **🎯 Live home focus** — Mission mantra + check-in first; arsenal (earned-through-play only) and prize pots below the feed.
+- **🃏 Shareable moment cards** — Canvas PNG cards for survive / jury / win; native share prefers the image; `/api/share/winner` for link unfurls.
 - **🛡️ Pluggable Multi-Provider Proof of Humanity** — Extensible PoH architecture supporting World ID and Self Protocol (both live). Self is on Celo Sepolia staging with mock passports; flip `SELF_MOCK_PASSPORT=false` to verify real passports on Celo mainnet.
 - **Pre-launch waitlist + countdown** — wallet auth + 1 WLD entry locks your slot in the cohort
 - **Cohort lifecycle** — `phase: 'prelaunch' | 'live' | 'ended'`, exposed via `/api/game/state`

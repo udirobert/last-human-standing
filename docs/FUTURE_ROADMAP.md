@@ -40,7 +40,7 @@ Do not build these until we have data from 25+ real users playing through at lea
 ### Viral mechanics
 - **Referral visualizations**: show invitation network trees
 - **Streak rewards**: bonus cosmetics for consecutive daily check-ins
-- **Shareable moment cards** *(next)*: designed OG images for survive / jury / win — extend `/api/og-image/checkin/:id` beyond rank strips so share sheets mint a mythic artifact, not just text + photo fallback
+- **Shareable moment cards** ✅: canvas PNG cards for survive / jury / win (`src/lib/momentCard.js` + `shareMoment.js`). Native share prefers the image file; `/api/share/winner` + improved check-in OG for link unfurls.
 - **Shareable highlight reels**: auto-generate clips of best check-ins for social sharing (after moment cards)
 
 ### Farcaster Snaps (post-launch, week 2+)

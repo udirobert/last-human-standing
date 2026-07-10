@@ -13,6 +13,7 @@ import BubbleLoader from './ui/BubbleLoader.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
 import GameMoment from './GameMoment.jsx';
 import { useDelight } from './DelightProvider.jsx';
+import { shareMoment } from '../lib/shareMoment.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, refresh: refreshRound } = useRound();
@@ -88,32 +89,36 @@ export default function CheckIn({ onBack, onSubmit }) {
   const buildShare = (survived) => {
     const cap = result?.survivalCap ?? '?';
     const rank = result?.rank ?? '?';
+    const displayName = user?.username
+      ? `@${user.username}`
+      : (user?.displayName || user?.address?.slice(0, 8) || 'anon');
     const strip = survived
-      ? `🧍 Day ${currentDay} · Rank #${rank}/${cap} · SURVIVED ✅`
-      : `💀 Survived ${currentDay ?? "?"} day${Number(currentDay) !== 1 ? "s" : ""} in Last Human Standing. The jury needs me now.`;
+      ? `Day ${currentDay} · Rank #${rank}/${cap} · SURVIVED`
+      : `Survived ${currentDay ?? "?"} day${Number(currentDay) !== 1 ? "s" : ""} in Last Human Standing. The jury needs me now.`;
     const text = survived
       ? `${strip}\nLast Human Standing — one verified human takes the pot. Can you outlast me?`
       : `${strip}\nI'm out. But my votes count double now. Next cohort, I go all the way.`;
     const url = result?.checkinId
       ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
       : window.location.origin;
-    return { text, url };
+    return { text, url, displayName, rank, cap };
   };
 
   const shareResult = async (survived) => {
-    const { text, url } = buildShare(survived);
-    try {
-      if (isFarcaster) {
-        const { sdk } = await import("@farcaster/miniapp-sdk");
-        await sdk.actions.composeCast({ text, embeds: [url] });
-      } else if (navigator.share) {
-        await navigator.share({ text, url });
-      } else {
-        await navigator.clipboard.writeText(`${text}\n${url}`);
-        setShareCopied(true);
-        setTimeout(() => setShareCopied(false), 2500);
-      }
-    } catch { /* user dismissed the share sheet */ }
+    const { text, url, displayName, rank, cap } = buildShare(survived);
+    const status = await shareMoment(survived ? "survive" : "jury", {
+      name: displayName,
+      day: currentDay,
+      rank,
+      cap,
+      text,
+      url,
+      isFarcaster,
+    });
+    if (status === "copied") {
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    }
   };
 
   // Auto-share on Farcaster after a successful check-in. Delayed 4s so
@@ -520,6 +525,11 @@ export default function CheckIn({ onBack, onSubmit }) {
               onShare={() => shareResult(result.survived)}
               shareCopied={shareCopied}
               photoUploadFailed={photoUploadFailed}
+              playerName={
+                user?.username
+                  ? `@${user.username}`
+                  : (user?.displayName || user?.address?.slice(0, 8) || "anon")
+              }
             />
           )}
         </AnimatePresence>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { momentCardDataUrl } from "../lib/shareMoment.js";
 
 /**
  * GameMoment — full-screen cinematic overlays for the two most
@@ -7,7 +8,8 @@ import { motion, AnimatePresence } from "framer-motion";
  *
  * Replaces the inline result cards in CheckIn.jsx with a
  * dimmed-background, large-type, haptic-driven moment that
- * feels like a reality-show reveal.
+ * feels like a reality-show reveal. Shows a shareable moment
+ * card preview so the myth is visible before the share sheet.
  *
  * Props:
  *   result    — { survived, rank, survivalCap, queued, gpsShared }
@@ -16,6 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
  *   onShare   — callback for share button
  *   shareCopied — boolean (share feedback)
  *   photoUploadFailed — boolean
+ *   playerName — display name for the moment card
  */
 export default function GameMoment({
   result,
@@ -24,6 +27,7 @@ export default function GameMoment({
   onShare,
   shareCopied,
   photoUploadFailed,
+  playerName,
 }) {
   if (!result) return null;
 
@@ -66,6 +70,7 @@ export default function GameMoment({
           onShare={onShare}
           shareCopied={shareCopied}
           photoUploadFailed={photoUploadFailed}
+          playerName={playerName}
         />
       ) : (
         <EliminationMoment
@@ -75,13 +80,38 @@ export default function GameMoment({
           onDismiss={onDismiss}
           onShare={onShare}
           shareCopied={shareCopied}
+          playerName={playerName}
         />
       )}
     </AnimatePresence>
   );
 }
 
-function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed }) {
+function MomentCardPreview({ kind, name, day, rank, cap }) {
+  const [src, setSrc] = useState(null);
+  useEffect(() => {
+    try {
+      const host = typeof window !== "undefined" ? window.location.host : "lasthumanstanding.thisyearnofear.com";
+      setSrc(momentCardDataUrl(kind, { name, day, rank, cap, originHost: host }));
+    } catch {
+      setSrc(null);
+    }
+  }, [kind, name, day, rank, cap]);
+
+  if (!src) return null;
+  return (
+    <motion.img
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.35 }}
+      src={src}
+      alt="Shareable moment card"
+      className="w-full max-w-sm rounded-xl border border-ember/50 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] relative z-10"
+    />
+  );
+}
+
+function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName }) {
   // Haptic celebration
   useEffect(() => {
     if (navigator.vibrate) {
@@ -94,7 +124,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto py-8"
     >
       {/* Pulse rings behind the checkmark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -117,9 +147,9 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
-        className="w-32 h-32 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-8 relative z-10"
+        className="w-24 h-24 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-5 relative z-10 shrink-0"
       >
-        <span className="text-7xl">✅</span>
+        <span className="text-5xl">✅</span>
       </motion.div>
 
       {/* Result text */}
@@ -127,21 +157,29 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
-        className="text-center relative z-10"
+        className="text-center relative z-10 mb-4"
       >
         <p className="font-mono text-neon text-sm tracking-widest uppercase mb-2">
           Day {currentDay ?? "—"} · Survived
         </p>
-        <p className="font-display text-7xl text-bone leading-none mb-3 animate-glow">
+        <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow">
           RANK #{result.rank}
         </p>
-        <p className="text-dim font-mono text-base">
+        <p className="text-dim font-mono text-sm">
           of {result.survivalCap} surviving today
         </p>
         {result.gpsShared && (
-          <p className="text-neon/70 font-mono text-xs mt-3">📍 GPS shared</p>
+          <p className="text-neon/70 font-mono text-xs mt-2">📍 GPS shared</p>
         )}
       </motion.div>
+
+      <MomentCardPreview
+        kind="survive"
+        name={playerName}
+        day={currentDay}
+        rank={result.rank}
+        cap={result.survivalCap}
+      />
 
       {/* Photo warning */}
       {photoUploadFailed && (
@@ -149,10 +187,10 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.6 }}
-          className="w-full max-w-sm mt-6 rounded-xl border border-amber/40 bg-amber/10 p-3 relative z-10"
+          className="w-full max-w-sm mt-4 rounded-xl border border-amber/40 bg-amber/10 p-3 relative z-10"
         >
           <p className="text-amber font-mono text-xs">
-            Photo didn't upload — voters see this without a photo.
+            Photo didn&apos;t upload — voters see this without a photo.
           </p>
         </motion.div>
       )}
@@ -162,13 +200,13 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
-        className="w-full max-w-sm mt-8 space-y-3 relative z-10"
+        className="w-full max-w-sm mt-6 space-y-3 relative z-10"
       >
         <button
           onClick={onShare}
           className="w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-bone bg-indigo/20 border border-indigo/40"
         >
-          {shareCopied ? "✓ COPIED" : "SHARE YOUR RANK 🧍"}
+          {shareCopied ? "✓ COPIED" : "SHARE YOUR CARD"}
         </button>
         <button
           onClick={onDismiss}
@@ -181,7 +219,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
   );
 }
 
-function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied }) {
+function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName }) {
   // Haptic thud — heavy, single pulse
   useEffect(() => {
     if (navigator.vibrate) {
@@ -218,14 +256,14 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5"
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto py-8"
     >
       {/* Red vignette */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 0.15 }}
         transition={{ duration: 0.8 }}
-        className="absolute inset-0 bg-blood"
+        className="absolute inset-0 bg-blood pointer-events-none"
         style={{ filter: "blur(60px)" }}
       />
 
@@ -234,9 +272,9 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         initial={{ scale: 3, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: "spring", duration: 0.8, bounce: 0 }}
-        className="mb-6 relative z-10"
+        className="mb-4 relative z-10 shrink-0"
       >
-        <span className="text-7xl">💀</span>
+        <span className="text-6xl">💀</span>
       </motion.div>
 
       {/* Eliminated text */}
@@ -244,9 +282,9 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
-        className="text-center relative z-10"
+        className="text-center relative z-10 mb-4"
       >
-        <p className="font-display text-6xl text-blood leading-none mb-3 animate-glow">
+        <p className="font-display text-5xl text-blood leading-none mb-2 animate-glow">
           ELIMINATED
         </p>
         <p className="text-bone font-mono text-base mb-1">
@@ -270,6 +308,14 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
           </motion.div>
         )}
       </motion.div>
+
+      <MomentCardPreview
+        kind="jury"
+        name={playerName}
+        day={daysSurvived}
+        rank={result.rank}
+        cap={result.survivalCap}
+      />
 
       {/* Verdict breakdown — "why was I eliminated" closure */}
       {verdict && verdict.votes?.total > 0 && (
@@ -373,7 +419,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
             nearMiss ? "bg-smoke/60 border border-ember/40 text-sm" : "bg-indigo/20 border border-indigo/40"
           }`}
         >
-          {shareCopied ? "✓ COPIED" : "SHARE YOUR RUN"}
+          {shareCopied ? "✓ COPIED" : "SHARE YOUR CARD"}
         </button>
       </motion.div>
     </motion.div>

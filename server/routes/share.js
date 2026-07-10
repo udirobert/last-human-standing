@@ -95,7 +95,12 @@ export default function shareRoutes({ supabaseAdmin }) {
       const name = ck?.username || (ck?.address ? `${ck.address.slice(0, 6)}…${ck.address.slice(-4)}` : "Player");
       const rank = ck?.rank ?? "—";
       const day = ck?.day ?? "—";
-      const status = ck?.survived ? "SURVIVED" : "ELIMINATED";
+      const status = ck?.survived ? "SURVIVED" : "JURY NOW";
+      const statusColor = ck?.survived ? C.neon : C.amber;
+      const headline = ck?.survived ? `RANK #${rank}` : "OUT — NOT DONE";
+      const subline = ck?.survived
+        ? `Day ${day}`
+        : `Survived Day ${day} · votes decide who stays`;
       const origin = getPublicOrigin(req) || "https://lasthumanstanding.thisyearnofear.com";
 
       const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
@@ -121,18 +126,18 @@ export default function shareRoutes({ supabaseAdmin }) {
         <text x="600" y="110" text-anchor="middle" fill="${C.blood}" font-family="monospace" font-size="18" letter-spacing="10" filter="url(#glow)">LAST HUMAN STANDING</text>
 
         <!-- Status badge -->
-        <rect x="450" y="140" width="300" height="44" rx="22" fill="none" stroke="${ck?.survived ? C.neon : C.blood}" stroke-width="2"/>
-        <text x="600" y="170" text-anchor="middle" fill="${ck?.survived ? C.neon : C.blood}" font-family="monospace" font-size="20" font-weight="bold" letter-spacing="4">${status}</text>
+        <rect x="450" y="140" width="300" height="44" rx="22" fill="none" stroke="${statusColor}" stroke-width="2"/>
+        <text x="600" y="170" text-anchor="middle" fill="${statusColor}" font-family="monospace" font-size="20" font-weight="bold" letter-spacing="4">${status}</text>
 
         <!-- Player name -->
-        <text x="600" y="260" text-anchor="middle" fill="${C.bone}" font-family="sans-serif" font-size="48" font-weight="bold">${escapeHtml(name)}</text>
+        <text x="600" y="250" text-anchor="middle" fill="${C.bone}" font-family="sans-serif" font-size="44" font-weight="bold">${escapeHtml(name)}</text>
 
-        <!-- Rank — big and bold -->
-        <text x="600" y="360" text-anchor="middle" fill="${C.amber}" font-family="monospace" font-size="80" font-weight="bold" filter="url(#glow)">RANK #${rank}</text>
+        <!-- Headline -->
+        <text x="600" y="360" text-anchor="middle" fill="${ck?.survived ? C.amber : C.blood}" font-family="monospace" font-size="${ck?.survived ? 80 : 56}" font-weight="bold" filter="url(#glow)">${escapeHtml(headline)}</text>
 
-        <!-- Day -->
+        <!-- Subline -->
         <line x1="450" y1="400" x2="750" y2="400" stroke="${C.ember}" stroke-width="1"/>
-        <text x="600" y="440" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="24">Day ${day}</text>
+        <text x="600" y="440" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="22">${escapeHtml(subline)}</text>
 
         <!-- Elimination curve: 50→25→12→6→3→1 -->
         ${renderEliminationCurve(day, ck?.survived)}
@@ -160,11 +165,11 @@ export default function shareRoutes({ supabaseAdmin }) {
       // Photo-first: crawlers (X, Farcaster, iMessage) render raster images
       // reliably; SVG cards often don't. The SVG card is the fallback.
       const ogImage = photoUrl || `${origin}/api/og-image/checkin/${ck.id}`;
-      const statusText = ck.survived ? `Rank #${ck.rank} · Survived Day ${ck.day}` : `Eliminated Day ${ck.day}`;
+      const statusText = ck.survived ? `Rank #${ck.rank} · Survived Day ${ck.day}` : `Jury · Survived Day ${ck.day}`;
       const title = `${name} — ${statusText} · Last Human Standing`;
       const description = ck.survived
         ? `Made the cut on Day ${ck.day}. One verified human takes the pot — watch the crowd audit live.`
-        : `Fell on Day ${ck.day}. The crowd decides who's HUMAN and who's SUS — watch the audit live.`;
+        : `Out on Day ${ck.day} — now on the jury. Votes decide who stays. Watch the audit live.`;
       const shareUrl = `${origin}/api/share/checkin/${ck.id}`;
 
       // Modern Mini App embed spec (miniapps.farcaster.xyz). Farcaster clients
@@ -223,10 +228,147 @@ export default function shareRoutes({ supabaseAdmin }) {
     ${photoUrl ? `<img class="photo" src="${photoUrl}" alt="Day ${ck.day} check-in photo" />` : ""}
     <h2>${escapeHtml(name)}</h2>
     <div class="rank">#${ck.rank}</div>
-    <div class="status">${ck.survived ? "SURVIVED" : "ELIMINATED"}</div>
-    <div class="day">Day ${ck.day} · the crowd votes HUMAN or SUS</div>
+    <div class="status">${ck.survived ? "SURVIVED" : "JURY NOW"}</div>
+    <div class="day">Day ${ck.day} · ${ck.survived ? "the crowd still judges" : "votes decide who stays"}</div>
     <a class="cta" href="${origin}">JOIN THE NEXT COHORT →</a>
     <a class="cta secondary" href="${origin}/?screen=feed">Watch the live audit (no signup)</a>
+  </div>
+</body>
+</html>`);
+    } catch {
+      res.status(500).send("Error");
+    }
+  });
+
+  async function loadWinner() {
+    if (!supabaseAdmin) return null;
+    const { data: round } = await supabaseAdmin
+      .from("rounds")
+      .select("day, game_winner")
+      .not("game_winner", "is", null)
+      .order("day", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!round?.game_winner) return null;
+    const { data: user } = await supabaseAdmin
+      .from("users")
+      .select("username, address")
+      .ilike("address", round.game_winner)
+      .maybeSingle();
+    return {
+      day: round.day,
+      address: round.game_winner,
+      username: user?.username ?? null,
+    };
+  }
+
+  router.get("/og-image/winner", async (req, res) => {
+    try {
+      const winner = await loadWinner();
+      const name = winner?.username
+        ? `@${winner.username}`
+        : winner?.address
+          ? `${winner.address.slice(0, 6)}…${winner.address.slice(-4)}`
+          : "One human";
+      const day = winner?.day ?? 5;
+      const origin = getPublicOrigin(req) || "https://lasthumanstanding.thisyearnofear.com";
+
+      const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
+        <defs>
+          <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="${C.ash}"/>
+            <stop offset="100%" stop-color="${C.smoke}"/>
+          </linearGradient>
+          <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="${C.blood}"/>
+            <stop offset="100%" stop-color="${C.neon}"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="blur"/>
+            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <rect width="1200" height="630" fill="url(#bg)"/>
+        <rect x="0" y="0" width="1200" height="6" fill="url(#accent)"/>
+        <rect x="40" y="40" width="1120" height="550" rx="24" fill="none" stroke="${C.ember}" stroke-width="2"/>
+        <text x="600" y="110" text-anchor="middle" fill="${C.blood}" font-family="monospace" font-size="18" letter-spacing="10" filter="url(#glow)">LAST HUMAN STANDING</text>
+        <rect x="450" y="140" width="300" height="44" rx="22" fill="none" stroke="${C.amber}" stroke-width="2"/>
+        <text x="600" y="170" text-anchor="middle" fill="${C.amber}" font-family="monospace" font-size="20" font-weight="bold" letter-spacing="4">LAST HUMAN</text>
+        <text x="600" y="270" text-anchor="middle" fill="${C.amber}" font-family="sans-serif" font-size="48" font-weight="bold">${escapeHtml(name)}</text>
+        <text x="600" y="360" text-anchor="middle" fill="${C.bone}" font-family="sans-serif" font-size="56" font-weight="bold">TOOK THE POT</text>
+        <text x="600" y="430" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="22">Outlasted the cohort · Day ${day}</text>
+        <text x="600" y="570" text-anchor="middle" fill="${C.dim}" font-family="monospace" font-size="14">${origin.replace(/^https?:\/\//, "")} · 50 humans. One pot.</text>
+      </svg>`;
+
+      res.setHeader("Content-Type", "image/svg+xml");
+      res.setHeader("Cache-Control", "public, max-age=300");
+      res.send(svg);
+    } catch {
+      res.status(500).end();
+    }
+  });
+
+  router.get("/share/winner", async (req, res) => {
+    try {
+      const winner = await loadWinner();
+      const origin = getPublicOrigin(req) || "https://lasthumanstanding.thisyearnofear.com";
+      const name = winner?.username
+        ? `@${winner.username}`
+        : winner?.address
+          ? `${winner.address.slice(0, 6)}…${winner.address.slice(-4)}`
+          : "One human";
+      const day = winner?.day ?? 5;
+      const ogImage = `${origin}/api/og-image/winner`;
+      const title = `${name} is the Last Human Standing`;
+      const description = `Outlasted the cohort on Day ${day}. One verified human took the pot. Next cohort is coming.`;
+      const shareUrl = `${origin}/api/share/winner`;
+      const miniappEmbed = {
+        version: "1",
+        imageUrl: ogImage,
+        button: {
+          title: "Join the next cohort",
+          action: {
+            type: "launch_frame",
+            name: "Last Human Standing",
+            url: origin,
+            splashImageUrl: `${origin}/splash.png`,
+            splashBackgroundColor: "#0a0a0a",
+          },
+        },
+      };
+
+      res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeHtml(title)}</title>
+  <meta name="description" content="${escapeHtml(description)}" />
+  <meta property="og:title" content="${escapeHtml(title)}" />
+  <meta property="og:description" content="${escapeHtml(description)}" />
+  <meta property="og:image" content="${ogImage}" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="${shareUrl}" />
+  <meta name="fc:miniapp" content='${JSON.stringify(miniappEmbed).replace(/'/g, "&#39;")}' />
+  <style>
+    html,body{margin:0;padding:0;background:${C.ash};color:${C.bone};font-family:monospace;display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .card{background:${C.smoke};border:1px solid ${C.ember};border-radius:24px;padding:32px;max-width:480px;text-align:center;margin:24px}
+    h1{color:${C.blood};font-size:14px;letter-spacing:4px;text-transform:uppercase;margin:0 0 16px}
+    h2{font-size:28px;margin:0 0 4px;color:${C.amber}}
+    .status{color:${C.bone};font-size:22px;margin:12px 0}
+    .day{color:${C.dim};font-size:14px;margin:16px 0 24px}
+    .cta{display:block;background:${C.blood};color:${C.bone};text-decoration:none;font-size:18px;letter-spacing:2px;padding:14px;border-radius:14px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Last Human Standing</h1>
+    <h2>${escapeHtml(name)}</h2>
+    <div class="status">TOOK THE POT</div>
+    <div class="day">Day ${day} · outlasted the cohort</div>
+    <a class="cta" href="${origin}">JOIN THE NEXT COHORT →</a>
   </div>
 </body>
 </html>`);
