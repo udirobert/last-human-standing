@@ -6,12 +6,10 @@ import StreakBloom from "./ui/StreakBloom.jsx";
 /**
  * ArsenalCard — makes the player's "currency" visible.
  *
- * Jury tickets, referral count, check-in streak, and vote accuracy
- * are all earned through play but were previously invisible. This
- * card surfaces them in one place so players can see their progress
- * and feel rewarded for engagement.
- *
- * Shown on GameHome for authed players (live + prelaunch).
+ * Only surfaces after the player has earned something through play
+ * (streak, votes, jury tickets). Referrals alone don't unlock it —
+ * those live on the prelaunch SharePanel. Keeps home focused on the
+ * mission until progress is real.
  */
 export default function ArsenalCard() {
   const { you } = useRound();
@@ -25,9 +23,9 @@ export default function ArsenalCard() {
   const referrals = user?.referralCount ?? 0;
   const isJury = you?.isJury ?? false;
 
-  // Don't show for unauthed users or users with zero everything
-  const hasAnything = juryTickets > 0 || streak > 0 || votesResolved > 0 || referrals > 0;
-  if (!you?.isAuthed || !hasAnything) return null;
+  // Earned-through-play only — don't clutter home for a fresh reserve.
+  const hasPlayProgress = streak > 0 || juryTickets > 0 || votesResolved > 0 || isJury;
+  if (!you?.isAuthed || !hasPlayProgress) return null;
 
   const stats = [
     { label: "Jury Tickets", value: juryTickets, icon: "⚖️", tone: "amber" },

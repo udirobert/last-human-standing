@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { DAILY_THEMES, TODAY_THEME } from "../data/game";
+import { missionMantra } from "../lib/copy.js";
 import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
 
@@ -219,6 +220,14 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
 
   if (!isLive) return null;
 
+  const mantra = missionMantra({
+    theme: themeLabel,
+    cap,
+    checkedIn,
+    eliminated,
+    survived: Boolean(survived),
+  });
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -236,10 +245,17 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         <TrustBadge />
       </div>
 
-      {round?.prompt && (
-        <p className="text-dim text-sm font-mono mb-3">📸 {round.prompt}</p>
-      )}
-      <p className="text-dim text-xs font-mono mb-4">{themeData.description}</p>
+      <div className="mb-4">
+        <p className="font-mono text-amber text-[10px] tracking-[0.18em] uppercase mb-1">
+          {mantra.kicker}
+        </p>
+        <p className="font-display text-xl text-bone leading-snug tracking-wide">
+          {mantra.line}
+        </p>
+        {round?.prompt && (
+          <p className="text-dim text-xs font-mono mt-2 leading-relaxed">{round.prompt}</p>
+        )}
+      </div>
 
       {/* Mid-day verdict moment: in the final hour, show a live banner */}
       {closingSoon && !eliminated && (

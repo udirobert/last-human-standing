@@ -98,8 +98,9 @@ still runs the routine screens.
   check-in streak (dormant → sprout → bud → bloom), in `ArsenalCard`. Growth =
   time = the daily loop. Its ceramic pot rhymes with the mug on purpose.
 - **DozingCat** (`DozingCat.jsx`) — a sleeping cat for the lonely dwell moment
-  (`SpectatorChip`, the "no slot, just watch" state): *you're not alone*. New
-  register (companionship / a living creature), new motion (a slow breath).
+  (`SpectatorChip` cohort-2 priority state): *you're not alone*. Plain spectators
+  are handled in `MissionBoard` so the cat isn't duplicated. New register
+  (companionship / a living creature), new motion (a slow breath).
 - **ThemeMotif** (`ThemeMotif.jsx`) — the full daily-theme wheel. A dispatcher
   keyed by each theme's emoji renders its hand-painted artefact on the check-in
   card (café→mug, park→tree, gym→dumbbell, friend→two mugs, sunrise→sun,

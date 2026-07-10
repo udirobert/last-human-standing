@@ -103,9 +103,10 @@
 - **`animate-pulse-blood`**: Custom keyframe animation. Works in dev but verify on Safari (some Safari versions have issues with non-standard animation names). Test before deploy.
 
 ### 3b. Onboarding flow — 🟡 Clear core, browser path needs refinement
-- **3-step flow** (Welcome → Rules → Reserve): clean, progressive disclosure. ✅
+- **Core-loop rules** (Welcome → Rules → Reserve): onboarding teaches reserve / theme / prove / survive only. ✅
+- **Progressive disclosure (2026-07-10)**: `ROUND_UNLOCKS` + `RuleReveal` teach infiltrator (Day 2), pressure (Day 3), wildcard (Day 4), finale (Day 5) once per unlock. Mission mantra on `MissionBoard` keeps live home to one job. Arsenal gated on play progress; pots below the feed. ✅
 - **Pre-launch state**: Countdown + cohort progress bar. Strong. ✅
-- **Live state**: "ENTER ARENA" CTA. Good. ✅
+- **Live state**: Mission-first home. Good. ✅
 - **"YOU'RE IN" confirmation**: After payment, shows email capture + referral link. Good virality hook. ✅
 - **Browser fallback**: Shows `BrowserWalletPay` component + "open in World App" CTA. Clear degradation. ✅
 - **World ID verify-first placement** ✅ — the Reserve step now renders World ID + Self verify *before* the paid card, no longer gated on `entryPaid`. World App users can prove identity without paying first. World ID is hidden for Farcaster users (no World App); Self is shown to everyone. `WorldIdVerify` also gates the widget on a connected wallet address (`user?.address`) and renders an explicit "Connect wallet to verify" prompt otherwise — the Orb proof's `signal` is bound to the wallet, so an empty signal would produce an unverifiable proof.

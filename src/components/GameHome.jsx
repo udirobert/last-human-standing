@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
@@ -20,6 +18,7 @@ import GlitchTitle from './ui/GlitchTitle.jsx';
 import WaitlistCard from './WaitlistCard.jsx';
 import ArsenalCard from './ArsenalCard.jsx';
 import DayRecap from './DayRecap.jsx';
+import RuleReveal from './RuleReveal.jsx';
 
 /**
  * GameHome — the persistent home view. Two states:
@@ -62,6 +61,9 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       {/* Day Recap cinematic — overlay shown when a day closes */}
       <DayRecap />
 
+      {/* Progressive rule unlock — one twist per day, once */}
+      {isLive && <RuleReveal onAudit={onViewFeed} />}
+
       {/* FAQ button in top-right — consistent with onboarding */}
       <div className="absolute top-4 right-4 z-20">
         <FAQModal />
@@ -94,25 +96,17 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         <GlitchTitle text="LAST HUMAN STANDING" className="font-display text-4xl text-bone tracking-wide animate-glow" />
       </div>
 
-      {/* === LIVE STATE: 3 clear priorities ===
-          1. Mission (check-in CTA + arsenal)
-          2. Your standing (survivors + pot)
-          3. The feed (what's happening)
-
-          Everything else (wildcard, spectator, waitlist) is
-          contextual and sits below the fold.
+      {/* === LIVE STATE: focus order ===
+          1. Mission (mantra + check-in)
+          2. Standing (survivors — compact)
+          3. Activity feed (the spectacle)
+          Below fold: arsenal (earned only), pots, wildcard, waitlist
       */}
 
       {/* 1. MISSION — the primary CTA */}
       {(isLive || isEnded) && (
         <StageSection index={0} className="relative z-10">
           <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
-        </StageSection>
-      )}
-
-      {(isLive || isEnded) && (
-        <StageSection index={0} className="relative z-10">
-          <ArsenalCard />
         </StageSection>
       )}
 
@@ -134,7 +128,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         </div>
       )}
 
-      {/* 2. STANDING — survivors + pot in one compact row */}
+      {/* 2. STANDING — survivors only; pots live below the feed */}
       {(isLive || isEnded) && (
         <StageSection index={1} className="relative z-10">
           <div className="px-5 grid grid-cols-2 gap-3 mb-3">
@@ -166,16 +160,23 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         </StageSection>
       )}
 
+      {/* 3. THE FEED — what's happening right now */}
       {(isLive || isEnded) && (
-        <StageSection index={2} className="relative z-10 px-5 mb-4">
-          <PrizePots prizePool={stats?.prizePool} />
+        <StageSection index={2} className="relative z-10">
+          <ActivityFeed />
         </StageSection>
       )}
 
-      {/* 3. THE FEED — what's happening right now */}
+      {/* Below fold — earned progress + pot (not competing with the mission) */}
       {(isLive || isEnded) && (
         <StageSection index={3} className="relative z-10">
-          <ActivityFeed />
+          <ArsenalCard />
+        </StageSection>
+      )}
+
+      {(isLive || isEnded) && (
+        <StageSection index={4} className="relative z-10 px-5 mb-4">
+          <PrizePots prizePool={stats?.prizePool} />
         </StageSection>
       )}
 

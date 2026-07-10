@@ -50,6 +50,11 @@ export const ENTRY_HEADING = {
   alreadyPaidSub: "Day 1 opens soon.",
 };
 
+/**
+ * Onboarding rules — the CORE LOOP only.
+ * Advanced mechanics (infiltrator, jury, wildcard) are taught later via
+ * ROUND_UNLOCKS when they actually matter. Don't spoil the myth here.
+ */
 export const RULES = [
   {
     n: "01",
@@ -66,22 +71,99 @@ export const RULES = [
   {
     n: "03",
     title: "PROVE IT",
-    body: "The crowd votes HUMAN or SUS on your photo. Infiltrators try to fake it — can you spot them? Can they spot you?",
+    body: "Snap a photo. The crowd votes HUMAN or SUS. Fake it and you're out — a slower, more convincing human takes your slot.",
     icon: "📸",
   },
   {
     n: "04",
     title: "SURVIVE",
-    body: "Each day the cap shrinks. The crowd eliminates the weakest. Outlast them all and the pot is yours.",
+    body: "Each day the cap shrinks. Outlast them all and the pot is yours.",
     icon: "🏆",
   },
-  {
-    n: "05",
-    title: "WILDCARD",
-    body: "Eliminated? On Day 4 the jury votes to revive one player. Keep voting — your detective rank makes you visible for revival.",
-    icon: "🎭",
-  },
 ];
+
+/**
+ * Progressive disclosure — one twist per day, revealed when the round opens.
+ * Keyed to real mechanic unlocks (not arbitrary "new rules").
+ * Shown once via RuleReveal; dismissed state lives in localStorage.
+ */
+export const ROUND_UNLOCKS = {
+  1: {
+    id: "day1_race",
+    eyebrow: "Day 1 · The race",
+    title: "BE FAST. BE REAL.",
+    body: "The fastest check-ins provisionally survive — but the crowd still judges every photo. Get flagged, and someone slower takes your slot.",
+    cta: "I'M IN →",
+  },
+  2: {
+    id: "day2_infiltrator",
+    eyebrow: "Day 2 · New path",
+    title: "INFILTRATORS UNLOCKED",
+    body: "When you check in, you can opt to bluff. Fool the crowd → immunity through tomorrow's cut. Get caught → you're out, and any immunity burns.",
+    cta: "UNDERSTOOD →",
+  },
+  3: {
+    id: "day3_pressure",
+    eyebrow: "Day 3 · The cut deepens",
+    title: "FEWER SPOTS. SAME STAKES.",
+    body: "The survival cap just shrank again. Speed matters more. Looking human matters more. Miss today and you join the jury.",
+    cta: "LET'S GO →",
+  },
+  4: {
+    id: "day4_wildcard",
+    eyebrow: "Day 4 · Wildcard",
+    title: "THE JURY CAN REVIVE ONE",
+    body: "When today closes, eliminated players vote one human back into the game. Keep auditing — accuracy keeps you visible for revival.",
+    bodyAlive: "The eliminated are voting. One of them might walk back in when today closes. Stay sharp — the audit still decides who holds a slot.",
+    cta: "I'M READY →",
+  },
+  5: {
+    id: "day5_finale",
+    eyebrow: "Day 5 · Finale",
+    title: "ONE HUMAN. ONE POT.",
+    body: "Cap is 1. Check in. Survive the audit. The last verified human takes everything.",
+    cta: "ENTER THE FINALE →",
+  },
+};
+
+/** Jury identity — shown once on first elimination (GameMoment also teaches this). */
+export const JURY_UNLOCK = {
+  id: "jury_identity",
+  eyebrow: "You're out — but not done",
+  title: "YOU'RE THE JURY NOW",
+  body: "Your votes decide who survives. Hit 80% accuracy on 5+ votes and yours count ×2 — plus lottery tickets for the next cohort.",
+  cta: "OPEN THE AUDIT →",
+};
+
+/**
+ * One-line mission mantra for the live home / MissionBoard.
+ * Keeps the first viewport to a single job — not a rulebook.
+ */
+export function missionMantra({
+  theme,
+  cap = 25,
+  checkedIn = false,
+  eliminated = false,
+  survived = false,
+} = {}) {
+  if (eliminated) {
+    return { kicker: "Your job now", line: "Audit the living. Your votes decide who stays." };
+  }
+  if (checkedIn && survived) {
+    return { kicker: "Hold the line", line: "You made the provisional cut. The crowd still judges." };
+  }
+  if (checkedIn) {
+    return {
+      kicker: "Checked in",
+      line: `Rank locked for now — flagged survivors get replaced. Cap is ${cap}.`,
+    };
+  }
+  const place = theme ? String(theme) : "TODAY'S THEME";
+  return {
+    kicker: "Your only job today",
+    line: `Be one of the first ${cap}. ${place}.`,
+  };
+}
 
 /**
  * The daily loop, for the landing's "How It Works" narrative (DayTimeline).

@@ -229,7 +229,7 @@ export default function Onboarding({ onEnter }) {
               <StageSection index={0} className="text-center">
                 <Mascot variant="idle" size={64} />
                 <h2 className="font-display text-4xl text-bone mb-1 mt-2">THE RULES</h2>
-                <p className="text-dim text-sm font-mono">Four steps. That's it.</p>
+                <p className="text-dim text-sm font-mono">The core loop. Twists unlock as you play.</p>
               </StageSection>
 
               <div className="mt-4 space-y-2.5 flex-1">
