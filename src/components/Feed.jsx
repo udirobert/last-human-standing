@@ -8,7 +8,6 @@ import VoteGateBanner from './VoteGateBanner.jsx';
 import { MiniKit } from "@worldcoin/minikit-js";
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
-import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import { useDelight } from './DelightProvider.jsx';
 
@@ -19,12 +18,45 @@ const STATUS_COLORS = {
 };
 
 const STATUS_LABELS = {
-  verified: '✅ Verified',
-  pending: '⏳ Pending',
-  flagged: '⚠️ Flagged',
+  verified: 'HUMAN',
+  pending: 'ON TRIAL',
+  flagged: 'SUS',
 };
 
 const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
+
+function LiveTally({ real = 0, fake = 0 }) {
+  const total = real + fake;
+  const realPct = total > 0 ? Math.round((real / total) * 100) : 50;
+  const fakePct = total > 0 ? 100 - realPct : 50;
+  return (
+    <div className="mt-3">
+      <div className="flex items-end justify-between mb-1.5">
+        <div>
+          <p className="font-mono text-[10px] text-neon uppercase tracking-widest">Human</p>
+          <p className="font-display text-3xl text-neon leading-none tabular-nums">{real}</p>
+        </div>
+        <p className="font-mono text-dim text-xs pb-1">
+          {total === 0 ? 'awaiting votes' : `${realPct}% · ${fakePct}%`}
+        </p>
+        <div className="text-right">
+          <p className="font-mono text-[10px] text-blood uppercase tracking-widest">Sus</p>
+          <p className="font-display text-3xl text-blood leading-none tabular-nums">{fake}</p>
+        </div>
+      </div>
+      <div className="flex h-3 rounded-full overflow-hidden border border-ember/40 bg-ash">
+        <div
+          className="h-full bg-neon transition-[width] duration-500 ease-out"
+          style={{ width: `${realPct}%` }}
+        />
+        <div
+          className="h-full bg-blood transition-[width] duration-500 ease-out"
+          style={{ width: `${fakePct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
 
 // Detective title based on votes resolved + accuracy
 function getDetectiveTitle(resolved, accuracy) {
@@ -105,10 +137,9 @@ export default function Feed({ onBack, onCheckIn }) {
     return () => clearTimeout(timeoutId);
   }, [loadFeed]);
 
-  // The audit is a live spectacle — poll so vote counts and verdicts move
-  // without the user hammering REFRESH.
+  // The audit is a live spectacle — poll so tallies move without refresh.
   useEffect(() => {
-    const id = setInterval(() => loadFeed(), 30_000);
+    const id = setInterval(() => loadFeed(), 12_000);
     return () => clearInterval(id);
   }, [loadFeed]);
 
@@ -216,86 +247,51 @@ export default function Feed({ onBack, onCheckIn }) {
     <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
       <AmbientBackdrop phase={phase === 'live' ? 'live' : 'prelaunch'} />
 
-      <div className="relative z-10 px-5 pt-12 pb-4 sticky top-0 bg-ash/80 backdrop-blur-md z-20">
-        <div className="flex items-center gap-4 mb-4">
+      <div className="relative z-10 px-4 pt-12 pb-3 sticky top-0 bg-ash/90 backdrop-blur-md z-20">
+        <div className="flex items-center gap-3 mb-3">
           <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
             <span className="text-dim text-lg">←</span>
           </button>
-          <div className="flex-1">
-            <GlitchTitle text="AUDIT FEED" className="font-display text-3xl text-bone tracking-wide" />
-            <div className="flex items-center gap-2">
-              <p className="font-mono text-dim text-xs">Vote HUMAN or SUS</p>
-              {import.meta.env.VITE_VOTE_REGISTRY_ADDRESS && (
-                <span className="inline-flex items-center gap-1 font-mono text-[10px] text-neon">
-                  <span className="w-1.5 h-1.5 rounded-full bg-neon animate-pulse" />
-                  ONCHAIN
-                </span>
-              )}
-            </div>
+          <div className="flex-1 min-w-0">
+            <GlitchTitle text="THE AUDIT" className="font-display text-3xl text-bone tracking-wide" />
+            <p className="font-mono text-dim text-[11px]">Live trial · HUMAN or SUS</p>
           </div>
           <FAQModal />
         </div>
 
-        <div className="flex gap-2 mb-3 items-center">
+        <div className="flex gap-2 mb-2 items-center overflow-x-auto">
           {['all', 'pending', 'verified', 'flagged'].map((key) => (
             <button
               key={key}
               onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-mono border ${filter === key ? 'border-bone text-bone' : 'border-ember text-dim'}`}
+              className={`px-3 py-1.5 rounded-full text-xs font-mono border shrink-0 ${filter === key ? 'border-bone text-bone' : 'border-ember text-dim'}`}
             >
-              {key.toUpperCase()}
+              {key === 'verified' ? 'HUMAN' : key === 'flagged' ? 'SUS' : key === 'pending' ? 'TRIAL' : 'ALL'}
             </button>
           ))}
-          <button onClick={handleRefresh} className="ml-auto px-3 py-1.5 rounded-full text-xs font-mono border border-ember text-dim">
-            {refreshing ? '...' : 'REFRESH'}
+          <button onClick={handleRefresh} className="ml-auto px-3 py-1.5 rounded-full text-xs font-mono border border-ember text-dim shrink-0">
+            {refreshing ? '...' : 'LIVE'}
           </button>
         </div>
 
-        {/* Vote accuracy + detective title — visible when you have votes */}
         {you?.votesResolved > 0 && (
-          <div className="mx-5 mb-3 bg-smoke/60 border border-ember/30 rounded-xl p-3 flex items-center justify-between">
-            <div>
-              <p className="font-mono text-[10px] tracking-widest uppercase text-dim mb-0.5">Your detective rank</p>
-              <p className="font-display text-sm text-bone">{getDetectiveTitle(you.votesResolved, you.voteAccuracy)}</p>
-            </div>
-            <div className="text-right">
-              <p className="font-display text-xl text-neon tabular-nums">
-                {you.voteAccuracy != null ? `${Math.round(you.voteAccuracy * 100)}%` : '—'}
-              </p>
-              <p className="font-mono text-[9px] text-dim">{you.votesCorrect}/{you.votesResolved} correct</p>
-            </div>
+          <div className="mb-2 bg-smoke/60 border border-ember/30 rounded-xl px-3 py-2 flex items-center justify-between">
+            <p className="font-display text-sm text-bone">{getDetectiveTitle(you.votesResolved, you.voteAccuracy)}</p>
+            <p className="font-display text-lg text-neon tabular-nums">
+              {you.voteAccuracy != null ? `${Math.round(you.voteAccuracy * 100)}%` : '—'}
+            </p>
           </div>
         )}
-
-        {/* Dunning-Kruger challenge — for authed players who haven't voted yet */}
-        {you?.isAuthed && (you?.votesResolved ?? 0) === 0 && canVote && (
-          <div className="mx-5 mb-3 bg-blood/5 border border-blood/30 rounded-xl p-3 text-center">
-            <p className="font-display text-sm text-bone mb-1">Think you can spot the infiltrators?</p>
-            <p className="text-dim text-[10px] font-mono">Vote on 5 submissions to earn your detective rank. Get 80% accuracy and your votes count ×2.</p>
-          </div>
-        )}
-
-        {/* Voting guide — what to look for */}
-        <div className="mx-5 mb-3 bg-amber/5 border border-amber/20 rounded-xl p-3">
-          <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-1.5">🔍 What to look for</p>
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-            <p className="text-dim text-[10px] font-mono">📍 GPS mismatch or missing</p>
-            <p className="text-dim text-[10px] font-mono">🖼️ Stock photo / AI-generated</p>
-            <p className="text-dim text-[10px] font-mono">🚫 No context or landmarks</p>
-            <p className="text-dim text-[10px] font-mono">⏱️ Posted too fast / generic</p>
-          </div>
-          <p className="text-dim/70 text-[9px] font-mono mt-1.5">Vote SUS if something feels off. Correct votes earn jury tickets.</p>
-        </div>
       </div>
 
-      <div className="px-5 space-y-4">
+      <div className="px-3 space-y-5 pb-8">
         {useMocks && !isMiniApp && (
-          <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5">
+          <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5 mx-1">
             Dev preview — sample submissions. Live data appears in production builds.
           </p>
         )}
         {loadError && (
-          <p className="text-blood font-mono text-xs text-center py-2 border border-blood/30 rounded-xl bg-blood/5">
+          <p className="text-blood font-mono text-xs text-center py-2 border border-blood/30 rounded-xl bg-blood/5 mx-1">
             {loadError.startsWith("challenge_failed")
               ? "Couldn't send challenge via World Chat."
               : "Live feed unavailable. Retrying in a few seconds…"}
@@ -303,7 +299,7 @@ export default function Feed({ onBack, onCheckIn }) {
         )}
         <VoteGateBanner />
         {loading && submissions.length === 0 && (
-          <div className="text-dim font-mono text-sm text-center py-12">Loading feed…</div>
+          <div className="text-dim font-mono text-sm text-center py-12">Loading the trial…</div>
         )}
 
         {!loading && filtered.length === 0 && (
@@ -326,67 +322,94 @@ export default function Feed({ onBack, onCheckIn }) {
           {filtered.map((sub, idx) => {
             const totalVotes = (sub.votes?.real || 0) + (sub.votes?.fake || 0);
             const quorum = sub.voteQuorum || verification.voteQuorum;
-            const progress = Math.min(100, Math.round((totalVotes / quorum) * 100));
+            const progress = Math.min(100, Math.round((totalVotes / Math.max(1, quorum)) * 100));
             const emoji = PHOTO_EMOJIS[idx % PHOTO_EMOJIS.length];
             const isExpanded = expandedId === sub.id;
+            const myVote = voted[sub.id];
 
             return (
-              <motion.div
+              <motion.article
                 key={sub.id}
-                initial={{ opacity: 0, y: 12 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 className="bg-smoke border border-ember rounded-3xl overflow-hidden"
               >
-                <button onClick={() => setExpandedId(isExpanded ? null : sub.id)} className="w-full text-left">
+                <button
+                  type="button"
+                  onClick={() => setExpandedId(isExpanded ? null : sub.id)}
+                  className="w-full text-left relative"
+                >
                   {sub.mediaUrl ? (
-                    <img src={sub.mediaUrl} alt={sub.caption} className="w-full h-64 object-cover" />
+                    <img
+                      src={sub.mediaUrl}
+                      alt={sub.caption}
+                      className="w-full aspect-[4/5] max-h-[70vh] object-cover bg-ash"
+                    />
                   ) : (
-                    <div className="w-full h-64 flex items-center justify-center text-7xl bg-ash">{emoji}</div>
-                  )}
-                </button>
-
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3 mb-2">
-                    <div>
-                      <p className="text-bone font-mono text-sm">{sub.user}</p>
-                      <p className="text-dim text-xs font-mono">{sub.time}</p>
+                    <div className="w-full aspect-[4/5] max-h-[70vh] flex items-center justify-center text-7xl bg-ash">
+                      {emoji}
                     </div>
-                    <span className="text-xs font-mono px-2 py-1 rounded-full" style={{ color: STATUS_COLORS[sub.status], border: `1px solid ${STATUS_COLORS[sub.status]}55` }}>
+                  )}
+                  <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
+                    <span className="font-mono text-[10px] px-2.5 py-1 rounded-full bg-ash/80 backdrop-blur text-bone border border-ember/50">
+                      {sub.user}
+                    </span>
+                    <span
+                      className="font-mono text-[10px] px-2.5 py-1 rounded-full bg-ash/80 backdrop-blur tracking-widest"
+                      style={{ color: STATUS_COLORS[sub.status], border: `1px solid ${STATUS_COLORS[sub.status]}88` }}
+                    >
                       {STATUS_LABELS[sub.status]}
                     </span>
                   </div>
+                </button>
 
-                  <p className="text-bone text-sm leading-relaxed">{sub.caption}</p>
+                <div className="p-4 pt-3">
+                  {sub.caption && (
+                    <p className="text-bone text-sm leading-relaxed mb-1">{sub.caption}</p>
+                  )}
 
-                  <div className="mt-3 h-1.5 bg-ash rounded-full overflow-hidden">
-                    <div className="h-full bg-amber rounded-full" style={{ width: `${progress}%` }} />
+                  <LiveTally real={sub.votes.real} fake={sub.votes.fake} />
+
+                  <div className="mt-2 h-1 bg-ash rounded-full overflow-hidden">
+                    <div className="h-full bg-amber/70 rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
                   </div>
-                  <p className="text-dim text-[10px] font-mono mt-1">{totalVotes}/{quorum} votes</p>
+                  <p className="text-dim text-[10px] font-mono mt-1">
+                    Quorum {totalVotes}/{quorum}
+                    {myVote ? ` · you voted ${myVote === 'real' ? 'HUMAN' : 'SUS'}` : ''}
+                  </p>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
                       onClick={() => handleVote(sub.id, 'real')}
-                      disabled={Boolean(voted[sub.id])}
-                      className="py-3 rounded-2xl bg-neon/10 border border-neon/30 text-neon font-mono text-sm disabled:opacity-50"
+                      disabled={Boolean(myVote) || !canVote}
+                      className={`py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform disabled:opacity-45 ${
+                        myVote === 'real'
+                          ? 'bg-neon text-ash border-2 border-neon'
+                          : 'bg-neon/15 border-2 border-neon/50 text-neon'
+                      }`}
                     >
-                      HUMAN · {sub.votes.real}
+                      HUMAN
                     </button>
                     <button
                       onClick={() => handleVote(sub.id, 'fake')}
-                      disabled={Boolean(voted[sub.id])}
-                      className="py-3 rounded-2xl bg-blood/10 border border-blood/30 text-blood font-mono text-sm disabled:opacity-50"
+                      disabled={Boolean(myVote) || !canVote}
+                      className={`py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform disabled:opacity-45 ${
+                        myVote === 'fake'
+                          ? 'bg-blood text-bone border-2 border-blood'
+                          : 'bg-blood/15 border-2 border-blood/50 text-blood'
+                      }`}
                     >
-                      SUS · {sub.votes.fake}
+                      SUS
                     </button>
                   </div>
+
                   {voteMeta[sub.id]?.juryWeight > 1 && (
                     <p className="text-amber font-mono text-[10px] mt-2 text-center">
-                      ⚖️ Jury vote — counted ×{voteMeta[sub.id].juryWeight} (your accuracy earned it)
+                      Jury vote — counted ×{voteMeta[sub.id].juryWeight}
                     </p>
                   )}
 
-                  {/* Post-vote feedback — shows if verdict resolved on your vote */}
                   {voteFeedback[sub.id] && (
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
@@ -397,14 +420,14 @@ export default function Feed({ onBack, onCheckIn }) {
                           : 'bg-blood/10 border border-blood/30 text-blood'
                       }`}
                     >
-                      {voteFeedback[sub.id].agreed ? '✓ You were right!' : '✗ You were wrong'}
+                      {voteFeedback[sub.id].agreed ? '✓ You were right' : '✗ You were wrong'}
                       {' · '}
                       Verdict: {voteFeedback[sub.id].status === 'verified' ? 'HUMAN' : 'SUS'}
                     </motion.div>
                   )}
 
                   {isExpanded && (
-                    <div className="mt-4 space-y-3">
+                    <div className="mt-4 space-y-2">
                       <button
                         onClick={() => handleChallenge(sub)}
                         className="w-full py-3 rounded-2xl bg-amber/10 border border-amber/30 text-amber font-mono text-sm"
@@ -423,7 +446,7 @@ export default function Feed({ onBack, onCheckIn }) {
                     </div>
                   )}
                 </div>
-              </motion.div>
+              </motion.article>
             );
           })}
         </AnimatePresence>

@@ -49,6 +49,10 @@ Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLO
 3. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID and Self Protocol (both live). See [HUMANITY_PROVIDERS.md](./HUMANITY_PROVIDERS.md) for the integration shape, trust tiers, and the one env-var flip that takes Self from Celo Sepolia staging to Celo mainnet.
 4. **🎨 Hand-painted human motifs**: A gouache-on-paper artefact language (coffee, a growing streak plant, a dozing cat, a full daily-theme wheel) layered against the cold system chrome — the visual argument for "last *human* standing." See [ART_DIRECTION.md](./ART_DIRECTION.md) for the thesis, the shared material, and what's next.
 5. **🎯 Live home focus**: Mission mantra ("Be one of the first N") leads; arsenal / prize pots sit below the feed; arsenal only appears after play progress; spectator chrome is deduped into MissionBoard (cohort-2 priority keeps `SpectatorChip`).
+6. **🃏 Shareable moment cards**: Canvas PNG cards for survive / jury / win; native share prefers the image file.
+7. **⚖️ Audit as spectacle**: Full-bleed photos, live HUMAN/SUS tally bar, large verdict buttons; feed polls every 12s.
+8. **🔁 Cohort 2 handoff**: Ended phase surfaces tickets, next-drop countdown (`COHORT_2_LAUNCH_AT`), waitlist, and push opt-in — not a dead end.
+9. **📋 Theme fairness**: Per-theme "what counts / doesn't" notes on mission + check-in.
 
 ## World Stack usage
 

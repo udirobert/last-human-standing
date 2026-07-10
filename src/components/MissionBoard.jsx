@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
-import { DAILY_THEMES, TODAY_THEME } from "../data/game";
+import { TODAY_THEME, findTheme } from "../data/game";
 import { missionMantra } from "../lib/copy.js";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
 import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
+import ThemeFairness from "./ThemeFairness.jsx";
+import Cohort2Handoff from "./Cohort2Handoff.jsx";
 
 function formatWindow(iso) {
   if (!iso) return null;
@@ -167,18 +169,7 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
         {youWon ? "SHARE YOUR VICTORY CARD" : "SHARE THE RESULT"}
       </button>
 
-      <div className="mt-4 bg-indigo/10 border border-indigo/40 rounded-2xl p-4 text-center">
-        <p className="font-mono text-indigo text-xs tracking-widest uppercase mb-1">Next cohort</p>
-        <p className="text-bone font-mono text-sm mb-3">
-          {youWon ? "Defend your title. The next game starts soon." : "You've seen the game. Now play it. Reserve your slot for cohort 2."}
-        </p>
-        <a
-          href={window.location.origin}
-          className="inline-block w-full py-3 rounded-xl bg-indigo/20 border border-indigo/50 text-indigo font-display text-sm tracking-widest active:scale-95 transition-transform"
-        >
-          RESERVE FOR COHORT 2 →
-        </a>
-      </div>
+      <Cohort2Handoff youWon={youWon} />
 
       <button
         onClick={onViewFeed}
@@ -207,7 +198,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
 
   const isSpectator = isLive && !user?.paid && !user?.eliminated;
   const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
-  const themeData = DAILY_THEMES.find((t) => t.theme === themeLabel) || TODAY_THEME;
+  const themeData = findTheme(themeLabel) || TODAY_THEME;
   const opens = formatWindow(round?.opensAt);
   const closes = formatWindow(round?.closesAt);
   const slotsLeft = round?.slotsRemaining ?? null;
@@ -286,6 +277,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         {round?.prompt && (
           <p className="text-dim text-xs font-mono mt-2 leading-relaxed">{round.prompt}</p>
         )}
+        <ThemeFairness theme={themeData} className="mt-3" />
       </div>
 
       {/* Mid-day verdict moment: in the final hour, show a live banner */}

@@ -11,10 +11,11 @@ import { motion, AnimatePresence } from 'framer-motion';
  * We never reveal whether the handle/email already existed — the
  * server returns 200 either way.
  */
-export default function WaitlistCard({ source = 'welcome_screen', className = '' }) {
+export default function WaitlistCard({ source = 'welcome_screen', variant = 'default', className = '' }) {
   const [xHandle, setXHandle] = useState('');
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('idle'); // idle | submitting | done | error
+  const isCohort2 = variant === 'cohort2' || source === 'cohort_2';
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -27,7 +28,7 @@ export default function WaitlistCard({ source = 'welcome_screen', className = ''
         body: JSON.stringify({
           x_handle: xHandle.trim() || undefined,
           email: email.trim() || undefined,
-          source,
+          source: isCohort2 ? 'cohort_2' : source,
         }),
       });
       if (!resp.ok) throw new Error(`waitlist_${resp.status}`);
@@ -58,10 +59,12 @@ export default function WaitlistCard({ source = 'welcome_screen', className = ''
               ✓
             </div>
             <p className="font-display text-base text-bone tracking-wider uppercase">
-              You're on the list
+              You&apos;re on the list
             </p>
             <p className="font-mono text-xs text-dim mt-1">
-              We'll ping you when cohort 1 launches.
+              {isCohort2
+                ? "We'll ping you when cohort 2 opens."
+                : "We'll ping you when the next cohort launches."}
             </p>
           </motion.div>
         ) : (
@@ -78,12 +81,13 @@ export default function WaitlistCard({ source = 'welcome_screen', className = ''
                 🔔
               </span>
               <p className="font-mono text-dim text-[10px] uppercase tracking-widest">
-                Notify me · cohort 1
+                {isCohort2 ? "Notify me · cohort 2" : "Notify me · next cohort"}
               </p>
             </div>
             <p className="font-mono text-xs text-bone mb-3 leading-relaxed">
-              Don't have a slot yet? Drop a handle or email and we'll
-              ping you the moment the cohort opens.
+              {isCohort2
+                ? "Drop a handle or email — we'll ping you the moment cohort 2 opens."
+                : "Don't have a slot yet? Drop a handle or email and we'll ping you the moment the cohort opens."}
             </p>
             <div className="space-y-2">
               <input

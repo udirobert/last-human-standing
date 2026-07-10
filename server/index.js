@@ -85,6 +85,7 @@ const LOTTERY_MIN_CANDIDATES = Number(process.env.LOTTERY_MIN_CANDIDATES || 10);
 const LOTTERY_MAX_DELAY_HOURS = Number(process.env.LOTTERY_MAX_DELAY_HOURS || 6);
 
 const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
+const COHORT_2_LAUNCH_AT = process.env.COHORT_2_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
 const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 40);
 
@@ -2072,6 +2073,10 @@ app.get("/api/game/state", async (req, res) => {
       now: new Date().toISOString(),
       phase,
       launchAt: GAME_LAUNCH_AT,
+      nextCohort: {
+        number: 2,
+        launchAt: COHORT_2_LAUNCH_AT,
+      },
       cohortSize: COHORT_SIZE,
       reservedCount: reserved,
       cohortFull,

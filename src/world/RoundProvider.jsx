@@ -22,6 +22,7 @@ const DEFAULT_YOU = {
 const DEFAULT_STATE = {
   phase: "prelaunch",
   launchAt: null,
+  nextCohort: { number: 2, launchAt: null },
   cohortSize: 50,
   reservedCount: 0,
   cohortFull: false,
@@ -73,6 +74,7 @@ export function RoundProvider({ children }) {
         setState({
           phase: data.phase ?? "prelaunch",
           launchAt: data.launchAt ?? null,
+          nextCohort: data.nextCohort ?? { number: 2, launchAt: null },
           cohortSize: data.cohortSize ?? 50,
           reservedCount: data.reservedCount ?? 0,
           cohortFull: Boolean(data.cohortFull),

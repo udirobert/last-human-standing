@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
-import { DAILY_THEMES, TODAY_THEME } from '../data/game';
+import { TODAY_THEME, findTheme } from '../data/game';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
@@ -11,6 +11,7 @@ import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import BubbleLoader from './ui/BubbleLoader.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
+import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { shareMoment } from '../lib/shareMoment.js';
@@ -43,7 +44,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const sharedRef = useRef(false);
 
   const theme = round?.placeType || round?.name || TODAY_THEME.theme;
-  const themeData = DAILY_THEMES.find(t => t.theme === theme) || TODAY_THEME;
+  const themeData = findTheme(theme) || TODAY_THEME;
 
   // GPS toggle — start/stop watching
   const toggleGps = () => {
@@ -319,6 +320,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
                 <p className="text-dim text-sm font-mono">{themeData.description}</p>
                 {round.prompt && <p className="text-dim text-xs font-mono mt-2">📸 {round.prompt}</p>}
+                <ThemeFairness theme={themeData} className="mt-3" />
                 <div className="mt-3 flex justify-between text-xs font-mono text-dim">
                   <span>Slots: {round.slotsRemaining}/{round.survivalCap}</span>
                   <span>Anywhere on Earth 🌍</span>
