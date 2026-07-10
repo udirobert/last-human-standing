@@ -3,6 +3,7 @@ import ThemeMotif from "./ThemeMotif.jsx";
 import CoffeeBrew from "./CoffeeBrew.jsx";
 import DozingCat from "./DozingCat.jsx";
 import MotifFrieze from "./MotifFrieze.jsx";
+import EmberField from "./EmberField.jsx";
 
 /**
  * LandingHero — the cinematic front door (docs/ART_DIRECTION.md).
@@ -116,6 +117,12 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
           this actually reads as a living, warm world rather than vanishing
           into the backdrop. */}
       <div aria-hidden="true" className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
+        {/* A visible ripple, contained strictly to this same box — can never
+            escape the hero or bleed into cards further down the page.
+            Positioned low, in the open space around the warm halo/frieze —
+            centering it behind the title (the obvious first instinct) hid
+            most of it behind that same opaque text. */}
+        <EmberField cy={78} />
         <div className="absolute left-[3%] top-[15%]" style={{ opacity: 0.32 }}>
           <ThemeMotif emoji="🌳" size={92} />
         </div>
