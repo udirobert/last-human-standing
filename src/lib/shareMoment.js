@@ -1,9 +1,11 @@
 import { canvasToPngBlob, renderMomentCard } from "./momentCard.js";
+import { MiniKit } from "@worldcoin/minikit-js";
 
 /**
  * Share a mythic moment card.
- * Prefers native share with a PNG file (X / iMessage / Stories get an image).
- * Falls back to share URL (OG unfurl) then clipboard.
+ * Prefers MiniKit.share() inside World App, then native share with a PNG
+ * file (X / iMessage / Stories), then Farcaster composeCast, then URL
+ * share, then clipboard.
  *
  * @param {'survive'|'jury'|'win'} kind
  * @param {{
@@ -46,6 +48,23 @@ export async function shareMoment(kind, opts) {
         embeds: [opts.url],
       });
       return "shared";
+    }
+
+    // World App native share sheet — can attach the PNG and opens system UI
+    if (MiniKit.isInstalled()) {
+      try {
+        const shareInput = {
+          title: "Last Human Standing",
+          text: opts.text,
+          url: opts.url,
+          ...(file ? { files: [file] } : {}),
+        };
+        await MiniKit.share(shareInput);
+        return "shared";
+      } catch (e) {
+        if (e?.name === "AbortError") return "dismissed";
+        // Fall through to browser-native share
+      }
     }
 
     if (file && navigator.canShare?.({ files: [file] })) {

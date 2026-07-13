@@ -45,6 +45,54 @@ export default function pushRoutes({ requireAuth, supabaseAdmin, log }) {
     }
   });
 
+  // World App native notification permission registration.
+  // The client uses MiniKit.requestPermission({ permission: Permission.Notifications });
+  // and then hits this endpoint so the server can send via the Developer Portal API.
+  router.get("/world-status", requireAuth, async (req, res) => {
+    if (!supabaseAdmin) {
+      return res.status(501).json({ error: "database_not_configured" });
+    }
+    try {
+      const { data } = await supabaseAdmin
+        .from("world_push_subscriptions")
+        .select("address")
+        .eq("address", req.user.address)
+        .maybeSingle();
+      res.json({ subscribed: Boolean(data) });
+    } catch (e) {
+      res.status(400).json({ error: "db_failed", message: e instanceof Error ? e.message : "unknown" });
+    }
+  });
+
+  router.post("/world-subscribe", requireAuth, async (req, res) => {
+    if (!supabaseAdmin) {
+      return res.status(501).json({ error: "database_not_configured" });
+    }
+    try {
+      await supabaseAdmin.from("world_push_subscriptions").upsert(
+        { address: req.user.address },
+        { onConflict: "address" },
+      );
+      log("world_push_subscribe", { address: req.user.address });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ error: "db_failed", message: e instanceof Error ? e.message : "unknown" });
+    }
+  });
+
+  router.post("/world-unsubscribe", requireAuth, async (req, res) => {
+    if (!supabaseAdmin) {
+      return res.status(501).json({ error: "database_not_configured" });
+    }
+    try {
+      await supabaseAdmin.from("world_push_subscriptions").delete().eq("address", req.user.address);
+      log("world_push_unsubscribe", { address: req.user.address });
+      res.json({ ok: true });
+    } catch (e) {
+      res.status(400).json({ error: "db_failed", message: e instanceof Error ? e.message : "unknown" });
+    }
+  });
+
   router.post("/test", async (req, res) => {
     const adminToken = process.env.ADMIN_TOKEN;
     const token = req.headers["x-admin-token"];

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useIDKitRequest, orbLegacy } from "@worldcoin/idkit";
+import { useIDKitRequest, proofOfHuman } from "@worldcoin/idkit";
 import QRCode from "qrcode";
 import { useWorld } from "./WorldProvider.jsx";
 import { useDelight } from "../components/DelightProvider.jsx";
@@ -265,7 +265,9 @@ export default function WorldIdVerify() {
       action,
       rp_context: rpContext,
       allow_legacy_proofs: true,
-      preset: orbLegacy({ signal: walletAddress }),
+      // proofOfHuman is the current World ID 4.0 credential and still
+      // accepts legacy Orb proofs as a fallback via allow_legacy_proofs.
+      preset: proofOfHuman({ signal: walletAddress }),
       polling: { interval: 2000, timeout: 0 }, // 0 = poll forever; we manage UX timeout ourselves
     };
   }, [rpContext, appId, action, walletAddress]);

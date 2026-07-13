@@ -31,6 +31,7 @@ export default defineConfig([
     files: [
       'src/hooks/**/*.{js,jsx}',
       'src/world/**/*.{js,jsx}',
+      'src/speedrun/**/*.{js,jsx}',
       'src/components/DelightProvider.jsx',
       'src/components/ExitIntentModal.jsx',
     ],

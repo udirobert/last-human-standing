@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
+import { WELCOME_KEY } from "../../lib/postReserve.js";
 import Mascot from "../Mascot.jsx";
 import TrustBadge from "../TrustBadge.jsx";
 import EarlyBadge from "./EarlyBadge.jsx";
@@ -7,8 +8,6 @@ import PushOptIn from "../PushOptIn.jsx";
 import VerifyOptIn from "./VerifyOptIn.jsx";
 import PracticeVote from "./PracticeVote.jsx";
 import MotifFrieze from "../ui/MotifFrieze.jsx";
-
-const WELCOME_KEY = "lhs_just_reserved";
 
 /**
  * Lobby-only extras after reserve — push, optional verify, practice vote.
@@ -65,13 +64,4 @@ export default function PostReserveExtras({ reservedAt, phase }) {
       <PracticeVote />
     </div>
   );
-}
-
-/** Call after a successful reserve/pay before routing to the lobby. */
-export function markJustReserved() {
-  try {
-    sessionStorage.setItem(WELCOME_KEY, "1");
-  } catch {
-    /* ignore */
-  }
 }

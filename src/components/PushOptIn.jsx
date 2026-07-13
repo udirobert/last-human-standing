@@ -1,11 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
-import { subscribePush, unsubscribePush, getPushStatus } from "../lib/pushClient.js";
+import { MiniKit } from "@worldcoin/minikit-js";
+import {
+  subscribePush,
+  unsubscribePush,
+  getPushStatus,
+  subscribeWorldPush,
+  unsubscribeWorldPush,
+  getWorldPushStatus,
+} from "../lib/pushClient.js";
 
 /**
  * PushOptIn — toggle component for enabling/disabling push notifications.
- * Renders nothing if the browser doesn't support push, or if VAPID
- * is not configured on the server.
+ * Uses MiniKit.requestPermission() inside World App, and the browser
+ * PushManager + VAPID outside of it.
  */
 export default function PushOptIn() {
   const [status, setStatus] = useState("loading"); // loading | unsupported | unconfigured | off | on | error
@@ -13,16 +21,24 @@ export default function PushOptIn() {
   const [busy, setBusy] = useState(false);
   const [justEnabled, setJustEnabled] = useState(false);
 
-  // Fetch VAPID public key + status on mount
+  const isWorldApp = typeof window !== "undefined" && MiniKit.isInstalled();
+
+  // Fetch status on mount
   useEffect(() => {
     let cancelled = false;
     (async () => {
       if (typeof window === "undefined") return;
-      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
-        if (!cancelled) setStatus("unsupported");
-        return;
-      }
       try {
+        if (isWorldApp) {
+          const { subscribed } = await getWorldPushStatus();
+          if (!cancelled) setStatus(subscribed ? "on" : "off");
+          return;
+        }
+
+        if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+          if (!cancelled) setStatus("unsupported");
+          return;
+        }
         const resp = await fetch("/api/push/vapid-key");
         if (!resp.ok) {
           if (!cancelled) setStatus("unconfigured");
@@ -35,26 +51,26 @@ export default function PushOptIn() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [isWorldApp]);
 
   const handleEnable = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      // Request browser permission
-      const permission = await Notification.requestPermission();
-      if (permission !== "granted") {
-        setError("Permission denied");
-        setStatus("off");
-        return;
+      if (isWorldApp) {
+        await subscribeWorldPush();
+      } else {
+        // Browser PushManager path
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") {
+          setError("Permission denied");
+          setStatus("off");
+          return;
+        }
+        const resp = await fetch("/api/push/vapid-key");
+        const { publicKey } = await resp.json();
+        await subscribePush(publicKey);
       }
-
-      // Fetch VAPID key
-      const resp = await fetch("/api/push/vapid-key");
-      const { publicKey } = await resp.json();
-
-      // Subscribe via the service worker
-      await subscribePush(publicKey);
       setStatus("on");
       // Brief "Subscribed!" beat so the user gets explicit confirmation
       // instead of a silent toggle flip.
@@ -66,20 +82,25 @@ export default function PushOptIn() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [isWorldApp]);
 
   const handleDisable = useCallback(async () => {
     setBusy(true);
     setError(null);
     try {
-      await unsubscribePush();
+      if (isWorldApp) {
+        await unsubscribeWorldPush();
+      } else {
+        await unsubscribePush();
+      }
       setStatus("off");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Unknown error");
+      setStatus("error");
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [isWorldApp]);
 
   if (status === "loading") return null;
   if (status === "unsupported") return null;

@@ -15,6 +15,7 @@ import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { shareMoment } from '../lib/shareMoment.js';
+import { haptic } from '../lib/haptics.js';
 import { HumanCta, GameCta } from './ui/CraftCta.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 
@@ -231,10 +232,10 @@ export default function CheckIn({ onBack, onSubmit }) {
       refreshRound();
       // Haptic feedback: survived = celebration pulse, eliminated = single thud
       if (json.survived) {
-        navigator.vibrate?.([30, 50, 100]);
+        haptic('success');
         playSound?.('victory');
       } else {
-        navigator.vibrate?.([200]);
+        haptic('error');
         playSound?.('error');
       }
 

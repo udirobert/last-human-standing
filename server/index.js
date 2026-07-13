@@ -2516,8 +2516,11 @@ function validateEnv() {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     warnings.push("SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY: DB writes will fail silently");
   }
+  if (IS_PROD && !process.env.WORLD_APP_ID) {
+    warnings.push("WORLD_APP_ID: MiniKit payment / push / wallet-auth commands will fail");
+  }
   if (IS_PROD && !process.env.WORLD_DEV_PORTAL_API_KEY) {
-    warnings.push("WORLD_DEV_PORTAL_API_KEY: World App payment verification will fail");
+    warnings.push("WORLD_DEV_PORTAL_API_KEY: World App payment verification and push notifications will fail");
   }
   if (IS_PROD && !process.env.WORLD_ID_RP_ID) {
     warnings.push("WORLD_ID_RP_ID: World ID verification will not work");

@@ -2,10 +2,10 @@ import { createContext, useContext, useEffect, useMemo, useState, useCallback, u
 import { MiniKit } from "@worldcoin/minikit-js";
 import { Tokens, tokenToDecimals } from "@worldcoin/minikit-js/commands";
 
-function constructSiweMessage({ domain, address, statement, uri, nonce, chainId }) {
+function constructSiweMessage({ domain, address, statement, uri, nonce, chainId, requestId }) {
   const issuedAt = new Date().toISOString();
   const expirationTime = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-  return [
+  const lines = [
     `${domain} wants you to sign in with your Ethereum account:`,
     address,
     "",
@@ -17,7 +17,11 @@ function constructSiweMessage({ domain, address, statement, uri, nonce, chainId 
     `Nonce: ${nonce}`,
     `Issued At: ${issuedAt}`,
     `Expiration Time: ${expirationTime}`,
-  ].join("\n");
+  ];
+  if (requestId) {
+    lines.push(`Request ID: ${requestId}`);
+  }
+  return lines.join("\n");
 }
 
 function detectFarcaster() {
@@ -41,6 +45,17 @@ const STORAGE_KEY = "******************";
 function safeTruncateAddress(address) {
   if (!address) return null;
   return `${address.slice(0, 6)}…${address.slice(-4)}`;
+}
+
+function generateRequestId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  if (typeof crypto !== "undefined" && crypto.getRandomValues) {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
 function loadPersisted() {
@@ -128,6 +143,8 @@ export function WorldProvider({ children }) {
       throw new Error(`Nonce request failed: ${text}`);
     }
     const { nonce } = await nonceResp.json();
+    const requestId = generateRequestId();
+    const statement = "Sign in to Last Human Standing";
 
     if (isFarcaster) {
       try {
@@ -141,10 +158,11 @@ export function WorldProvider({ children }) {
         const message = constructSiweMessage({
           domain,
           address,
-          statement: "Sign in to Last Human Standing",
+          statement,
           uri,
           nonce,
           chainId: parseInt(chainId, 16),
+          requestId,
         });
 
         const signature = await provider.request({
@@ -156,7 +174,7 @@ export function WorldProvider({ children }) {
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ payload: { message, signature, address }, nonce }),
+          body: JSON.stringify({ payload: { message, signature, address }, nonce, statement, requestId }),
         });
         if (!verifyResp.ok) {
           const text = await verifyResp.text();
@@ -189,7 +207,8 @@ export function WorldProvider({ children }) {
     try {
       const result = await MiniKit.walletAuth({
         nonce,
-        statement: "Sign in to Last Human Standing",
+        statement,
+        requestId,
         expirationTime: new Date(Date.now() + 1000 * 60 * 30),
       });
 
@@ -203,7 +222,7 @@ export function WorldProvider({ children }) {
         method: "POST",
         headers: { "content-type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ payload: result.data, nonce }),
+        body: JSON.stringify({ payload: result.data, nonce, statement, requestId }),
       });
       if (!verifyResp.ok) {
         const text = await verifyResp.text();
@@ -400,16 +419,19 @@ export function WorldProvider({ children }) {
         const nonceResp = await fetch("/api/nonce", { method: "POST" });
         if (!nonceResp.ok) return;
         const { nonce } = await nonceResp.json();
+        const autoRequestId = generateRequestId();
+        const autoStatement = "Sign in to Last Human Standing";
         const message = constructSiweMessage({
-          domain, address, statement: "Sign in to Last Human Standing", uri, nonce,
+          domain, address, statement: autoStatement, uri, nonce,
           chainId: parseInt(chainId, 16),
+          requestId: autoRequestId,
         });
         const signature = await provider.request({ method: "personal_sign", params: [message, address] });
         const verifyResp = await fetch("/api/complete-siwe", {
           method: "POST",
           headers: { "content-type": "application/json" },
           credentials: "include",
-          body: JSON.stringify({ payload: { message, signature, address }, nonce }),
+          body: JSON.stringify({ payload: { message, signature, address }, nonce, statement: autoStatement, requestId: autoRequestId }),
         });
         if (!verifyResp.ok) return;
         const { address: verifiedAddress } = await verifyResp.json();

@@ -58,7 +58,7 @@ export default function authRoutes({
     async (req, res) => {
     const body = ensureObjectBody(req, res);
     if (!body) return;
-    const { payload, nonce } = body;
+    const { payload, nonce, statement, requestId } = body;
     if (!payload || !nonce) {
       return res.status(400).json({ error: "missing_payload_or_nonce" });
     }
@@ -77,7 +77,9 @@ export default function authRoutes({
     }
 
     try {
-      const verification = await verifySiweMessage(payload, nonce);
+      // Pass statement and requestId for additional server-side validation
+      // so the signed SIWE message must contain the exact values the client sent.
+      const verification = await verifySiweMessage(payload, nonce, statement, requestId);
       if (!verification.isValid) {
         log("siwe_invalid", { nonce });
         return res.status(401).json({ error: "invalid_siwe" });

@@ -152,7 +152,7 @@ export function SpeedRunProvider({ children }) {
 
   const choosePath = useCallback((choice) => {
     // Honest → clean survive. Bluff → staged 50/50 (seeded by session for replay stability).
-    let outcome = null;
+    let outcome;
     let immunity = false;
     let caught = false;
     if (choice === "honest") {

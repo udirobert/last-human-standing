@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
@@ -20,7 +20,7 @@ import ShrinkingPot from "./ui/ShrinkingPot.jsx";
 import GameplayLoopDemo from "./ui/GameplayLoopDemo.jsx";
 import ExitIntentPrompt from "./ui/ExitIntentPrompt.jsx";
 import SharePanel from "./prelaunch/SharePanel.jsx";
-import { markJustReserved } from "./prelaunch/PostReserveExtras.jsx";
+import { markJustReserved } from "../lib/postReserve.js";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import { HumanCta } from "./ui/CraftCta.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
@@ -98,11 +98,11 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
     try { localStorage.setItem(ONBOARDING_KEY, "1"); } catch { /* ignore */ }
   };
 
-  const goToLobby = () => {
+  const goToLobby = useCallback(() => {
     markOnboardingDone();
     markJustReserved();
     onEnter();
-  };
+  }, [onEnter]);
 
   useEffect(() => {
     if (!verified || enteredRef.current) return;
@@ -111,7 +111,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
     enteredRef.current = true;
     const t = setTimeout(() => goToLobby(), 600);
     return () => clearTimeout(t);
-  }, [verified, isLive, phase, youReserved, onEnter]);
+  }, [verified, isLive, phase, youReserved, onEnter, goToLobby]);
 
   const handleWalletAuth = async () => {
     if (authing || walletAuthed) return;

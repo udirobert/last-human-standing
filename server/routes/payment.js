@@ -188,6 +188,12 @@ export default function paymentRoutes({
         log("pay_confirm_rejected", { address: req.user.address, status: resp.status });
         return res.status(400).json({ error: "payment_verify_failed", details: json });
       }
+      // The World API returns 200 once it has a record; verify the on-chain
+      // status is actually "mined" before treating the payment as final.
+      if (json?.transaction_status !== "mined") {
+        log("pay_confirm_not_mined", { address: req.user.address, status: json?.transaction_status });
+        return res.status(400).json({ error: "payment_not_mined", status: json?.transaction_status, details: json });
+      }
       await upsertPaidUser(req.user.address, { referredBy: body.referredBy || null, platform: "world", entryKind: "paid", entryToken: "wld" });
       log("pay_confirm_success", { address: req.user.address, platform: "world" });
       res.json({ ok: true, paid: true, details: json });

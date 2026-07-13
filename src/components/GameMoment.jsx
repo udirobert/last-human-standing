@@ -8,6 +8,7 @@ import MotifFrieze from "./ui/MotifFrieze.jsx";
 import ShareSheet from "./ShareSheet.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
+import { haptic } from "../lib/haptics.js";
 
 /**
  * GameMoment — full-screen cinematic overlays for the two most
@@ -138,9 +139,7 @@ function MomentCardPreview({ kind, name, day, rank, cap }) {
 function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName }) {
   // Haptic celebration
   useEffect(() => {
-    if (navigator.vibrate) {
-      navigator.vibrate([30, 40, 30, 40, 60]);
-    }
+    haptic("success");
   }, []);
 
   return (
@@ -259,9 +258,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
 function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName }) {
   // Haptic thud — heavy, single pulse
   useEffect(() => {
-    if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 200]);
-    }
+    haptic("error");
   }, []);
 
   // Fetch the vote breakdown for this day's submission — "why was I eliminated"
