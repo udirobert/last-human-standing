@@ -171,6 +171,7 @@ export default function Feed({ onBack, onCheckIn }) {
   const handleVote = async (id, type) => {
     if (!canVote) return;
     if (voted[id]) return;
+    if (navigator.vibrate) navigator.vibrate(type === 'real' ? 15 : [10, 30, 10]);
     setVoted((v) => ({ ...v, [id]: type }));
     setSubmissions((subs) =>
       subs.map((s) =>

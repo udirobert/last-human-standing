@@ -539,6 +539,8 @@ export default function CheckIn({ onBack, onSubmit }) {
                   ? `@${user.username}`
                   : (user?.displayName || user?.address?.slice(0, 8) || "anon")
               }
+              shareText={buildShare(result.survived).text}
+              shareUrl={buildShare(result.survived).url}
             />
           )}
         </AnimatePresence>

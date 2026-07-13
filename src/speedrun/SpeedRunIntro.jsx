@@ -4,6 +4,8 @@ import CoffeeBrew from "../components/ui/CoffeeBrew.jsx";
 import DozingCat from "../components/ui/DozingCat.jsx";
 import MotifFrieze from "../components/ui/MotifFrieze.jsx";
 import EmberField from "../components/ui/EmberField.jsx";
+import MascotGuide from "../components/ui/MascotGuide.jsx";
+import { getProfiledMascotLines } from "../lib/copy.js";
 import { CUE_PRESS, CUE_HOVER } from "../lib/cuelume.js";
 
 const PAPER_GRAIN =
@@ -112,6 +114,23 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
           <br />
           STANDING
         </motion.h1>
+
+        {/* Survivor — your guide through the week */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5, delay: 0.18, type: "spring", bounce: 0.4 }}
+          className="flex justify-center"
+          style={{ marginTop: "clamp(10px,1.5vw,16px)" }}
+        >
+          <MascotGuide
+            variant="excited"
+            size={56}
+            message={getProfiledMascotLines().intro}
+            position="top"
+            interactive
+          />
+        </motion.div>
 
         <motion.p
           initial={{ opacity: 0, y: 10 }}

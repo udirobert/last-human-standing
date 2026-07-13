@@ -1,5 +1,6 @@
 import { findTheme } from "../data/game.js";
 import { ROUND_UNLOCKS, JURY_UNLOCK } from "../lib/copy.js";
+import { proofSceneDataUri } from "../components/ui/proofSceneData.js";
 
 /**
  * 5-day speed-run — compressed cohort myth.
@@ -52,8 +53,7 @@ export const DEMO_DAYS = {
   1: {
     day: 1,
     theme: findTheme("ON PUBLIC TRANSIT"),
-    samplePhoto:
-      "https://images.unsplash.com/photo-1544620341-11cb2e5b5755?w=800&h=1000&fit=crop",
+    samplePhoto: proofSceneDataUri({ scene: "transit", seed: 1 }),
     unlock: ROUND_UNLOCKS[1],
     capFrom: 50,
     capTo: 25,
@@ -61,8 +61,7 @@ export const DEMO_DAYS = {
   2: {
     day: 2,
     theme: findTheme("AT A GYM"),
-    samplePhoto:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=800&h=1000&fit=crop",
+    samplePhoto: proofSceneDataUri({ scene: "gym", seed: 2 }),
     unlock: ROUND_UNLOCKS[2],
     capFrom: 25,
     capTo: 12,
@@ -70,8 +69,7 @@ export const DEMO_DAYS = {
   3: {
     day: 3,
     theme: findTheme("AT A GROCERY STORE"),
-    samplePhoto:
-      "https://images.unsplash.com/photo-1542838132-92c53300491e?w=800&h=1000&fit=crop",
+    samplePhoto: proofSceneDataUri({ scene: "grocery", seed: 3 }),
     unlock: ROUND_UNLOCKS[3],
     capFrom: 12,
     capTo: 6,
@@ -79,8 +77,7 @@ export const DEMO_DAYS = {
   4: {
     day: 4,
     theme: findTheme("AT A BEACH OR WATER"),
-    samplePhoto:
-      "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&h=1000&fit=crop",
+    samplePhoto: proofSceneDataUri({ scene: "beach", seed: 4 }),
     unlock: ROUND_UNLOCKS[4],
     capFrom: 6,
     capTo: 3,
@@ -88,8 +85,7 @@ export const DEMO_DAYS = {
   5: {
     day: 5,
     theme: findTheme("EATING SOMETHING"),
-    samplePhoto:
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=800&h=1000&fit=crop",
+    samplePhoto: proofSceneDataUri({ scene: "eating", seed: 5 }),
     unlock: ROUND_UNLOCKS[5],
     capFrom: 3,
     capTo: 1,
@@ -124,16 +120,16 @@ export const NPCS = [
 
 const AUDIT_PHOTOS = {
   transit: [
-    "https://images.unsplash.com/photo-1558618666-fcd25c85f82e?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1449965408869-eaa3f722e40d?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1506521781263-d8422e82f27a?w=800&h=1000&fit=crop",
+    proofSceneDataUri({ scene: "transit", seed: 11 }),
+    proofSceneDataUri({ scene: "transit", seed: 22 }),
+    proofSceneDataUri({ scene: "transit", seed: 33 }),
   ],
   gym: [
-    "https://images.unsplash.com/photo-1571902943202-507ec2618e8f?w=800&h=1000&fit=crop",
-    "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=800&h=1000&fit=crop",
+    proofSceneDataUri({ scene: "gym", seed: 44 }),
+    proofSceneDataUri({ scene: "gym", seed: 55 }),
   ],
   default: [
-    "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=800&h=1000&fit=crop",
+    proofSceneDataUri({ scene: "default", seed: 66 }),
   ],
 };
 

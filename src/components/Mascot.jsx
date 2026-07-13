@@ -1,5 +1,7 @@
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useId } from 'react';
+import GouacheFilters from './ui/GouacheFilters.jsx';
+import { GOUACHE as P } from './ui/gouachePalette.js';
 
 /**
  * "Survivor" mascot — a determined little figure that's always one step ahead.
@@ -169,6 +171,7 @@ export default function Mascot({
 
   // Variant-specific expressions
   const customExpression = getExpression(variant);
+  const uid = useId().replace(/:/g, "");
 
   return (
     <div
@@ -214,30 +217,54 @@ export default function Mascot({
 
         <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full overflow-visible">
           <defs>
-            <radialGradient id="mascot-body" cx="0.5" cy="0.4">
-              <stop offset="0%" stopColor="#FF4444" />
-              <stop offset="100%" stopColor="#CC0000" />
-            </radialGradient>
+            <GouacheFilters id={uid} />
+            <clipPath id={`${uid}-body`}>
+              <ellipse cx="48" cy="56" rx="14" ry="18" />
+            </clipPath>
+            <clipPath id={`${uid}-head`}>
+              <circle cx="48" cy="32" r="16" />
+            </clipPath>
           </defs>
 
-          {/* Shadow */}
-          <ellipse cx="48" cy="88" rx="20" ry="6" fill="rgba(0,0,0,0.3)" />
+          {/* Shadow — gouache grounding */}
+          <ellipse cx="48" cy="88" rx="20" ry="6" fill="#000" opacity="0.35" filter={`url(#${uid}-shadow)`} />
 
-          {/* Body group */}
-          <g transform="translate(48, 48)">
-            {/* Legs - mid-stride */}
-            <path d="M-8 20 Q-14 32 -12 38" stroke="#FFB800" strokeWidth="6" strokeLinecap="round" fill="none" />
-            <path d="M8 20 Q14 28 10 36" stroke="#FFB800" strokeWidth="6" strokeLinecap="round" fill="none" />
+          {/* Body group — brush-wobbled */}
+          <g transform="translate(48, 48)" filter={`url(#${uid}-brush)`}>
+            {/* Legs — warm crema, hand-painted strokes */}
+            <path d="M-8 20 Q-14 32 -12 38" stroke={P.crema} strokeWidth="6" strokeLinecap="round" fill="none" />
+            <path d="M8 20 Q14 28 10 36" stroke={P.crema} strokeWidth="6" strokeLinecap="round" fill="none" />
 
-            {/* Body */}
-            <ellipse cx="0" cy="8" rx="14" ry="18" fill="url(#mascot-body)" />
+            {/* Body — terracotta like the cat, not flat red */}
+            <ellipse cx="0" cy="8" rx="14" ry="18" fill={P.terracotta} />
+            {/* Body shade — right side shadow */}
+            <path
+              d="M0,-10 C8,-10 14,-4 14,8 C14,18 8,26 0,26 C6,20 10,12 10,2 C10,-6 6,-10 0,-10 Z"
+              fill={P.terracottaShade}
+              opacity="0.4"
+            />
 
-            {/* Arms */}
-            <path d="M-14 0 Q-28 -8 -24 -16" stroke="#FFB800" strokeWidth="6" strokeLinecap="round" fill="none" />
-            <path d="M14 0 Q24 -12 20 -22" stroke="#FFB800" strokeWidth="6" strokeLinecap="round" fill="none" />
+            {/* Arms — warm crema strokes */}
+            <path d="M-14 0 Q-28 -8 -24 -16" stroke={P.crema} strokeWidth="6" strokeLinecap="round" fill="none" />
+            <path d="M14 0 Q24 -12 20 -22" stroke={P.crema} strokeWidth="6" strokeLinecap="round" fill="none" />
 
-            {/* Head */}
-            <circle cx="0" cy="-16" r="16" fill="#FFB800" />
+            {/* Head — amber/petal, warm and human */}
+            <circle cx="0" cy="-16" r="16" fill={P.petal} />
+            {/* Head shade */}
+            <path
+              d="M0,-32 C8,-32 16,-24 16,-16 C16,-8 8,0 0,0 C6,-4 10,-10 10,-18 C10,-26 6,-30 0,-32 Z"
+              fill={P.petalShade}
+              opacity="0.35"
+            />
+
+            {/* Paper grain on body */}
+            <g clipPath={`url(#${uid}-body)`}>
+              <rect x="-14" y="-10" width="28" height="36" filter={`url(#${uid}-grain)`} opacity="0.5" />
+            </g>
+            {/* Paper grain on head */}
+            <g clipPath={`url(#${uid}-head)`} transform="translate(-48, -48)">
+              <rect x="32" y="16" width="32" height="32" filter={`url(#${uid}-grain)`} opacity="0.4" />
+            </g>
 
             {/* EYES — animated pupils that track the cursor */}
             {customExpression
@@ -245,22 +272,22 @@ export default function Mascot({
               : !blink
                 ? (
                     <>
-                      {/* Eye whites */}
-                      <circle cx="-6" cy="-18" r="5" fill="#FFFFFF" />
-                      <circle cx="6" cy="-18" r="5" fill="#FFFFFF" />
-                      {/* Pupils — move with cursor */}
+                      {/* Eye whites — cream, not pure white */}
+                      <circle cx="-6" cy="-18" r="5" fill={P.foam} />
+                      <circle cx="6" cy="-18" r="5" fill={P.foam} />
+                      {/* Pupils — warm dark espresso, not pure black */}
                       <motion.circle
                         cx={-6}
                         cy={-18}
                         r={3}
-                        fill="#0D0D0D"
+                        fill={P.espresso}
                         style={{ x: pupilX, y: pupilY }}
                       />
                       <motion.circle
                         cx={6}
                         cy={-18}
                         r={3}
-                        fill="#0D0D0D"
+                        fill={P.espresso}
                         style={{ x: pupilX, y: pupilY }}
                       />
                       {/* Eye shine — follows pupils */}
@@ -268,39 +295,39 @@ export default function Mascot({
                         cx={-5}
                         cy={-19}
                         r={1.2}
-                        fill="#FFFFFF"
+                        fill={P.foam}
                         style={{ x: pupilX, y: pupilY }}
                       />
                       <motion.circle
                         cx={7}
                         cy={-19}
                         r={1.2}
-                        fill="#FFFFFF"
+                        fill={P.foam}
                         style={{ x: pupilX, y: pupilY }}
                       />
                     </>
                   )
                 : (
-                    <path d="M-10 -18 Q-6 -14 -2 -18 M2 -18 Q6 -14 10 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+                    <path d="M-10 -18 Q-6 -14 -2 -18 M2 -18 Q6 -14 10 -18" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
                   )}
 
             {/* Smile (only if no custom expression provides one) */}
             {!["sad", "sleeping", "shocked", "determined", "proud"].includes(variant) && (
-              <path d="M-6 -8 Q0 -4 6 -8" stroke="#0D0D0D" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+              <path d="M-6 -8 Q0 -4 6 -8" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
             )}
 
-            {/* Headband */}
+            {/* Headband — blood red, the game's signature accent */}
             <path d="M-16 -16 Q0 -22 16 -16" stroke="#FF1A1A" strokeWidth="4" strokeLinecap="round" fill="none" />
 
-            {/* Sweat drop */}
-            <path d="M20 -10 Q22 -6 22 -2 Q22 2 20 2 Q18 2 18 -2 Q18 -6 20 -10" fill="#00C8FF" opacity="0.8" />
+            {/* Sweat drop — muted gouache teal */}
+            <path d="M20 -10 Q22 -6 22 -2 Q22 2 20 2 Q18 2 18 -2 Q18 -6 20 -10" fill={P.water} opacity="0.8" />
           </g>
 
-          {/* Speed lines */}
-          <g opacity="0.6">
-            <line x1="4" y1="40" x2="12" y2="40" stroke="#00FF94" strokeWidth="2" strokeLinecap="round" />
-            <line x1="0" y1="48" x2="10" y2="48" stroke="#00FF94" strokeWidth="2" strokeLinecap="round" />
-            <line x1="6" y1="56" x2="14" y2="56" stroke="#00FF94" strokeWidth="2" strokeLinecap="round" />
+          {/* Speed lines — subtle, warm */}
+          <g opacity="0.4" filter={`url(#${uid}-brush)`}>
+            <line x1="4" y1="40" x2="12" y2="40" stroke={P.leaf} strokeWidth="2" strokeLinecap="round" />
+            <line x1="0" y1="48" x2="10" y2="48" stroke={P.leaf} strokeWidth="2" strokeLinecap="round" />
+            <line x1="6" y1="56" x2="14" y2="56" stroke={P.leaf} strokeWidth="2" strokeLinecap="round" />
           </g>
         </svg>
 
@@ -413,45 +440,45 @@ function getExpression(variant) {
     case "sad":
       return (
         <>
-          <path d="M-10 -20 Q-6 -16 -2 -20" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M2 -20 Q6 -16 10 -20" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M-6 -6 Q0 -10 6 -6" stroke="#0D0D0D" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M-10 -20 Q-6 -16 -2 -20" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M2 -20 Q6 -16 10 -20" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M-6 -6 Q0 -10 6 -6" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
         </>
       );
     case "sleeping":
       return (
         <>
-          <path d="M-10 -18 L-2 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
-          <path d="M2 -18 L10 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
-          <path d="M-4 -8 Q0 -6 4 -8" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M-10 -18 L-2 -18" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path d="M2 -18 L10 -18" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path d="M-4 -8 Q0 -6 4 -8" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
         </>
       );
     case "shocked":
       return (
         <>
-          <circle cx="-6" cy="-18" r="5" fill="#0D0D0D" />
-          <circle cx="6" cy="-18" r="5" fill="#0D0D0D" />
-          <circle cx="-5" cy="-19" r="2" fill="white" />
-          <circle cx="7" cy="-19" r="2" fill="white" />
-          <circle cx="0" cy="-6" r="4" fill="#0D0D0D" />
+          <circle cx="-6" cy="-18" r="5" fill={P.espresso} />
+          <circle cx="6" cy="-18" r="5" fill={P.espresso} />
+          <circle cx="-5" cy="-19" r="2" fill={P.foam} />
+          <circle cx="7" cy="-19" r="2" fill={P.foam} />
+          <circle cx="0" cy="-6" r="4" fill={P.espresso} />
         </>
       );
     case "determined":
       return (
         <>
-          <path d="M-10 -20 L-2 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
-          <path d="M10 -20 L2 -18" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
-          <circle cx="-6" cy="-18" r="3" fill="#0D0D0D" />
-          <circle cx="6" cy="-18" r="3" fill="#0D0D0D" />
-          <path d="M-8 -6 Q0 -2 8 -6" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path d="M-10 -20 L-2 -18" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path d="M10 -20 L2 -18" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
+          <circle cx="-6" cy="-18" r="3" fill={P.espresso} />
+          <circle cx="6" cy="-18" r="3" fill={P.espresso} />
+          <path d="M-8 -6 Q0 -2 8 -6" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
         </>
       );
     case "proud":
       return (
         <>
-          <path d="M-10 -18 Q-6 -14 -2 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M2 -18 Q6 -14 10 -18" stroke="#0D0D0D" strokeWidth="2" strokeLinecap="round" fill="none" />
-          <path d="M-8 -6 Q0 -2 8 -6" stroke="#0D0D0D" strokeWidth="3" strokeLinecap="round" fill="none" />
+          <path d="M-10 -18 Q-6 -14 -2 -18" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M2 -18 Q6 -14 10 -18" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
+          <path d="M-8 -6 Q0 -2 8 -6" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
         </>
       );
     default:

@@ -5,6 +5,9 @@ import { HumanCta, GameCta, GhostLink } from "./ui/CraftCta.jsx";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 import DozingCat from "./ui/DozingCat.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
+import ShareSheet from "./ShareSheet.jsx";
+import MascotGuide from "./ui/MascotGuide.jsx";
+import { getProfiledMascotLines } from "../lib/copy.js";
 
 /**
  * GameMoment — full-screen cinematic overlays for the two most
@@ -19,10 +22,12 @@ import MotifFrieze from "./ui/MotifFrieze.jsx";
  *   result    — { survived, rank, survivalCap, queued, gpsShared }
  *   currentDay — number
  *   onDismiss — callback when user taps "back to game"
- *   onShare   — callback for share button
+ *   onShare   — callback for native share (mobile system sheet)
  *   shareCopied — boolean (share feedback)
  *   photoUploadFailed — boolean
  *   playerName — display name for the moment card
+ *   shareText — composed caption for the share sheet
+ *   shareUrl  — URL to include in the share
  */
 export default function GameMoment({
   result,
@@ -32,7 +37,11 @@ export default function GameMoment({
   shareCopied,
   photoUploadFailed,
   playerName,
+  shareText = "",
+  shareUrl = "",
 }) {
+  const [showShareSheet, setShowShareSheet] = useState(false);
+
   if (!result) return null;
 
   // Queued state — keep it simple, no cinematic
@@ -61,30 +70,44 @@ export default function GameMoment({
   }
 
   return (
-    <AnimatePresence mode="wait">
-      {result.survived ? (
-        <SurvivalMoment
-          key="survival"
-          result={result}
-          currentDay={currentDay}
-          onDismiss={onDismiss}
-          onShare={onShare}
-          shareCopied={shareCopied}
-          photoUploadFailed={photoUploadFailed}
-          playerName={playerName}
-        />
-      ) : (
-        <EliminationMoment
-          key="elimination"
-          result={result}
-          currentDay={currentDay}
-          onDismiss={onDismiss}
-          onShare={onShare}
-          shareCopied={shareCopied}
-          playerName={playerName}
-        />
-      )}
-    </AnimatePresence>
+    <>
+      <AnimatePresence mode="wait">
+        {result.survived ? (
+          <SurvivalMoment
+            key="survival"
+            result={result}
+            currentDay={currentDay}
+            onDismiss={onDismiss}
+            onShare={() => setShowShareSheet(true)}
+            shareCopied={shareCopied}
+            photoUploadFailed={photoUploadFailed}
+            playerName={playerName}
+          />
+        ) : (
+          <EliminationMoment
+            key="elimination"
+            result={result}
+            currentDay={currentDay}
+            onDismiss={onDismiss}
+            onShare={() => setShowShareSheet(true)}
+            shareCopied={shareCopied}
+            playerName={playerName}
+          />
+        )}
+      </AnimatePresence>
+      <ShareSheet
+        open={showShareSheet}
+        kind={result.survived ? "survive" : "jury"}
+        name={playerName}
+        day={currentDay}
+        rank={result.rank}
+        cap={result.survivalCap}
+        text={shareText}
+        url={shareUrl}
+        onNativeShare={onShare}
+        onClose={() => setShowShareSheet(false)}
+      />
+    </>
   );
 }
 
@@ -172,6 +195,21 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         {result.gpsShared && (
           <p className="text-neon/70 font-mono text-xs mt-2">GPS shared</p>
         )}
+      </motion.div>
+
+      {/* Survivor celebrates with you */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.5, type: "spring", bounce: 0.4 }}
+        className="relative z-10 mb-2"
+      >
+        <MascotGuide
+          variant="celebrating"
+          size={48}
+          message={getProfiledMascotLines().survived}
+          position="top"
+        />
       </motion.div>
 
       <MomentCardPreview
@@ -306,6 +344,21 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
             </p>
           </motion.div>
         )}
+      </motion.div>
+
+      {/* Survivor feels it with you */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.6, type: "spring", bounce: 0.3 }}
+        className="relative z-10 mb-2"
+      >
+        <MascotGuide
+          variant={nearMiss ? "determined" : "sad"}
+          size={48}
+          message={nearMiss ? getProfiledMascotLines().eliminatedNear : getProfiledMascotLines().eliminated}
+          position="top"
+        />
       </motion.div>
 
       <MomentCardPreview

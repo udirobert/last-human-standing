@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import ThemeMotif from "../ui/ThemeMotif.jsx";
+import { proofSceneDataUri } from "../ui/proofSceneData.js";
 import { CUE_PRESS } from "../../lib/cuelume.js";
 
 /**
@@ -15,7 +16,7 @@ export default function PracticeVote() {
     caption: "Flat white at my local in Lisbon. Day 1 — still here.",
     location: "Lisbon, Portugal",
     gpsShared: true,
-    mediaUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=300&fit=crop",
+    mediaUrl: proofSceneDataUri({ scene: "cafe", seed: 7, width: 400, height: 300 }),
     answer: "real",
     explanation:
       "This was voted HUMAN. Real location, GPS shared, specific caption with city name. Those are the signals voters look for.",

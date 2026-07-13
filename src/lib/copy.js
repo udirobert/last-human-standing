@@ -237,3 +237,193 @@ export function getEntryHeading({ isFreeMode = isFreeEntryMode(), alreadyPaid = 
   }
   return { title: ENTRY_HEADING.paidMode, sub: ENTRY_HEADING.paidModeSub };
 }
+
+/**
+ * Personalization questions for onboarding.
+ * Each answer feeds the paywall framing and the mascot's dialogue,
+ * making the user feel the app was built for them.
+ */
+export const PROFILE_QUESTIONS = [
+  {
+    id: "strategy",
+    question: "What's your play style?",
+    options: [
+      { value: "honest", label: "Honest", emoji: "🧍", blurb: "Real proofs. Let the photos speak." },
+      { value: "cunning", label: "Cunning", emoji: "🕶️", blurb: "I'll bluff if I have to." },
+      { value: "undecided", label: "Undecided", emoji: "🤔", blurb: "I'll figure it out as I go." },
+    ],
+  },
+  {
+    id: "theme",
+    question: "Which daily theme would you ace?",
+    options: [
+      { value: "cafe", label: "Café", emoji: "☕" },
+      { value: "park", label: "Park", emoji: "🌳" },
+      { value: "gym", label: "Gym", emoji: "🏋️" },
+      { value: "water", label: "Beach", emoji: "🌊" },
+    ],
+  },
+  {
+    id: "rhythm",
+    question: "When do you check in?",
+    options: [
+      { value: "early", label: "Dawn raid", emoji: "🌅", blurb: "First to submit, every time." },
+      { value: "steady", label: "Steady", emoji: "⏰", blurb: "Mid-day, no rush." },
+      { value: "late", label: "Last minute", emoji: "🌙", blurb: "I thrive under pressure." },
+    ],
+  },
+];
+
+/**
+ * Paywall personalization — the heading and framing change
+ * based on the user's profile answers.
+ */
+export function getPersonalizedPaywall({ strategy, theme, rhythm } = {}) {
+  const themeLabel = {
+    cafe: "the café life",
+    park: "touching grass",
+    gym: "the gym grind",
+    water: "the beach",
+  }[theme] || "the daily theme";
+
+  const strategyHook = {
+    honest: "Your honest proofs could take you all the way.",
+    cunning: "Your bluff game could fool them all — if you're careful.",
+    undecided: "You'll find your style fast. The first theme drops Day 1.",
+  }[strategy] || "50 humans. One pot. Last one standing.";
+
+  const rhythmHook = {
+    early: "Dawn raiders get the fastest slots. You'll love Day 1.",
+    steady: "Consistency wins this game. You're built for it.",
+    late: "Pressure players thrive when the cap shrinks. Day 3+ is yours.",
+  }[rhythm] || "50 humans. One pot. Last one standing.";
+
+  return {
+    hook: strategyHook,
+    sub: rhythmHook,
+    themeLabel,
+  };
+}
+
+/**
+ * Social proof quotes for the paywall.
+ */
+export const PAYWALL_QUOTES = [
+  { text: "Got flagged on Day 2 for a fake gym selfie. The crowd is brutal.", user: "@marina_sol", day: "Day 2 player" },
+  { text: "Made it to Day 4 just by being honest and fast. The pot is real.", user: "@luna_waves", day: "Day 4 survivor" },
+  { text: "The jury system is genius. My votes count double now.", user: "@ghost_protocol", day: "Eliminated, still playing" },
+];
+
+/**
+ * SURVIVOR VOICE GUIDE
+ *
+ * The mascot is the warmest, most human thing in the app — but "warm" doesn't
+ * mean "cute." It means real. Weathered. Someone who's been through the game.
+ *
+ * Voice: dry, darkly funny, quietly rooting for you.
+ * A mentor who survived, not a cheerleader.
+ *
+ * Rules:
+ *   1. Acknowledge, don't celebrate. "You survived" not "Great job!"
+ *   2. Short sentences. Punchy. No exclamation marks unless it's genuine surprise.
+ *   3. Dark humor is welcome — this is a game where 49 people get cut.
+ *   4. Never saccharine. Never "you can do it!" — instead "don't get comfortable."
+ *   5. The mascot knows the stakes. It's seen players go out. It doesn't soften that.
+ *   6. One idea per line. No compound sentences.
+ *
+ * Good: "One day down. Four to go. Don't get comfortable."
+ * Bad:  "Wow, you're doing amazing! Keep it up and you'll win the pot!"
+ */
+export const MASCOT_LINES = {
+  // SpeedRun intro — first impression
+  intro: "I'll be your guide. Stay human.",
+
+  // Onboarding profile step
+  profile: "Quick questions. This shapes your game.",
+
+  // Audit — before voting
+  auditStart: "Trust your gut. Human or bluff.",
+  // Audit — voted HUMAN, crowd agrees
+  auditHumanAgrees: "Crowd agrees. Nice read.",
+  // Audit — voted HUMAN, crowd disagrees
+  auditHumanDisagrees: "Bold call. Crowd thought otherwise.",
+  // Audit — voted SUS, crowd agrees
+  auditSusAgrees: "Caught the bluff. Good eye.",
+  // Audit — voted SUS, crowd disagrees
+  auditSusDisagrees: "Hmm. Crowd trusted them. We'll see.",
+  // Audit — complete
+  auditDone: (n) => `${n} votes cast. You've got the eye for this.`,
+
+  // Survival moment
+  survived: "One day down. Don't get comfortable.",
+  // Elimination — near miss
+  eliminatedNear: "So close. The jury can bring you back.",
+  // Elimination — clear
+  eliminated: "You're out. The crowd voted. Now you vote back.",
+  // Finale
+  finale: "Last human standing. The pot is yours. You earned this.",
+};
+
+/**
+ * Profile-aware mascot lines.
+ *
+ * Reads the user's onboarding profile (strategy, theme, rhythm) from
+ * localStorage and generates personalized dialogue for key game moments.
+ * Falls back to the generic MASCOT_LINES if no profile exists.
+ *
+ * This is what makes the personalization feel real — not just paywall text,
+ * but the mascot actually knowing who you are during the game.
+ */
+export function getProfiledMascotLines() {
+  let profile = {};
+  try {
+    profile = JSON.parse(localStorage.getItem("lhs_profile") || "{}");
+  } catch { /* ignore */ }
+
+  const { strategy, rhythm } = profile;
+
+  // Personalized intro — references their strategy
+  const intro = strategy === "cunning"
+    ? "I'll be your guide. You said you'd bluff. Careful with that."
+    : strategy === "honest"
+      ? "I'll be your guide. You said you'd play it straight. Good."
+      : MASCOT_LINES.intro;
+
+  // Personalized audit start — references their rhythm
+  const auditStart = rhythm === "early"
+    ? "First to vote. Trust your gut."
+    : rhythm === "late"
+      ? "Last minute, as usual. Trust your gut."
+      : MASCOT_LINES.auditStart;
+
+  // Personalized survived — references their strategy
+  const survived = strategy === "cunning"
+    ? "One day down. They haven't caught you yet."
+    : strategy === "honest"
+      ? "One day down. Honest proof, honest result."
+      : MASCOT_LINES.survived;
+
+  // Personalized eliminated — references their strategy
+  const eliminated = strategy === "cunning"
+    ? "You're out. The bluff didn't hold. Now you vote back."
+    : strategy === "honest"
+      ? "You're out. Honest doesn't always mean safe. Now you vote back."
+      : MASCOT_LINES.eliminated;
+
+  // Personalized finale — references their rhythm
+  const finale = rhythm === "early"
+    ? "Last human standing. Dawn raider to the end. You earned this."
+    : rhythm === "late"
+      ? "Last human standing. Under pressure, you delivered. You earned this."
+      : MASCOT_LINES.finale;
+
+  return {
+    ...MASCOT_LINES,
+    intro,
+    auditStart,
+    survived,
+    eliminated,
+    finale,
+    hasProfile: Object.keys(profile).length > 0,
+  };
+}

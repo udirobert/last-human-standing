@@ -7,7 +7,7 @@ import TrustBadge from "./TrustBadge.jsx";
 import BrowserWalletPay from "../wallet/BrowserWalletPay.jsx";
 import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useEntryMode } from "../hooks/useEntryMode.js";
-import { RULES, getEntryHeading, ENTRY } from "../lib/copy.js";
+import { RULES, getEntryHeading, ENTRY, PROFILE_QUESTIONS, getPersonalizedPaywall, PAYWALL_QUOTES, MASCOT_LINES, getProfiledMascotLines } from "../lib/copy.js";
 import PrizePots from "./prelaunch/PrizePots.jsx";
 import DayTimeline from "./DayTimeline.jsx";
 import AmbientBackdrop from "./AmbientBackdrop.jsx";
@@ -17,9 +17,13 @@ import LandingHero from "./ui/LandingHero.jsx";
 import DailyProofs from "./ui/DailyProofs.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import ShrinkingPot from "./ui/ShrinkingPot.jsx";
+import GameplayLoopDemo from "./ui/GameplayLoopDemo.jsx";
+import ExitIntentPrompt from "./ui/ExitIntentPrompt.jsx";
+import SharePanel from "./prelaunch/SharePanel.jsx";
 import { markJustReserved } from "./prelaunch/PostReserveExtras.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import { HumanCta } from "./ui/CraftCta.jsx";
+import MascotGuide from "./ui/MascotGuide.jsx";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -33,6 +37,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
     payEntryFee,
     markBrowserPaid,
     prizePoolAddress,
+    user,
   } = useWorld();
   const { isFree } = useEntryMode();
   const { phase, launchAt, cohortSize, reservedCount, you, isLive } = useRound();
@@ -41,9 +46,9 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
     try {
       if (sessionStorage.getItem("lhs_enter_reserve") === "1") {
         sessionStorage.removeItem("lhs_enter_reserve");
-        return 2;
+        return 3;
       }
-      if (localStorage.getItem(ONBOARDING_KEY) === "1") return 2;
+      if (localStorage.getItem(ONBOARDING_KEY) === "1") return 3;
     } catch { /* ignore */ }
     return 0;
   });
@@ -53,7 +58,11 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
   const [mascotName, setMascotName] = useState(() => {
     try { return localStorage.getItem("lhs_mascot_name") || ""; } catch { return ""; }
   });
+  const [profile, setProfile] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("lhs_profile") || "{}"); } catch { return {}; }
+  });
   const [pot, setPot] = useState(null);
+  const [showExitIntent, setShowExitIntent] = useState(false);
   const enteredRef = useRef(false);
 
   const verified = walletAuthed && entryPaid;
@@ -127,7 +136,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
     } finally { setPaying(false); }
   };
 
-  const stepLabels = ["Welcome", "Rules", "Reserve"];
+  const stepLabels = ["Welcome", "Rules", "Profile", "Reserve"];
 
   return (
     <div className="onboarding-shell min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
@@ -180,6 +189,12 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             <section id="how-it-works" className="max-w-[560px] mx-auto px-5 pt-6 pb-10">
               <p className="font-display text-3xl text-bone text-center tracking-wide mb-5">HOW IT WORKS</p>
               <DayTimeline />
+            </section>
+
+            {/* Animated gameplay loop demo — see the game before you commit */}
+            <section className="px-5 pb-10">
+              <p className="font-display text-3xl text-bone text-center tracking-wide mb-5">SEE THE LOOP</p>
+              <GameplayLoopDemo />
             </section>
 
             {/* The stakes — 50 → 1, and the pot. */}
@@ -278,7 +293,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
 
               <StageSection index={6}>
                 <HumanCta onClick={() => { markOnboardingDone(); setStep(2); }}>
-                  Reserve my slot →
+                  Build my profile →
                 </HumanCta>
                 {onSpeedRun && (
                   <button
@@ -297,7 +312,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
 
         {step === 2 && (
           <motion.div
-            key="reserve"
+            key="profile"
             initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
@@ -310,21 +325,131 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               withAmbient
               AmbientComponent={<AmbientBackdrop phase={phase} />}
             >
+              <StageSection index={0} className="text-center">
+                <MascotGuide
+                  variant="thinking"
+                  size={64}
+                  message={MASCOT_LINES.profile}
+                  position="top"
+                />
+                <h2 className="font-display text-4xl text-bone mb-1 mt-3">YOUR PROFILE</h2>
+                <p className="text-bone/60 text-sm font-body">Three questions. Takes 10 seconds.</p>
+              </StageSection>
+
+              <div className="mt-4 space-y-5 flex-1">
+                {PROFILE_QUESTIONS.map((q, qi) => (
+                  <StageSection key={q.id} index={qi + 1}>
+                    <div>
+                      <p className="font-display text-lg text-bone mb-3">{q.question}</p>
+                      <div className="space-y-2">
+                        {q.options.map((opt) => {
+                          const selected = profile[q.id] === opt.value;
+                          return (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => {
+                                const next = { ...profile, [q.id]: opt.value };
+                                setProfile(next);
+                                try { localStorage.setItem("lhs_profile", JSON.stringify(next)); } catch { /* ignore */ }
+                              }}
+                              {...CUE_PRESS}
+                              className={`w-full flex items-center gap-3 rounded-2xl p-3 border text-left transition-all active:scale-[0.97] ${
+                                selected
+                                  ? "bg-amber/15 border-amber/60"
+                                  : "bg-smoke/70 border-ember/40 hover:border-amber/30"
+                              }`}
+                            >
+                              <span className="text-2xl shrink-0">{opt.emoji}</span>
+                              <div className="min-w-0">
+                                <p className={`font-display text-base leading-tight ${selected ? "text-amber" : "text-bone"}`}>
+                                  {opt.label}
+                                </p>
+                                {opt.blurb && (
+                                  <p className="text-dim text-[11px] mt-0.5 leading-snug">{opt.blurb}</p>
+                                )}
+                              </div>
+                              {selected && (
+                                <span className="ml-auto text-amber text-sm shrink-0">✓</span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </StageSection>
+                ))}
+              </div>
+
+              <StageSection index={5}>
+                <HumanCta
+                  onClick={() => setStep(3)}
+                  disabled={Object.keys(profile).length < 2}
+                >
+                  {Object.keys(profile).length < 2 ? "Answer at least 2 →" : "See my plan →"}
+                </HumanCta>
+              </StageSection>
+            </StageShell>
+          </motion.div>
+        )}
+
+        {step === 3 && (
+          <motion.div
+            key="reserve"
+            initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
+            animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
+            exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+            className="flex-1 flex flex-col"
+          >
+            <StageShell
+              onBack={() => setShowExitIntent(true)}
+              faq
+              withAmbient
+              AmbientComponent={<AmbientBackdrop phase={phase} />}
+            >
               <StageSection index={0} className="flex flex-col items-center text-center pt-2 pb-1">
                 <Mascot variant={entryPaid ? "celebrating" : "excited"} size={72} />
                 {(() => {
                   const heading = getEntryHeading({ isFreeMode: isFree, alreadyPaid: entryPaid });
+                  const personalized = getPersonalizedPaywall(profile);
                   return (
                     <>
                       <h2 className="font-display text-bone mt-3 mb-1 leading-tight" style={{ fontSize: "clamp(28px,7vw,36px)" }}>
                         {heading.title}
                       </h2>
-                      <p className="text-bone/70 text-sm font-body mb-2 max-w-xs">{heading.sub}</p>
+                      <p className="text-bone/70 text-sm font-body mb-1 max-w-xs">{heading.sub}</p>
+                      {!entryPaid && personalized.hook !== "50 humans. One pot. Last one standing." && (
+                        <p className="text-amber text-sm font-body mb-2 max-w-xs leading-relaxed">
+                          {personalized.hook}
+                        </p>
+                      )}
+                      {!entryPaid && personalized.sub !== "50 humans. One pot. Last one standing." && (
+                        <p className="text-bone/50 text-xs font-body mb-2 max-w-xs">
+                          {personalized.sub}
+                        </p>
+                      )}
                     </>
                   );
                 })()}
                 <MotifFrieze className="w-full mt-3 mb-1 opacity-90" />
               </StageSection>
+
+              {/* Social proof — player quotes */}
+              {!entryPaid && (
+                <StageSection index={1} className="space-y-2">
+                  {PAYWALL_QUOTES.map((q) => (
+                    <div key={q.user} className="bg-smoke/60 rounded-2xl p-3 border border-ember/30">
+                      <p className="text-bone/80 text-xs font-body leading-relaxed italic">
+                        "{q.text}"
+                      </p>
+                      <p className="text-dim text-[10px] font-mono mt-1.5">
+                        {q.user} · {q.day}
+                      </p>
+                    </div>
+                  ))}
+                </StageSection>
+              )}
 
               <div className="mt-2 space-y-3 flex-1">
                 {!entryPaid && (
@@ -414,11 +539,25 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                         </button>
                       </StageSection>
                     )}
+
+                    {/* Referral — invite friends, grow the pot together */}
+                    {user?.referralCode && (
+                      <StageSection index={6} className="bg-smoke/60 border border-neon/20 rounded-3xl p-5 backdrop-blur-sm">
+                        <p className="font-display text-lg text-neon mb-1">Bring a friend</p>
+                        <p className="font-body text-bone/60 text-xs leading-relaxed mb-3">
+                          More humans in the cohort. Bigger pot. Same stakes.
+                        </p>
+                        <SharePanel
+                          referralCode={user.referralCode}
+                          referralCount={user.referralCount ?? 0}
+                        />
+                      </StageSection>
+                    )}
                   </>
                 )}
 
                 {entryPaid && phase !== "prelaunch" && (
-                  <StageSection index={6}>
+                  <StageSection index={7}>
                     <HumanCta onClick={goToLobby}>
                       Enter the lobby →
                     </HumanCta>
@@ -426,7 +565,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                 )}
 
                 {entryPaid && phase === "prelaunch" && (
-                  <StageSection index={6} className="text-center">
+                  <StageSection index={7} className="text-center">
                     <p className="text-neon font-mono text-sm animate-pulse">Taking you to the lobby…</p>
                   </StageSection>
                 )}
@@ -459,6 +598,20 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Exit-intent softening — catches users who tap back on the paywall */}
+      <ExitIntentPrompt
+        open={showExitIntent}
+        onStay={() => setShowExitIntent(false)}
+        onPractice={() => {
+          setShowExitIntent(false);
+          setStep(1);
+        }}
+        onLeave={() => {
+          setShowExitIntent(false);
+          setStep(2);
+        }}
+      />
     </div>
   );
 }

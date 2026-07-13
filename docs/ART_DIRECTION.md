@@ -126,6 +126,33 @@ still runs the routine screens.
 - **Desktop environment** (`index.css`, ≥480px) — the 430px column was stranded
   in a black void; it now rests on a warm paper-textured surface, framed with a
   soft shadow, so desktop feels crafted too. Mobile stays edge-to-edge.
+- **Mascot** (`Mascot.jsx`) — the Survivor, rebuilt in gouache-on-paper. Body in
+  terracotta, head in petal amber, limbs in crema brown — same `GOUACHE` palette
+  as every other warm component. Brush-wobbled via `GouacheFilters`, paper grain
+  clipped onto body and head. 11 expression variants (idle, excited, sad,
+  sleeping, shocked, determined, proud, thinking, worried, celebrating, winner)
+  all painted in espresso/foam — no pure black or white. Headband stays blood
+  red (the one cold accent that ties the mascot to the system). Cursor-tracking
+  pupils and blink animation preserved from the original.
+- **MascotGuide** (`ui/MascotGuide.jsx`) — speech-bubble wrapper for the Mascot.
+  Positions the bubble top/bottom relative to the mascot, fades in/out on
+  message change. Used in SpeedRunIntro, D1AuditBeat (reactive to votes),
+  GameMoment (survival/elimination), FinaleBeat, Onboarding profile step.
+- **ProofScene** (`ui/ProofScene.jsx` + `ui/proofSceneData.js`) — hand-painted
+  gouache scenes replacing all Unsplash stock photos. 8 scene types (transit,
+  gym, grocery, beach, eating, cafe, park, default) rendered as self-contained
+  SVG data URIs with the same brush wobble + grain as `GouacheFilters`. Per-scene
+  seed variation so submissions look distinct. The `.js` file is split out for
+  fast-refresh compliance (data utilities separate from the component).
+- **GameplayLoopDemo** (`ui/GameplayLoopDemo.jsx`) — auto-playing animated
+  sequence in a phone-frame mockup showing the core loop: theme drops → check
+  in → crowd votes → survive. 4 phases cycle on a timer with progress dots.
+  Placed in onboarding step 0 between "How it works" and the stakes, so users
+  see the game in motion before the paywall.
+- **ExitIntentPrompt** (`ui/ExitIntentPrompt.jsx`) — soft exit-intent overlay
+  for the paywall. When a user taps back on the Reserve step, this overlay
+  appears with a softer alternative (practice run) instead of immediately
+  going back. Mascot says "Not ready? That's fair." — dry, not pushy.
 
 ## Next step
 
@@ -137,6 +164,10 @@ Remaining opportunities, in order of visibility:
   peak-moment painted reward, not a generic badge.
 - **New daily themes** — any theme added later just needs a `MOTIFS` entry;
   until then it falls back to its emoji automatically.
+- **Richer proof scenes** — the current `ProofScene` scenes are minimal painted
+  shapes. If they read as too sparse, add figures (a person at the gym, a hand
+  on the coffee mug), more environmental detail, and texture variation. The
+  system supports it — just extend the scene paths in `proofSceneData.js`.
 
 Restraint still holds: room motifs stay soft; MotifFrieze / ThemeMotif live at
 peak and dwell; admin and error surfaces stay machine-flat on purpose.

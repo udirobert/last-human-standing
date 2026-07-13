@@ -37,11 +37,24 @@ export function DelightProvider({ children, showTipOnMount = false }) {
   }, [confettiKey]);
 
   // Sound — Cuelume under the hood (useSound → playCue)
-  const { play, toggle, enabled: soundEnabled } = useSound();
+  const { play, toggle, enabled: soundEnabled, startAmbient, stopAmbient } = useSound();
 
   useEffect(() => {
     ensureCuelumeBound();
   }, []);
+
+  // Start ambient drone when sound is enabled, stop when disabled
+  useEffect(() => {
+    if (soundEnabled) {
+      // Small delay so it doesn't fight the initial UI sounds
+      const id = setTimeout(() => startAmbient(), 800);
+      return () => {
+        clearTimeout(id);
+        stopAmbient();
+      };
+    }
+    stopAmbient();
+  }, [soundEnabled, startAmbient, stopAmbient]);
 
   // Achievements
   const { 

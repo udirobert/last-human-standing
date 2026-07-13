@@ -93,7 +93,7 @@ For demos, set `GAME_LAUNCH_AT` to a past date so the game is already live.
 
 ### Interactive Layer
 
-- **Onboarding** — a tight 4-step flow: Welcome → Rules → Reserve/pay 1 WLD → celebration. No subscriptions, no upsells.
+- **Onboarding** — a tight 4-step flow: Welcome → Rules → Profile → Reserve/pay 1 WLD → celebration. A short profile step (strategy, theme, rhythm) personalizes the mascot and paywall copy. No subscriptions, no upsells.
 - **Dynamic Web Audio Soundscape** — Tap through the UI (onboarding steps, check-in, votes) to experience zero-latency custom-synthesized SFX generated programmatically via Web Audio.
 - **Extensible PoH (Self Protocol)** — Toggle the `VITE_ENABLE_SELF` flag to show the Celo/Self Protocol onboarding block, illustrating how the codebase supports pluggable humanity providers beyond World ID.
 

@@ -1,3 +1,5 @@
+import { proofSceneDataUri } from "../components/ui/proofSceneData.js";
+
 export const DAILY_THEMES = [
   {
     id: 1,
@@ -106,6 +108,7 @@ export function findTheme(labelOrId) {
     TODAY_THEME
   );
 }
+
 export const MOCK_SUBMISSIONS = [
   {
     id: 1,
@@ -119,7 +122,7 @@ export const MOCK_SUBMISSIONS = [
     accuracy: 91,
     location: "Lisbon, Portugal",
     gpsShared: true,
-    mediaUrl: "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=600&h=400&fit=crop",
+    mediaUrl: proofSceneDataUri({ scene: "cafe", seed: 1, width: 600, height: 400 }),
   },
   {
     id: 2,
@@ -134,7 +137,7 @@ export const MOCK_SUBMISSIONS = [
     infiltrator: true,
     location: "Tokyo, Japan",
     gpsShared: true,
-    mediaUrl: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&h=400&fit=crop",
+    mediaUrl: proofSceneDataUri({ scene: "beach", seed: 2, width: 600, height: 400 }),
   },
   {
     id: 3,
@@ -148,7 +151,7 @@ export const MOCK_SUBMISSIONS = [
     accuracy: 72,
     location: null,
     gpsShared: false,
-    mediaUrl: "https://images.unsplash.com/photo-1519046904884-53103b34b206?w=600&h=400&fit=crop",
+    mediaUrl: proofSceneDataUri({ scene: "beach", seed: 3, width: 600, height: 400 }),
   },
   {
     id: 4,
@@ -162,7 +165,7 @@ export const MOCK_SUBMISSIONS = [
     accuracy: 95,
     location: "Nairobi, Kenya",
     gpsShared: true,
-    mediaUrl: "https://images.unsplash.com/photo-1476673160081-cf065607f449?w=600&h=400&fit=crop",
+    mediaUrl: proofSceneDataUri({ scene: "beach", seed: 4, width: 600, height: 400 }),
   },
   {
     id: 5,
@@ -177,7 +180,7 @@ export const MOCK_SUBMISSIONS = [
     infiltrator: true,
     location: "Berlin, Germany",
     gpsShared: false,
-    mediaUrl: "https://images.unsplash.com/photo-1473116763249-2faaef81ccda?w=600&h=400&fit=crop",
+    mediaUrl: proofSceneDataUri({ scene: "beach", seed: 5, width: 600, height: 400 }),
   },
 ];
 

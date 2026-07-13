@@ -191,7 +191,7 @@ function SpeedRunShell({ onReserve, onExit }) {
   }
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body pb-10 overflow-hidden bg-transparent">
+    <div className="relative h-screen flex flex-col font-body pb-10 overflow-hidden bg-transparent">
       <AmbientBackdrop phase={phase} />
       <PlayChrome
         demoDay={demoDay}

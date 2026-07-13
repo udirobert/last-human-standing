@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useSpeedRun } from "./SpeedRunProvider.jsx";
 import {
   FINALE_COPY,
@@ -10,7 +10,10 @@ import {
 } from "./script.js";
 import ThemeMotif from "../components/ui/ThemeMotif.jsx";
 import GameMoment from "../components/GameMoment.jsx";
+import ShareSheet from "../components/ShareSheet.jsx";
+import MascotGuide from "../components/ui/MascotGuide.jsx";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
+import { getProfiledMascotLines } from "../lib/copy.js";
 import BuiltWithStack from "./BuiltWithStack.jsx";
 import SpeedRunIntro from "./SpeedRunIntro.jsx";
 import MotifFrieze from "../components/ui/MotifFrieze.jsx";
@@ -134,15 +137,17 @@ export function D1RankBeat() {
   const { rank, nextBeat, shareCopied, setShareCopied } = useSpeedRun();
   const cap = dayMeta(1).capTo;
 
+  const shareText = `Day 1 · Rank #${rank}/${cap} · SURVIVED\nLast Human Standing practice run`;
+  const shareUrl = `${window.location.origin}${DEMO_SHARE_URL_PATH}`;
+
   const onShare = async () => {
-    const url = `${window.location.origin}${DEMO_SHARE_URL_PATH}`;
     const status = await shareMoment("survive", {
       name: "@you",
       day: 1,
       rank,
       cap,
-      text: `Day 1 · Rank #${rank}/${cap} · SURVIVED\nLast Human Standing practice run`,
-      url,
+      text: shareText,
+      url: shareUrl,
     });
     if (status === "copied") {
       setShareCopied(true);
@@ -159,6 +164,8 @@ export function D1RankBeat() {
       shareCopied={shareCopied}
       photoUploadFailed={false}
       playerName="@you"
+      shareText={shareText}
+      shareUrl={shareUrl}
     />
   );
 }
@@ -194,88 +201,186 @@ export function D1AuditBeat() {
   const { submissions, votes, castVote, votesDone, nextBeat } = useSpeedRun();
   const { beatFeel } = useSpeedRunFeel();
   const theme = dayMeta(1).theme;
+  const lines = getProfiledMascotLines();
+
+  // Only show submissions that aren't "you" — you don't vote on yourself
+  const votable = submissions.filter((s) => !s.isYou);
+  const [currentIdx, setCurrentIdx] = useState(0);
+  const [revealTally, setRevealTally] = useState(false);
+  const [mascotState, setMascotState] = useState({ variant: "determined", message: lines.auditStart });
 
   const onVote = (id, type) => {
     beatFeel(type === "real" ? "vote-human" : "vote-sus");
+    if (navigator.vibrate) navigator.vibrate(type === "real" ? 15 : [10, 30, 10]);
     castVote(id, type);
+    setRevealTally(true);
+    // Mascot reacts to the vote
+    const sub = votable.find((s) => s.id === id);
+    const crowdAgrees = type === "real" ? sub.votes.real > sub.votes.fake : sub.votes.fake > sub.votes.real;
+    if (type === "real") {
+      setMascotState({
+        variant: crowdAgrees ? "proud" : "thinking",
+        message: crowdAgrees ? lines.auditHumanAgrees : lines.auditHumanDisagrees,
+      });
+    } else {
+      setMascotState({
+        variant: crowdAgrees ? "determined" : "worried",
+        message: crowdAgrees ? lines.auditSusAgrees : lines.auditSusDisagrees,
+      });
+    }
+    // Auto-advance after the tally reveal
+    setTimeout(() => {
+      setRevealTally(false);
+      setCurrentIdx((i) => Math.min(i + 1, votable.length - 1));
+      setMascotState({ variant: "determined", message: null });
+    }, 1600);
   };
 
-  return (
-    <div className="flex-1 flex flex-col px-3 pb-8 overflow-y-auto">
-      <div className="px-2 mb-4 flex items-start gap-3">
-        <ThemeMotif emoji={theme.emoji} size={44} label={theme.theme} />
-        <div>
-          <p className="font-display text-3xl text-bone leading-none">The audit</p>
-          <p className="font-body text-bone/60 text-sm mt-1">Is this proof human — or a bluff?</p>
+  const sub = votable[currentIdx];
+  const myVote = sub ? votes[sub.id] : null;
+  const totalVoted = Object.keys(votes).filter((id) => id !== "you").length;
+  const votesNeeded = Math.min(3, votable.length);
+
+  // All done — show completion state
+  if (votesDone || !sub) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-5 overflow-y-auto">
+        <MascotGuide
+          variant="proud"
+          size={72}
+          message={lines.auditDone(totalVoted)}
+          position="top"
+        />
+        <div className="text-center">
+          <p className="font-display text-4xl text-bone leading-none mb-2">Audit complete</p>
+          <p className="text-dim font-body text-sm">
+            The crowd has spoken.
+          </p>
         </div>
+        <MotifFrieze className="w-full max-w-sm opacity-85" />
+        <GameCta tone="amber" onClick={nextBeat} className="w-full max-w-sm mt-2">
+          Close the day →
+        </GameCta>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex flex-col px-3 pb-4 overflow-hidden">
+      {/* Header — compact, with mascot */}
+      <div className="px-2 mb-3 flex items-start gap-2 shrink-0">
+        <MascotGuide
+          variant={mascotState.variant}
+          size={40}
+          message={mascotState.message}
+          position="top"
+        />
+        <div className="flex-1 min-w-0 pt-2">
+          <p className="font-display text-2xl text-bone leading-none">The audit</p>
+          <p className="font-body text-bone/60 text-xs mt-0.5">Human or bluff? Vote on {votesNeeded}.</p>
+        </div>
+        <ThemeMotif emoji={theme.emoji} size={32} label={theme.theme} />
       </div>
 
-      <div className="space-y-5">
-        {submissions.map((sub) => {
-          const myVote = votes[sub.id];
-          return (
-            <article key={sub.id} className="bg-smoke/80 border border-ember/40 rounded-3xl overflow-hidden backdrop-blur-sm">
+      {/* Progress dots */}
+      <div className="flex items-center justify-center gap-2 mb-3 shrink-0">
+        {votable.map((_, i) => (
+          <span
+            key={i}
+            className={`h-1.5 rounded-full transition-all duration-300 ${
+              i < currentIdx
+                ? "w-4 bg-neon"
+                : i === currentIdx
+                  ? "w-6 bg-amber"
+                  : "w-1.5 bg-bone/15"
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Focused card — one submission at a time */}
+      <div className="flex-1 flex flex-col min-h-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={sub.id}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ type: "spring", damping: 26, stiffness: 280 }}
+            className="flex-1 flex flex-col bg-smoke/80 border border-ember/40 rounded-3xl overflow-hidden backdrop-blur-sm min-h-0"
+          >
+            {/* Image — fills available space */}
+            <div className="flex-1 min-h-0 relative bg-ash overflow-hidden">
               {sub.mediaUrl ? (
-                <img src={sub.mediaUrl} alt={sub.caption} className="w-full aspect-[4/5] max-h-[45vh] object-cover bg-ash" />
+                <img src={sub.mediaUrl} alt={sub.caption} className="w-full h-full object-cover" />
               ) : (
-                <div className="w-full aspect-[4/5] max-h-[45vh] bg-ash/80 flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center">
                   <ThemeMotif emoji={theme.emoji} size={80} />
                 </div>
               )}
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="font-mono text-sm text-bone">
-                    {sub.user}
-                    {sub.isYou ? <span className="text-amber ml-2 text-[10px]">YOU</span> : null}
-                  </p>
-                  <span className="font-mono text-[10px] text-amber tracking-widest">ON TRIAL</span>
-                </div>
-                {sub.caption && <p className="font-body text-bone/85 text-sm mb-1">{sub.caption}</p>}
-                <LiveTally real={sub.votes.real} fake={sub.votes.fake} />
-                {!sub.isYou && (
-                  <div className="mt-4 grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      disabled={Boolean(myVote)}
-                      onClick={() => onVote(sub.id, "real")}
-                      data-cuelume-press="chime"
-                      data-cuelume-release="release"
-                      className={`py-4 rounded-2xl font-display text-xl tracking-widest disabled:opacity-45 active:scale-[0.97] transition-transform ${
-                        myVote === "real" ? "bg-neon text-ash border-2 border-neon" : "bg-neon/15 border-2 border-neon/50 text-neon"
-                      }`}
-                    >
-                      HUMAN
-                    </button>
-                    <button
-                      type="button"
-                      disabled={Boolean(myVote)}
-                      onClick={() => onVote(sub.id, "fake")}
-                      data-cuelume-press="press"
-                      data-cuelume-release="release"
-                      className={`py-4 rounded-2xl font-display text-xl tracking-widest disabled:opacity-45 active:scale-[0.97] transition-transform ${
-                        myVote === "fake" ? "bg-blood text-bone border-2 border-blood" : "bg-blood/15 border-2 border-blood/50 text-blood"
-                      }`}
-                    >
-                      SUS
-                    </button>
-                  </div>
-                )}
+              {/* Overlay: user + status */}
+              <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
+                <span className="font-mono text-[10px] px-2.5 py-1 rounded-full bg-ash/80 backdrop-blur text-bone border border-ember/50">
+                  {sub.user}
+                </span>
+                <span className="font-mono text-[10px] px-2.5 py-1 rounded-full bg-ash/80 backdrop-blur text-amber tracking-widest">
+                  ON TRIAL
+                </span>
               </div>
-            </article>
-          );
-        })}
+              {/* Caption overlay at bottom of image */}
+              {sub.caption && (
+                <div className="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-ash/90 to-transparent">
+                  <p className="font-body text-bone/90 text-sm leading-snug">{sub.caption}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Tally + vote actions — fixed at bottom of card */}
+            <div className="shrink-0 p-4">
+              {/* Tally — reveal after voting */}
+              <AnimatePresence>
+                {revealTally && myVote && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <LiveTally real={sub.votes.real} fake={sub.votes.fake} />
+                    <p className="text-center font-mono text-[10px] text-dim mt-2">
+                      You voted {myVote === "real" ? "HUMAN" : "SUS"} · next submission…
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Vote buttons — hide after voting */}
+              {!myVote && (
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => onVote(sub.id, "real")}
+                    data-cuelume-press="chime"
+                    data-cuelume-release="release"
+                    className="py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform bg-neon/15 border-2 border-neon/50 text-neon"
+                  >
+                    HUMAN
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onVote(sub.id, "fake")}
+                    data-cuelume-press="press"
+                    data-cuelume-release="release"
+                    className="py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform bg-blood/15 border-2 border-blood/50 text-blood"
+                  >
+                    SUS
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </AnimatePresence>
       </div>
-
-      <MotifFrieze className="w-full mt-6 mb-4 opacity-85" />
-
-      <GameCta
-        tone="amber"
-        disabled={!votesDone}
-        onClick={nextBeat}
-        className="sticky bottom-2 mt-2"
-      >
-        {votesDone ? "Close the day →" : "Vote on 3 submissions"}
-      </GameCta>
     </div>
   );
 }
@@ -621,6 +726,10 @@ export function FinaleBeat({ onReserve, onExit }) {
   const { beatFeel } = useSpeedRunFeel();
   const c = FINALE_COPY;
   const [cardSrc, setCardSrc] = useState(null);
+  const [showShareSheet, setShowShareSheet] = useState(false);
+
+  const shareText = "I just practiced all 5 days of Last Human Standing. Real cohort opens soon — get in.";
+  const shareUrl = `${window.location.origin}${DEMO_SHARE_URL_PATH}`;
 
   useEffect(() => {
     try {
@@ -635,12 +744,11 @@ export function FinaleBeat({ onReserve, onExit }) {
   }, []);
 
   const onShare = async () => {
-    const url = `${window.location.origin}${DEMO_SHARE_URL_PATH}`;
     const status = await shareMoment("win", {
       name: "@you",
       day: 5,
-      text: "I just practiced all 5 days of Last Human Standing. Real cohort opens soon — get in.",
-      url,
+      text: shareText,
+      url: shareUrl,
     });
     beatFeel("share");
     if (status === "copied") {
@@ -662,6 +770,15 @@ export function FinaleBeat({ onReserve, onExit }) {
       </h2>
       <p className="font-body text-bone/75 text-sm leading-relaxed mb-4">{c.body}</p>
 
+      {/* Survivor — your guide, celebrating the finish */}
+      <MascotGuide
+        variant="winner"
+        size={64}
+        message={getProfiledMascotLines().finale}
+        position="top"
+        className="mb-4"
+      />
+
       <MotifFrieze className="w-full mb-2" />
       <p className="font-mono text-dim uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.14em" }}>
         you showed up. that&apos;s the whole game.
@@ -678,7 +795,7 @@ export function FinaleBeat({ onReserve, onExit }) {
       <HumanCta onClick={onReserve} className="mb-3">
         {c.reserveCta}
       </HumanCta>
-      <GameCta tone="ghost" onClick={onShare} className="mb-3 !text-sm">
+      <GameCta tone="ghost" onClick={() => setShowShareSheet(true)} className="mb-3 !text-sm">
         {shareCopied ? "✓ Copied" : c.shareCta}
       </GameCta>
       <BuiltWithStack className="mb-4 opacity-80" />
@@ -690,6 +807,16 @@ export function FinaleBeat({ onReserve, onExit }) {
       >
         Back to landing
       </button>
+      <ShareSheet
+        open={showShareSheet}
+        kind="win"
+        name="@you"
+        day={5}
+        text={shareText}
+        url={shareUrl}
+        onNativeShare={onShare}
+        onClose={() => setShowShareSheet(false)}
+      />
     </Ceremony>
   );
 }
