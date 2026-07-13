@@ -10,7 +10,7 @@
 - [x] Deploy Celo prize pool wallet (personal EOA is fine for beta)
 - [x] Set `VITE_CELO_PRIZE_POOL_ADDRESS` in production `.env`
 - [ ] Set `COHORT_SIZE=25` in production `.env` *(currently 50)*
-- [x] Set `GAME_LAUNCH_AT` to beta start date — **2026-07-14T18:00:00Z**
+- [x] Set `GAME_LAUNCH_AT` to beta start date — **2026-07-17T18:00:00Z**
 - [x] Set `DAILY_SURVIVAL_CAP` — now automatic via `survival_cap_for_day()` (25→12→6→3→1)
 - [x] Verify Supabase project is running and schema is applied
 - [x] Verify storage bucket (`checkins`) exists
@@ -46,7 +46,7 @@
 
 ## Beta Launch Steps
 
-1. **T-3 days**: Set `GAME_LAUNCH_AT` (done — `2026-07-14T18:00:00Z`), rounds pre-created (migration 010)
+1. **T-3 days**: Set `GAME_LAUNCH_AT` (done — `2026-07-17T18:00:00Z`), rounds pre-created (migration 010 + 014)
 2. **T-1 day**: Seed the prize pool with cUSD/WLD, run reset SQL, smoke-test
 3. **T-0**: Share beta URL with 25 testers (Celo community + WLD team)
 4. **Day 1 opens**: Auto-scheduler opens the round at `opens_at`; cap = 25

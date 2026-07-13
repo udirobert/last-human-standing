@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
+import MotifFrieze from "./ui/MotifFrieze.jsx";
+import { HumanCta } from "./ui/CraftCta.jsx";
 
 /**
  * DayRecap — a cinematic full-screen overlay shown when a day closes.
@@ -81,23 +83,25 @@ export default function DayRecap() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={dismiss}
-          className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5"
+          className="fixed inset-0 z-40 flex flex-col items-center justify-center px-5"
+          style={{
+            background: "radial-gradient(120% 90% at 50% 0%, rgba(74,50,33,0.97) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
+          }}
         >
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
+            initial={{ scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0.2 }}
-            className="text-center"
+            transition={{ type: "spring", duration: 0.5, bounce: 0.15 }}
+            className="text-center w-full max-w-sm"
           >
             <p className="font-mono text-dim text-sm tracking-widest uppercase mb-3">
-              Day {day} Closed
+              Day {day} closed
             </p>
-            <p className="font-display text-6xl text-bone leading-none mb-6 animate-glow">
-              VERDICTS IN
+            <p className="font-display text-5xl text-bone leading-none mb-4 animate-glow">
+              Verdicts in
             </p>
+            <MotifFrieze className="w-full mb-5" />
 
-            {/* Personal result banner */}
             {personalResult && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -110,36 +114,29 @@ export default function DayRecap() {
                 }`}
               >
                 <p className="font-mono text-sm font-bold">
-                  {personalResult === "survived" ? "✅ YOU SURVIVED" : "💀 YOU WERE ELIMINATED"}
+                  {personalResult === "survived" ? "You survived" : "You were eliminated"}
                 </p>
               </motion.div>
             )}
 
-            {/* Stats grid with real numbers */}
-            <div className="grid grid-cols-3 gap-4 max-w-sm mx-auto">
-              <RecapStat icon="✅" label="Survived" value={survived} tone="neon" />
-              <RecapStat icon="💀" label="Eliminated" value={eliminated} tone="blood" />
-              <RecapStat icon="🚫" label="DQ'd" value={dq} tone="amber" />
+            <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
+              <RecapStat label="Survived" value={survived} tone="neon" />
+              <RecapStat label="Eliminated" value={eliminated} tone="blood" />
+              <RecapStat label="DQ'd" value={dq} tone="amber" />
             </div>
 
-            {/* Remaining humans */}
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="text-bone font-mono text-sm mt-6"
+              className="text-bone font-body text-sm mt-6"
             >
               <span className="font-display text-2xl text-amber">{remaining}</span> humans remain
             </motion.p>
 
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-              className="text-dim font-mono text-xs mt-6"
-            >
-              Tap to continue
-            </motion.p>
+            <HumanCta onClick={dismiss} className="mt-8">
+              Continue →
+            </HumanCta>
           </motion.div>
 
           <AutoDismiss onDismiss={dismiss} />
@@ -149,14 +146,13 @@ export default function DayRecap() {
   );
 }
 
-function RecapStat({ icon, label, value, tone }) {
+function RecapStat({ label, value, tone }) {
   const color =
     tone === "neon" ? "text-neon" :
     tone === "blood" ? "text-blood" :
     "text-amber";
   return (
     <div className="bg-smoke/60 border border-ember/40 rounded-xl p-3">
-      <p className="text-2xl mb-1">{icon}</p>
       <p className={`font-display text-2xl ${color} leading-none tabular-nums`}>{value}</p>
       <p className="text-dim text-[9px] font-mono uppercase mt-1">{label}</p>
     </div>

@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { momentCardDataUrl } from "../lib/shareMoment.js";
+import { HumanCta, GameCta, GhostLink } from "./ui/CraftCta.jsx";
+import ThemeMotif from "./ui/ThemeMotif.jsx";
+import DozingCat from "./ui/DozingCat.jsx";
+import MotifFrieze from "./ui/MotifFrieze.jsx";
 
 /**
  * GameMoment — full-screen cinematic overlays for the two most
@@ -39,22 +43,19 @@ export default function GameMoment({
         animate={{ opacity: 1 }}
         className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
       >
-        <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center">
-          <span className="text-6xl">📡</span>
+        <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center overflow-hidden">
+          <ThemeMotif emoji="📡" size={72} label="queued" />
         </div>
         <div className="text-center">
-          <p className="font-display text-4xl text-amber mb-1">QUEUED</p>
-          <p className="text-bone font-mono text-sm">Check-in saved offline</p>
+          <p className="font-display text-4xl text-amber mb-1">Queued</p>
+          <p className="text-bone font-body text-sm">Check-in saved offline</p>
           <p className="text-dim font-mono text-xs mt-2">
             Submits automatically when you reconnect.
           </p>
         </div>
-        <button
-          onClick={onDismiss}
-          className="w-full py-4 rounded-2xl font-display text-2xl tracking-widest active:scale-[0.97] transition-transform text-bone bg-smoke border border-ember"
-        >
-          BACK TO GAME
-        </button>
+        <GameCta tone="ghost" onClick={onDismiss}>
+          Back to game
+        </GameCta>
       </motion.div>
     );
   }
@@ -147,9 +148,9 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
         transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
-        className="w-24 h-24 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-5 relative z-10 shrink-0"
+        className="w-24 h-24 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-5 relative z-10 shrink-0 overflow-hidden"
       >
-        <span className="text-5xl">✅</span>
+        <ThemeMotif emoji="🌅" size={64} label="survived" />
       </motion.div>
 
       {/* Result text */}
@@ -165,11 +166,11 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow">
           RANK #{result.rank}
         </p>
-        <p className="text-dim font-mono text-sm">
+        <p className="text-dim font-body text-sm">
           of {result.survivalCap} surviving today
         </p>
         {result.gpsShared && (
-          <p className="text-neon/70 font-mono text-xs mt-2">📍 GPS shared</p>
+          <p className="text-neon/70 font-mono text-xs mt-2">GPS shared</p>
         )}
       </motion.div>
 
@@ -180,6 +181,10 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         rank={result.rank}
         cap={result.survivalCap}
       />
+
+      <div className="relative z-10 w-full max-w-sm mt-5">
+        <MotifFrieze className="w-full opacity-85" />
+      </div>
 
       {/* Photo warning */}
       {photoUploadFailed && (
@@ -202,18 +207,12 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         transition={{ delay: 0.5 }}
         className="w-full max-w-sm mt-6 space-y-3 relative z-10"
       >
-        <button
-          onClick={onShare}
-          className="w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-bone bg-indigo/20 border border-indigo/40"
-        >
-          {shareCopied ? "✓ COPIED" : "SHARE YOUR CARD"}
-        </button>
-        <button
-          onClick={onDismiss}
-          className="w-full py-4 rounded-2xl font-display text-2xl tracking-widest active:scale-[0.97] transition-transform text-bone bg-smoke border border-ember"
-        >
-          BACK TO GAME
-        </button>
+        <HumanCta onClick={onShare}>
+          {shareCopied ? "Copied" : "Share your card →"}
+        </HumanCta>
+        <GhostLink onClick={onDismiss} className="w-full py-2">
+          Back to game
+        </GhostLink>
       </motion.div>
     </motion.div>
   );
@@ -274,7 +273,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         transition={{ type: "spring", duration: 0.8, bounce: 0 }}
         className="mb-4 relative z-10 shrink-0"
       >
-        <span className="text-6xl">💀</span>
+        <DozingCat size={72} />
       </motion.div>
 
       {/* Eliminated text */}
@@ -316,6 +315,10 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         rank={result.rank}
         cap={result.survivalCap}
       />
+
+      <div className="relative z-10 w-full max-w-sm mt-5">
+        <MotifFrieze className="w-full opacity-85" />
+      </div>
 
       {/* Verdict breakdown — "why was I eliminated" closure */}
       {verdict && verdict.votes?.total > 0 && (
@@ -375,52 +378,38 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
       >
         <div className="bg-amber/10 border border-amber/40 rounded-2xl p-4 text-center">
           <p className="font-mono text-amber text-sm uppercase tracking-widest mb-2">
-            ⚖️ You're the jury now
+            You&apos;re the jury now
           </p>
-          <p className="text-bone font-mono text-xs leading-relaxed mb-2">
+          <p className="text-bone font-body text-xs leading-relaxed mb-2">
             Your votes decide who survives. Get 80% accuracy on 5+ votes and your
             votes count <span className="text-amber">×2</span> — plus
             lottery tickets for next cohort.
           </p>
-          {/* Wildcard hope — keeps eliminated players engaged */}
           {Number(currentDay) < 4 && (
-            <p className="text-purple-300 font-mono text-[10px] leading-relaxed mb-2 pt-2 border-t border-amber/20">
-              🎭 Not over yet: on Day 4, the jury can revive one eliminated player. Keep voting to stay visible.
+            <p className="text-purple-300 font-body text-[11px] leading-relaxed mb-3 pt-2 border-t border-amber/20">
+              Not over yet: on Day 4, the jury can revive one eliminated player. Keep voting to stay visible.
             </p>
           )}
-          <button
-            onClick={onDismiss}
-            className="w-full py-3 rounded-xl bg-amber/20 border border-amber/50 text-amber font-display text-sm tracking-widest active:scale-[0.97] transition-transform"
-          >
-            OPEN THE AUDIT FEED →
-          </button>
+          <HumanCta onClick={onDismiss} className="!py-3">
+            Open the audit feed →
+          </HumanCta>
         </div>
       </motion.div>
 
-      {/* Actions */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.3 }}
         className="w-full max-w-sm mt-4 space-y-3 relative z-10"
       >
-        {/* Near-miss CTA — channel the frustration into the next cohort */}
         {nearMiss && (
-          <button
-            onClick={onShare}
-            className="w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-amber bg-amber/10 border border-amber/40"
-          >
-            {shareCopied ? "✓ COPIED" : "🔥 CLAIM YOUR COMEBACK"}
-          </button>
+          <HumanCta onClick={onShare}>
+            {shareCopied ? "Copied" : "Claim your comeback →"}
+          </HumanCta>
         )}
-        <button
-          onClick={onShare}
-          className={`w-full py-3.5 rounded-2xl font-display text-lg tracking-widest active:scale-[0.97] transition-transform text-bone ${
-            nearMiss ? "bg-smoke/60 border border-ember/40 text-sm" : "bg-indigo/20 border border-indigo/40"
-          }`}
-        >
-          {shareCopied ? "✓ COPIED" : "SHARE YOUR CARD"}
-        </button>
+        <GameCta tone="ghost" onClick={onShare} className="!text-sm">
+          {shareCopied ? "Copied" : "Share your card →"}
+        </GameCta>
       </motion.div>
     </motion.div>
   );

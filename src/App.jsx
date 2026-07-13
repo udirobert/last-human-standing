@@ -7,12 +7,15 @@ import BottomNav from './components/BottomNav';
 import ScreenLoader from './components/ui/ScreenLoader.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
 import { useScreenState } from './hooks/useScreenState.js';
+import { useWorld } from './world/WorldProvider.jsx';
+import { useRound } from './world/RoundProvider.jsx';
 
 const Feed = lazy(() => import('./components/Feed.jsx'));
 const Chat = lazy(() => import('./components/Chat.jsx'));
 const Leaderboard = lazy(() => import('./components/Leaderboard.jsx'));
 const AdminDashboard = lazy(() => import('./components/AdminDashboard.jsx'));
 const PlayerHistory = lazy(() => import('./components/PlayerHistory.jsx'));
+const SpeedRunApp = lazy(() => import('./speedrun/SpeedRunApp.jsx'));
 
 // Error boundary — catches crashes and shows a retry screen instead of white page
 class ErrorBoundary extends Component {
@@ -72,11 +75,14 @@ const SCREENS = {
   LEADERBOARD: 'leaderboard',
   ADMIN: 'admin',
   HISTORY: 'history',
+  SPEEDRUN: 'speedrun',
 };
 
   // Wrapper to use delight hooks in App
   function AppWithDelight() {
     const { playSound, celebrate } = useDelight();
+    const { entryPaid } = useWorld();
+    const { phase, you } = useRound();
     const [refreshNonce, setRefreshNonce] = useState(0);
     const handleRefresh = useCallback(() => setRefreshNonce((n) => n + 1), []);
 
@@ -85,6 +91,17 @@ const SCREENS = {
       validScreens: Object.values(SCREENS),
     });
     const [badges, setBadges] = useState({});
+
+    // Reserved players belong in the lobby — not a duplicate onboarding countdown.
+    useEffect(() => {
+      const reserved = Boolean(entryPaid || you?.isPaid);
+      if (!reserved || screen !== SCREENS.ONBOARDING) return;
+      if (phase !== 'prelaunch' && phase !== 'live') return;
+      playSound('victory');
+      celebrate(30);
+      setScreen(SCREENS.HOME);
+      setNavTab('home');
+    }, [entryPaid, you?.isPaid, phase, screen, setScreen, setNavTab, playSound, celebrate]);
 
     // Check for admin access via URL param or direct navigation
     const urlParams = new URLSearchParams(window.location.search);
@@ -156,7 +173,7 @@ const SCREENS = {
     }
   };
 
-  const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN;
+  const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN && screen !== SCREENS.SPEEDRUN;
 
   return (
     <div className="relative">
@@ -171,8 +188,45 @@ const SCREENS = {
             exit={{ opacity: 0, transform: "scale(0.97)" }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
-            <Onboarding onEnter={handleEnterGame} />
+            <Onboarding
+              onEnter={handleEnterGame}
+              onSpeedRun={() => { setScreen(SCREENS.SPEEDRUN); }}
+            />
           </motion.div>
+        )}
+
+        {screen === SCREENS.SPEEDRUN && (
+          <Suspense fallback={<ScreenLoader kind="detail" />}>
+          <motion.div
+            key="speedrun"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+          >
+            <SpeedRunApp
+              onReserve={() => {
+                try { sessionStorage.setItem("lhs_enter_reserve", "1"); } catch { /* ignore */ }
+                try {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("demo");
+                  window.history.replaceState({}, "", url.pathname + url.search);
+                } catch { /* ignore */ }
+                setScreen(SCREENS.ONBOARDING);
+                setNavTab('home');
+              }}
+              onExit={() => {
+                try {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete("demo");
+                  window.history.replaceState({}, "", url.pathname + url.search);
+                } catch { /* ignore */ }
+                setScreen(SCREENS.ONBOARDING);
+                setNavTab('home');
+              }}
+            />
+          </motion.div>
+          </Suspense>
         )}
 
         {screen === SCREENS.HOME && (
@@ -184,7 +238,7 @@ const SCREENS = {
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
             <GameHome
-              onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
+              onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
               onViewHistory={() => setScreen(SCREENS.HISTORY)}
               onRouteToOnboarding={() => { setScreen(SCREENS.ONBOARDING); setNavTab('home'); }}
@@ -216,7 +270,7 @@ const SCREENS = {
           >
             <Feed
               onBack={() => handleNavChange('home')}
-              onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
+              onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
             />
           </motion.div>
           </Suspense>
@@ -247,7 +301,7 @@ const SCREENS = {
         >
           <Leaderboard
             onBack={() => handleNavChange('home')}
-            onCheckIn={() => { playSound('click'); setScreen(SCREENS.CHECKIN); }}
+            onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
             onRouteToOnboarding={() => { setScreen(SCREENS.ONBOARDING); setNavTab('home'); }}
           />
         </motion.div>

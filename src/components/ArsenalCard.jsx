@@ -28,18 +28,16 @@ export default function ArsenalCard() {
   if (!you?.isAuthed || !hasPlayProgress) return null;
 
   const stats = [
-    { label: "Jury Tickets", value: juryTickets, icon: "⚖️", tone: "amber" },
+    { label: "Jury tickets", value: juryTickets, tone: "amber" },
     { label: "Streak", value: `${streak}`, tone: "neon" },
     { label: "Referrals", value: referrals, tone: "bone" },
     {
-      label: "Vote Accuracy",
+      label: "Vote accuracy",
       value: accuracy != null ? `${accuracy}%` : "—",
       tone: accuracy != null && accuracy >= 80 ? "neon" : "dim",
     },
   ];
 
-  // Sunk cost framing: "X days invested" makes the accumulated effort visible
-  // at every glance, not just when the streak is at risk.
   const daysInvested = you?.eliminatedAtDay ?? (you?.checkinStreak ?? 0);
 
   return (
@@ -50,14 +48,13 @@ export default function ArsenalCard() {
       className="mx-5 mb-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm"
     >
       <div className="flex items-center justify-between mb-2">
-        <p className="font-mono text-[10px] text-dim uppercase tracking-widest">Your Arsenal</p>
+        <p className="font-mono text-[10px] text-dim uppercase tracking-widest">Your arsenal</p>
         <div className="flex items-center gap-2">
           {isJury && (
-            <span className="font-mono text-[9px] text-amber bg-amber/10 px-2 py-0.5 rounded-full border border-amber/30">
-              ⚖️ JURY · ×2
+            <span className="font-mono text-[9px] text-amber bg-amber/10 px-2 py-0.5 rounded-full border border-amber/30 tracking-wider uppercase">
+              Jury · ×2
             </span>
           )}
-          {/* The streak, growing — a plant tended by showing up (docs/ART_DIRECTION.md) */}
           {streak > 0 && <StreakBloom streak={streak} size={38} className="-my-2 shrink-0" />}
         </div>
       </div>
@@ -75,10 +72,9 @@ export default function ArsenalCard() {
           </div>
         ))}
       </div>
-      {/* Sunk cost footer — makes accumulated investment visible at every glance */}
       {daysInvested > 0 && (
         <p className="text-dim/70 text-[9px] font-mono mt-2 text-center border-t border-ember/20 pt-2">
-          {daysInvested} day{daysInvested !== 1 ? "s" : ""} invested — don't lose your progress
+          {daysInvested} day{daysInvested !== 1 ? "s" : ""} invested — don&apos;t lose your progress
         </p>
       )}
     </motion.div>

@@ -26,6 +26,7 @@
     "concurrently": "^9.2.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
+    "cuelume": "^0.1.0",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "framer-motion": "^12.38.0",

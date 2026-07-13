@@ -8,6 +8,13 @@ import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
 import ThemeFairness from "./ThemeFairness.jsx";
 import Cohort2Handoff from "./Cohort2Handoff.jsx";
+import VoteProgressCard from "./VoteProgressCard.jsx";
+import ThemeMotif from "./ui/ThemeMotif.jsx";
+import MotifFrieze from "./ui/MotifFrieze.jsx";
+import StreakBloom from "./ui/StreakBloom.jsx";
+import DozingCat from "./ui/DozingCat.jsx";
+import { HumanCta, GameCta } from "./ui/CraftCta.jsx";
+import { CUE_PRESS } from "../lib/cuelume.js";
 
 function formatWindow(iso) {
   if (!iso) return null;
@@ -64,12 +71,12 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
       className="mx-5 mb-4 bg-smoke border border-amber/40 rounded-3xl p-6 text-center"
     >
       <motion.div
-        initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", duration: 0.8, bounce: 0.4 }}
-        className="mb-3"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", duration: 0.7, bounce: 0.35 }}
+        className="mb-4"
       >
-        <span className="text-7xl inline-block">🏆</span>
+        <MotifFrieze className="w-full" />
       </motion.div>
 
       {youWon ? (
@@ -143,7 +150,7 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
           {payout.status === "submitted" || payout.status === "confirmed" ? (
             <>
               <p className="text-neon font-mono text-sm">
-                ✅ {payout.amount_usd} {payout.token} sent onchain
+                {payout.amount_usd} {payout.token} sent onchain
               </p>
               {payout.explorer_url && (
                 <a href={payout.explorer_url} target="_blank" rel="noopener noreferrer"
@@ -162,21 +169,15 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
         </div>
       )}
 
-      <button
-        onClick={shareWin}
-        className="w-full mt-4 py-4 rounded-2xl bg-amber text-ash font-display text-xl tracking-widest active:scale-95 transition-transform"
-      >
-        {youWon ? "SHARE YOUR VICTORY CARD" : "SHARE THE RESULT"}
-      </button>
+      <HumanCta onClick={shareWin} className="mt-4">
+        {youWon ? "Share your victory card →" : "Share the result →"}
+      </HumanCta>
 
       <Cohort2Handoff youWon={youWon} />
 
-      <button
-        onClick={onViewFeed}
-        className="w-full mt-2 py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
-      >
+      <GameCta tone="ghost" onClick={onViewFeed} className="mt-2 !text-sm">
         Relive the final audit →
-      </button>
+      </GameCta>
     </motion.div>
   );
 }
@@ -197,6 +198,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const closingSoon = minutesLeft !== null && minutesLeft < 60;
 
   const isSpectator = isLive && !user?.paid && !user?.eliminated;
+  const canAudit = isLive && Boolean(user?.paid);
   const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
   const themeData = findTheme(themeLabel) || TODAY_THEME;
   const opens = formatWindow(round?.opensAt);
@@ -256,11 +258,14 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       animate={{ opacity: 1, y: 0 }}
       className="mx-5 mb-4 bg-smoke border border-neon/25 rounded-3xl p-5 relative overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-2 mb-3">
+      <div className="absolute -right-3 -top-3 opacity-25 pointer-events-none" aria-hidden>
+        <ThemeMotif emoji={themeData.emoji} size={96} label={themeLabel} />
+      </div>
+      <div className="flex items-start justify-between gap-2 mb-3 relative">
         <div>
           <p className="font-mono text-neon text-xs tracking-widest uppercase">Today&apos;s mission · Day {currentDay ?? "—"}</p>
-          <div className="flex items-center gap-2 mt-1">
-            <span className="text-3xl">{themeData.emoji}</span>
+          <div className="flex items-center gap-3 mt-1">
+            <ThemeMotif emoji={themeData.emoji} size={56} label={themeLabel} />
             <p className="font-display text-3xl text-bone leading-tight">{themeLabel}</p>
           </div>
         </div>
@@ -283,18 +288,17 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       {/* Mid-day verdict moment: in the final hour, show a live banner */}
       {closingSoon && !eliminated && (
         <div className="mb-3 bg-amber/10 border border-amber/40 rounded-xl p-3 animate-pulse">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-base">⚡</span>
-            <p className="font-mono text-amber text-xs tracking-widest uppercase">Verdicts are landing</p>
-          </div>
-          <p className="text-dim text-[11px] font-mono leading-relaxed">
-            Final hour — submissions are being verified and flagged in real-time. Watch the audit feed to see the crowd's verdicts come in.
+          <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Verdicts are landing</p>
+          <p className="text-dim text-[11px] font-body leading-relaxed">
+            Final hour — submissions are being verified and flagged in real time. Watch the audit feed to see the crowd&apos;s verdicts come in.
           </p>
           <button
+            type="button"
             onClick={onViewFeed}
+            {...CUE_PRESS}
             className="w-full mt-2 py-2 rounded-lg bg-amber/20 border border-amber/40 text-amber font-mono text-xs active:scale-95 transition-transform"
           >
-            WATCH LIVE VERDICTS →
+            Watch live verdicts →
           </button>
         </div>
       )}
@@ -307,7 +311,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           </p>
           {round?.closesAt && (
             <p className={closingSoon ? 'text-amber font-mono text-sm font-semibold mt-1 animate-pulse' : 'text-amber text-[10px] font-mono mt-1'}>
-              {closingSoon ? '⏳ Closes ' : 'Closes '}
+              {closingSoon ? 'Closes ' : 'Closes '}
               <Countdown targetIso={round.closesAt} className="inline font-mono" />
             </p>
           )}
@@ -320,6 +324,8 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           </p>
         </div>
       </div>
+
+      {canAudit && <VoteProgressCard onViewFeed={onViewFeed} />}
 
       {eliminated ? (
         <div className="bg-blood/10 border border-blood/30 rounded-xl p-4 mb-3 space-y-3">
@@ -336,9 +342,12 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
               <p className="text-dim text-[9px] font-mono uppercase">Days</p>
               <p className="text-bone font-display text-lg">{you?.eliminatedAtDay ?? "—"}</p>
             </div>
-            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
+            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30 flex flex-col items-center justify-center gap-1">
               <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
-              <p className="text-amber font-display text-lg">{you?.checkinStreak ?? 0}🔥</p>
+              <div className="flex items-center gap-1">
+                <p className="text-amber font-display text-lg">{you?.checkinStreak ?? 0}</p>
+                {(you?.checkinStreak ?? 0) > 0 && <StreakBloom streak={you.checkinStreak} size={22} />}
+              </div>
             </div>
             <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
               <p className="text-dim text-[9px] font-mono uppercase">Top %</p>
@@ -351,9 +360,8 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           {/* Jury status card */}
           <div className={`rounded-xl p-3 border ${you?.isJury ? "bg-amber/10 border-amber/40" : "bg-ash/60 border-ember/40"}`}>
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-base">{you?.isJury ? "⚖️" : "🗳️"}</span>
               <p className={`font-mono text-xs uppercase tracking-widest ${you?.isJury ? "text-amber" : "text-dim"}`}>
-                {you?.isJury ? "Jury member" : "Voting — earn jury status"}
+                {you?.isJury ? "Jury member · ×2" : "Voting — earn jury status"}
               </p>
             </div>
             {you?.isJury ? (
@@ -387,15 +395,15 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             </div>
           )}
 
-          <p className="text-dim text-[11px] font-mono leading-relaxed">
-            🎫 Jury tickets weight your next cohort's lottery draw. Every correct verdict vote earns +1 ticket. Catch an infiltrator → +2 tickets.
+          <p className="text-dim text-[11px] font-body leading-relaxed">
+            Jury tickets weight your next cohort&apos;s lottery draw. Every correct verdict vote earns +1 ticket. Catch an infiltrator → +2 tickets.
           </p>
         </div>
       ) : checkedIn ? (
         round?.status === "closed" ? (
           <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3 mb-3`}>
             <p className={`font-display text-xl ${survived ? "text-neon" : "text-blood"}`}>
-              {survived ? `Verdict is in — you made the cut ✅` : `Verdict is in — you're out 💀`}
+              {survived ? "Verdict is in — you made the cut" : "Verdict is in — you're out"}
             </p>
             <p className="text-dim text-xs font-mono mt-1">
               {survived
@@ -414,48 +422,42 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
                 : "At risk until day closes — if the audit disqualifies a survivor, you inherit their slot."}
             </p>
             {you?.checkinStreak >= 2 && (
-              <p className="text-amber text-[11px] font-mono mt-1.5">
-                🔥 {you.checkinStreak}-day streak · {you.checkinStreak >= 3 ? "+1 jury ticket bonus at day close" : "3-day streak earns a bonus ticket"}
-              </p>
+              <div className="mt-2 flex items-center gap-2">
+                <StreakBloom streak={you.checkinStreak} size={28} />
+                <p className="text-amber text-[11px] font-body leading-snug">
+                  {you.checkinStreak}-day streak · {you.checkinStreak >= 3 ? "+1 jury ticket bonus at day close" : "3-day streak earns a bonus ticket"}
+                </p>
+              </div>
             )}
           </div>
         )
       ) : isSpectator ? (
         <div className="space-y-2 mb-3">
-          <div className="bg-ash/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-base">🔭</span>
-              <p className="font-mono text-dim text-xs uppercase tracking-widest">
+          <div className="bg-ash/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm flex gap-3 items-start">
+            <DozingCat size={44} />
+            <div>
+              <p className="font-mono text-dim text-xs uppercase tracking-widest mb-1">
                 Spectator mode
               </p>
+              <p className="text-bone text-sm font-body leading-relaxed">
+                You&apos;re not in this cohort. You can audit, vote, and chat — but no check-in.
+              </p>
             </div>
-            <p className="text-bone text-sm font-mono">
-              You're not in this cohort. You can audit, vote, and chat — but no check-in.
-            </p>
           </div>
-          <button
-            onClick={onViewFeed}
-            className="w-full py-3 rounded-xl bg-blood text-bone font-display text-base tracking-widest active:scale-95 transition-transform"
-          >
-            OPEN AUDIT FEED →
-          </button>
+          <GameCta onClick={onViewFeed} className="!text-base">
+            Open audit feed →
+          </GameCta>
         </div>
       ) : (
-        <button
-          onClick={onCheckIn}
-          className="w-full mb-3 bg-blood text-bone font-display text-2xl tracking-widest py-4 rounded-2xl active:scale-95 transition-transform animate-pulse-blood"
-        >
-          CHECK IN NOW
-        </button>
+        <HumanCta onClick={onCheckIn} className="mb-3 animate-pulse-blood">
+          Check in now →
+        </HumanCta>
       )}
 
       {!isSpectator && (
-        <button
-          onClick={onViewFeed}
-          className="w-full py-3 rounded-xl bg-ash border border-ember text-bone font-mono text-sm active:scale-95 transition-transform"
-        >
+        <GameCta tone="ghost" onClick={onViewFeed} className="!text-sm">
           Open audit feed → vote HUMAN or SUS
-        </button>
+        </GameCta>
       )}
     </motion.div>
   );

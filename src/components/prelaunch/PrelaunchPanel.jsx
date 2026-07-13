@@ -6,6 +6,9 @@ import SharePanel from "./SharePanel.jsx";
 import TopReferrersBoard from "./TopReferrersBoard.jsx";
 import DailyPrompt from "./DailyPrompt.jsx";
 import PrizePots from "./PrizePots.jsx";
+import PostReserveExtras from "./PostReserveExtras.jsx";
+import MotifFrieze from "../ui/MotifFrieze.jsx";
+import CoffeeBrew from "../ui/CoffeeBrew.jsx";
 import { COHORT } from "../../lib/copy.js";
 
 /**
@@ -22,6 +25,8 @@ export default function PrelaunchPanel({
   referralCode,
   referralCount,
   reservedAt,
+  isReserved = false,
+  phase = "prelaunch",
   variant = "home",
 }) {
   const round = useRound();
@@ -70,21 +75,25 @@ export default function PrelaunchPanel({
 
   return (
     <div className="px-5 space-y-3">
+      {isReserved && (
+        <PostReserveExtras reservedAt={reservedAt} phase={phase} />
+      )}
+
       <CountdownCard launchAt={launchAt} split={split} />
 
       <PrizePots prizePool={prizePool} />
 
       {friendsInCohort != null && friendsInCohort > 0 && (
         <div className="bg-smoke/60 border border-neon/30 rounded-2xl px-4 py-3">
-          <p className="font-mono text-neon text-sm">
-            🎉 {friendsInCohort} {friendsInCohort === 1 ? "friend is" : "friends are"} in
+          <p className="font-body text-neon text-sm">
+            {friendsInCohort} {friendsInCohort === 1 ? "friend is" : "friends are"} in with you
           </p>
         </div>
       )}
 
       {friendsInCohort === 0 && referralCount > 0 && (
         <div className="bg-smoke/60 border border-ember/40 rounded-2xl px-4 py-3">
-          <p className="font-mono text-bone text-sm">
+          <p className="font-body text-bone/80 text-sm">
             Your invite is out — share it to your group chat
           </p>
         </div>
@@ -104,13 +113,21 @@ export default function PrelaunchPanel({
 
 function CountdownCard({ launchAt, split }) {
   return (
-    <div className="bg-smoke border border-amber/40 rounded-3xl p-6 relative overflow-hidden">
-      <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Day 1 in</p>
+    <div
+      className="border border-amber/35 rounded-3xl p-6 relative overflow-hidden"
+      style={{
+        background: "radial-gradient(120% 100% at 50% 0%, #3a281c 0%, #1c1410 70%, #14100e 100%)",
+      }}
+    >
+      <div className="absolute right-3 top-3 opacity-30 pointer-events-none" aria-hidden>
+        <CoffeeBrew size={64} />
+      </div>
+      <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1 relative">Day 1 in</p>
       {launchAt
-        ? <Countdown targetIso={launchAt} className="font-display text-5xl text-bone leading-none animate-glow" />
-        : <p className="font-display text-3xl text-dim">TBA</p>}
+        ? <Countdown targetIso={launchAt} className="font-display text-5xl text-bone leading-none animate-glow relative" />
+        : <p className="font-display text-3xl text-dim relative">TBA</p>}
 
-      <div className="mt-5 space-y-3">
+      <div className="mt-5 space-y-3 relative">
         <CohortProgress
           label="Paid · guaranteed"
           count={split.paidCount}
@@ -129,6 +146,11 @@ function CountdownCard({ launchAt, split }) {
             : `be the first`}
         </p>
       </div>
+
+      <MotifFrieze className="w-full mt-5 opacity-90" />
+      <p className="font-mono text-dim uppercase text-center mt-2" style={{ fontSize: 10, letterSpacing: "0.14em" }}>
+        the little proofs you&apos;re human
+      </p>
     </div>
   );
 }

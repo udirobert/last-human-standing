@@ -12,6 +12,7 @@ import {
   SuspenseNotification,
 } from '../hooks/useSurprises.jsx';
 import { useMascotName, MascotNameModal } from '../hooks/usePersonalization.jsx';
+import { ensureCuelumeBound, CUE_TOGGLE } from '../lib/cuelume.js';
 
 // Combined context for all delight features
 const DelightContext = createContext(null);
@@ -35,8 +36,12 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     setTimeout(() => setParticles([]), 3000);
   }, [confettiKey]);
 
-  // Sound
+  // Sound — Cuelume under the hood (useSound → playCue)
   const { play, toggle, enabled: soundEnabled } = useSound();
+
+  useEffect(() => {
+    ensureCuelumeBound();
+  }, []);
 
   // Achievements
   const { 
@@ -81,7 +86,7 @@ export function DelightProvider({ children, showTipOnMount = false }) {
 
   // Track mascot interaction
   const handleMascotClick = useCallback((type) => {
-    play('click');
+    play('tick');
     if (type === 'secret') {
       unlock('collector'); // Hidden achievement
       setShowSecret(true);
@@ -95,7 +100,7 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     // Confetti
     celebrate,
     
-    // Sound
+    // Sound (Cuelume-backed)
     playSound: play,
     toggleSound: toggle,
     soundEnabled,
@@ -185,7 +190,9 @@ export function SoundToggle() {
   
   return (
     <button
+      type="button"
       onClick={toggleSound}
+      {...CUE_TOGGLE}
       className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
       title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
       aria-label={soundEnabled ? 'Mute sounds' : 'Enable sounds'}

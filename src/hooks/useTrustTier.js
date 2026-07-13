@@ -58,7 +58,7 @@ export function useTrustTier() {
               ? "Verified · World ID"
               : "Verified",
         provisional: "Provisional — signed in, verify to unlock full trust",
-        unverified: "Observer — sign in and reserve a slot to play",
+        unverified: "Browsing — reserve a slot to play",
       },
     };
   }, [walletAuthed, entryPaid, worldIdVerified, humanityProvider, isWorldApp, platform]);

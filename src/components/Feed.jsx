@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_SUBMISSIONS, TODAY_THEME } from '../data/game';
+import { MOCK_SUBMISSIONS, TODAY_THEME, findTheme } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useTrustTier } from '../hooks/useTrustTier.js';
@@ -10,6 +10,9 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import { useDelight } from './DelightProvider.jsx';
+import ThemeMotif from './ui/ThemeMotif.jsx';
+import MotifFrieze from './ui/MotifFrieze.jsx';
+import { HumanCta } from './ui/CraftCta.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -22,8 +25,6 @@ const STATUS_LABELS = {
   pending: 'ON TRIAL',
   flagged: 'SUS',
 };
-
-const PHOTO_EMOJIS = ['☕', '🧋', '🍵', '☕', '🥐'];
 
 function LiveTally({ real = 0, fake = 0 }) {
   const total = real + fake;
@@ -77,7 +78,7 @@ const useMocks = import.meta.env.DEV;
 export default function Feed({ onBack, onCheckIn }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
   const { verification, phase, you } = useRound();
-  const { unlockAchievement, checkAchievement, playSound } = useDelight();
+  const { unlockAchievement, checkAchievement } = useDelight();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
   const [voteMeta, setVoteMeta] = useState({});
@@ -179,9 +180,8 @@ export default function Feed({ onBack, onCheckIn }) {
       ),
     );
 
-    // Achievement: first vote
+    // Achievement: first vote (press sound from data-cuelume-press on the button)
     unlockAchievement?.('first_vote');
-    playSound?.('click');
 
     if (walletAuthed && entryPaid) {
       try {
@@ -244,7 +244,7 @@ export default function Feed({ onBack, onCheckIn }) {
   const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
 
   return (
-    <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
+    <div className="relative min-h-screen flex flex-col font-body pb-24 overflow-hidden bg-transparent">
       <AmbientBackdrop phase={phase === 'live' ? 'live' : 'prelaunch'} />
 
       <div className="relative z-10 px-4 pt-12 pb-3 sticky top-0 bg-ash/90 backdrop-blur-md z-20">
@@ -303,18 +303,19 @@ export default function Feed({ onBack, onCheckIn }) {
         )}
 
         {!loading && filtered.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-dim font-mono text-sm mb-4">No submissions yet for {TODAY_THEME.theme}.</p>
+          <div className="text-center py-12 px-4">
+            <div className="flex justify-center mb-4">
+              <ThemeMotif emoji={(findTheme(TODAY_THEME.theme) || TODAY_THEME).emoji} size={72} label={TODAY_THEME.theme} />
+            </div>
+            <p className="text-bone/70 font-body text-sm mb-4">No submissions yet for {TODAY_THEME.theme}.</p>
             {onCheckIn && walletAuthed && entryPaid ? (
-              <button
-                onClick={onCheckIn}
-                className="px-6 py-3 rounded-2xl bg-blood text-bone font-display text-base tracking-widest active:scale-95 transition-transform animate-pulse-blood"
-              >
-                BE THE FIRST TO CHECK IN →
-              </button>
+              <HumanCta onClick={onCheckIn}>
+                Be the first to check in →
+              </HumanCta>
             ) : (
               <p className="text-dim font-mono text-xs">Submissions appear here the moment players check in.</p>
             )}
+            <MotifFrieze className="w-full mt-8 opacity-85" />
           </div>
         )}
 
@@ -323,9 +324,9 @@ export default function Feed({ onBack, onCheckIn }) {
             const totalVotes = (sub.votes?.real || 0) + (sub.votes?.fake || 0);
             const quorum = sub.voteQuorum || verification.voteQuorum;
             const progress = Math.min(100, Math.round((totalVotes / Math.max(1, quorum)) * 100));
-            const emoji = PHOTO_EMOJIS[idx % PHOTO_EMOJIS.length];
             const isExpanded = expandedId === sub.id;
             const myVote = voted[sub.id];
+            const themeEmoji = (findTheme(TODAY_THEME.theme) || TODAY_THEME).emoji;
 
             return (
               <motion.article
@@ -347,8 +348,8 @@ export default function Feed({ onBack, onCheckIn }) {
                       className="w-full aspect-[4/5] max-h-[70vh] object-cover bg-ash"
                     />
                   ) : (
-                    <div className="w-full aspect-[4/5] max-h-[70vh] flex items-center justify-center text-7xl bg-ash">
-                      {emoji}
+                    <div className="w-full aspect-[4/5] max-h-[70vh] flex items-center justify-center bg-ash/80">
+                      <ThemeMotif emoji={themeEmoji} size={96} label={TODAY_THEME.theme} />
                     </div>
                   )}
                   <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
@@ -381,8 +382,11 @@ export default function Feed({ onBack, onCheckIn }) {
 
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
+                      type="button"
                       onClick={() => handleVote(sub.id, 'real')}
                       disabled={Boolean(myVote) || !canVote}
+                      data-cuelume-press="chime"
+                      data-cuelume-release="release"
                       className={`py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform disabled:opacity-45 ${
                         myVote === 'real'
                           ? 'bg-neon text-ash border-2 border-neon'
@@ -392,8 +396,11 @@ export default function Feed({ onBack, onCheckIn }) {
                       HUMAN
                     </button>
                     <button
+                      type="button"
                       onClick={() => handleVote(sub.id, 'fake')}
                       disabled={Boolean(myVote) || !canVote}
+                      data-cuelume-press="press"
+                      data-cuelume-release="release"
                       className={`py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform disabled:opacity-45 ${
                         myVote === 'fake'
                           ? 'bg-blood text-bone border-2 border-blood'
@@ -435,10 +442,15 @@ export default function Feed({ onBack, onCheckIn }) {
                         Challenge in chat
                       </button>
                       <button
+                        type="button"
                         onClick={() => setFired((v) => ({ ...v, [sub.id]: !v[sub.id] }))}
-                        className="w-full py-3 rounded-2xl bg-ash border border-ember text-dim font-mono text-sm"
+                        className={`w-full py-3 rounded-2xl border font-mono text-sm transition-colors ${
+                          fired[sub.id]
+                            ? "bg-amber/15 border-amber/40 text-amber"
+                            : "bg-ash border-ember text-dim"
+                        }`}
                       >
-                        {fired[sub.id] ? '🔥 Fired up' : '🔥 Fire reaction'}
+                        {fired[sub.id] ? "Ember lit" : "Send an ember"}
                       </button>
                       {challengeToast === sub.id && (
                         <p className="text-amber font-mono text-xs text-center">Open inside World App to challenge via chat.</p>

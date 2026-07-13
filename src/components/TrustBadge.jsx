@@ -26,11 +26,11 @@ export default function TrustBadge({ size = "sm", className = "" }) {
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full border font-mono tracking-wide uppercase ${STYLES[tier]} ${pad} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full border font-body tracking-wide ${STYLES[tier]} ${pad} ${className}`}
       title={labels[tier]}
     >
       <span aria-hidden>{ICONS[tier]}</span>
-      <span>{labels[tier]}</span>
+      <span className="normal-case">{labels[tier]}</span>
     </span>
   );
 }

@@ -24,7 +24,11 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
     try {
       // Deep links win over persisted state: share landing pages and push
       // notification clicks open /?screen=feed (etc.) to land on the drama.
-      const urlScreen = new URLSearchParams(window.location.search).get("screen");
+      // /?demo=1 opens the guided speed-run demo.
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("demo") === "1" && isValid("speedrun")) return "speedrun";
+
+      const urlScreen = params.get("screen");
       if (urlScreen && isValid(urlScreen)) return urlScreen;
 
       const raw = localStorage.getItem(KEY);

@@ -1,6 +1,6 @@
 # Launch reset — pre-flight SQL
 
-Run before 2026-07-14 18:00 UTC. Idempotent. Safe to re-run.
+Run before 2026-07-17 18:00 UTC. Idempotent. Safe to re-run.
 
 > **Re-launch context.** This reset was re-run on 2026-06-15
 > after the June 14 launch produced an empty lottery draw

@@ -35,7 +35,7 @@ import RuleReveal from './RuleReveal.jsx';
  *     in the same place they appear in Onboarding)
  */
 export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRouteToOnboarding, onRefresh }) {
-  const { user, hasQueuedCheckin, clearQueuedCheckin } = useWorld();
+  const { user, hasQueuedCheckin, clearQueuedCheckin, entryPaid } = useWorld();
   const {
     phase, launchAt, currentDay,
     cohortSize, reservedCount, cohortFull,
@@ -52,10 +52,11 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
   const isPrelaunch = phase === 'prelaunch';
   const isLive = phase === 'live';
   const isEnded = phase === 'ended';
+  const isReserved = Boolean(entryPaid || user?.paid);
 
   return (
-    <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
-      {/* Phase-aware ambient backdrop — same palette as Onboarding */}
+    <div className="relative min-h-screen flex flex-col font-body pb-24 overflow-hidden bg-transparent">
+      {/* Phase-aware ambient — warm room shared with landing vocabulary */}
       <AmbientBackdrop phase={phase} />
 
       {/* Day Recap cinematic — overlay shown when a day closes */}
@@ -76,7 +77,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           <div className="flex items-center gap-2">
             <div className={`w-2 h-2 rounded-full animate-pulse ${isLive ? 'bg-neon' : 'bg-amber'}`} />
             <span className={`font-mono text-xs tracking-widest uppercase ${isLive ? 'text-neon' : 'text-amber'}`}>
-              {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : '🏆 Ended'}
+              {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : 'Ended'}
             </span>
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -185,6 +186,8 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         <StageSection index={2} className="relative z-10">
           <PrelaunchPanel
             launchAt={launchAt}
+            phase={phase}
+            isReserved={isReserved}
             cohort={cohortSplit ?? {
               size: cohortSize,
               paidSlots: 25,
@@ -200,7 +203,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         </StageSection>
       )}
 
-      {/* Prelaunch stats + pots */}
+      {/* Prelaunch stats — cohort fill at a glance (pots live inside PrelaunchPanel) */}
       {isPrelaunch && (
         <StageSection index={3} className="relative z-10">
           <div className="px-5 grid grid-cols-2 gap-3 mb-4">
@@ -223,12 +226,6 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
               </p>
             </div>
           </div>
-        </StageSection>
-      )}
-
-      {isPrelaunch && (
-        <StageSection index={4} className="relative z-10 px-5 mb-4">
-          <PrizePots prizePool={stats?.prizePool} />
         </StageSection>
       )}
 

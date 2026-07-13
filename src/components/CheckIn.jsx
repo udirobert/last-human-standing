@@ -15,9 +15,11 @@ import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { shareMoment } from '../lib/shareMoment.js';
+import { HumanCta, GameCta } from './ui/CraftCta.jsx';
+import { CUE_PRESS } from '../lib/cuelume.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
-  const { round, currentDay, refresh: refreshRound } = useRound();
+  const { round, currentDay, phase, refresh: refreshRound } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
   const { unlockAchievement, checkAchievement, playSound } = useDelight();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
@@ -253,8 +255,11 @@ export default function CheckIn({ onBack, onSubmit }) {
   };
 
   return (
-    <div className="relative min-h-screen bg-ash flex flex-col font-body overflow-hidden">
-      <AmbientBackdrop phase="live" />
+    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
+      <AmbientBackdrop
+        phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"}
+        flourishes={false}
+      />
       
       {/* Infiltrator threat visual overlay */}
       <AnimatePresence>
@@ -309,43 +314,47 @@ export default function CheckIn({ onBack, onSubmit }) {
               exit={{ opacity: 0, x: -30 }}
               className="flex-1 flex flex-col px-5 pb-8"
             >
-              {/* Theme card */}
-              <div className="bg-smoke border border-ember rounded-3xl p-6 mb-5">
-                <p className="font-mono text-dim text-xs tracking-widest uppercase mb-1">Today's challenge</p>
-                <div className="flex items-center gap-3 mb-2">
-                  {/* Hand-painted proof-of-presence artefact per theme; falls back
-                      to the emoji for any theme not yet painted. */}
+              <div className="bg-smoke border border-neon/20 rounded-3xl p-6 mb-5 relative overflow-hidden">
+                <div className="absolute -right-3 -top-3 opacity-25 pointer-events-none" aria-hidden>
+                  <ThemeMotif emoji={themeData.emoji} size={88} label={theme} />
+                </div>
+                <p className="font-mono text-neon text-xs tracking-widest uppercase mb-1 relative">Today&apos;s mission</p>
+                <div className="flex items-center gap-3 mb-2 relative">
                   <ThemeMotif emoji={themeData.emoji} size={64} label={theme} className="-my-2 shrink-0" />
                   <p className="font-display text-2xl text-bone">{theme}</p>
                 </div>
-                <p className="text-dim text-sm font-mono">{themeData.description}</p>
-                {round.prompt && <p className="text-dim text-xs font-mono mt-2">📸 {round.prompt}</p>}
-                <ThemeFairness theme={themeData} className="mt-3" />
-                <div className="mt-3 flex justify-between text-xs font-mono text-dim">
+                <p className="text-dim text-sm font-body relative">{themeData.description}</p>
+                {round.prompt && <p className="text-dim text-xs font-mono mt-2 relative">{round.prompt}</p>}
+                <ThemeFairness theme={themeData} className="mt-3 relative" />
+                <div className="mt-3 flex justify-between text-xs font-mono text-dim relative">
                   <span>Slots: {round.slotsRemaining}/{round.survivalCap}</span>
-                  <span>Anywhere on Earth 🌍</span>
+                  <span>Anywhere on Earth</span>
                 </div>
               </div>
 
               {/* Photo capture — primary proof */}
               {photoPreview ? (
-                <div className="mb-5 rounded-2xl overflow-hidden border border-neon/40 relative" style={{ height: 200 }}>
+                <div className="mb-5 rounded-3xl overflow-hidden border border-neon/30 relative shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)]" style={{ height: 200 }}>
                   <img src={photoPreview} alt="check-in" className="w-full h-full object-cover" />
                   <button
+                    type="button"
                     onClick={() => { setPhotoFile(null); setPhotoPreview(null); }}
-                    className="absolute top-2 right-2 bg-ash/80 backdrop-blur rounded-lg px-2 py-1 text-bone text-xs font-mono"
+                    {...CUE_PRESS}
+                    className="absolute top-2 right-2 bg-ash/80 backdrop-blur rounded-full px-3 py-1.5 text-bone text-xs font-mono"
                   >
                     Replace
                   </button>
                 </div>
               ) : (
                 <button
+                  type="button"
                   onClick={handlePhotoSelect}
-                  className="mb-5 w-full bg-smoke border-2 border-dashed border-neon/40 rounded-2xl py-8 flex flex-col items-center justify-center gap-2 active:scale-98 transition-transform"
+                  {...CUE_PRESS}
+                  className="mb-5 w-full bg-smoke/50 border border-dashed border-amber/35 rounded-3xl py-8 flex flex-col items-center justify-center gap-3 active:scale-[0.99] transition-transform"
                 >
-                  <span className="text-4xl">📸</span>
-                  <span className="text-bone font-mono text-sm">Take a photo — this is your proof</span>
-                  <span className="text-dim font-mono text-xs">The community will vote on it</span>
+                  <ThemeMotif emoji={themeData.emoji} size={64} label={theme} />
+                  <span className="text-bone font-body text-sm">Snap your proof of presence</span>
+                  <span className="text-dim font-mono text-[10px] uppercase tracking-wider">The crowd will vote on it</span>
                 </button>
               )}
 
@@ -484,17 +493,15 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               )}
 
-              <button
-                onClick={handleSubmit}
-                disabled={!canSubmit}
-                className={`w-full py-4 rounded-2xl font-display text-3xl tracking-widest active:scale-95 transition-transform ${
-                  infiltratorMode && canSubmit
-                    ? 'bg-purple-600 text-bone animate-pulse-blood'
-                    : canSubmit ? 'bg-blood text-bone animate-pulse-blood' : 'bg-ember text-dim'
-                }`}
-              >
-                {!online && canSubmit ? 'QUEUE OFFLINE' : !canSubmit ? 'TAKE A PHOTO FIRST' : infiltratorMode ? '🎭 SUBMIT AS INFILTRATOR' : 'SUBMIT CHECK-IN'}
-              </button>
+              {infiltratorMode && canSubmit ? (
+                <GameCta tone="purple" onClick={handleSubmit} className="animate-pulse-blood">
+                  Submit as infiltrator →
+                </GameCta>
+              ) : (
+                <HumanCta onClick={handleSubmit} disabled={!canSubmit} className={canSubmit ? "animate-pulse-blood" : ""}>
+                  {!online && canSubmit ? "Queue offline →" : !canSubmit ? "Take a photo first" : "Submit check-in →"}
+                </HumanCta>
+              )}
               {!canSubmit && (
                 <p className="text-dim text-xs font-mono text-center mt-2">
                   Photo is required — the community votes on your proof
@@ -513,8 +520,8 @@ export default function CheckIn({ onBack, onSubmit }) {
               {/* Your bubble — seeded from your identity, so it's always yours. */}
               <BubbleLoader size={112} seed={user?.username || user?.address} />
               <div className="text-center">
-                <p className="font-display text-3xl text-bone">SUBMITTING</p>
-                <p className="text-dim font-mono text-sm mt-1">Recording your check-in…</p>
+                <p className="font-display text-3xl text-bone">Sending…</p>
+                <p className="text-dim font-body text-sm mt-1">Recording your check-in</p>
               </div>
             </motion.div>
           )}

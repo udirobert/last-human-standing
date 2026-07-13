@@ -10,6 +10,11 @@ import AmbientBackdrop from './AmbientBackdrop.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import BubbleLoader from './ui/BubbleLoader.jsx';
 import Mascot from './Mascot.jsx';
+import { CUE_PRESS } from '../lib/cuelume.js';
+import { HumanCta } from './ui/CraftCta.jsx';
+import ThemeMotif from './ui/ThemeMotif.jsx';
+import MotifFrieze from './ui/MotifFrieze.jsx';
+import DozingCat from './ui/DozingCat.jsx';
 
 function shortAddr(addr) {
   if (!addr) return 'anon';
@@ -83,7 +88,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
   const isLive = phase === 'live';
 
   return (
-    <div className="relative min-h-screen bg-ash flex flex-col font-body pb-24 overflow-hidden">
+    <div className="relative min-h-screen flex flex-col font-body pb-24 overflow-hidden bg-transparent">
       <AmbientBackdrop phase={isLive ? 'live' : 'prelaunch'} />
       {/* Header */}
       <div className="relative z-10 px-5 pt-12 pb-4">
@@ -204,17 +209,18 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             ))
           )}
           {!loading && roster.length === 0 && (
-            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
-              <p className="text-dim text-sm font-mono">No reservations yet.</p>
-              <p className="text-bone text-xs font-mono mt-1 mb-3">Be first.</p>
+            <div className="bg-smoke/80 border border-ember/40 rounded-2xl p-6 text-center backdrop-blur-sm">
+              <div className="flex justify-center mb-3">
+                <ThemeMotif emoji="☕" size={56} label="waiting" />
+              </div>
+              <p className="text-bone/70 text-sm font-body">No reservations yet.</p>
+              <p className="text-bone text-xs font-body mt-1 mb-3">Be first.</p>
               {onRouteToOnboarding && (
-                <button
-                  onClick={onRouteToOnboarding}
-                  className="px-5 py-2.5 rounded-xl bg-blood text-bone font-display text-sm tracking-widest active:scale-95 transition-transform"
-                >
-                  RESERVE A SLOT →
-                </button>
+                <HumanCta onClick={onRouteToOnboarding} className="!py-3">
+                  Reserve a slot →
+                </HumanCta>
               )}
+              <MotifFrieze className="w-full mt-5 opacity-85" />
             </div>
           )}
           {roster.map((r, i) => {
@@ -289,7 +295,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
           })()}
 
           <p className="text-dim text-xs font-mono uppercase tracking-wider mb-1 mt-3">
-            🏆 Top referrers — priority check-in on Day 1
+            Top referrers — priority check-in on Day 1
           </p>
           {refBoard.length === 0 ? (
             <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
@@ -377,17 +383,18 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             </div>
           )}
           {!loading && survivors.length === 0 && (
-            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
-              <p className="text-dim text-sm font-mono">No one has checked in yet.</p>
-              <p className="text-bone text-xs font-mono mt-1 mb-3">Be first.</p>
+            <div className="bg-smoke/80 border border-ember/40 rounded-2xl p-6 text-center backdrop-blur-sm">
+              <div className="flex justify-center mb-3">
+                <ThemeMotif emoji="🌅" size={56} label="check-in" />
+              </div>
+              <p className="text-bone/70 text-sm font-body">No one has checked in yet.</p>
+              <p className="text-bone text-xs font-body mt-1 mb-3">Be first.</p>
               {onCheckIn && (
-                <button
-                  onClick={onCheckIn}
-                  className="px-5 py-2.5 rounded-xl bg-blood text-bone font-display text-sm tracking-widest active:scale-95 transition-transform animate-pulse-blood"
-                >
-                  CHECK IN NOW →
-                </button>
+                <HumanCta onClick={onCheckIn} className="!py-3 animate-pulse-blood">
+                  Check in now →
+                </HumanCta>
               )}
+              <MotifFrieze className="w-full mt-5 opacity-85" />
             </div>
           )}
           {survivors.map((c, i) => {

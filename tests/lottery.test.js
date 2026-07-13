@@ -38,7 +38,7 @@ describe("lottery", () => {
     let whaleWins = 0;
     const rounds = 200;
     for (let i = 0; i < rounds; i += 1) {
-      const r = drawLottery(candidates, { launchAtIso: `2026-07-14T18:00:${String(i % 60).padStart(2, "0")}Z-${i}`, cohort: 1, slots: 3 });
+      const r = drawLottery(candidates, { launchAtIso: `2026-07-17T18:00:${String(i % 60).padStart(2, "0")}Z-${i}`, cohort: 1, slots: 3 });
       if (r.drawn.some((d) => d.address === "0xwhale")) whaleWins += 1;
     }
     // 11 tickets vs 20 singles: whale expectation is ~80%+ for 3 slots;
@@ -51,7 +51,7 @@ describe("lottery", () => {
       { address: "0xwhale", referral_count: 5, jury_tickets: 5 },
       { address: "0xother", referral_count: 0 },
     ];
-    const r = drawLottery(candidates, { launchAtIso: "2026-07-14T18:00:00Z", cohort: 1, slots: 2 });
+    const r = drawLottery(candidates, { launchAtIso: "2026-07-17T18:00:00Z", cohort: 1, slots: 2 });
     const addrs = r.drawn.map((d) => d.address);
     expect(new Set(addrs).size).toBe(addrs.length);
     expect(addrs).toHaveLength(2);

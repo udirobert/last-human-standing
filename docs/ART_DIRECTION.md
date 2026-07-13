@@ -106,23 +106,37 @@ still runs the routine screens.
   card (café→mug, park→tree, gym→dumbbell, friend→two mugs, sunrise→sun,
   bookstore→books, eating→ramen bowl, transit→bus, grocery→bag, beach→paper
   boat). All 10 themes covered; unpainted future themes fall back to the emoji.
+- **MotifFrieze** (`MotifFrieze.jsx`) — the still-life shelf (sunrise · coffee ·
+  cat · park · meal). Peak/dwell only: landing, speed-run intro + quiet beats,
+  onboarding rules/reserve, post-reserve, mission board, empties (feed/chat/
+  standings/history), day recap, finale.
+- **AmbientBackdrop** (`AmbientBackdrop.jsx`) — shared warm room for every
+  player shell (home, feed, chat, standings, history, onboarding stages,
+  speed-run mid-arc): radial “lit room,” paper grain, EmberField ripple,
+  phase-tinted pools. Transparent page shells so the room shows through.
+- **AmbientMotifs** (`AmbientMotifs.jsx`) — soft corner flourishes (tree, cat,
+  coffee, ramen) inside the backdrop so the hand doesn’t vanish after landing.
+  Optional `flourishes={false}` when a ceremony already owns a large ThemeMotif
+  (check-in). LandingHero / SpeedRunIntro keep their denser floating set.
+- **Craft dialect (demo ↔ real)** — `CraftCta.jsx` (HumanCta / GameCta) +
+  `src/lib/cuelume.js` interaction layer. Speed-run `beatUi.jsx` ceremonies
+  (`DayReveal`, `CutCeremony`, `OutcomeCeremony`) share MotifFrieze / DozingCat
+  with live overlays (`GameMoment`, `RuleReveal`) so `/?demo=1` and the cohort
+  path speak one visual language.
 - **Desktop environment** (`index.css`, ≥480px) — the 430px column was stranded
   in a black void; it now rests on a warm paper-textured surface, framed with a
   soft shadow, so desktop feels crafted too. Mobile stays edge-to-edge.
 
 ## Next step
 
-The daily-theme wheel is fully painted. Remaining opportunities, in order of
-visibility:
+Remaining opportunities, in order of visibility:
 
-- **Emoji still lurking elsewhere** — the theme card is done, but other surfaces
-  still lean on emoji (🔥 was replaced by StreakBloom; 🔭 by DozingCat; others
-  remain in `MissionBoard`, `Feed`, `useDelight`). Replace the high-traffic ones
-  with painted marks, same hand.
+- **Emoji still lurking in chrome** — high-traffic leftovers in MissionBoard /
+  Delight copy where a painted mark would beat a glyph.
 - **Achievement / milestone artefacts** — day-3, day-7, day-30 moments deserve a
   peak-moment painted reward, not a generic badge.
 - **New daily themes** — any theme added later just needs a `MOTIFS` entry;
   until then it falls back to its emoji automatically.
 
-Restraint still holds: motifs live at peak/dwell moments, one per moment, always
-in the shared material.
+Restraint still holds: room motifs stay soft; MotifFrieze / ThemeMotif live at
+peak and dwell; admin and error surfaces stay machine-flat on purpose.

@@ -64,6 +64,8 @@ const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 8);
 const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 5);
 const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 60);
 const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30);
+const VOTE_DAILY_GOAL = Number(process.env.VOTE_DAILY_GOAL || 5);
+const AUDIT_NUDGE_HOURS = Number(process.env.AUDIT_NUDGE_HOURS || 2);
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
@@ -427,11 +429,85 @@ async function notifyClosingSoon() {
   }
 }
 
+// Audit participation nudge — fires once per open round, AUDIT_NUDGE_HOURS
+// after the window opens. Targets paid players who haven't hit VOTE_DAILY_GOAL.
+const auditNudgeFiredFor = new Set();
+
+async function notifyAuditNeeded() {
+  if (!supabaseAdmin) return;
+
+  const nudgeMs = AUDIT_NUDGE_HOURS * 60 * 60 * 1000;
+  const quorum = (await getDynamicVoteQuorum()).effective;
+
+  const { data: rounds } = await supabaseAdmin
+    .from("rounds")
+    .select("day,opens_at")
+    .eq("status", "open");
+
+  for (const r of rounds || []) {
+    if (auditNudgeFiredFor.has(r.day)) continue;
+    if (!r.opens_at) continue;
+    if (Date.now() - Date.parse(r.opens_at) < nudgeMs) continue;
+
+    auditNudgeFiredFor.add(r.day);
+
+    const { data: subs } = await supabaseAdmin
+      .from("submissions")
+      .select("id,status")
+      .eq("day", r.day);
+
+    const ids = (subs || []).map((s) => s.id);
+    let needsVotes = 0;
+    if (ids.length > 0) {
+      const { data: agg } = await supabaseAdmin
+        .from("votes")
+        .select("submission_id")
+        .in("submission_id", ids);
+      const counts = new Map();
+      for (const row of agg || []) {
+        counts.set(row.submission_id, (counts.get(row.submission_id) || 0) + 1);
+      }
+      for (const s of subs || []) {
+        if (s.status !== "pending") continue;
+        if ((counts.get(s.id) || 0) < quorum) needsVotes += 1;
+      }
+    }
+
+    const { data: voters } = await supabaseAdmin
+      .from("users")
+      .select("address")
+      .eq("paid", true);
+
+    for (const u of voters || []) {
+      let votesToday = 0;
+      if (r.opens_at) {
+        const { count } = await supabaseAdmin
+          .from("votes")
+          .select("id", { count: "exact", head: true })
+          .eq("voter_address", u.address)
+          .gte("created_at", r.opens_at);
+        votesToday = count ?? 0;
+      }
+      if (votesToday >= VOTE_DAILY_GOAL) continue;
+
+      const remaining = Math.max(0, VOTE_DAILY_GOAL - votesToday);
+      sendPushToAddress(supabaseAdmin, u.address, {
+        title: needsVotes > 0 ? `${needsVotes} photos need your vote` : "The audit needs you",
+        body: needsVotes > 0
+          ? `You've cast ${votesToday}/${VOTE_DAILY_GOAL} today — ${remaining} more to hit your goal. Verdicts only work if humans vote.`
+          : `You've cast ${votesToday}/${VOTE_DAILY_GOAL} today. Open the feed and vote HUMAN or SUS.`,
+        data: { type: "audit_nudge", day: r.day, needsVotes, votesToday },
+      }).catch(() => {});
+    }
+  }
+}
+
 setInterval(() => {
   cleanupPersistentState().catch(() => {});
   autoAdvanceRounds().catch(() => {});
   notifyClosingSoon().catch(() => {});
   notifyRankSnapshot().catch(() => {});
+  notifyAuditNeeded().catch(() => {});
 }, 60_000).unref();
 
 // Mid-day rank snapshot — fires once at ~50% through the check-in window.
@@ -1474,6 +1550,106 @@ app.get("/api/feed", async (req, res) => {
     return res.json({ ok: true, submissions: withVotes });
   } catch (e) {
     res.status(400).json({ error: "feed_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Audit funnel for the open round — public counts + per-player progress
+// when a session cookie is present (via getOptionalAuthAddress).
+app.get("/api/audit/status", async (req, res) => {
+  try {
+    const quorumInfo = await getDynamicVoteQuorum();
+    const quorum = quorumInfo.effective;
+    const empty = {
+      day: null,
+      voteQuorum: quorum,
+      voteQuorumReason: quorumInfo.reason,
+      submissionCount: 0,
+      pendingCount: 0,
+      needsVotes: 0,
+      dailyGoal: VOTE_DAILY_GOAL,
+      votesCastToday: null,
+      unvotedCount: null,
+      goalMet: null,
+      opensAt: null,
+      closesAt: null,
+    };
+
+    if (!supabaseAdmin) return res.json({ ok: true, ...empty });
+
+    const { data: round } = await supabaseAdmin
+      .from("rounds")
+      .select("day,opens_at,closes_at,status")
+      .eq("status", "open")
+      .maybeSingle();
+
+    if (!round) return res.json({ ok: true, ...empty });
+
+    const { data: subs } = await supabaseAdmin
+      .from("submissions")
+      .select("id,status")
+      .eq("day", round.day);
+
+    const ids = (subs || []).map((s) => s.id);
+    const voteTotals = new Map();
+    if (ids.length > 0) {
+      const { data: agg } = await supabaseAdmin
+        .from("votes")
+        .select("submission_id")
+        .in("submission_id", ids);
+      for (const row of agg || []) {
+        voteTotals.set(row.submission_id, (voteTotals.get(row.submission_id) || 0) + 1);
+      }
+    }
+
+    let pendingCount = 0;
+    let needsVotes = 0;
+    for (const s of subs || []) {
+      if (s.status === "pending") pendingCount += 1;
+      const total = voteTotals.get(s.id) || 0;
+      if (s.status === "pending" && total < quorum) needsVotes += 1;
+    }
+
+    const address = await getOptionalAuthAddress(req);
+    let votesCastToday = null;
+    let unvotedCount = null;
+    let goalMet = null;
+
+    if (address) {
+      const votedIds = new Set();
+      if (ids.length > 0) {
+        const { data: mine } = await supabaseAdmin
+          .from("votes")
+          .select("submission_id,created_at")
+          .eq("voter_address", address)
+          .in("submission_id", ids);
+        for (const v of mine || []) {
+          if (!round.opens_at || v.created_at >= round.opens_at) {
+            votedIds.add(v.submission_id);
+          }
+        }
+      }
+      votesCastToday = votedIds.size;
+      unvotedCount = ids.filter((id) => !votedIds.has(id)).length;
+      goalMet = votesCastToday >= VOTE_DAILY_GOAL;
+    }
+
+    return res.json({
+      ok: true,
+      day: round.day,
+      voteQuorum: quorum,
+      voteQuorumReason: quorumInfo.reason,
+      submissionCount: subs?.length ?? 0,
+      pendingCount,
+      needsVotes,
+      dailyGoal: VOTE_DAILY_GOAL,
+      votesCastToday,
+      unvotedCount,
+      goalMet,
+      opensAt: round.opens_at,
+      closesAt: round.closes_at,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "audit_status_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

@@ -135,7 +135,7 @@ The client uses `split.paidCount / split.paidSlots` and `split.freeCount / split
 GET /api/lottery/status
 → {
   "ok": true,
-  "drawAt": "2026-07-14T18:00:00Z",
+  "drawAt": "2026-07-17T18:00:00Z",
   "status": "pending" | "drawn" | "closed",
   "freeRegistered": 12,
   "freeSlots": 25,
@@ -157,14 +157,11 @@ Reserve copy becomes unambiguous:
 - "RESERVE A SLOT" (paid) — 1 WLD / 5 cUSD / 5 USDC, guaranteed entry
 - "ENTER FREE LOTTERY" (free) — drawn at launch, 25 slots, no payment
 
-**1.5 Client: BrowserWalletPay shows the token selector before connect**
+**1.5 Client: BrowserWalletPay — token first, wallet list in a modal** ✅
 
-The current UX is "connect a wallet first, then pick a token". That hides Celo. Refactor to:
-1. Show all three token options (WLD, cUSD, USDC) as a tab strip.
-2. Show "Connect wallet to continue" with the wallet picker below.
-3. After connect, the selected tab drives which chain / token the payment uses.
-
-Same fix for the World App path: add a token selector above the `payEntryFee` button (currently the World App path is WLD-only, but the user can choose to pay in cUSD via Celo if the WLD world app supports it — research needed before shipping).
+Shipped: pick WLD / cUSD → **Connect wallet to pay →** opens a portal modal of
+connectors (never dumped onto the reserve page). Connected state shows a short
+address + pay CTA. World App path remains MiniKit WLD pay (Celo via browser).
 
 **1.6 Client: prelaunch card surfaces both pots**
 

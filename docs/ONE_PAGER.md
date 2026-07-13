@@ -28,6 +28,7 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 - **✨ Focused Onboarding Flow** — Welcome → Rules → Reserve → celebration. Core loop only; twists unlock per day via `RuleReveal` (Day 2 infiltrator, Day 4 wildcard, Day 5 finale).
 - **🎯 Live home focus** — Mission mantra + check-in first; arsenal (earned-through-play only) and prize pots below the feed.
 - **🃏 Shareable moment cards** — Canvas PNG cards for survive / jury / win; native share prefers the image; `/api/share/winner` for link unfurls.
+- **⚡ Speed-run demo** — `/?demo=1` (~8–10 min): full 5-day arc (decoy themes) → proof → audit → infiltrator → wildcard → finale → reserve. Same warm room + motifs + craft CTAs as the live path. No payment.
 - **🛡️ Pluggable Multi-Provider Proof of Humanity** — Extensible PoH architecture supporting World ID and Self Protocol (both live). Self is on Celo Sepolia staging with mock passports; flip `SELF_MOCK_PASSPORT=false` to verify real passports on Celo mainnet.
 - **Pre-launch waitlist + countdown** — wallet auth + 1 WLD entry locks your slot in the cohort
 - **Cohort lifecycle** — `phase: 'prelaunch' | 'live' | 'ended'`, exposed via `/api/game/state`
@@ -46,7 +47,11 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 - **Admin tooling** — `/api/admin/round`, `/api/admin/close-day` (token-gated)
 - **Full backend** — Express + Supabase + PM2 + Nginx + TLS on Hetzner
 
-## Demo flow (2 minutes)
+## Demo flow
+
+**Send a link (preferred):** `https://lasthumanstanding.thisyearnofear.com/?demo=1` — 15-min speed run, then reserve.
+
+**Real cohort (2 minutes):**
 
 1. **Pre-launch**: see countdown + cohort fill counter; tap **Reserve your slot** → wallet auth → pay 1 WLD
 2. **Day 1 opens**: location pin + prompt revealed

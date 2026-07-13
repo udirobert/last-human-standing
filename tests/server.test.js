@@ -215,6 +215,15 @@ describe("server hardening", () => {
     expect([401, 404]).toContain(res.status);
   });
 
+  it("GET /api/audit/status returns audit funnel fields without Supabase", async () => {
+    const res = await request(app).get("/api/audit/status");
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(typeof res.body.dailyGoal).toBe("number");
+    expect(typeof res.body.voteQuorum).toBe("number");
+    expect(res.body.votesCastToday).toBeNull();
+  });
+
   it("GET /api/game/state returns valid phase and cohort fields", async () => {
     const res = await request(app).get("/api/game/state");
     expect(res.status).toBe(200);

@@ -4,6 +4,7 @@ import CoffeeBrew from "./CoffeeBrew.jsx";
 import DozingCat from "./DozingCat.jsx";
 import MotifFrieze from "./MotifFrieze.jsx";
 import EmberField from "./EmberField.jsx";
+import { CUE_PRESS, CUE_HOVER } from "../../lib/cuelume.js";
 
 /**
  * LandingHero — the cinematic front door (docs/ART_DIRECTION.md).
@@ -77,7 +78,7 @@ function HeroCountdown({ targetIso }) {
   );
 }
 
-export default function LandingHero({ targetIso, reservedCount = 0, cohortSize = 50, onReserve, onDetails }) {
+export default function LandingHero({ targetIso, reservedCount = 0, cohortSize = 50, onReserve, onDetails, onSpeedRun }) {
   const filling = reservedCount > 0 && reservedCount < cohortSize;
 
   return (
@@ -202,14 +203,28 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
           <button
             type="button"
             onClick={onReserve}
+            {...CUE_PRESS}
             className="font-body font-semibold text-[#1a1206] bg-amber rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform"
             style={{ fontSize: "clamp(15px,1.6vw,17px)", boxShadow: "0 10px 30px -8px rgba(255,184,0,0.5)" }}
           >
             Reserve your slot →
           </button>
+          {onSpeedRun && (
+            <button
+              type="button"
+              onClick={onSpeedRun}
+              {...CUE_PRESS}
+              className="font-body font-semibold text-bone bg-blood/90 rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform"
+              style={{ fontSize: "clamp(15px,1.6vw,17px)" }}
+            >
+              Try the 15-min speed run →
+            </button>
+          )}
           <button
             type="button"
             onClick={onDetails}
+            {...CUE_HOVER}
+            data-cuelume-press="tick"
             className="font-body font-semibold text-bone bg-transparent border border-bone/20 rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform"
             style={{ fontSize: "clamp(15px,1.6vw,17px)" }}
           >

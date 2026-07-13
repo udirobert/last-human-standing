@@ -4,6 +4,33 @@
 
 **Mechanic:** A real-world elimination game. Each day a **theme drops** (e.g. "AT A CAFÉ"); players anywhere on Earth snap a photo as proof. The community votes HUMAN or SUS. First 25 to check in survive; cap shrinks until one human takes the pot.
 
+## Send-a-link path (primary)
+
+**Speed run:** https://lasthumanstanding.thisyearnofear.com/?demo=1
+
+Telegram-ready message:
+
+> check this out — https://lasthumanstanding.thisyearnofear.com/?demo=1  
+> 15 min speed run of the full 5-day cohort
+
+Guided client demo (~8–10 min). No payment. Seeded NPCs. Ends with **Reserve for Cohort 1**.
+
+**5-day compressed arc** (decoy themes — deliberately *not* the live drop order):
+
+1. **Transit** — photo check-in → rank → audit (HUMAN/SUS) → cut + DQ-and-replace
+2. **Gym** — infiltrator unlock → honest vs bluff → outcome → cut (skip-to-finale available)
+3. **Grocery** — pressure + inherit-a-slot easter egg → cut
+4. **Beach** — wildcard jury vote → revive an NPC
+5. **Eating** — finale ceremony → share card → reserve
+
+Also available from the landing CTA **Try the 15-min speed run**.
+
+> Spoiler note: demo themes are chosen from outside the cohort schedule so partners and players can't reverse-engineer the real drop order from `/?demo=1`.
+
+**Immersion:** Shared warm room (`AmbientBackdrop` + soft `AmbientMotifs`) + MotifFrieze / ThemeMotif / DozingCat on every beat — same dialect as the live app. Cuelume press/hover/success, Delight confetti on peak beats, mute toggle, **Built with World · Self · Celo** on intro + finale.
+
+---
+
 ## 0) Pre-flight checks
 
 ```bash
@@ -19,7 +46,7 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 - For real flow: open inside World App with WLD balance ≥ 1.
 - For browser demos: any browser — connect a wallet (MetaMask, WalletConnect, etc.) and pay the 1 WLD entry fee on World Chain.
 
-## 1) The 2-minute "judge path"
+## 1) The 2-minute "judge path" (real cohort)
 
 ### A) Pre-launch state (`phase = "prelaunch"`)
 

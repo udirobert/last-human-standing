@@ -32,7 +32,7 @@ Keep the legacy `fc:frame` tags in the share page only as a fallback for very ol
 
 Snaps (`docs.farcaster.xyz/snap`) are JSON-defined components embedded inline in a cast. They are the modern replacement for both Cast Actions and static OG embeds on shared casts — a snap can show live vote tallies, render a HUMAN/SUS toggle, and POST a signed vote back to the server, all without leaving the feed.
 
-**Status: beta.** The spec page says it "may change significantly over the next few weeks or months." That is why we are **not** shipping snaps for the 18:00 UTC re-launch on 2026-07-14.
+**Status: beta.** The spec page says it "may change significantly over the next few weeks or months." That is why we are **not** shipping snaps for the 18:00 UTC re-launch on 2026-07-17.
 
 When the spec stabilizes, the plan is:
 

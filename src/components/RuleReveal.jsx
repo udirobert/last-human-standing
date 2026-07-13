@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ROUND_UNLOCKS } from "../lib/copy.js";
+import { TODAY_THEME, findTheme } from "../data/game";
 import { useRound } from "../world/RoundProvider.jsx";
+import ThemeMotif from "./ui/ThemeMotif.jsx";
+import ThemeFairness from "./ThemeFairness.jsx";
+import { HumanCta, GhostLink } from "./ui/CraftCta.jsx";
 
 const SEEN_KEY = "lhs_round_unlocks_seen";
 
@@ -26,18 +30,17 @@ function markSeen(id) {
 }
 
 /**
- * RuleReveal — progressive disclosure for advanced mechanics.
- *
- * Onboarding teaches the core loop only. Each live day unlocks one twist
- * (infiltrator, pressure, wildcard, finale) the first time the player
- * opens home that day. Dismiss once; never nag again.
- *
- * Mythmaking > rulebook: one large-type beat, one body sentence, one CTA.
+ * RuleReveal — day unlock overlay. Matches speed-run DayReveal craft:
+ * theme motif hero, twist in a secondary card, amber HumanCta.
  */
 export default function RuleReveal({ onAudit }) {
-  const { phase, currentDay, you } = useRound();
+  const { phase, currentDay, you, round } = useRound();
   const [unlock, setUnlock] = useState(null);
   const [body, setBody] = useState("");
+
+  const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
+  const theme = findTheme(themeLabel) || TODAY_THEME;
+  const cap = round?.survivalCap ?? null;
 
   useEffect(() => {
     if (phase !== "live") {
@@ -93,41 +96,60 @@ export default function RuleReveal({ onAudit }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-6"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+          style={{
+            background: "radial-gradient(120% 90% at 50% 0%, rgba(74,50,33,0.97) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
+          }}
         >
           <motion.div
-            initial={{ opacity: 0, y: 24, scale: 0.96 }}
+            initial={{ opacity: 0, y: 20, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12 }}
-            transition={{ type: "spring", duration: 0.45, bounce: 0.15 }}
+            transition={{ type: "spring", duration: 0.45, bounce: 0.12 }}
             className="w-full max-w-sm text-center"
           >
-            <p className="font-mono text-amber text-xs tracking-[0.2em] uppercase mb-4">
+            <p className="font-mono text-amber/90 uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
               {unlock.eyebrow}
             </p>
+
+            <div className="mb-3 flex justify-center">
+              <ThemeMotif emoji={theme.emoji} size={100} label={theme.theme} />
+            </div>
+
             <h2
               id="rule-reveal-title"
-              className="font-display text-4xl text-bone leading-none tracking-wide mb-4"
+              className="font-display text-bone leading-[0.9] mb-1"
+              style={{ fontSize: "clamp(32px,8vw,44px)" }}
             >
-              {unlock.title}
+              {theme.theme}
             </h2>
-            <p className="text-dim font-mono text-sm leading-relaxed mb-8">
-              {body}
+            <p className="font-mono text-neon/80 uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.16em" }}>
+              Today&apos;s theme
             </p>
-            <button
-              type="button"
-              onClick={handleCta}
-              className="w-full py-4 rounded-2xl bg-blood text-bone font-display text-xl tracking-widest active:scale-[0.97] transition-transform"
-            >
-              {unlock.cta}
-            </button>
-            <button
-              type="button"
-              onClick={dismiss}
-              className="mt-3 font-mono text-dim text-xs underline decoration-dotted underline-offset-2"
-            >
+
+            <div className="w-full rounded-3xl border border-ember/30 bg-smoke/50 backdrop-blur-sm p-4 mb-4 text-left">
+              <p className="font-mono text-amber text-[10px] tracking-[0.18em] uppercase mb-1.5">
+                The twist
+              </p>
+              <p className="font-display text-2xl text-bone leading-snug mb-2">
+                {unlock.title}
+              </p>
+              <p className="font-body text-bone/75 text-sm leading-relaxed">{body}</p>
+              {cap != null && (
+                <p className="mt-3 font-mono text-dim text-[11px] tabular-nums">
+                  Survival cap <span className="text-amber">{cap}</span>
+                </p>
+              )}
+            </div>
+
+            <ThemeFairness theme={theme} className="mb-6" />
+
+            <HumanCta onClick={handleCta}>
+              {(unlock.cta || "I'm in").replace(/→\s*$/, "").trim()} →
+            </HumanCta>
+            <GhostLink onClick={dismiss} className="mt-3">
               Dismiss
-            </button>
+            </GhostLink>
           </motion.div>
         </motion.div>
       )}

@@ -47,12 +47,14 @@ Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLO
 1. **🔊 Immersive Audio Layer (Sound Design)**: Zero-latency synthetic sound effects generated dynamically via the Web Audio API for highly responsive UI sounds (button click, success, milestone, errors, and custom mascot responses) without requiring audio asset downloads.
 2. **✨ Focused Onboarding Flow**: A tight 4-step flow — Welcome → Rules → Reserve/pay 1 WLD → celebration. Onboarding teaches the **core loop only** (reserve → theme → prove → survive). Advanced mechanics (infiltrator, jury, wildcard, finale) unlock via `RuleReveal` on the day they matter — progressive disclosure, not a rulebook.
 3. **🛡️ Pluggable Proof of Humanity**: A pluggable, extensible multi-provider identity layer supporting World ID and Self Protocol (both live). See [HUMANITY_PROVIDERS.md](./HUMANITY_PROVIDERS.md) for the integration shape, trust tiers, and the one env-var flip that takes Self from Celo Sepolia staging to Celo mainnet.
-4. **🎨 Hand-painted human motifs**: A gouache-on-paper artefact language (coffee, a growing streak plant, a dozing cat, a full daily-theme wheel) layered against the cold system chrome — the visual argument for "last *human* standing." See [ART_DIRECTION.md](./ART_DIRECTION.md) for the thesis, the shared material, and what's next.
+4. **🎨 Hand-painted human motifs**: A gouache-on-paper artefact language (coffee, streak plant, dozing cat, daily-theme wheel) against cold system chrome. Shared `AmbientBackdrop` + soft `AmbientMotifs` across home/feed/chat/standings/history/onboarding and the speed-run; MotifFrieze at dwells; LandingHero / SpeedRunIntro keep the denser floating set. See [ART_DIRECTION.md](./ART_DIRECTION.md).
 5. **🎯 Live home focus**: Mission mantra ("Be one of the first N") leads; arsenal / prize pots sit below the feed; arsenal only appears after play progress; spectator chrome is deduped into MissionBoard (cohort-2 priority keeps `SpectatorChip`).
 6. **🃏 Shareable moment cards**: Canvas PNG cards for survive / jury / win; native share prefers the image file.
 7. **⚖️ Audit as spectacle**: Full-bleed photos, live HUMAN/SUS tally bar, large verdict buttons; feed polls every 12s.
 8. **🔁 Cohort 2 handoff**: Ended phase surfaces tickets, next-drop countdown (`COHORT_2_LAUNCH_AT`), waitlist, and push opt-in — not a dead end.
 9. **📋 Theme fairness**: Per-theme "what counts / doesn't" notes on mission + check-in.
+10. **⚡ Speed-run demo**: Guided ~15-min client demo at `/?demo=1` — same craft dialect as live (Cuelume + CraftCta + motifs through every beat) → reserve for the real cohort. Telegram-ready; no payment.
+11. **🔌 Browser pay UX**: Pick WLD/cUSD → **Connect wallet to pay** opens a wallet modal (connectors never dumped on the page).
 
 ## World Stack usage
 
@@ -81,7 +83,7 @@ Copy `.env.example` → `.env`. New values for the cohort/geo model:
 
 ```bash
 # Pre-launch / cohort
-GAME_LAUNCH_AT=2026-07-14T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
+GAME_LAUNCH_AT=2026-07-17T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
 COHORT_SIZE=50                         # max reservations before pre-launch closes early
 
 # Daily round defaults

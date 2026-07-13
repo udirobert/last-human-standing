@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { CUE_HOVER } from '../lib/cuelume.js';
 
 // Prefetch the lazy chunks on first interaction so the screen is hot
 // by the time the user taps. Cheap on dev tools; fire-and-forget.
@@ -93,10 +94,13 @@ export default function BottomNav({
           return (
             <motion.button
               key={tab.id}
+              type="button"
               onClick={() => onChange(tab.id)}
               onMouseEnter={() => prefetch(tab.id)}
               onTouchStart={() => prefetch(tab.id)}
               whileTap={{ scale: 0.88 }}
+              {...CUE_HOVER}
+              data-cuelume-press="tick"
               className={`relative flex flex-col items-center gap-1 flex-1 py-2 rounded-xl transition-colors ${
                 isActive ? 'text-blood' : 'text-dim'
               }`}

@@ -7,6 +7,8 @@ import NetworkPill from './ui/NetworkPill.jsx';
 import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import { StageSection } from './StageShell.jsx';
+import DozingCat from './ui/DozingCat.jsx';
+import MotifFrieze from './ui/MotifFrieze.jsx';
 
 const BOT_RESPONSES = [
   "still alive another day, respect",
@@ -31,6 +33,7 @@ export default function Chat({ onBack }) {
   const bottomRef = useRef();
   const inputRef = useRef();
   const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
+  const { phase } = useRound();
   const [rosterCount, setRosterCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState(null);
@@ -194,25 +197,32 @@ export default function Chat({ onBack }) {
     : input.trim().length > 0 && toUser.trim().length > 0;
 
   return (
-    <div className="relative min-h-screen bg-ash flex flex-col font-body overflow-hidden">
-      <AmbientBackdrop phase="prelaunch" />
+    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
+      <AmbientBackdrop phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"} />
       {/* Header */}
-      <div className="relative z-10 px-5 pt-12 pb-4 bg-ash/80 backdrop-blur-md border-b border-ember/40">
+      <div className="relative z-10 px-5 pt-12 pb-4 bg-ash/70 backdrop-blur-md border-b border-ember/30">
         <div className="flex items-center gap-4 mb-1">
-          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all"
+            aria-label="Back"
+          >
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h2 className="font-display text-3xl text-bone tracking-wide">SURVIVORS LOBBY</h2>
+              <h2 className="font-display text-3xl text-bone tracking-wide leading-none">Survivors lobby</h2>
               <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
+            <div className="flex items-center gap-2 flex-wrap mt-1">
               {isMiniApp && onlineCount != null ? (
                 <span className="font-mono text-dim text-xs">{onlineCount} humans reserved</span>
               ) : useMocks ? (
                 <span className="font-mono text-amber text-xs">Dev preview — simulated messages</span>
-              ) : null}
+              ) : (
+                <span className="font-mono text-dim text-xs">Talk with the living</span>
+              )}
             </div>
           </div>
           <FAQModal />
@@ -220,9 +230,8 @@ export default function Chat({ onBack }) {
       </div>
 
       {/* Context banner */}
-      <div className="mx-5 mt-3 bg-smoke border border-ember rounded-xl px-4 py-2 flex items-center gap-2">
-        <span className="text-lg">💬</span>
-        <p className="text-dim text-xs font-mono">
+      <div className="mx-5 mt-3 bg-smoke/80 border border-ember/40 rounded-xl px-4 py-2.5">
+        <p className="text-bone/70 text-xs font-body leading-relaxed">
           {isMiniApp
             ? (chatMode === 'lobby'
                 ? 'Lobby chat — all survivors can see your messages.'
@@ -252,10 +261,13 @@ export default function Chat({ onBack }) {
 
         {/* Empty state */}
         {!chatLoading && messages.length === 0 && (
-          <div className="text-center py-8">
-            <span className="text-4xl block mb-3">🫂</span>
-            <p className="text-bone font-mono text-sm mb-1">No messages yet</p>
-            <p className="text-dim font-mono text-xs">Be the first to say something to the survivors.</p>
+          <div className="text-center py-8 px-2">
+            <div className="flex justify-center mb-3">
+              <DozingCat size={64} />
+            </div>
+            <p className="text-bone font-body text-sm mb-1">No messages yet</p>
+            <p className="text-bone/55 font-body text-xs mb-5">Be the first to say something to the survivors.</p>
+            <MotifFrieze className="w-full opacity-85" />
           </div>
         )}
 
@@ -291,7 +303,7 @@ export default function Chat({ onBack }) {
                       ? 'bg-blood text-white rounded-tr-sm'
                       : 'bg-smoke border border-ember text-bone rounded-tl-sm'
                 }`}>
-                  <p className="text-sm leading-relaxed">{msg.msg}</p>
+                  <p className="text-sm leading-relaxed font-body">{msg.msg}</p>
                 </div>
               </div>
             </motion.div>
@@ -311,7 +323,7 @@ export default function Chat({ onBack }) {
               chatMode === 'lobby' ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
             }`}
           >
-            🌍 Lobby
+            Lobby
           </button>
           <button
             type="button"
@@ -320,7 +332,7 @@ export default function Chat({ onBack }) {
               chatMode === 'dm' ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
             }`}
           >
-            🔒 DM
+            DM
           </button>
         </div>
         <div className="flex gap-3 items-end">
