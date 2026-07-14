@@ -50,7 +50,6 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
         sessionStorage.removeItem("lhs_enter_reserve");
         return 3;
       }
-      if (localStorage.getItem(ONBOARDING_KEY) === "1") return 3;
     } catch { /* ignore */ }
     return 0;
   });
@@ -294,7 +293,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               </StageSection>
 
               <StageSection index={6}>
-                <HumanCta onClick={() => { markOnboardingDone(); setStep(2); }}>
+                <HumanCta onClick={() => setStep(2)}>
                   Build my profile →
                 </HumanCta>
                 {onSpeedRun && (

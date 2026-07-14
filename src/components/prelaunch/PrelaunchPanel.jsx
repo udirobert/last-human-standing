@@ -7,7 +7,9 @@ import TopReferrersBoard from "./TopReferrersBoard.jsx";
 import DailyPrompt from "./DailyPrompt.jsx";
 import PrizePots from "./PrizePots.jsx";
 import PostReserveExtras from "./PostReserveExtras.jsx";
+import MascotGuide from "../ui/MascotGuide.jsx";
 import MotifFrieze from "../ui/MotifFrieze.jsx";
+import { HumanCta } from "../ui/CraftCta.jsx";
 import CoffeeBrew from "../ui/CoffeeBrew.jsx";
 import { COHORT } from "../../lib/copy.js";
 
@@ -26,6 +28,7 @@ export default function PrelaunchPanel({
   referralCount,
   reservedAt,
   isReserved = false,
+  onReserve,
   phase = "prelaunch",
   variant = "home",
 }) {
@@ -75,6 +78,23 @@ export default function PrelaunchPanel({
 
   return (
     <div className="px-5 space-y-3">
+      {!isReserved && variant === "home" && (
+        <div className="border border-ember/40 rounded-3xl p-4 bg-smoke/50 backdrop-blur-sm">
+          <MascotGuide
+            variant="thinking"
+            size={52}
+            message="A 5-day real-world check-in game. One human wins the pot."
+            position="top"
+            className="mb-3"
+          />
+          {onReserve && (
+            <HumanCta onClick={onReserve} className="w-full">
+              Reserve your slot →
+            </HumanCta>
+          )}
+        </div>
+      )}
+
       {isReserved && (
         <PostReserveExtras reservedAt={reservedAt} phase={phase} />
       )}

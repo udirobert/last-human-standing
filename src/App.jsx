@@ -103,6 +103,20 @@ const SCREENS = {
       setNavTab('home');
     }, [entryPaid, you?.isPaid, phase, screen, setScreen, setNavTab, playSound, celebrate]);
 
+    // Returning users who already saw onboarding should land on the prelaunch home,
+    // not the reserve wall, until they choose to reserve.
+    useEffect(() => {
+      if (screen !== SCREENS.ONBOARDING) return;
+      const reserved = Boolean(entryPaid || you?.isPaid);
+      if (reserved) return;
+      try {
+        if (localStorage.getItem("lhs_onboarding_v2_done") === "1") {
+          setScreen(SCREENS.HOME);
+          setNavTab("home");
+        }
+      } catch { /* ignore */ }
+    }, [screen, entryPaid, you?.isPaid, setScreen, setNavTab]);
+
     // Check for admin access via URL param or direct navigation
     const urlParams = new URLSearchParams(window.location.search);
     const adminParam = urlParams.get('admin') === '1' || window.location.pathname === '/admin';
@@ -241,7 +255,11 @@ const SCREENS = {
               onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
               onViewHistory={() => setScreen(SCREENS.HISTORY)}
-              onRouteToOnboarding={() => { setScreen(SCREENS.ONBOARDING); setNavTab('home'); }}
+              onRouteToOnboarding={() => {
+                try { sessionStorage.setItem("lhs_enter_reserve", "1"); } catch { /* ignore */ }
+                setScreen(SCREENS.ONBOARDING);
+                setNavTab('home');
+              }}
               onRefresh={handleRefresh}
             />
           </motion.div>

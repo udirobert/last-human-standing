@@ -188,6 +188,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
             launchAt={launchAt}
             phase={phase}
             isReserved={isReserved}
+            onReserve={onRouteToOnboarding}
             cohort={cohortSplit ?? {
               size: cohortSize,
               paidSlots: 25,
