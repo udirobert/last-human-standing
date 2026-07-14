@@ -11,6 +11,9 @@ create table if not exists public.world_push_subscriptions (
 -- Only the server (service role) can write; users can read their own
 alter table public.world_push_subscriptions enable row level security;
 
-create policy if not exists "world_push_subscriptions_server_only"
+-- PostgreSQL does not support CREATE POLICY IF NOT EXISTS, so drop first.
+drop policy if exists "world_push_subscriptions_server_only" on public.world_push_subscriptions;
+
+create policy "world_push_subscriptions_server_only"
   on public.world_push_subscriptions
   for all using (false) with check (false);
