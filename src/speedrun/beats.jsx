@@ -27,6 +27,7 @@ import {
   ThemeMissionCard,
   OutcomeCeremony,
 } from "./beatUi.jsx";
+import { haptic } from "../lib/haptics.js";
 
 export function IntroBeat({ onStart, onExit, soundEnabled, onToggleSound }) {
   const { nextBeat } = useSpeedRun();
@@ -133,8 +134,79 @@ export function D1CheckInBeat() {
   );
 }
 
+export function D1ClosingBeat() {
+  const { photoPreview, submissions, nextBeat } = useSpeedRun();
+  const mySub = submissions.find((s) => s.isYou);
+  const photo = photoPreview || mySub?.mediaUrl;
+  const targetReal = mySub?.votes?.real ?? 0;
+  const targetFake = mySub?.votes?.fake ?? 0;
+
+  const [displayReal, setDisplayReal] = useState(0);
+  const [displayFake, setDisplayFake] = useState(0);
+  const [canContinue, setCanContinue] = useState(false);
+
+  // Fast-forward the jury tally so the user sees votes roll in
+  useEffect(() => {
+    const duration = 2200;
+    const steps = 30;
+    const interval = duration / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step += 1;
+      const progress = step / steps;
+      setDisplayReal(Math.round(targetReal * progress));
+      setDisplayFake(Math.round(targetFake * progress));
+      if (step >= steps) {
+        clearInterval(timer);
+        setDisplayReal(targetReal);
+        setDisplayFake(targetFake);
+        setCanContinue(true);
+      }
+    }, interval);
+    return () => clearInterval(timer);
+  }, [targetReal, targetFake]);
+
+  // Auto-advance once the tally finishes
+  useEffect(() => {
+    if (!canContinue) return;
+    const timer = setTimeout(() => nextBeat(), 1200);
+    return () => clearTimeout(timer);
+  }, [canContinue, nextBeat]);
+
+  return (
+    <div className="flex-1 flex flex-col px-5 pb-8 items-center justify-center overflow-y-auto">
+      <div className="w-full max-w-sm text-center mb-5">
+        <p className="font-mono text-amber text-xs uppercase tracking-[0.2em] mb-2">Day 1 · Submitted</p>
+        <p className="font-display text-4xl text-bone leading-none mb-2">Proof received</p>
+        <p className="font-body text-bone/60 text-sm">The jury is voting. Your photo is on trial.</p>
+      </div>
+
+      <div className="w-full max-w-sm mb-5 rounded-3xl overflow-hidden border border-amber/30 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)] aspect-[4/5] max-h-[40vh] bg-ash">
+        {photo ? (
+          <img src={photo} alt="Your proof" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <ThemeMotif emoji={dayMeta(1).theme.emoji} size={80} />
+          </div>
+        )}
+      </div>
+
+      <div className="w-full max-w-sm mb-6">
+        <LiveTally real={displayReal} fake={displayFake} />
+        <p className="text-center font-mono text-dim text-[10px] mt-2 uppercase tracking-widest">
+          {canContinue ? "Voting closed — enter the audit" : "Jury votes rolling in..."}
+        </p>
+      </div>
+
+      <GameCta onClick={nextBeat} disabled={!canContinue} className="w-full max-w-sm">
+        {canContinue ? "Enter the audit →" : "Tallying votes..."}
+      </GameCta>
+    </div>
+  );
+}
+
 export function D1RankBeat() {
-  const { rank, nextBeat, shareCopied, setShareCopied } = useSpeedRun();
+  const { rank, nextBeat, shareCopied, setShareCopied, photoPreview } = useSpeedRun();
   const cap = dayMeta(1).capTo;
 
   const shareText = `Day 1 · Rank #${rank}/${cap} · SURVIVED\nLast Human Standing practice run`;
@@ -148,6 +220,7 @@ export function D1RankBeat() {
       cap,
       text: shareText,
       url: shareUrl,
+      photoUrl: photoPreview,
     });
     if (status === "copied") {
       setShareCopied(true);
@@ -166,6 +239,7 @@ export function D1RankBeat() {
       playerName="@you"
       shareText={shareText}
       shareUrl={shareUrl}
+      photoUrl={photoPreview}
     />
   );
 }
@@ -203,6 +277,7 @@ export function D1AuditBeat() {
   const theme = dayMeta(1).theme;
   const lines = getProfiledMascotLines();
 
+  const mySub = submissions.find((s) => s.isYou);
   // Only show submissions that aren't "you" — you don't vote on yourself
   const votable = submissions.filter((s) => !s.isYou);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -211,7 +286,7 @@ export function D1AuditBeat() {
 
   const onVote = (id, type) => {
     beatFeel(type === "real" ? "vote-human" : "vote-sus");
-    if (navigator.vibrate) navigator.vibrate(type === "real" ? 15 : [10, 30, 10]);
+    haptic(type === "real" ? "light" : "warning");
     castVote(id, type);
     setRevealTally(true);
     // Mascot reacts to the vote
@@ -281,6 +356,32 @@ export function D1AuditBeat() {
         </div>
         <ThemeMotif emoji={theme.emoji} size={32} label={theme.theme} />
       </div>
+
+      {/* Your proof — on trial */}
+      {mySub && (
+        <div className="shrink-0 mb-3 rounded-2xl border border-amber/35 bg-smoke/70 overflow-hidden backdrop-blur-sm">
+          <div className="flex gap-2 p-2 items-center">
+            <div className="w-16 h-16 rounded-xl bg-ash overflow-hidden shrink-0 border border-ember/40">
+              {mySub.mediaUrl ? (
+                <img src={mySub.mediaUrl} alt="Your proof" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ThemeMotif emoji={theme.emoji} size={28} />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-mono text-[10px] text-amber uppercase tracking-widest">Your proof · on trial</p>
+              {mySub.caption && (
+                <p className="font-body text-bone/85 text-xs leading-snug truncate">{mySub.caption}</p>
+              )}
+              <div className="mt-1">
+                <LiveTally real={mySub.votes.real} fake={mySub.votes.fake} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Progress dots */}
       <div className="flex items-center justify-center gap-2 mb-3 shrink-0">
@@ -732,15 +833,20 @@ export function FinaleBeat({ onReserve, onExit }) {
   const shareUrl = `${window.location.origin}${DEMO_SHARE_URL_PATH}`;
 
   useEffect(() => {
-    try {
-      setCardSrc(momentCardDataUrl("win", {
-        name: "@you",
-        day: 5,
-        originHost: window.location.host,
-      }));
-    } catch {
-      setCardSrc(null);
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const src = await momentCardDataUrl("win", {
+          name: "@you",
+          day: 5,
+          originHost: window.location.host,
+        });
+        if (!cancelled) setCardSrc(src);
+      } catch {
+        if (!cancelled) setCardSrc(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const onShare = async () => {

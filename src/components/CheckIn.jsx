@@ -117,6 +117,7 @@ export default function CheckIn({ onBack, onSubmit }) {
       cap,
       text,
       url,
+      photoUrl: photoPreview,
       isFarcaster,
     });
     if (status === "copied") {
@@ -542,6 +543,7 @@ export default function CheckIn({ onBack, onSubmit }) {
               }
               shareText={buildShare(result.survived).text}
               shareUrl={buildShare(result.survived).url}
+              photoUrl={photoPreview}
             />
           )}
         </AnimatePresence>

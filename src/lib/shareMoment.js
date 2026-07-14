@@ -15,6 +15,7 @@ import { MiniKit } from "@worldcoin/minikit-js";
  *   cap?: number|string,
  *   text: string,
  *   url: string,
+ *   photoUrl?: string,
  *   isFarcaster?: boolean,
  * }} opts
  * @returns {Promise<'shared'|'copied'|'dismissed'|'failed'>}
@@ -28,12 +29,13 @@ export async function shareMoment(kind, opts) {
     }
   })();
 
-  const canvas = renderMomentCard(kind, {
+  const canvas = await renderMomentCard(kind, {
     name: opts.name,
     day: opts.day,
     rank: opts.rank,
     cap: opts.cap,
     originHost,
+    photoUrl: opts.photoUrl,
   });
   const blob = await canvasToPngBlob(canvas);
   const file = blob
@@ -96,7 +98,7 @@ export async function shareMoment(kind, opts) {
 }
 
 /** Data-URL preview for in-ceremony card display. */
-export function momentCardDataUrl(kind, data) {
-  const canvas = renderMomentCard(kind, data);
+export async function momentCardDataUrl(kind, data) {
+  const canvas = await renderMomentCard(kind, data);
   return canvas ? canvas.toDataURL("image/png") : null;
 }

@@ -4,6 +4,7 @@ import {
   IntroBeat,
   D1RevealBeat,
   D1CheckInBeat,
+  D1ClosingBeat,
   D1RankBeat,
   D1AuditBeat,
   D1CutBeat,
@@ -27,6 +28,7 @@ const BEAT_VIEW = {
   intro: IntroBeat,
   d1_reveal: D1RevealBeat,
   d1_checkin: D1CheckInBeat,
+  d1_closing: D1ClosingBeat,
   d1_rank: D1RankBeat,
   d1_audit: D1AuditBeat,
   d1_cut: D1CutBeat,
@@ -134,6 +136,8 @@ function SpeedRunShell({ onReserve, onExit }) {
   useEffect(() => {
     if (beat === "d1_reveal" || beat === "d2_reveal" || beat === "d3_reveal" || beat === "d4_reveal" || beat === "d5_reveal") {
       beatFeel("reveal");
+    } else if (beat === "d1_closing") {
+      beatFeel("pressure");
     } else if (beat === "d1_cut" || beat === "d2_cut" || beat === "d3_cut") {
       beatFeel("cut");
     } else if (beat === "d4_revive") {

@@ -127,7 +127,7 @@ export function SpeedRunProvider({ children }) {
     const cast = buildDay1Audit({ playerPhoto: photo });
     setSubmissions(cast);
     persist({ photoPreview: photo, submissions: cast });
-    goToBeat("d1_rank");
+    goToBeat("d1_closing");
   }, [photoPreview, persist, goToBeat]);
 
   const castVote = useCallback((id, type) => {

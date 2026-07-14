@@ -29,6 +29,7 @@ import { haptic } from "../lib/haptics.js";
  *   playerName — display name for the moment card
  *   shareText — composed caption for the share sheet
  *   shareUrl  — URL to include in the share
+ *   photoUrl  — optional user photo for the share card background
  */
 export default function GameMoment({
   result,
@@ -40,6 +41,7 @@ export default function GameMoment({
   playerName,
   shareText = "",
   shareUrl = "",
+  photoUrl,
 }) {
   const [showShareSheet, setShowShareSheet] = useState(false);
 
@@ -83,6 +85,7 @@ export default function GameMoment({
             shareCopied={shareCopied}
             photoUploadFailed={photoUploadFailed}
             playerName={playerName}
+            photoUrl={photoUrl}
           />
         ) : (
           <EliminationMoment
@@ -93,6 +96,7 @@ export default function GameMoment({
             onShare={() => setShowShareSheet(true)}
             shareCopied={shareCopied}
             playerName={playerName}
+            photoUrl={photoUrl}
           />
         )}
       </AnimatePresence>
@@ -105,6 +109,7 @@ export default function GameMoment({
         cap={result.survivalCap}
         text={shareText}
         url={shareUrl}
+        photoUrl={photoUrl}
         onNativeShare={onShare}
         onClose={() => setShowShareSheet(false)}
       />
@@ -112,16 +117,21 @@ export default function GameMoment({
   );
 }
 
-function MomentCardPreview({ kind, name, day, rank, cap }) {
+function MomentCardPreview({ kind, name, day, rank, cap, photoUrl }) {
   const [src, setSrc] = useState(null);
   useEffect(() => {
-    try {
-      const host = typeof window !== "undefined" ? window.location.host : "lasthumanstanding.thisyearnofear.com";
-      setSrc(momentCardDataUrl(kind, { name, day, rank, cap, originHost: host }));
-    } catch {
-      setSrc(null);
-    }
-  }, [kind, name, day, rank, cap]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const host = typeof window !== "undefined" ? window.location.host : "lasthumanstanding.thisyearnofear.com";
+        const data = await momentCardDataUrl(kind, { name, day, rank, cap, originHost: host, photoUrl });
+        if (!cancelled) setSrc(data);
+      } catch {
+        if (!cancelled) setSrc(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [kind, name, day, rank, cap, photoUrl]);
 
   if (!src) return null;
   return (
@@ -136,7 +146,7 @@ function MomentCardPreview({ kind, name, day, rank, cap }) {
   );
 }
 
-function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName }) {
+function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName, photoUrl }) {
   // Haptic celebration
   useEffect(() => {
     haptic("success");
@@ -217,6 +227,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         day={currentDay}
         rank={result.rank}
         cap={result.survivalCap}
+        photoUrl={photoUrl}
       />
 
       <div className="relative z-10 w-full max-w-sm mt-5">
@@ -255,7 +266,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
   );
 }
 
-function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName }) {
+function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName, photoUrl }) {
   // Haptic thud — heavy, single pulse
   useEffect(() => {
     haptic("error");
@@ -364,6 +375,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         day={daysSurvived}
         rank={result.rank}
         cap={result.survivalCap}
+        photoUrl={photoUrl}
       />
 
       <div className="relative z-10 w-full max-w-sm mt-5">

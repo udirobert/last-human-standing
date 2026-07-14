@@ -40,15 +40,20 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
 
   const [winCardSrc, setWinCardSrc] = useState(null);
   useEffect(() => {
-    try {
-      setWinCardSrc(momentCardDataUrl("win", {
-        name: winCardName,
-        day: currentDay ?? 5,
-        originHost: window.location.host,
-      }));
-    } catch {
-      setWinCardSrc(null);
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const src = await momentCardDataUrl("win", {
+          name: winCardName,
+          day: currentDay ?? 5,
+          originHost: window.location.host,
+        });
+        if (!cancelled) setWinCardSrc(src);
+      } catch {
+        if (!cancelled) setWinCardSrc(null);
+      }
+    })();
+    return () => { cancelled = true; };
   }, [winCardName, currentDay]);
 
   const shareWin = async () => {

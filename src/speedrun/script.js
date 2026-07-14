@@ -16,8 +16,9 @@ export const SPEEDRUN_BEATS = [
   "intro",
   "d1_reveal",
   "d1_checkin",
-  "d1_rank",
+  "d1_closing",
   "d1_audit",
+  "d1_rank",
   "d1_cut",
   "d2_reveal",
   "d2_path",
@@ -36,7 +37,7 @@ export const SPEEDRUN_BEATS = [
 /** Map beat → demo day (for chrome / progress). */
 export const BEAT_DAY = {
   intro: 0,
-  d1_reveal: 1, d1_checkin: 1, d1_rank: 1, d1_audit: 1, d1_cut: 1,
+  d1_reveal: 1, d1_checkin: 1, d1_closing: 1, d1_audit: 1, d1_rank: 1, d1_cut: 1,
   d2_reveal: 2, d2_path: 2, d2_outcome: 2, d2_cut: 2,
   d3_reveal: 3, d3_pulse: 3, d3_cut: 3,
   d4_reveal: 4, d4_jury: 4, d4_revive: 4,

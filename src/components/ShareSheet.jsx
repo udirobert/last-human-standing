@@ -37,6 +37,7 @@ export default function ShareSheet({
   cap,
   text,
   url,
+  photoUrl,
   onNativeShare,
   onClose,
 }) {
@@ -47,21 +48,26 @@ export default function ShareSheet({
 
   useEffect(() => {
     if (!open) return;
-    try {
-      const host = typeof window !== "undefined" ? window.location.host : "lasthumanstanding.thisyearnofear.com";
-      setCardSrc(momentCardDataUrl(kind, { name, day, rank, cap, originHost: host }));
-    } catch {
-      setCardSrc(null);
-    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const host = typeof window !== "undefined" ? window.location.host : "lasthumanstanding.thisyearnofear.com";
+        const src = await momentCardDataUrl(kind, { name, day, rank, cap, originHost: host, photoUrl });
+        if (!cancelled) setCardSrc(src);
+      } catch {
+        if (!cancelled) setCardSrc(null);
+      }
+    })();
     // Reset state on open
     setDownloaded(false);
     setCopied(false);
     // Check if native share with files is available
     setCanNativeShare(typeof navigator !== "undefined" && !!navigator.canShare?.({ files: [new File([""], "test.png", { type: "image/png" })] }));
-  }, [open, kind, name, day, rank, cap]);
+    return () => { cancelled = true; };
+  }, [open, kind, name, day, rank, cap, photoUrl]);
 
   const handleDownload = async () => {
-    const canvas = renderMomentCard(kind, { name, day, rank, cap });
+    const canvas = await renderMomentCard(kind, { name, day, rank, cap, photoUrl });
     const blob = await canvasToPngBlob(canvas);
     if (!blob) return;
     const fileUrl = URL.createObjectURL(blob);
