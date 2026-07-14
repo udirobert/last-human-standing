@@ -244,7 +244,7 @@ export default function Chat({ onBack }) {
 
       {/* Messages */}
       <NetworkPill error={chatError} onRetry={loadMessages} />
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ maxHeight: 'calc(100dvh - 280px)' }}>
+      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
         {/* Day divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />
@@ -313,7 +313,7 @@ export default function Chat({ onBack }) {
       </div>
 
       {/* Input */}
-      <div className="px-5 py-4 bg-ash border-t border-ember">
+      <div className="px-5 pt-4 pb-24 bg-ash border-t border-ember">
         {/* Mode toggle — Lobby (broadcast to survivors) or DM (private to a single recipient) */}
         <div className="flex gap-2 mb-2.5">
           <button

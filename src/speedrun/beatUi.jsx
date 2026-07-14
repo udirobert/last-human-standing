@@ -17,7 +17,7 @@ const EASE = [0.23, 1, 0.32, 1];
 /** Centered ceremony stage with staggered entrance. */
 export function Ceremony({ children, className = "" }) {
   return (
-    <div className={`flex-1 flex flex-col items-center justify-center px-5 pb-10 text-center overflow-y-auto ${className}`}>
+    <div className={`flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-10 text-center ${className}`}>
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}

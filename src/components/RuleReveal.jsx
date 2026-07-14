@@ -100,7 +100,7 @@ export default function RuleReveal({ onAudit }) {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 overflow-y-auto"
           style={{
             background: "radial-gradient(120% 90% at 50% 0%, rgba(74,50,33,0.97) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
           }}

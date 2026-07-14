@@ -177,7 +177,7 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-       <div className="flex-1 overflow-auto px-5 py-4">
+       <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
          {loading ? (
            <div className="text-center py-12 text-dim font-mono">Loading…</div>
          ) : tabs === 'overview' ? (

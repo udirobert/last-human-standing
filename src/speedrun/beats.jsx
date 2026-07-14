@@ -84,7 +84,7 @@ export function D1CheckInBeat() {
   };
 
   return (
-    <div className="flex-1 flex flex-col px-5 pb-8 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
       <ThemeMissionCard
         day={1}
         theme={d.theme}
@@ -174,7 +174,7 @@ export function D1ClosingBeat() {
   }, [canContinue, nextBeat]);
 
   return (
-    <div className="flex-1 flex flex-col px-5 pb-8 items-center justify-center overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8 items-center justify-center">
       <div className="w-full max-w-sm text-center mb-5">
         <p className="font-mono text-amber text-xs uppercase tracking-[0.2em] mb-2">Day 1 · Submitted</p>
         <p className="font-display text-4xl text-bone leading-none mb-2">Proof received</p>
@@ -319,7 +319,7 @@ export function D1AuditBeat() {
   // All done — show completion state
   if (votesDone || !sub) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-5 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-8 gap-5">
         <MascotGuide
           variant="proud"
           size={72}
@@ -346,7 +346,7 @@ export function D1AuditBeat() {
   }
 
   return (
-    <div className="flex-1 flex flex-col px-3 pb-4 overflow-hidden">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-3 pb-4">
       {/* Header — compact, with mascot */}
       <div className="px-2 mb-3 flex items-start gap-2 shrink-0">
         <MascotGuide
@@ -531,7 +531,7 @@ export function D2PathBeat() {
   const { beatFeel } = useSpeedRunFeel();
   const d = dayMeta(2);
   return (
-    <div className="flex-1 flex flex-col px-5 pb-8 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
       <ThemeMissionCard
         day={2}
         theme={d.theme}
@@ -627,7 +627,7 @@ export function D2CutBeat() {
   const { nextBeat, skipToFinale, hasImmunity } = useSpeedRun();
   const d = dayMeta(2);
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 min-h-0 flex flex-col">
       <CutCeremony
         from={d.capFrom}
         to={d.capTo}
@@ -667,7 +667,7 @@ export function D3PulseBeat() {
   const { nextBeat } = useSpeedRun();
   const d = dayMeta(3);
   return (
-    <div className="flex-1 flex flex-col px-5 pb-8 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
       <ThemeMissionCard
         day={3}
         theme={d.theme}
@@ -734,7 +734,7 @@ export function D4JuryBeat() {
   const d = dayMeta(4);
 
   return (
-    <div className="flex-1 flex flex-col px-5 pb-8 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
       <div className="flex items-start gap-3 mb-4">
         <ThemeMotif emoji={d.theme.emoji} size={52} label={d.theme.theme} />
         <div>

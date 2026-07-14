@@ -208,7 +208,7 @@ function SpeedRunShell({ onReserve, onExit }) {
         }}
         onExit={handleExit}
       />
-      <div className="relative z-10 flex-1 flex flex-col pt-12">
+      <div className="relative z-10 flex-1 min-h-0 flex flex-col pt-12">
         {isFinale ? (
           <FinaleBeat onReserve={handleReserve} onExit={handleExit} />
         ) : (

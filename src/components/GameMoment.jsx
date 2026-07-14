@@ -54,7 +54,7 @@ export default function GameMoment({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
+        className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-8 gap-6"
       >
         <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center overflow-hidden">
           <ThemeMotif emoji="📡" size={72} label="queued" />

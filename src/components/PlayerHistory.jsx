@@ -56,7 +56,7 @@ export default function PlayerHistory({ onBack }) {
         </div>
       </div>
 
-      <div className="relative z-10 flex-1 px-5 pb-8 space-y-3">
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 pb-24 space-y-3">
         {voterStats && (voterStats.total ?? 0) > 0 && (
           <div className="bg-smoke/80 border border-amber/30 rounded-2xl p-4 backdrop-blur-sm">
             <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2">Your vote accuracy</p>

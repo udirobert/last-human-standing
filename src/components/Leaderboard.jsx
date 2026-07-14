@@ -88,7 +88,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
   const isLive = phase === 'live';
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body pb-24 overflow-hidden bg-transparent">
+    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
       <AmbientBackdrop phase={isLive ? 'live' : 'prelaunch'} />
       {/* Header */}
       <div className="relative z-10 px-5 pt-12 pb-4">
@@ -191,6 +191,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
         </div>
       </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto pb-24">
       {/* PRE-LAUNCH: Roster */}
       {isPrelaunch && (tab === 'roster' || tab === 'today') && (
         <div className="px-5 space-y-2">
@@ -573,6 +574,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
           </>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }

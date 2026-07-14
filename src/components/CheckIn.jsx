@@ -305,7 +305,7 @@ export default function CheckIn({ onBack, onSubmit }) {
       </div>
 
       {!round ? (
-        <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-5 gap-3">
+        <div className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 gap-3">
           <p className="text-5xl">⏳</p>
           <p className="text-dim font-mono text-sm text-center">No round set for today yet.</p>
         </div>
@@ -317,7 +317,7 @@ export default function CheckIn({ onBack, onSubmit }) {
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -30 }}
-              className="flex-1 flex flex-col px-5 pb-8"
+              className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8"
             >
               <div className="flex justify-center mb-3">
                 <MascotGuide
@@ -530,7 +530,7 @@ export default function CheckIn({ onBack, onSubmit }) {
               key="submitting"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
+              className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-8 gap-6"
             >
               <MascotGuide
                 variant={checkInMascot.variant}

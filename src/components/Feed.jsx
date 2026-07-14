@@ -252,7 +252,7 @@ export default function Feed({ onBack, onCheckIn }) {
   const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body pb-24 overflow-hidden bg-transparent">
+    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
       <AmbientBackdrop phase={phase === 'live' ? 'live' : 'prelaunch'} />
 
       <div className="relative z-10 px-4 pt-12 pb-3 sticky top-0 bg-ash/90 backdrop-blur-md z-20">
@@ -292,7 +292,7 @@ export default function Feed({ onBack, onCheckIn }) {
         )}
       </div>
 
-      <div className="px-3 space-y-5 pb-8">
+      <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-5 pb-24">
         {useMocks && !isMiniApp && (
           <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5 mx-1">
             Dev preview — sample submissions. Live data appears in production builds.

@@ -55,7 +55,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
   const isReserved = Boolean(entryPaid || user?.paid);
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body pb-24 overflow-hidden bg-transparent">
+    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
       {/* Phase-aware ambient — warm room shared with landing vocabulary */}
       <AmbientBackdrop phase={phase} />
 
@@ -103,6 +103,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           3. Activity feed (the spectacle)
           Below fold: arsenal (earned only), pots, wildcard, waitlist
       */}
+      <div className="flex-1 min-h-0 overflow-y-auto pb-24">
 
       {/* 1. MISSION — the primary CTA */}
       {(isLive || isEnded) && (
@@ -248,6 +249,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           <WaitlistCard source={isLive ? 'spectator' : 'welcome_screen'} />
         </StageSection>
       )}
+      </div>
 
     </div>
   );
