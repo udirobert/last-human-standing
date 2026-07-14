@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
+import { useDelight } from "./DelightProvider.jsx";
 import { TODAY_THEME, findTheme } from "../data/game";
-import { missionMantra } from "../lib/copy.js";
+import { missionMantra, getMissionMascot, getEndgameMascot } from "../lib/copy.js";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
 import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
@@ -13,6 +14,7 @@ import ThemeMotif from "./ui/ThemeMotif.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import StreakBloom from "./ui/StreakBloom.jsx";
 import DozingCat from "./ui/DozingCat.jsx";
+import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta, GameCta } from "./ui/CraftCta.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 
@@ -26,6 +28,7 @@ function formatWindow(iso) {
 }
 
 function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
+  const { handleMascotClick } = useDelight();
   const youWon = Boolean(
     winner?.address && you?.address && winner.address.toLowerCase() === you.address.toLowerCase(),
   );
@@ -37,6 +40,7 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
   const winCardName = youWon
     ? (winner?.username ? `@${winner.username}` : "You")
     : (winnerName ?? "One human");
+  const endMascot = getEndgameMascot({ youWon, eliminated: you?.isEliminated });
 
   const [winCardSrc, setWinCardSrc] = useState(null);
   useEffect(() => {
@@ -83,6 +87,17 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
       >
         <MotifFrieze className="w-full" />
       </motion.div>
+
+      <div className="flex justify-center mb-4">
+        <MascotGuide
+          variant={endMascot.variant}
+          size={64}
+          message={endMascot.message}
+          position="top"
+          interactive
+          onMascotClick={handleMascotClick}
+        />
+      </div>
 
       {youWon ? (
         <>
@@ -189,6 +204,7 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
 
 export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const { phase, isLive, isEnded, currentDay, round, you, winner, payout } = useRound();
+  const { handleMascotClick } = useDelight();
 
   // "Closing soon" pulse: recompute once a minute from a state
   // variable so the JSX is render-pure. (Date.now() in render
@@ -216,6 +232,8 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const rank = you?.rankToday;
   const eliminated = Boolean(you?.isEliminated);
 
+  const prelaunchMascot = getMissionMascot({ state: "prelaunch" });
+
   if (phase === "prelaunch") {
     return (
       <motion.div
@@ -223,12 +241,22 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         animate={{ opacity: 1, y: 0 }}
         className="mx-5 mb-4 bg-smoke border border-amber/30 rounded-3xl p-5"
       >
-        <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2">Pre-game</p>
-        <p className="font-display text-2xl text-bone mb-2">You're registered</p>
-        <p className="text-dim text-sm font-mono leading-relaxed">
+        <div className="flex flex-col items-center mb-4">
+          <MascotGuide
+            variant={prelaunchMascot.variant}
+            size={64}
+            message={prelaunchMascot.message}
+            position="top"
+            interactive
+            onMascotClick={handleMascotClick}
+          />
+        </div>
+        <p className="font-mono text-amber text-xs tracking-widest uppercase mb-2 text-center">Pre-game</p>
+        <p className="font-display text-2xl text-bone mb-2 text-center">You're registered</p>
+        <p className="text-dim text-sm font-mono leading-relaxed text-center">
           When the game starts, you will get a daily theme, a check-in window, and a race for the first {cap} spots.
         </p>
-        <div className="mt-3">
+        <div className="mt-3 flex justify-center">
           <TrustBadge size="md" />
         </div>
       </motion.div>
@@ -249,6 +277,18 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
 
   if (!isLive) return null;
 
+  const missionState = eliminated
+    ? "eliminated"
+    : survived
+      ? "survived"
+      : checkedIn
+        ? "checkedIn"
+        : isSpectator
+          ? "spectator"
+          : "open";
+  const missionMascot = getMissionMascot({ state: missionState, cap, theme: themeLabel });
+  const juryTickets = you?.juryTickets ?? 0;
+
   const mantra = missionMantra({
     theme: themeLabel,
     cap,
@@ -266,12 +306,24 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       <div className="absolute -right-3 -top-3 opacity-25 pointer-events-none" aria-hidden>
         <ThemeMotif emoji={themeData.emoji} size={96} label={themeLabel} />
       </div>
+
       <div className="flex items-start justify-between gap-2 mb-3 relative">
-        <div>
+        <MascotGuide
+          variant={missionMascot.variant}
+          size={56}
+          message={missionMascot.message}
+          position="top"
+          interactive
+          onMascotClick={handleMascotClick}
+          showBadge
+          badgeCount={juryTickets}
+          className="shrink-0"
+        />
+        <div className="flex-1 min-w-0 pt-1">
           <p className="font-mono text-neon text-xs tracking-widest uppercase">Today&apos;s mission · Day {currentDay ?? "—"}</p>
           <div className="flex items-center gap-3 mt-1">
-            <ThemeMotif emoji={themeData.emoji} size={56} label={themeLabel} />
-            <p className="font-display text-3xl text-bone leading-tight">{themeLabel}</p>
+            <ThemeMotif emoji={themeData.emoji} size={40} label={themeLabel} />
+            <p className="font-display text-2xl text-bone leading-tight">{themeLabel}</p>
           </div>
         </div>
         <TrustBadge />

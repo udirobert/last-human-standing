@@ -487,9 +487,12 @@ function getExpression(variant) {
 }
 
 /**
- * Small mascot avatar for use in lists and headers
+ * Small mascot avatar for use in lists and headers.
+ *
+ * status: alive | eliminated | pending
+ * badgeCount: optional numeric badge
  */
-export function MascotAvatar({ size = 32, status = "alive" }) {
+export function MascotAvatar({ size = 32, status = "alive", badgeCount = 0 }) {
   const statusColors = {
     alive: { bg: "bg-neon/20", border: "border-neon", icon: "✓" },
     eliminated: { bg: "bg-blood/20", border: "border-blood", icon: "💀" },
@@ -498,11 +501,18 @@ export function MascotAvatar({ size = 32, status = "alive" }) {
   const colors = statusColors[status] || statusColors.pending;
 
   return (
-    <div
-      className={`rounded-full ${colors.bg} border-2 ${colors.border} flex items-center justify-center`}
-      style={{ width: size, height: size }}
-    >
-      <span className="text-sm">{colors.icon}</span>
+    <div className="relative inline-flex">
+      <div
+        className={`rounded-full ${colors.bg} border-2 ${colors.border} flex items-center justify-center`}
+        style={{ width: size, height: size }}
+      >
+        <span className="text-sm">{colors.icon}</span>
+      </div>
+      {badgeCount > 0 && (
+        <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-amber text-[#1a1206] rounded-full text-[10px] font-mono font-bold flex items-center justify-center border border-amber">
+          {badgeCount > 99 ? "99+" : badgeCount}
+        </span>
+      )}
     </div>
   );
 }

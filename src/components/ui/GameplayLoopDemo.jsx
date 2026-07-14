@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ThemeMotif from "./ThemeMotif.jsx";
 import { proofSceneDataUri } from "./proofSceneData.js";
 import MascotGuide from "./MascotGuide.jsx";
+import { useDelight } from "../DelightProvider.jsx";
 import { GOUACHE as P } from "./gouachePalette.js";
 
 /**
@@ -39,6 +40,7 @@ const PHASES = [
 ];
 
 export default function GameplayLoopDemo() {
+  const { handleMascotClick } = useDelight();
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [voteReal, setVoteReal] = useState(0);
   const [voteFake, setVoteFake] = useState(0);
@@ -255,6 +257,8 @@ export default function GameplayLoopDemo() {
                   size={36}
                   message="One day down."
                   position="top"
+                  interactive
+                  onMascotClick={handleMascotClick}
                 />
               </motion.div>
             )}

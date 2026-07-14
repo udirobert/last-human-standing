@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MascotGuide from "./MascotGuide.jsx";
+import { useDelight } from "../DelightProvider.jsx";
 
 /**
  * ExitIntentPrompt — soft exit-intent overlay for the paywall.
@@ -17,6 +18,7 @@ import MascotGuide from "./MascotGuide.jsx";
  *   onLeave — callback when user confirms they want to leave
  */
 export default function ExitIntentPrompt({ open, onStay, onPractice, onLeave }) {
+  const { handleMascotClick } = useDelight();
   // Prevent body scroll when open
   useEffect(() => {
     if (open) {
@@ -51,6 +53,8 @@ export default function ExitIntentPrompt({ open, onStay, onPractice, onLeave }) 
                 size={56}
                 message="Not ready? That's fair."
                 position="top"
+                interactive
+                onMascotClick={handleMascotClick}
               />
             </div>
 

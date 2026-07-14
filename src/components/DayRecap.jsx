@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
+import { getDayRecapMascot } from "../lib/copy.js";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
+import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta } from "./ui/CraftCta.jsx";
 
 /**
@@ -75,6 +77,7 @@ export default function DayRecap() {
   const youSurvived = you?.survivedToday === true;
   const youEliminated = you?.isEliminated === true && you?.eliminatedAtDay === day;
   const personalResult = youSurvived ? "survived" : youEliminated ? "eliminated" : null;
+  const recapMascot = getDayRecapMascot({ personalResult });
 
   return (
     <AnimatePresence>
@@ -101,6 +104,15 @@ export default function DayRecap() {
               Verdicts in
             </p>
             <MotifFrieze className="w-full mb-5" />
+
+            <div className="flex justify-center mb-5">
+              <MascotGuide
+                variant={recapMascot.variant}
+                size={64}
+                message={recapMascot.message}
+                position="top"
+              />
+            </div>
 
             {personalResult && (
               <motion.div

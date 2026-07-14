@@ -1,4 +1,6 @@
 import { usePolling } from "../hooks/usePolling.js";
+import { getVoteProgressMascot } from "../lib/copy.js";
+import MascotGuide from "./ui/MascotGuide.jsx";
 
 /**
  * Live audit engagement — votes cast today vs daily goal, plus
@@ -17,11 +19,19 @@ export default function VoteProgressCard({ onViewFeed, className = "" }) {
   const pct = goal > 0 ? Math.min(100, Math.round((cast / goal) * 100)) : 0;
   const goalMet = Boolean(data.goalMet);
   const needsVotes = data.needsVotes ?? 0;
+  const mascot = getVoteProgressMascot({ goalMet, needsVotes, cast, goal });
 
   return (
     <div className={`rounded-xl border p-3 mb-3 ${goalMet ? "bg-neon/10 border-neon/30" : "bg-amber/10 border-amber/40"} ${className}`}>
-      <div className="flex items-start justify-between gap-2 mb-2">
-        <div>
+      <div className="flex items-start gap-2 mb-2">
+        <MascotGuide
+          variant={mascot.variant}
+          size={40}
+          message={mascot.message}
+          position="top"
+          className="shrink-0"
+        />
+        <div className="flex-1 min-w-0">
           <p className={`font-mono text-[10px] tracking-widest uppercase ${goalMet ? "text-neon" : "text-amber"}`}>
             {goalMet ? "Audit duty done" : "Audit the crowd"}
           </p>

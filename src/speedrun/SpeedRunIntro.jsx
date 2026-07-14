@@ -5,6 +5,7 @@ import DozingCat from "../components/ui/DozingCat.jsx";
 import MotifFrieze from "../components/ui/MotifFrieze.jsx";
 import EmberField from "../components/ui/EmberField.jsx";
 import MascotGuide from "../components/ui/MascotGuide.jsx";
+import { useDelight } from "../components/DelightProvider.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import { CUE_PRESS, CUE_HOVER } from "../lib/cuelume.js";
 
@@ -17,6 +18,7 @@ const PAPER_GRAIN =
  * Meta (demo/skip/wallet) stays off this viewport.
  */
 export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleSound }) {
+  const { handleMascotClick } = useDelight();
   return (
     <section
       className="relative w-full flex-1"
@@ -129,6 +131,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
             message={getProfiledMascotLines().intro}
             position="top"
             interactive
+            onMascotClick={handleMascotClick}
           />
         </motion.div>
 

@@ -13,8 +13,10 @@ import BubbleLoader from './ui/BubbleLoader.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
 import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
+import MascotGuide from './ui/MascotGuide.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { shareMoment } from '../lib/shareMoment.js';
+import { getCheckInMascot } from '../lib/copy.js';
 import { haptic } from '../lib/haptics.js';
 import { HumanCta, GameCta } from './ui/CraftCta.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
@@ -22,7 +24,7 @@ import { CUE_PRESS } from '../lib/cuelume.js';
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, phase, refresh: refreshRound } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
-  const { unlockAchievement, checkAchievement, playSound } = useDelight();
+  const { unlockAchievement, checkAchievement, playSound, handleMascotClick } = useDelight();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
@@ -39,6 +41,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   // on Day 2+ are actually detectable. Also protects new players from
   // instant DQ on their first check-in.
   const infiltratorUnlocked = (currentDay ?? 1) >= 2;
+  const checkInMascot = getCheckInMascot({ step, photoPreview, gpsEnabled });
   const [queuedCheckin, setQueuedCheckin] = useState(false);
   const { online, queueCheckin } = useOnlineStatus();
   const { markQueuedCheckin, clearQueuedCheckin } = useWorld();
@@ -316,6 +319,16 @@ export default function CheckIn({ onBack, onSubmit }) {
               exit={{ opacity: 0, x: -30 }}
               className="flex-1 flex flex-col px-5 pb-8"
             >
+              <div className="flex justify-center mb-3">
+                <MascotGuide
+                  variant={checkInMascot.variant}
+                  size={56}
+                  message={checkInMascot.message}
+                  position="top"
+                  interactive
+                  onMascotClick={handleMascotClick}
+                />
+              </div>
               <div className="bg-smoke border border-neon/20 rounded-3xl p-6 mb-5 relative overflow-hidden">
                 <div className="absolute -right-3 -top-3 opacity-25 pointer-events-none" aria-hidden>
                   <ThemeMotif emoji={themeData.emoji} size={88} label={theme} />
@@ -519,6 +532,14 @@ export default function CheckIn({ onBack, onSubmit }) {
               animate={{ opacity: 1 }}
               className="flex-1 flex flex-col items-center justify-center px-5 pb-8 gap-6"
             >
+              <MascotGuide
+                variant={checkInMascot.variant}
+                size={72}
+                message={checkInMascot.message}
+                position="top"
+                interactive
+                onMascotClick={handleMascotClick}
+              />
               {/* Your bubble — seeded from your identity, so it's always yours. */}
               <BubbleLoader size={112} seed={user?.username || user?.address} />
               <div className="text-center">

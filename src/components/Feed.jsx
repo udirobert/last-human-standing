@@ -12,6 +12,7 @@ import GlitchTitle from './ui/GlitchTitle.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
 import MotifFrieze from './ui/MotifFrieze.jsx';
+import { MascotAvatar } from './Mascot.jsx';
 import { HumanCta } from './ui/CraftCta.jsx';
 
 const STATUS_COLORS = {
@@ -24,6 +25,12 @@ const STATUS_LABELS = {
   verified: 'HUMAN',
   pending: 'ON TRIAL',
   flagged: 'SUS',
+};
+
+const STATUS_MASCOT = {
+  verified: 'alive',
+  pending: 'pending',
+  flagged: 'eliminated',
 };
 
 function LiveTally({ real = 0, fake = 0 }) {
@@ -358,9 +365,10 @@ export default function Feed({ onBack, onCheckIn }) {
                       {sub.user}
                     </span>
                     <span
-                      className="font-mono text-[10px] px-2.5 py-1 rounded-full bg-ash/80 backdrop-blur tracking-widest"
+                      className="font-mono text-[10px] px-2 py-1 rounded-full bg-ash/80 backdrop-blur tracking-widest flex items-center gap-1"
                       style={{ color: STATUS_COLORS[sub.status], border: `1px solid ${STATUS_COLORS[sub.status]}88` }}
                     >
+                      <MascotAvatar status={STATUS_MASCOT[sub.status]} size={16} />
                       {STATUS_LABELS[sub.status]}
                     </span>
                   </div>

@@ -7,6 +7,7 @@ import DozingCat from "./ui/DozingCat.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import ShareSheet from "./ShareSheet.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
+import { useDelight } from "./DelightProvider.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import { haptic } from "../lib/haptics.js";
 
@@ -147,6 +148,7 @@ function MomentCardPreview({ kind, name, day, rank, cap, photoUrl }) {
 }
 
 function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName, photoUrl }) {
+  const { handleMascotClick } = useDelight();
   // Haptic celebration
   useEffect(() => {
     haptic("success");
@@ -218,6 +220,8 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
           size={48}
           message={getProfiledMascotLines().survived}
           position="top"
+          interactive
+          onMascotClick={handleMascotClick}
         />
       </motion.div>
 
@@ -267,6 +271,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
 }
 
 function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName, photoUrl }) {
+  const { handleMascotClick } = useDelight();
   // Haptic thud — heavy, single pulse
   useEffect(() => {
     haptic("error");
@@ -366,6 +371,8 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
           size={48}
           message={nearMiss ? getProfiledMascotLines().eliminatedNear : getProfiledMascotLines().eliminated}
           position="top"
+          interactive
+          onMascotClick={handleMascotClick}
         />
       </motion.div>
 

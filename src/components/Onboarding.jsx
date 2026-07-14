@@ -2,6 +2,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
+import { useDelight } from "./DelightProvider.jsx";
 import Mascot from "./Mascot.jsx";
 import TrustBadge from "./TrustBadge.jsx";
 import BrowserWalletPay from "../wallet/BrowserWalletPay.jsx";
@@ -41,6 +42,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
   } = useWorld();
   const { isFree } = useEntryMode();
   const { phase, launchAt, cohortSize, reservedCount, you, isLive } = useRound();
+  const { handleMascotClick } = useDelight();
 
   const [step, setStep] = useState(() => {
     try {
@@ -244,7 +246,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               AmbientComponent={<AmbientBackdrop phase={phase} />}
             >
               <StageSection index={0} className="text-center">
-                <Mascot variant="idle" size={64} />
+                <Mascot variant="idle" size={64} interactive onClick={handleMascotClick} />
                 <h2 className="font-display text-4xl text-bone mb-1 mt-2">THE RULES</h2>
                 <p className="text-bone/60 text-sm font-body">The core loop. Twists unlock as you play.</p>
                 <MotifFrieze className="w-full mt-4 opacity-90" />
@@ -331,6 +333,8 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                   size={64}
                   message={MASCOT_LINES.profile}
                   position="top"
+                  interactive
+                  onMascotClick={handleMascotClick}
                 />
                 <h2 className="font-display text-4xl text-bone mb-1 mt-3">YOUR PROFILE</h2>
                 <p className="text-bone/60 text-sm font-body">Three questions. Takes 10 seconds.</p>
@@ -409,7 +413,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               AmbientComponent={<AmbientBackdrop phase={phase} />}
             >
               <StageSection index={0} className="flex flex-col items-center text-center pt-2 pb-1">
-                <Mascot variant={entryPaid ? "celebrating" : "excited"} size={72} />
+                <Mascot variant={entryPaid ? "celebrating" : "excited"} size={72} interactive onClick={handleMascotClick} />
                 {(() => {
                   const heading = getEntryHeading({ isFreeMode: isFree, alreadyPaid: entryPaid });
                   const personalized = getPersonalizedPaywall(profile);

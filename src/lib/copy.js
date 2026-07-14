@@ -362,7 +362,152 @@ export const MASCOT_LINES = {
   eliminated: "You're out. The crowd voted. Now you vote back.",
   // Finale
   finale: "Last human standing. The pot is yours. You earned this.",
+
+  // Live-game mission card
+  missionOpen: (cap, theme) => `Be one of the first ${cap}. ${theme}.`,
+  missionPrelaunch: "Registered. The first theme drops when the cohort opens.",
+  missionSpectator: "You're in the stands. Watch the audit and see how the game feels.",
+  missionCheckedIn: "Submitted. The crowd judges every photo.",
+  missionSurvived: "One day down. Don't get comfortable.",
+  missionEliminated: "You're out. The audit needs you.",
+  missionEnded: "One human took the pot. The next cohort is coming.",
+
+  // Check-in coaching
+  checkInPhoto: "Show the place. Show yourself. Real proof only.",
+  checkInGps: "GPS helps the crowd trust you. Optional, but it helps.",
+  checkInSubmit: "Ready when you are.",
+  checkInSubmitting: "Sending. The jury will see it soon.",
+
+  // Audit / vote progress
+  voteProgressStart: (cast, goal) => `The audit needs you. ${cast} / ${goal} votes today.`,
+  voteProgressDone: "Audit duty done. Keep voting for jury tickets.",
+  voteProgressNeeds: (n) => `${n} photo${n !== 1 ? "s" : ""} below quorum. The audit needs you.`,
+
+  // Rule reveal per day
+  ruleUnlock1: (cap) => `Be fast. Be real. The first ${cap} check-ins provisionally survive.`,
+  ruleUnlock2: "Infiltrators can bluff. Caught = out. Fooled = immunity.",
+  ruleUnlock3: "The cap shrinks again. Speed matters more.",
+  ruleUnlock4: "The jury can vote one eliminated player back in. Keep auditing.",
+  ruleUnlock4Alive: "The eliminated are voting. One might walk back in.",
+  ruleUnlock5: "One human. One pot. Last verified survivor wins.",
+
+  // Wildcard
+  wildcardOpen: "The jury picks one eliminated player to revive. Choose carefully.",
+  wildcardVoted: "Vote cast. The revival triggers when Day 4 closes.",
+
+  // Day recap
+  dayRecapSurvived: "You survived. The cut shrinks tomorrow.",
+  dayRecapEliminated: "You were cut. The jury can still bring you back.",
+  dayRecapDefault: "Day closed. The remaining humans face tomorrow.",
 };
+
+/**
+ * Mascot personality for the live mission card.
+ */
+export function getMissionMascot({ state, cap, theme } = {}) {
+  switch (state) {
+    case "prelaunch":
+      return { variant: "thinking", message: MASCOT_LINES.missionPrelaunch };
+    case "open":
+      return { variant: "determined", message: MASCOT_LINES.missionOpen(cap, theme) };
+    case "spectator":
+      return { variant: "thinking", message: MASCOT_LINES.missionSpectator };
+    case "checkedIn":
+      return { variant: "thinking", message: MASCOT_LINES.missionCheckedIn };
+    case "survived":
+      return { variant: "proud", message: MASCOT_LINES.missionSurvived };
+    case "eliminated":
+      return { variant: "sad", message: MASCOT_LINES.missionEliminated };
+    case "ended":
+      return { variant: "winner", message: MASCOT_LINES.missionEnded };
+    default:
+      return { variant: "idle", message: null };
+  }
+}
+
+/**
+ * Mascot coaching for the check-in flow.
+ */
+export function getCheckInMascot({ step, photoPreview, gpsEnabled } = {}) {
+  if (step === 1) {
+    return { variant: "thinking", message: MASCOT_LINES.checkInSubmitting };
+  }
+  if (!photoPreview) {
+    return { variant: "determined", message: MASCOT_LINES.checkInPhoto };
+  }
+  if (!gpsEnabled) {
+    return { variant: "thinking", message: MASCOT_LINES.checkInGps };
+  }
+  return { variant: "proud", message: MASCOT_LINES.checkInSubmit };
+}
+
+/**
+ * Mascot for the audit vote progress card.
+ */
+export function getVoteProgressMascot({ goalMet, needsVotes, cast, goal } = {}) {
+  if (goalMet) {
+    return { variant: "proud", message: MASCOT_LINES.voteProgressDone };
+  }
+  if (needsVotes > 0) {
+    return { variant: "determined", message: MASCOT_LINES.voteProgressNeeds(needsVotes) };
+  }
+  return { variant: "thinking", message: MASCOT_LINES.voteProgressStart(cast, goal) };
+}
+
+/**
+ * Mascot for the daily rule reveal.
+ */
+export function getRuleMascot({ day, eliminated } = {}) {
+  switch (day) {
+    case 1:
+      return { variant: "thinking", message: MASCOT_LINES.ruleUnlock1(25) };
+    case 2:
+      return { variant: "excited", message: MASCOT_LINES.ruleUnlock2 };
+    case 3:
+      return { variant: "worried", message: MASCOT_LINES.ruleUnlock3 };
+    case 4:
+      return { variant: "shocked", message: eliminated ? MASCOT_LINES.ruleUnlock4 : MASCOT_LINES.ruleUnlock4Alive };
+    case 5:
+      return { variant: "winner", message: MASCOT_LINES.ruleUnlock5 };
+    default:
+      return { variant: "idle", message: null };
+  }
+}
+
+/**
+ * Mascot for the wildcard revival panel.
+ */
+export function getWildcardMascot({ voted } = {}) {
+  return voted
+    ? { variant: "proud", message: MASCOT_LINES.wildcardVoted }
+    : { variant: "thinking", message: MASCOT_LINES.wildcardOpen };
+}
+
+/**
+ * Mascot for the day recap cinematic.
+ */
+export function getDayRecapMascot({ personalResult } = {}) {
+  if (personalResult === "survived") {
+    return { variant: "proud", message: MASCOT_LINES.dayRecapSurvived };
+  }
+  if (personalResult === "eliminated") {
+    return { variant: "sad", message: MASCOT_LINES.dayRecapEliminated };
+  }
+  return { variant: "thinking", message: MASCOT_LINES.dayRecapDefault };
+}
+
+/**
+ * Mascot for the final endgame ceremony.
+ */
+export function getEndgameMascot({ youWon, eliminated } = {}) {
+  if (youWon) {
+    return { variant: "winner", message: MASCOT_LINES.finale };
+  }
+  if (eliminated) {
+    return { variant: "sad", message: MASCOT_LINES.missionEliminated };
+  }
+  return { variant: "thinking", message: MASCOT_LINES.missionEnded };
+}
 
 /**
  * Profile-aware mascot lines.

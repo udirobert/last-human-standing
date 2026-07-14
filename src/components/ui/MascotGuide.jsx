@@ -19,6 +19,9 @@ import Mascot from "../Mascot.jsx";
  *   className — extra classes for the wrapper
  *   interactive — whether the mascot is tappable
  *   onMascotClick — callback for mascot taps
+ *   showBadge — show a badge dot/count
+ *   badgeCount — number to display on the badge
+ *   trackCursor — whether pupils follow the cursor (default true)
  */
 export default function MascotGuide({
   variant = "idle",
@@ -28,6 +31,9 @@ export default function MascotGuide({
   className = "",
   interactive = false,
   onMascotClick,
+  showBadge = false,
+  badgeCount = 0,
+  trackCursor = true,
 }) {
   return (
     <div className={`relative flex flex-col items-center ${className}`}>
@@ -39,6 +45,9 @@ export default function MascotGuide({
         size={size}
         interactive={interactive}
         onClick={onMascotClick}
+        showBadge={showBadge}
+        badgeCount={badgeCount}
+        trackCursor={trackCursor}
       />
       {message && position === "bottom" && (
         <SpeechBubble position="bottom">{message}</SpeechBubble>

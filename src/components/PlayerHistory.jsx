@@ -4,6 +4,7 @@ import { usePolling } from "../hooks/usePolling.js";
 import AmbientBackdrop from "./AmbientBackdrop.jsx";
 import DozingCat from "./ui/DozingCat.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
+import { MascotAvatar } from "./Mascot.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 
 export default function PlayerHistory({ onBack }) {
@@ -90,9 +91,12 @@ export default function PlayerHistory({ onBack }) {
             {myCheckins.slice(0, 20).map((ck) => (
               <div key={ck.rank} className="bg-smoke/80 border border-ember/40 rounded-2xl p-4 backdrop-blur-sm">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="font-display text-lg text-bone">
-                    {ck.survived ? "Survived" : "Out"} #{ck.rank}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <MascotAvatar status={ck.survived ? "alive" : "eliminated"} size={24} />
+                    <p className="font-display text-lg text-bone">
+                      {ck.survived ? "Survived" : "Out"} #{ck.rank}
+                    </p>
+                  </div>
                   <span className="font-mono text-xs text-dim">
                     {new Date(ck.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>

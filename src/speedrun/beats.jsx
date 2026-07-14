@@ -273,7 +273,7 @@ function LiveTally({ real = 0, fake = 0 }) {
 
 export function D1AuditBeat() {
   const { submissions, votes, castVote, votesDone, nextBeat } = useSpeedRun();
-  const { beatFeel } = useSpeedRunFeel();
+  const { beatFeel, cue, celebrate } = useSpeedRunFeel();
   const theme = dayMeta(1).theme;
   const lines = getProfiledMascotLines();
 
@@ -325,6 +325,11 @@ export function D1AuditBeat() {
           size={72}
           message={lines.auditDone(totalVoted)}
           position="top"
+          interactive
+          onMascotClick={(type) => {
+            cue("tap");
+            if (type === "secret") celebrate(12);
+          }}
         />
         <div className="text-center">
           <p className="font-display text-4xl text-bone leading-none mb-2">Audit complete</p>
@@ -349,6 +354,11 @@ export function D1AuditBeat() {
           size={40}
           message={mascotState.message}
           position="top"
+          interactive
+          onMascotClick={(type) => {
+            cue("tap");
+            if (type === "secret") celebrate(12);
+          }}
         />
         <div className="flex-1 min-w-0 pt-2">
           <p className="font-display text-2xl text-bone leading-none">The audit</p>
@@ -824,7 +834,7 @@ export function D5RevealBeat() {
 
 export function FinaleBeat({ onReserve, onExit }) {
   const { shareCopied, setShareCopied } = useSpeedRun();
-  const { beatFeel } = useSpeedRunFeel();
+  const { beatFeel, cue, celebrate } = useSpeedRunFeel();
   const c = FINALE_COPY;
   const [cardSrc, setCardSrc] = useState(null);
   const [showShareSheet, setShowShareSheet] = useState(false);
@@ -883,6 +893,11 @@ export function FinaleBeat({ onReserve, onExit }) {
         message={getProfiledMascotLines().finale}
         position="top"
         className="mb-4"
+        interactive
+        onMascotClick={(type) => {
+          cue("tap");
+          if (type === "secret") celebrate(24);
+        }}
       />
 
       <MotifFrieze className="w-full mb-2" />

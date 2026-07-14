@@ -9,7 +9,7 @@ import FAQModal from './FAQModal.jsx';
 import AmbientBackdrop from './AmbientBackdrop.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import BubbleLoader from './ui/BubbleLoader.jsx';
-import Mascot from './Mascot.jsx';
+import Mascot, { MascotAvatar } from './Mascot.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 import { HumanCta } from './ui/CraftCta.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
@@ -426,7 +426,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                     {c.distance_m != null ? `${Math.round(c.distance_m)}m from target` : ''}
                   </p>
                 </div>
-                <p className="text-neon text-xs font-mono">✓ alive</p>
+                <MascotAvatar status="alive" size={24} />
               </motion.div>
             );
           })}
@@ -449,7 +449,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 onClick={() => setPeekPlayer(c)}
                 className="bg-smoke border border-ember rounded-2xl p-4 flex items-center gap-3 opacity-60 cursor-pointer hover:border-amber/40 hover:opacity-90 transition-all"
               >
-                <span className="text-2xl">💀</span>
+                <MascotAvatar status="eliminated" size={24} />
                 <div className="flex-1">
                   <p className="font-mono text-bone text-sm line-through">{c.username || shortAddr(c.address)}</p>
                   <p className="text-dim text-xs mt-0.5">Arrived as #{c.rank}</p>
@@ -500,6 +500,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
+                      <MascotAvatar status={d.total >= 5 ? 'alive' : 'pending'} size={20} />
                       <span className={`font-mono text-sm ${isYou ? 'text-blood' : 'text-bone'}`}>
                         {d.username || shortAddr(d.address)}
                       </span>
@@ -541,7 +542,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               <div className="w-12 h-1 bg-ember/60 rounded-full mx-auto mb-4" />
               
               <div className="flex flex-col items-center text-center">
-                <Mascot variant="neutral" size={100} />
+                <Mascot variant="idle" size={100} />
 
                 <h3 className="font-display text-3xl text-bone mt-4">
                   {peekPlayer.username ? `@${peekPlayer.username}` : shortAddr(peekPlayer.address)}

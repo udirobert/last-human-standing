@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
+import { getWildcardMascot } from "../lib/copy.js";
+import MascotGuide from "./ui/MascotGuide.jsx";
 
 /**
  * Wildcard revival panel — shown to eliminated players (jury) on Day 4.
@@ -22,6 +24,7 @@ export default function WildcardPanel() {
   const [voted, setVoted] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const mascot = getWildcardMascot({ voted: voted !== null });
 
   const myAddr = user?.address?.toLowerCase() ?? null;
   const isJury = Boolean(you?.isEliminated);
@@ -98,17 +101,19 @@ export default function WildcardPanel() {
       animate={{ opacity: 1, y: 0 }}
       className="mx-5 mb-4 bg-purple-500/10 border border-purple-400/30 rounded-3xl p-5"
     >
-      <div className="flex items-center gap-2 mb-2">
-        <span className="text-2xl">🎭</span>
+      <div className="flex items-start gap-2 mb-3">
+        <MascotGuide
+          variant={mascot.variant}
+          size={48}
+          message={mascot.message}
+          position="top"
+          className="shrink-0"
+        />
         <div>
           <p className="font-display text-xl text-purple-300">Wildcard Revival</p>
           <p className="text-dim text-[10px] font-mono uppercase tracking-widest">Day 4 · Jury vote</p>
         </div>
       </div>
-
-      <p className="text-dim text-xs font-mono mb-3 leading-relaxed">
-        The jury picks one eliminated player to bring back into the game. Vote wisely — this player could win it all.
-      </p>
 
       {error && (
         <p className="text-blood text-[10px] font-mono mb-2">{error}</p>
