@@ -236,7 +236,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col min-h-0"
           >
             <StageShell
               onBack={() => setStep(0)}
@@ -318,7 +318,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col min-h-0"
           >
             <StageShell
               onBack={() => setStep(1)}
@@ -403,7 +403,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
-            className="flex-1 flex flex-col"
+            className="flex-1 flex flex-col min-h-0"
           >
             <StageShell
               onBack={() => setShowExitIntent(true)}

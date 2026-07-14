@@ -25,7 +25,7 @@ export default function StageShell({
 }) {
   return (
     <motion.div
-      className={`relative flex-1 flex flex-col px-6 pt-4 pb-10 overflow-y-auto ${className}`}
+      className={`relative flex-1 flex flex-col min-h-0 px-6 pt-4 pb-10 overflow-y-auto ${className}`}
     >
       {withAmbient && AmbientComponent}
 
@@ -45,7 +45,7 @@ export default function StageShell({
         </div>
       )}
 
-      <div className="relative z-10 flex-1 flex flex-col w-full max-w-md mx-auto">
+      <div className="relative z-10 flex-1 flex flex-col min-h-0 w-full max-w-md mx-auto">
         {children}
       </div>
     </motion.div>
