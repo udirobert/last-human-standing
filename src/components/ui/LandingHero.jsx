@@ -186,8 +186,8 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
           }}
         >
           50 humans. 5 days. Each day, prove you're still here — from{" "}
-          <b className="text-amber font-semibold">anywhere on Earth</b>. The crowd votes. The pot shrinks. One human
-          takes it all.
+          <b className="text-amber font-semibold">anywhere on Earth</b>. The crowd votes people out. The field
+          narrows. One human takes the pot.
         </p>
 
         <MotifFrieze className="w-full" style={{ marginTop: "clamp(22px,3vw,34px)" }} />
