@@ -109,6 +109,7 @@ export default function PopulationField({
   const aliveColor = phase === "live" ? "#F4B84A" : phase === "ended" ? "#FFB800" : "#E7DDC6";
   const eliminatedColor = "#3a2a1e";
   const winnerColor = "#FFB800";
+  const ghostColor = phase === "live" ? "#F4B84A" : "#E7DDC6";
 
   // Animation: use rAF for smooth drift, like EmberField
   useEffect(() => {
@@ -144,40 +145,63 @@ export default function PopulationField({
     >
       {positions.slice(0, totalCount).map((p, i) => {
         const isAlive = i < aliveCount;
+        const isEliminated = !isAlive && phase !== "prelaunch";
         const isWinner = winner && aliveCount === 1 && i === 0;
         const color = isWinner ? winnerColor : isAlive ? aliveColor : eliminatedColor;
         const baseOpacity = isWinner ? 0.9 : isAlive ? 0.55 : 0.08;
         const size = isWinner ? 8 : p.size;
 
         return (
-          <motion.span
-            key={i}
-            data-dot
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{
-              opacity: baseOpacity,
-              scale: isAlive ? 1 : 0.3,
-            }}
-            transition={{
-              duration: isAlive ? 0.8 : 1.5,
-              ease: "easeOut",
-              delay: isAlive ? i * 0.02 : 0,
-            }}
-            className="absolute rounded-full"
-            style={{
-              width: size,
-              height: size,
-              background: color,
-              left: 0,
-              top: 0,
-              willChange: reduce ? undefined : "transform",
-              boxShadow: isWinner
-                ? "0 0 12px rgba(255,184,0,0.8), 0 0 24px rgba(255,184,0,0.4)"
-                : isAlive
-                  ? `0 0 ${size * 1.5}px ${color}40`
-                  : "none",
-            }}
-          />
+          <div key={i} className="absolute" style={{ left: 0, top: 0 }}>
+            {/* Eliminated ghost ring — a faint persistent echo where a
+                player used to be. By game end, 49 ghost rings scatter
+                the backdrop with one bright dot remaining. */}
+            {isEliminated && (
+              <motion.span
+                initial={{ opacity: 0, scale: 0.3 }}
+                animate={{ opacity: 0.12, scale: 1 }}
+                transition={{ duration: 2, ease: "easeOut", delay: 0.3 }}
+                className="absolute rounded-full"
+                style={{
+                  width: size * 2.5,
+                  height: size * 2.5,
+                  border: `1px solid ${ghostColor}30`,
+                  left: 0,
+                  top: 0,
+                  marginLeft: -size * 0.75,
+                  marginTop: -size * 0.75,
+                }}
+              />
+            )}
+
+            <motion.span
+              data-dot
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{
+                opacity: baseOpacity,
+                scale: isAlive ? 1 : 0.3,
+              }}
+              transition={{
+                duration: isAlive ? 0.8 : 1.5,
+                ease: "easeOut",
+                delay: isAlive ? i * 0.02 : 0,
+              }}
+              className="absolute rounded-full"
+              style={{
+                width: size,
+                height: size,
+                background: color,
+                left: 0,
+                top: 0,
+                willChange: reduce ? undefined : "transform",
+                boxShadow: isWinner
+                  ? "0 0 12px rgba(255,184,0,0.8), 0 0 24px rgba(255,184,0,0.4)"
+                  : isAlive
+                    ? `0 0 ${size * 1.5}px ${color}40`
+                    : "none",
+              }}
+            />
+          </div>
         );
       })}
     </div>

@@ -24,7 +24,7 @@ export default function AppShell({
   /** Extra top inset beyond safe-area (for FAQ / status row). Default matches pt-safe. */
   padTop = true,
 }) {
-  const { reservedCount, cohortSize, isEnded, winner } = useRound();
+  const { reservedCount, cohortSize, isEnded, winner, currentDay } = useRound();
   const { stats } = useStats();
 
   // Population data for the backdrop
@@ -57,6 +57,7 @@ export default function AppShell({
         populationCount={populationCount}
         populationTotal={populationTotal}
         populationWinner={populationWinner}
+        currentDay={currentDay}
       />
       {children}
     </div>

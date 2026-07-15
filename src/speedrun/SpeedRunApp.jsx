@@ -204,6 +204,7 @@ function SpeedRunShell({ onReserve, onExit }) {
         populationCount={demoPopulation}
         populationTotal={50}
         populationWinner={phase === "ended"}
+        currentDay={demoDay || null}
       />
       <PlayChrome
         demoDay={demoDay}

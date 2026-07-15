@@ -123,12 +123,34 @@ still runs the routine screens.
   under the warm gradient. The game's premise is proving you're somewhere real;
   the topo pattern grounds the backdrop in physical geography. Deterministic
   seeded shapes (per-phase seed) with a gentle breathing animation on the
-  innermost rings. 3-4.5% opacity — structural, not decorative.
+  innermost rings. 3-4.5% opacity — structural, not decorative. Day markers
+  (D1-D5) placed at ascending contour elevations like waypoints on a trail;
+  the current day brightens, past days dim to ghosts, future days are faint.
 - **PopulationField** (`ui/PopulationField.jsx`) — warm dots scattered across
   the backdrop, each representing a player. Deterministic positions (seeded,
   min-distance constraint) so dots don't jump when count changes. Eliminated
-  dots fade in place. Winner dot gets a crown glow. rAF drift for organic
-  motion. Reduced-motion: static. Max 50 dots (cohort size).
+  dots leave a **persistent ghost ring** — a faint echo where a player used
+  to be. By game end, 49 ghost rings scatter the backdrop with one bright
+  dot remaining: the entire game narrative in a single image. Winner dot
+  gets a crown glow. rAF drift for organic motion. Reduced-motion: static.
+  Max 50 dots (cohort size).
+- **CoordinateGrid** (`ui/CoordinateGrid.jsx`) — faint map grid (A-H, 1-8)
+  for the desktop backdrop. Reinforces the map identity. 3.5% opacity —
+  structural character, not decoration. Desktop only.
+- **CompassRose** (`ui/CompassRose.jsx`) — a small hand-painted compass in
+  the desktop gutters. Classic map element that says "this is a map, and
+  you're on it." Painted in the same gouache hand via GouacheFilters. The
+  needle has a gentle wobble (6s ease-in-out), like a compass at rest.
+  Reduced-motion: static. Desktop only.
+- **DesktopBackdrop** (`DesktopBackdrop.jsx`) — the cultivated environment
+  OUTSIDE the 430px game column on desktop. Portal-based (renders on
+  document.body, outside #root's stacking context). Layer stack: coordinate
+  grid → topographic texture + day markers → population field + ghost rings →
+  large hand-painted motifs (DozingCat 140px, CoffeeBrew 120px, tree, ramen,
+  sunrise at 25-32% opacity) → compass rose. The contrast between cold topo
+  lines and warm painted motifs IS the art direction thesis. Responsive:
+  more motifs appear as the viewport widens (480px → 640px → 768px). Hidden
+  during landing mode and on mobile.
 - **AmbientMotifs** (`AmbientMotifs.jsx`) — soft corner flourishes (tree, cat,
   coffee, ramen). Off by default now — the population dots and topo texture
   carry the character. Enable with `flourishes` on ceremony screens that want

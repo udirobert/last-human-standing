@@ -84,9 +84,32 @@ export default function TopographicTexture({
   wobble = 14,
   /** Gentle breathing animation for the whole field. */
   breathe = true,
+  /** Current game day (1-5). When set, day markers are rendered at
+   *  different contour elevations, with the current day brightened. */
+  currentDay = null,
+  /** Phase — controls day marker styling. */
+  phase = "prelaunch",
 }) {
   const reduce = usePrefersReducedMotion();
   const contours = generateContours(seed, rings, cx, cy, baseRadius, spacing, wobble);
+
+  // Day markers: D1-D5 placed at ascending elevations on the topo map,
+  // like checkpoints on a hiking trail. Each sits on a different contour
+  // ring, spread around the map at different angles.
+  const DAY_MARKERS = [
+    { day: 1, ring: 0, angle: -0.6 },
+    { day: 2, ring: 1, angle: 1.2 },
+    { day: 3, ring: 2, angle: 2.4 },
+    { day: 4, ring: 3, angle: 3.6 },
+    { day: 5, ring: 4, angle: 4.8 },
+  ];
+
+  function dayMarkerPos(marker) {
+    const radius = baseRadius + marker.ring * spacing;
+    const x = cx + Math.cos(marker.angle) * radius;
+    const y = cy + Math.sin(marker.angle) * radius * 0.7;
+    return { x, y };
+  }
 
   return (
     <svg
@@ -122,6 +145,42 @@ export default function TopographicTexture({
           ))}
         </motion.g>
       )}
+
+      {/* Day markers — D1 through D5, placed at different contour
+          elevations like waypoints on a trail. The current day
+          brightens; past days dim to ghosts; future days are faint. */}
+      {currentDay && DAY_MARKERS.map((marker) => {
+        const { x, y } = dayMarkerPos(marker);
+        const isPast = phase === "live" && marker.day < currentDay;
+        const isCurrent = phase === "live" && marker.day === currentDay;
+        const isFuture = phase === "live" && marker.day > currentDay;
+        const isEnded = phase === "ended";
+        const markerOpacity = isCurrent ? 0.7 : isPast ? 0.15 : isEnded && marker.day === 5 ? 0.6 : isEnded ? 0.1 : 0.2;
+        const markerColor = isCurrent ? "#F4B84A" : isEnded && marker.day === 5 ? "#FFB800" : stroke;
+        const markerSize = isCurrent ? 5 : 3;
+
+        return (
+          <g key={`day-${marker.day}`} opacity={markerOpacity}>
+            {/* Waypoint dot */}
+            <circle cx={x} cy={y} r={markerSize} fill={markerColor} />
+            {isCurrent && (
+              <circle cx={x} cy={y} r={markerSize * 2} fill="none" stroke={markerColor} strokeWidth="0.5" opacity="0.5" />
+            )}
+            {/* Day label */}
+            <text
+              x={x}
+              y={y - markerSize - 3}
+              textAnchor="middle"
+              fontFamily="'DM Mono', monospace"
+              fontSize="6"
+              fill={markerColor}
+              letterSpacing="0.05em"
+            >
+              D{marker.day}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }

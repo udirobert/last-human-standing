@@ -389,8 +389,19 @@ body.landing-mode .tip-toast {
   50%      { transform: scaleY(1.035); }
 }
 .cat-breathe { animation: cat-breathe 4s ease-in-out infinite; transform-origin: 70px 84px; }
+
+/* CompassRose — a gentle needle wobble, like a compass at rest */
+@keyframes compass-wobble {
+  0%, 100% { transform: rotate(-2deg); }
+  25%      { transform: rotate(1.5deg); }
+  50%      { transform: rotate(-1deg); }
+  75%      { transform: rotate(2deg); }
+}
+.compass-needle { animation: compass-wobble 6s ease-in-out infinite; transform-origin: 50px 50px; }
+
 @media (prefers-reduced-motion: reduce) {
   .cat-breathe { animation: none; }
+  .compass-needle { animation: none; }
 }
 
 /* Button press effect */

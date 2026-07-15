@@ -63,6 +63,8 @@ export default function AmbientBackdrop({
   populationTotal,
   /** Population field: whether to show a winner glow on the last dot. */
   populationWinner = false,
+  /** Current game day (1-5) for topo day markers. */
+  currentDay = null,
 }) {
   const palette = PALETTES[phase] ?? PALETTES.prelaunch;
   const room = ROOMS[phase] ?? ROOMS.prelaunch;
@@ -78,8 +80,13 @@ export default function AmbientBackdrop({
       {/* 1. Warm radial gradient — the lit room */}
       <div className="absolute inset-0" style={{ background: room }} />
 
-      {/* 2. Topographic contour texture — geographic identity */}
-      <TopographicTexture seed={topoSeed} opacity={phase === "ended" ? 0.03 : 0.045} />
+      {/* 2. Topographic contour texture — geographic identity + day markers */}
+      <TopographicTexture
+        seed={topoSeed}
+        opacity={phase === "ended" ? 0.03 : 0.045}
+        currentDay={currentDay}
+        phase={phase}
+      />
 
       {/* 3. Paper grain — tactile surface */}
       <div
