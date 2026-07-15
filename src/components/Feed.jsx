@@ -14,6 +14,7 @@ import { useMascotEvent } from './MascotEventProvider.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
 import { MascotAvatar } from './Mascot.jsx';
 import EmptyState from './EmptyState.jsx';
+import VotePreview from './VotePreview.jsx';
 import { HumanCta } from './ui/CraftCta.jsx';
 import { haptic } from '../lib/haptics.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
@@ -318,28 +319,34 @@ export default function Feed({ onBack, onCheckIn }) {
           </p>
         )}
         <VoteGateBanner />
-        <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
-          Vote the proof, not the person. Don&apos;t redistribute photos off the app.
-        </p>
+        {phase !== "prelaunch" && (
+          <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
+            Vote the proof, not the person. Don&apos;t redistribute photos off the app.
+          </p>
+        )}
         {loading && submissions.length === 0 && (
           <ScreenLoader kind="list" />
         )}
 
         {!loading && filtered.length === 0 && (
-          <EmptyState
-            motif="coffee"
-            title={`No submissions yet for ${TODAY_THEME.theme}`}
-            body={
-              onCheckIn && walletAuthed && entryPaid
-                ? null
-                : "Submissions appear here the moment players check in."
-            }
-            action={
-              onCheckIn && walletAuthed && entryPaid ? (
-                <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>
-              ) : null
-            }
-          />
+          phase === "prelaunch" ? (
+            <VotePreview />
+          ) : (
+            <EmptyState
+              motif="coffee"
+              title={`No submissions yet for ${TODAY_THEME.theme}`}
+              body={
+                onCheckIn && walletAuthed && entryPaid
+                  ? null
+                  : "Submissions appear here the moment players check in."
+              }
+              action={
+                onCheckIn && walletAuthed && entryPaid ? (
+                  <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>
+                ) : null
+              }
+            />
+          )
         )}
 
         <AnimatePresence>
