@@ -36,6 +36,50 @@ Do not build these until we have data from 25+ real users playing through at lea
 - **Premium tier**: 5 WLD entry for bonus features (double infiltration attempts, custom badges)
 - **Sponsored rounds**: brands sponsor daily themes (e.g., "AT A NIKE STORE") with boosted prize pools
 - **"Humanity Plus" subscription**: monthly recurring for free entries + exclusive cosmetics
+- **Commitment stakes (side-pot)**: see [Commitment Stakes](#commitment-stakes-side-pot) below
+
+### Commitment stakes (side-pot)
+
+An opt-in side-pot where active players stake a small amount on their own
+survival. Eliminated stakes flow to the winner, growing the headline prize.
+
+**Why not a prediction market on other players:**
+The audit layer is crowd-sourced. If spectators or players can bet on *who*
+survives, they gain a financial incentive to corrupt the audit — downvoting
+competitors, coordinating smear campaigns in chat, or socially pressuring
+rivals to drop out. A prediction market on survival in a game where survival
+is determined by crowd vote is a conflict-of-interest factory. We don't
+build it.
+
+**Why a self-stake works:**
+- It's a commitment device, not a bet. "I'm so sure I'll survive, I'm putting
+  $1 in." Skin in the game strengthens daily engagement.
+- It grows the pot for everyone, making the headline prize bigger.
+- It doesn't create a corruption incentive — you can't bet on anyone else,
+  and your own survival is the only thing that pays out.
+
+**Round 2 design (proposed):**
+1. **Framing:** "Commitment stake," not "bet." You're staking confidence.
+2. **Cap:** $1 worth of WLD or cUSD for the first iteration. Low enough that
+   cheating isn't worth it, high enough to be a meaningful signal.
+3. **Eligibility:** Only reserved and checked-in players can stake. No
+   spectator participation.
+4. **Settlement:** Eliminated stakes go to the winner, not back to the pool.
+   The winner gets the main pot + all commitment stakes from eliminated
+   players. Players who survive but don't win get their stake back.
+5. **Display:** Separate line item from the main pot.
+   "Main pot: $420 · Commitment stakes: $31 (31 players in)."
+6. **DQ handling:** A player disqualified for cheating forfeits their stake
+   to the winner. This aligns the stake with honest play.
+7. **Round 2 tracking:** Database-tracked, settled manually at game end.
+   On-chain settlement (smart contract with claim/refund logic) is a Phase 3
+   item if the mechanic proves engaging.
+
+**What we're testing in Round 2:**
+- Does the side-pot increase daily show-up rate?
+- Does it increase emotional investment / share rate?
+- Does it create any audit corruption we can detect?
+- Is $1 the right cap, or should it scale with the main pot?
 
 ### Viral mechanics
 - **Referral visualizations**: show invitation network trees
