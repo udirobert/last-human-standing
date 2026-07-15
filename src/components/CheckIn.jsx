@@ -20,6 +20,7 @@ import { shareMoment } from '../lib/shareMoment.js';
 import { getCheckInMascot, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
 import { haptic } from '../lib/haptics.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
+import CheckInPreview from './CheckInPreview.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
@@ -323,10 +324,16 @@ export default function CheckIn({ onBack, onSubmit }) {
       </div>
 
       {!round ? (
-        <div className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 gap-3">
-          <p className="text-5xl">⏳</p>
-          <p className="text-dim font-mono text-sm text-center">No round set for today yet.</p>
-        </div>
+        phase === "prelaunch" ? (
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 pb-8">
+            <CheckInPreview />
+          </div>
+        ) : (
+          <div className="relative z-10 flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 gap-3">
+            <p className="text-5xl">⏳</p>
+            <p className="text-dim font-mono text-sm text-center">No round set for today yet.</p>
+          </div>
+        )
       ) : (
         <AnimatePresence mode="wait">
           {step === 0 && (

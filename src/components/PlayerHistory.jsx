@@ -3,6 +3,7 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { usePolling } from "../hooks/usePolling.js";
 import AppShell, { SHELL_BOTTOM_PAD } from "./AppShell.jsx";
 import EmptyState from "./EmptyState.jsx";
+import HistoryPreview from "./HistoryPreview.jsx";
 import { MascotAvatar } from "./Mascot.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import { CompactButton } from "./ui/CraftCta.jsx";
@@ -75,11 +76,15 @@ export default function PlayerHistory({ onBack }) {
           Today&apos;s check-ins
         </p>
         {myCheckins.length === 0 ? (
-          <EmptyState
-            motif="coffee"
-            title="Nothing logged yet"
-            body="Race to the theme location before the survival cap fills."
-          />
+          phase === "prelaunch" ? (
+            <HistoryPreview />
+          ) : (
+            <EmptyState
+              motif="coffee"
+              title="Nothing logged yet"
+              body="Race to the theme location before the survival cap fills."
+            />
+          )
         ) : (
           <div className="space-y-3">
             {myCheckins.slice(0, 20).map((ck) => (
