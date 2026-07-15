@@ -6,6 +6,7 @@ import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
 import ScreenLoader from './components/ui/ScreenLoader.jsx';
 import AmbientBackdrop from './components/AmbientBackdrop.jsx';
+import DesktopBackdrop from './components/DesktopBackdrop.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
 import { MascotEventProvider } from './components/MascotEventProvider.jsx';
 import { useScreenState } from './hooks/useScreenState.js';
@@ -196,6 +197,9 @@ const SCREENS = {
   return (
     <div className="relative">
 
+      {/* Desktop-only backdrop for the gutters outside the 430px column.
+          Fixed positioning escapes #root's max-width. Hidden on mobile. */}
+      <DesktopBackdrop phase={phase} />
 
       <AnimatePresence mode="wait">
         {screen === SCREENS.ONBOARDING && (
