@@ -220,7 +220,20 @@ export const FAQS = [
     q: "Any country?",
     a: "Yes. Themes are place types (café, park), not GPS pins. Find one anywhere.",
   },
+  {
+    q: "Who sees my check-in photo?",
+    a: "The day's audit feed — the cohort and spectators. It's shown with your display name or a truncated wallet, never as anonymous. GPS only appears if you choose to share it.",
+  },
+  {
+    q: "Can others share my photo?",
+    a: "Playing means your photo is part of a public audit — that's how the crowd decides HUMAN or SUS. We ask players not to redistribute photos off-platform or harass anyone. Report abuse on Discord.",
+  },
 ];
+
+/** Index of the “Who sees my check-in photo?” FAQ — used by What’s public chip. */
+export const FAQ_PUBLIC_PHOTO_INDEX = FAQS.findIndex(
+  (f) => f.q === "Who sees my check-in photo?",
+);
 
 /**
  * Returns the copy that explains how to enter, for a given audience:
@@ -312,6 +325,36 @@ export const PAYWALL_QUOTES = [
   { text: "Got flagged on Day 2 for a fake gym selfie. The crowd is brutal.", user: "@marina_sol", day: "Day 2 player" },
   { text: "Made it to Day 4 just by being honest and fast. The pot is real.", user: "@luna_waves", day: "Day 4 survivor" },
   { text: "The jury system is genius. My votes count double now.", user: "@ghost_protocol", day: "Eliminated, still playing" },
+];
+
+/** Utility-screen voice: the same fiction, without cinematic drama. */
+export const CHAT_COPY = {
+  demoResponses: [
+    "still alive another day. respectable.",
+    "anyone else watching the survivor count instead of sleeping",
+    "if you haven't checked in yet, the clock is not your friend.",
+    "that café proof needs a second look. we have standards.",
+    "the pot grows. the cap shrinks. perfectly normal day.",
+    "local spots make better proof. landmarks help.",
+    "vote the photo, not the person.",
+  ],
+  sendFailed: "Message didn't make it through. Try once more.",
+  worldChatFailed: "World Chat lost the signal. Your message stayed here.",
+};
+
+export const SURVIVAL_TIPS = [
+  "Your check-in is your lifeline. Miss the window and you're out.",
+  "Show the place and your face. The crowd needs both.",
+  "GPS is optional. A visible landmark can earn the same trust.",
+  "Fast gets you a provisional slot. Believable keeps it.",
+  "Vote the proof, not the person.",
+  "A flagged survivor gets replaced by the next convincing human.",
+  "The cap shrinks every day. Tomorrow is less forgiving.",
+  "Eliminated players become the jury. Their accuracy still matters.",
+  "Infiltrators get immunity if the crowd believes the bluff.",
+  "The Day 4 jury can bring one eliminated player back.",
+  "A clear background beats a clever caption.",
+  "Check in early. The audit can still change the cut.",
 ];
 
 /**

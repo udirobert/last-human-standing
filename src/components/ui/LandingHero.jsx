@@ -235,7 +235,7 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
         <div className="mt-5 font-mono text-dim" style={{ fontSize: "12px" }}>
           <span className="inline-flex items-center gap-2 align-middle">
             <span className="w-2 h-2 rounded-full bg-neon" style={{ boxShadow: "0 0 10px #00FF94" }} />
-            <b className="text-bone font-semibold">{reservedCount.toLocaleString()}</b>
+            <b className="text-bone font-semibold tabular-nums">{reservedCount.toLocaleString()}</b>
             <span>
               of {cohortSize} reserved{filling ? " · filling fast" : ""}
             </span>

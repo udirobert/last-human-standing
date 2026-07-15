@@ -46,7 +46,7 @@ export default function SharePanel({ referralCode, referralCount = 0, className 
         <p className="text-dim text-xs font-mono uppercase">Your referral link</p>
         <p className="text-neon text-sm font-mono truncate">{shareUrl}</p>
         {referralCount > 0 && (
-          <p className="text-amber text-sm font-mono">
+          <p className="text-amber text-sm font-mono tabular-nums">
             {referralCount} friend{referralCount !== 1 ? "s" : ""} invited
             {rankData?.rank && (
               <span className="text-dim"> · #{rankData.rank} top referrer</span>

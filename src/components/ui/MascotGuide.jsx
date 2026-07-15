@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Mascot from "../Mascot.jsx";
+import { MOTION_SPRING } from "../../lib/motion.js";
 
 /**
  * MascotGuide — Survivor as a guide, not decoration.
@@ -34,6 +35,7 @@ export default function MascotGuide({
   showBadge = false,
   badgeCount = 0,
   trackCursor = true,
+  name = null,
 }) {
   return (
     <div className={`relative flex flex-col items-center ${className}`}>
@@ -48,6 +50,7 @@ export default function MascotGuide({
         showBadge={showBadge}
         badgeCount={badgeCount}
         trackCursor={trackCursor}
+        name={name}
       />
       {message && position === "bottom" && (
         <SpeechBubble position="bottom">{message}</SpeechBubble>
@@ -63,7 +66,7 @@ function SpeechBubble({ children, position = "top" }) {
         initial={{ opacity: 0, y: position === "top" ? 8 : -8, scale: 0.9 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
-        transition={{ type: "spring", damping: 20, stiffness: 300 }}
+        transition={MOTION_SPRING.snappy}
         className={`relative max-w-[220px] px-4 py-2.5 rounded-2xl bg-smoke border border-amber/40 ${position === "top" ? "mb-3" : "mt-3"}`}
       >
         <p className="text-bone font-body text-xs leading-relaxed text-center">

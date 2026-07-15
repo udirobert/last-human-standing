@@ -62,7 +62,7 @@ export default function ActivityFeed({ maxVisible = 12 }) {
                 </p>
                 <p className="text-dim text-xs font-mono truncate">{event.text}</p>
               </div>
-              <span className="text-dim/50 text-[10px] font-mono shrink-0 whitespace-nowrap">
+              <span className="text-dim/50 text-[10px] font-mono shrink-0 whitespace-nowrap tabular-nums">
                 {formatTimeAgo(event.ts)}
               </span>
             </div>

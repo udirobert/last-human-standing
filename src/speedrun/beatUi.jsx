@@ -4,10 +4,9 @@ import MotifFrieze from "../components/ui/MotifFrieze.jsx";
 import DozingCat from "../components/ui/DozingCat.jsx";
 import ThemeFairness from "../components/ThemeFairness.jsx";
 import { HumanCta, GameCta } from "../components/ui/CraftCta.jsx";
+import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
 
 export { HumanCta, GameCta };
-
-const EASE = [0.23, 1, 0.32, 1];
 
 /**
  * Shared speed-run UI — cold system chrome + warm human motifs
@@ -21,7 +20,7 @@ export function Ceremony({ children, className = "" }) {
       <motion.div
         initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: EASE }}
+        transition={{ duration: MOTION_DURATION.slow, ease: MOTION_EASE.out }}
         className="w-full max-w-sm flex flex-col items-center"
       >
         {children}
@@ -53,7 +52,7 @@ export function DayReveal({ day, theme, unlock, onContinue, capFrom, capTo }) {
       <motion.div
         initial={{ opacity: 0, scale: 0.92 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.5, delay: 0.05, ease: EASE }}
+        transition={{ duration: MOTION_DURATION.slow, delay: 0.05, ease: MOTION_EASE.out }}
         className="mb-3"
       >
         <ThemeMotif emoji={theme.emoji} size={104} label={theme.theme} />
@@ -109,7 +108,7 @@ export function CutCeremony({ from, to, title, body, chip, onContinue, cta = "Co
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: EASE }}
+        transition={{ duration: MOTION_DURATION.slow, ease: MOTION_EASE.out }}
         className="font-display text-bone mb-3 tabular-nums"
         style={{ fontSize: "clamp(48px,12vw,64px)", lineHeight: 0.9 }}
       >

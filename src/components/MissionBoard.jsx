@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
+import { useWorld } from "../world/WorldProvider.jsx";
 import { useDelight } from "./DelightProvider.jsx";
+import { useMascotEvent } from "./MascotEventProvider.jsx";
 import { TODAY_THEME, findTheme } from "../data/game";
 import { missionMantra, getMissionMascot, getEndgameMascot } from "../lib/copy.js";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
@@ -205,6 +207,7 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
 export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const { phase, isLive, isEnded, currentDay, round, you, winner, payout } = useRound();
   const { handleMascotClick } = useDelight();
+  const { mascotEvent } = useMascotEvent();
 
   // "Closing soon" pulse: recompute once a minute from a state
   // variable so the JSX is render-pure. (Date.now() in render
@@ -232,7 +235,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const rank = you?.rankToday;
   const eliminated = Boolean(you?.isEliminated);
 
-  const prelaunchMascot = getMissionMascot({ state: "prelaunch" });
+  const prelaunchMascot = { variant: mascotEvent?.variant || "thinking", message: mascotEvent?.message };
 
   if (phase === "prelaunch") {
     return (
@@ -286,7 +289,11 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         : isSpectator
           ? "spectator"
           : "open";
-  const missionMascot = getMissionMascot({ state: missionState, cap, theme: themeLabel });
+  // Use the central mascot event from MascotEventProvider, falling back
+  // to the local derivation only if the provider isn't ready yet.
+  const missionMascot = mascotEvent
+    ? { variant: mascotEvent.variant, message: mascotEvent.message }
+    : getMissionMascot({ state: missionState, cap, theme: themeLabel });
   const juryTickets = you?.juryTickets ?? 0;
 
   const mantra = missionMantra({
@@ -375,7 +382,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         </div>
         <div className="bg-ash rounded-xl p-3 border border-ember">
           <p className="text-dim text-[10px] font-mono uppercase">Spots left</p>
-          <p className="text-bone font-display text-2xl mt-0.5">
+          <p className="text-bone font-display text-2xl mt-0.5 tabular-nums">
             {slotsLeft != null ? slotsLeft : "—"}
             <span className="text-dim text-sm font-mono"> / {cap}</span>
           </p>
@@ -402,13 +409,13 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             <div className="bg-ash/60 rounded-lg p-2 border border-ember/30 flex flex-col items-center justify-center gap-1">
               <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
               <div className="flex items-center gap-1">
-                <p className="text-amber font-display text-lg">{you?.checkinStreak ?? 0}</p>
+                <p className="text-amber font-display text-lg tabular-nums">{you?.checkinStreak ?? 0}</p>
                 {(you?.checkinStreak ?? 0) > 0 && <StreakBloom streak={you.checkinStreak} size={22} />}
               </div>
             </div>
             <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
               <p className="text-dim text-[9px] font-mono uppercase">Top %</p>
-              <p className="text-bone font-display text-lg">
+              <p className="text-bone font-display text-lg tabular-nums">
                 {you?.eliminatedAtDay ? Math.round((Number(you.eliminatedAtDay) * 100) / 5) : "—"}%
               </p>
             </div>
@@ -437,17 +444,17 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
                 <p className="text-dim text-[9px] font-mono uppercase">Accuracy</p>
-                <p className="text-bone font-display text-lg">
+                <p className="text-bone font-display text-lg tabular-nums">
                   {you?.voteAccuracy != null ? `${Math.round(you.voteAccuracy * 100)}%` : "—"}
                 </p>
               </div>
               <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
                 <p className="text-dim text-[9px] font-mono uppercase">Correct</p>
-                <p className="text-bone font-display text-lg">{you?.votesCorrect ?? 0}</p>
+                <p className="text-bone font-display text-lg tabular-nums">{you?.votesCorrect ?? 0}</p>
               </div>
               <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
                 <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
-                <p className="text-amber font-display text-lg">{you?.juryTickets ?? 0}</p>
+                <p className="text-amber font-display text-lg tabular-nums">{you?.juryTickets ?? 0}</p>
               </div>
             </div>
           )}

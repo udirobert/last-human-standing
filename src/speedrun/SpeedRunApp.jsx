@@ -64,7 +64,7 @@ function PlayChrome({ demoDay, beat, soundEnabled, onToggleSound, onSkip, onExit
           {[1, 2, 3, 4, 5].map((d) => (
             <span
               key={d}
-              className={`h-1 rounded-full transition-all duration-300 ${
+              className={`h-1 rounded-full transition-[width,background-color,box-shadow] duration-300 ${
                 demoDay === d
                   ? "w-5 bg-amber shadow-[0_0_10px_rgba(255,184,0,0.45)]"
                   : demoDay > d
@@ -181,7 +181,7 @@ function SpeedRunShell({ onReserve, onExit }) {
 
   if (isIntro) {
     return (
-      <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
+      <div className="relative h-[100svh] max-h-[100svh] flex flex-col font-body overflow-hidden bg-transparent">
         <IntroBeat
           onStart={() => {
             beatFeel("reveal");
@@ -195,7 +195,7 @@ function SpeedRunShell({ onReserve, onExit }) {
   }
 
   return (
-    <div className="relative h-screen flex flex-col font-body pb-10 overflow-hidden bg-transparent">
+    <div className="relative h-[100svh] max-h-[100svh] flex flex-col font-body pb-10 overflow-hidden bg-transparent">
       <AmbientBackdrop phase={phase} />
       <PlayChrome
         demoDay={demoDay}

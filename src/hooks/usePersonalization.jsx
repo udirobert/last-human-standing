@@ -1,14 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
+import OverlayPortal from '../components/OverlayPortal.jsx';
+import { useFocusTrap } from './useFocusTrap.js';
 
 // Mascot name storage and personalization
 export function useMascotName() {
   const [name, setName] = useState(() => {
-    return localStorage.getItem('mascot_name') || 'Survivor';
+    const current = localStorage.getItem('lhs_mascot_name');
+    const legacy = localStorage.getItem('mascot_name');
+    return current || legacy || '';
   });
 
   const saveName = useCallback((newName) => {
-    setName(newName);
-    localStorage.setItem('mascot_name', newName);
+    const normalized = newName.trim().slice(0, 20);
+    setName(normalized);
+    localStorage.setItem('lhs_mascot_name', normalized);
+    localStorage.removeItem('mascot_name');
   }, []);
 
   return { name, saveName };
@@ -17,6 +23,7 @@ export function useMascotName() {
 // Mascot name input modal
 export function MascotNameModal({ onSave, onSkip }) {
   const [inputName, setInputName] = useState('');
+  const trapRef = useFocusTrap(true, { onEscape: onSkip });
 
   const handleSave = () => {
     if (inputName.trim()) {
@@ -25,41 +32,52 @@ export function MascotNameModal({ onSave, onSkip }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
-      <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-sm w-full animate-bounce-in">
-        <div className="text-center mb-6">
-          <div className="text-5xl mb-3">🤖</div>
-          <h2 className="text-xl font-bold text-white mb-2">Name Your Guide</h2>
-          <p className="text-gray-400 text-sm">Give your survival companion a name</p>
-        </div>
-        
-        <input
-          type="text"
-          value={inputName}
-          onChange={(e) => setInputName(e.target.value.slice(0, 20))}
-          placeholder="Enter name..."
-          className="w-full px-4 py-3 bg-gray-800 border border-gray-600 rounded-xl text-white text-center text-lg mb-4 focus:outline-none focus:border-amber-500 transition-colors"
-          maxLength={20}
-          autoFocus
-        />
-        
-        <div className="flex gap-3">
-          <button
-            onClick={onSkip}
-            className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded-xl transition-colors"
-          >
-            Skip
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!inputName.trim()}
-            className="flex-1 px-4 py-3 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-xl transition-colors disabled:opacity-50"
-          >
-            Save
-          </button>
+    <OverlayPortal>
+      <div
+        ref={trapRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Name your guide"
+        className="fixed inset-0 z-[70] bg-ash/90 backdrop-blur-md flex items-center justify-center p-4 outline-none"
+      >
+        <div className="bg-smoke border border-ember/40 rounded-2xl p-8 max-w-sm w-full animate-bounce-in">
+          <div className="text-center mb-6">
+            <div className="text-5xl mb-3">🤖</div>
+            <h2 className="font-display text-2xl text-bone mb-2 tracking-wide">Name Your Guide</h2>
+            <p className="text-dim font-mono text-xs">Give your survival companion a name</p>
+          </div>
+
+          <input
+            type="text"
+            value={inputName}
+            onChange={(e) => setInputName(e.target.value.slice(0, 20))}
+            placeholder="Enter name..."
+            className="w-full px-4 py-3 bg-ash border border-ember/40 rounded-xl text-bone text-center text-lg mb-4 focus:outline-none focus:border-amber/60 transition-colors font-body"
+            maxLength={20}
+            autoFocus
+          />
+
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={onSkip}
+              className="flex-1 px-4 py-3 bg-ash border border-ember/40 hover:border-amber/40 text-dim rounded-xl transition-colors font-mono text-sm"
+            >
+              Skip
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!inputName.trim()}
+              className="flex-1 px-4 py-3 bg-amber text-ash font-mono text-sm rounded-xl transition-colors disabled:opacity-50 active:scale-95"
+            >
+              Save
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </OverlayPortal>
   );
 }
 
@@ -124,26 +142,28 @@ export function useTheme() {
   return { theme, themeId, setTheme, themes: Object.entries(THEMES).map(([id, t]) => ({ id, ...t })) };
 }
 
-// Theme selector component
+// Theme selector — branded tokens. Not mounted in main chrome (prototype).
 export function ThemeSelector({ currentThemeId, onSelect }) {
   return (
     <div className="grid grid-cols-2 gap-3">
       {Object.entries(THEMES).map(([id, theme]) => (
         <button
           key={id}
+          type="button"
           onClick={() => onSelect(id)}
-          className={`p-4 rounded-xl border-2 transition-all ${
+          className={`p-4 rounded-xl border transition-[background-color,border-color] ${
             currentThemeId === id
-              ? 'border-amber-500 bg-gray-800'
-              : 'border-gray-700 bg-gray-900 hover:border-gray-600'
+              ? 'border-amber/50 bg-smoke'
+              : 'border-ember/40 bg-ash/60 hover:border-ember'
           }`}
         >
           <div className="flex gap-1 mb-2">
-            {Object.values(theme.colors).map((c, i) => (
-              <div key={i} className={`w-4 h-4 rounded-full bg-${c}`} />
-            ))}
+            <span className="w-4 h-4 rounded-full bg-amber" />
+            <span className="w-4 h-4 rounded-full bg-blood" />
+            <span className="w-4 h-4 rounded-full bg-ember" />
+            <span className="w-4 h-4 rounded-full bg-bone/40" />
           </div>
-          <div className="text-sm text-gray-300">{theme.name}</div>
+          <div className="text-sm font-body text-bone/80">{theme.name}</div>
         </button>
       ))}
     </div>

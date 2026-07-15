@@ -79,8 +79,11 @@ export function DelightProvider({ children, showTipOnMount = false }) {
 
   // Easter eggs
   const { count: easterEggCount, increment: easterEggTap, unlocked: easterEggUnlocked } = useEasterEgg('tap_logo_5');
+  const { increment: survivalEggTap, unlocked: survivalEggUnlocked } = useEasterEgg('survive_100_rounds');
   const [showSecret, setShowSecret] = useState(false);
+  const [secretMessage, setSecretMessage] = useState("🤫 The whispers say 'patience wins battles, but persistence wins wars.'");
   const secretTriggeredRef = useRef(false);
+  const survivalSecretTriggeredRef = useRef(false);
 
   // Use effect to avoid direct setState during render
   useEffect(() => {
@@ -89,6 +92,14 @@ export function DelightProvider({ children, showTipOnMount = false }) {
       setShowSecret(true);
     }
   }, [easterEggUnlocked]);
+
+  useEffect(() => {
+    if (survivalEggUnlocked && !survivalSecretTriggeredRef.current) {
+      survivalSecretTriggeredRef.current = true;
+      setSecretMessage("Death's Favorite. One hundred rounds survived. Even the audit is impressed.");
+      setShowSecret(true);
+    }
+  }, [survivalEggUnlocked]);
 
   // Suspense notifications
   const { notification: suspenseNotification, show: showSuspense, dismiss: dismissSuspense } = useSuspenseNotification();
@@ -102,11 +113,25 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     play('tick');
     if (type === 'secret') {
       unlock('collector'); // Hidden achievement
+      setSecretMessage("🤫 The whispers say 'patience wins battles, but persistence wins wars.'");
       setShowSecret(true);
     } else {
       easterEggTap();
     }
   }, [play, easterEggTap, unlock]);
+
+  const recordSurvival = useCallback((roundKey) => {
+    const key = String(roundKey ?? "unknown");
+    try {
+      const recorded = new Set(JSON.parse(localStorage.getItem('lhs_recorded_survivals') || '[]'));
+      if (recorded.has(key)) return;
+      recorded.add(key);
+      localStorage.setItem('lhs_recorded_survivals', JSON.stringify([...recorded]));
+    } catch {
+      // Storage is best-effort; still count the live survival.
+    }
+    survivalEggTap();
+  }, [survivalEggTap]);
 
   // Expose methods
   const value = {
@@ -130,6 +155,7 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     // Easter egg
     handleMascotClick,
     easterEggCount,
+    recordSurvival,
     
     // Mascot name
     mascotName,
@@ -158,6 +184,7 @@ export function DelightProvider({ children, showTipOnMount = false }) {
       {pendingUnlock && (
         <AchievementToast 
           achievement={pendingUnlock} 
+          mascotName={mascotName}
           onClose={dismissNotification} 
         />
       )}
@@ -168,7 +195,7 @@ export function DelightProvider({ children, showTipOnMount = false }) {
       
       {showSecret && (
         <SecretMessage 
-          message="🤫 The whispers say 'patience wins battles, but persistence wins wars.'"
+          message={secretMessage}
           onDismiss={() => setShowSecret(false)}
         />
       )}
@@ -180,7 +207,10 @@ export function DelightProvider({ children, showTipOnMount = false }) {
       
       {showNameModal && (
         <MascotNameModal 
-          onSave={saveMascotName}
+          onSave={(name) => {
+            saveMascotName(name);
+            setShowNameModal(false);
+          }}
           onSkip={() => setShowNameModal(false)}
         />
       )}
@@ -206,7 +236,7 @@ export function SoundToggle() {
       type="button"
       onClick={toggleSound}
       {...CUE_TOGGLE}
-      className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-colors"
+      className="p-2 rounded-lg bg-smoke/70 border border-ember/40 hover:border-amber/50 transition-colors"
       title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
       aria-label={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
     >

@@ -1,6 +1,8 @@
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import FAQModal from "./FAQModal.jsx";
+import { MOTION_SPRING } from "../lib/motion.js";
+import { CompactButton } from "./ui/CraftCta.jsx";
 
 /**
  * StageShell — consistent wrapper for every onboarding stage.
@@ -10,10 +12,6 @@ import FAQModal from "./FAQModal.jsx";
  * - Consistent max-width + padding + safe-area-insets
  * - Optional back button (top-left) and FAQ button (top-right)
  * - Optional ambient backdrop (phase-aware colors)
- *
- * Used by Onboarding steps 0, 1, 2, 3 so the user feels they're
- * moving through a coherent system, not jumping between
- * disconnected pages.
  */
 export default function StageShell({
   children,
@@ -25,19 +23,22 @@ export default function StageShell({
 }) {
   return (
     <motion.div
-      className={`relative flex-1 flex flex-col min-h-0 px-6 pt-4 pb-10 overflow-y-auto ${className}`}
+      className={`relative flex-1 flex flex-col min-h-0 px-6 pt-4 overflow-y-auto overscroll-y-contain ${className}`}
+      style={{
+        paddingTop: "max(1rem, env(safe-area-inset-top, 0px))",
+        paddingBottom: "max(2.5rem, env(safe-area-inset-bottom, 0px))",
+      }}
     >
       {withAmbient && AmbientComponent}
 
       {onBack && (
-        <button
-          type="button"
+        <CompactButton
           onClick={onBack}
-          className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-smoke/80 backdrop-blur-sm border border-ember/40 text-bone font-mono text-sm flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all"
+          className="absolute top-4 left-4 z-10 w-9 h-9 rounded-full bg-smoke/80 backdrop-blur-sm border border-ember/40 text-bone font-mono text-sm flex items-center justify-center hover:border-amber/60"
           aria-label="Back"
         >
           ←
-        </button>
+        </CompactButton>
       )}
       {faq && (
         <div className="absolute top-4 right-4 z-10">
@@ -61,7 +62,7 @@ export function StageSection({ children, index = 0, className = "" }) {
     <motion.section
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1 + index * 0.12, type: "spring", damping: 20 }}
+      transition={{ ...MOTION_SPRING.snappy, delay: 0.06 + index * 0.06 }}
       className={className}
     >
       {children}

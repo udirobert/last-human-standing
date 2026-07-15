@@ -3,6 +3,7 @@ import { useIDKitRequest, proofOfHuman } from "@worldcoin/idkit";
 import QRCode from "qrcode";
 import { useWorld } from "./WorldProvider.jsx";
 import { useDelight } from "../components/DelightProvider.jsx";
+import { GameCta } from "../components/ui/CraftCta.jsx";
 
 // World ID 4.0 (current spec) — see docs.world.org/idkit/integrate.
 // Uses the lower-level `useIDKitRequest` hook so we can render a
@@ -298,14 +299,14 @@ export default function WorldIdVerify() {
         <p className="text-dim text-xs font-mono text-center leading-relaxed">
           World ID verification is bound to your wallet, so sign in first.
         </p>
-        <button
-          type="button"
+        <GameCta
+          tone="ghost"
           onClick={handleConnectWallet}
           disabled={connecting || walletAuthed}
-          className="w-full font-display text-2xl tracking-widest py-4 rounded-2xl active:scale-95 transition-all bg-neon/10 border border-neon/40 text-neon disabled:opacity-60"
+          className="!font-display !text-2xl !tracking-widest !bg-neon/10 !border-neon/40 !text-neon"
         >
           {connecting ? "CONNECTING…" : walletAuthed ? "WALLET READY" : "CONNECT WALLET TO VERIFY"}
-        </button>
+        </GameCta>
         {walletError && (
           <p className="text-blood font-mono text-xs text-center leading-relaxed">
             {walletError}
@@ -335,14 +336,14 @@ export default function WorldIdVerify() {
       {fetchError && (
         <p className="text-blood text-xs font-mono text-center">{fetchError}</p>
       )}
-      <button
-        type="button"
+      <GameCta
+        tone="ghost"
         onClick={handleStart}
         disabled={fetchingContext}
-        className="w-full font-display text-2xl tracking-widest py-4 rounded-2xl active:scale-95 transition-all bg-neon/10 border border-neon/40 text-neon disabled:opacity-60"
+        className="!font-display !text-2xl !tracking-widest !bg-neon/10 !border-neon/40 !text-neon"
       >
         {fetchingContext ? "LOADING…" : "VERIFY WORLD ID"}
-      </button>
+      </GameCta>
     </div>
   );
 }

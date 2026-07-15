@@ -17,6 +17,8 @@ npx vitest run tests/onlineStatus.test.jsx
 npx vitest run tests/push.test.js
 npx vitest run tests/rateLimit.test.js
 npx vitest run tests/server.test.js
+npx vitest run tests/regression.test.jsx
+npx vitest run tests/worldIdVerify.test.jsx
 
 # Run in watch mode during development
 npx vitest
@@ -33,8 +35,13 @@ npx vitest
 | `tests/config.test.js` | 11 | AI provider config, humanity provider config, localStorage persistence | `jsdom` |
 | `tests/onlineStatus.test.jsx` | 4 | Offline/online tracking, SW queue helper | `jsdom` |
 | `tests/push.test.js` | 10 | VAPID push lib (sendToAddress, broadcastPush) + push routes | `node` |
+| `tests/lottery.test.js` | — | Lottery ticket allocation and distribution | `node` |
+| `tests/lotteryApi.test.js` | — | Lottery API endpoints | `node` |
+| `tests/ariaAgent.test.js` | — | ARIA accessibility checks | `jsdom` |
+| `tests/worldIdVerify.test.jsx` | 5 | World ID verification flow, IDKit binding, wallet signal | `jsdom` |
+| `tests/regression.test.jsx` | 44 | Focus trap, mascot name migration, survival dedup, variant expressions, chat error branding, MascotEventProvider state | `jsdom` |
 
-**Total: 87 tests across 7 files**
+**Total: 178 tests across 12 files**
 
 ## Adding a new test
 
@@ -61,6 +68,10 @@ describe("myModule", () => {
 - **RPC/network calls**: Stub `globalThis.fetch` directly (see `tests/server.test.js`)
 - **localStorage**: Available in jsdom; use `beforeEach` to reset state
 - **Service Worker**: Not available in jsdom — `queueCheckin` rejects when SW absent
+- **framer-motion**: Mock with a Proxy that renders plain DOM elements (see `tests/regression.test.jsx`); drop framer-only props (`initial`, `animate`, `transition`, etc.)
+- **matchMedia**: jsdom doesn't implement it — stub `window.matchMedia` returning `{ matches: false, addEventListener: () => {} }`
+- **scrollIntoView**: jsdom doesn't implement it — stub `Element.prototype.scrollIntoView = () => {}`
+- **Context providers**: `RoundContext` and `WorldContext` are both exported from their provider modules for test wrapping
 
 ## Coverage thresholds
 

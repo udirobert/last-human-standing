@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import MascotGuide from "./MascotGuide.jsx";
 import { useDelight } from "../DelightProvider.jsx";
+import OverlayPortal from "../OverlayPortal.jsx";
+import { GameCta, GhostLink, HumanCta } from "./CraftCta.jsx";
 
 /**
  * ExitIntentPrompt — soft exit-intent overlay for the paywall.
@@ -28,6 +30,7 @@ export default function ExitIntentPrompt({ open, onStay, onPractice, onLeave }) 
   }, [open]);
 
   return (
+    <OverlayPortal>
     <AnimatePresence>
       {open && (
         <motion.div
@@ -35,7 +38,7 @@ export default function ExitIntentPrompt({ open, onStay, onPractice, onLeave }) 
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-5 bg-black/70 backdrop-blur-sm"
+          className="fixed inset-0 z-[70] flex items-center justify-center p-5 bg-ash/90 backdrop-blur-md"
           onClick={onStay}
         >
           <motion.div
@@ -67,31 +70,23 @@ export default function ExitIntentPrompt({ open, onStay, onPractice, onLeave }) 
             </p>
 
             {/* Primary: practice run */}
-            <button
-              onClick={onPractice}
-              className="w-full py-3.5 rounded-2xl bg-amber text-[#1a1206] font-body font-semibold text-base active:scale-[0.97] transition-transform mb-2"
-            >
+            <HumanCta onClick={onPractice} className="!py-3.5 mb-2">
               Try the practice run
-            </button>
+            </HumanCta>
 
             {/* Secondary: stay on paywall */}
-            <button
-              onClick={onStay}
-              className="w-full py-3 rounded-2xl bg-smoke border border-ember/40 text-bone font-body text-sm active:scale-[0.97] transition-transform mb-3"
-            >
+            <GameCta tone="ghost" onClick={onStay} className="!py-3 !text-sm mb-3">
               Stay on this page
-            </button>
+            </GameCta>
 
             {/* Tertiary: leave — quiet, not prominent */}
-            <button
-              onClick={onLeave}
-              className="font-mono text-dim text-[11px] tracking-widest uppercase active:scale-95 transition-transform"
-            >
+            <GhostLink onClick={onLeave} className="tracking-widest uppercase">
               I'll come back later
-            </button>
+            </GhostLink>
           </motion.div>
         </motion.div>
       )}
     </AnimatePresence>
+    </OverlayPortal>
   );
 }

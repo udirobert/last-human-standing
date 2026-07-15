@@ -5,20 +5,10 @@ import { useRound } from '../world/RoundProvider.jsx';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import NetworkPill from './ui/NetworkPill.jsx';
 import FAQModal from './FAQModal.jsx';
-import AmbientBackdrop from './AmbientBackdrop.jsx';
-import { StageSection } from './StageShell.jsx';
-import DozingCat from './ui/DozingCat.jsx';
-import MotifFrieze from './ui/MotifFrieze.jsx';
-
-const BOT_RESPONSES = [
-  "still alive another day, respect",
-  "who else is already planning what they're buying with the prize money 💀",
-  "if you didn't check in yet... bro...",
-  "that starbucks submission should be flagged immediately. we have standards.",
-  "anyone else checking the player count every 5 minutes or just me",
-  "the prize pool growing with every entry, not sleeping",
-  "real ones check in from a local spot. show some culture.",
-];
+import AppShell from './AppShell.jsx';
+import EmptyState from './EmptyState.jsx';
+import { CHAT_COPY } from '../lib/copy.js';
+import { CUE_PRESS } from '../lib/cuelume.js';
 
 // Dev convenience: in development, fall back to simulated chat when not
 // in the mini app. In production, real lobby messages are the only thing
@@ -39,6 +29,7 @@ export default function Chat({ onBack }) {
   const [chatError, setChatError] = useState(null);
   const [chatLoading, setChatLoading] = useState(true);
   const onlineCount = isMiniApp || useMocks ? rosterCount : null;
+  const walletAddress = user?.address;
 
   // ---- Browser demo: seed fake messages + bot interval ----
   useEffect(() => {
@@ -52,7 +43,7 @@ export default function Chat({ onBack }) {
       if (Math.random() > 0.7) {
         const users = ['0xGhost_4459', '0xHuman_7734', '0xLastOnes_8823', '0xSurvivor_2291', '0xNewbie_9001', '0xElite_0042'];
         const randUser = users[Math.floor(Math.random() * users.length)];
-        const randMsg = BOT_RESPONSES[Math.floor(Math.random() * BOT_RESPONSES.length)];
+        const randMsg = CHAT_COPY.demoResponses[Math.floor(Math.random() * CHAT_COPY.demoResponses.length)];
         setMessages(m => [...m, {
           id: Date.now(),
           user: randUser,
@@ -83,7 +74,7 @@ export default function Chat({ onBack }) {
           user: m.username ? `@${m.username}` : (m.address?.slice(0, 10) + '…'),
           msg: m.message,
           time: timeAgo(m.created_at),
-          isSelf: user?.address && m.address?.toLowerCase() === user.address.toLowerCase(),
+          isSelf: walletAddress && m.address?.toLowerCase() === walletAddress.toLowerCase(),
         })));
       }
     } catch (e) {
@@ -91,7 +82,7 @@ export default function Chat({ onBack }) {
     } finally {
       setChatLoading(false);
     }
-  }, [isMiniApp, user?.address]);
+  }, [isMiniApp, walletAddress]);
 
   useEffect(() => {
     loadMessages();
@@ -141,11 +132,11 @@ export default function Chat({ onBack }) {
           body: JSON.stringify({ message: text }),
         });
         await loadMessages();
-      } catch (e) {
+      } catch {
         setMessages(m => [...m, {
           id: Date.now() + 1,
           user: 'system',
-          msg: `Failed to send: ${e instanceof Error ? e.message : 'unknown'}`,
+          msg: CHAT_COPY.sendFailed,
           time: 'now',
         }]);
       } finally {
@@ -171,11 +162,11 @@ export default function Chat({ onBack }) {
 
       try {
         await sendWorldChat({ to: toUser, message: text });
-      } catch (e) {
+      } catch {
         setMessages(m => [...m, {
           id: Date.now() + 1,
           user: 'system',
-          msg: `Could not send via World Chat: ${e instanceof Error ? e.message : 'unknown error'}`,
+          msg: CHAT_COPY.worldChatFailed,
           time: 'now',
           isNew: true,
         }]);
@@ -197,15 +188,15 @@ export default function Chat({ onBack }) {
     : input.trim().length > 0 && toUser.trim().length > 0;
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
-      <AmbientBackdrop phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"} />
+    <AppShell phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"}>
       {/* Header */}
-      <div className="relative z-10 px-5 pt-12 pb-4 bg-ash/70 backdrop-blur-md border-b border-ember/30">
+      <div className="relative z-10 px-5 pt-10 pb-4 bg-ash/70 backdrop-blur-md border-b border-ember/30">
         <div className="flex items-center gap-4 mb-1">
           <button
             type="button"
             onClick={onBack}
-            className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all"
+            {...CUE_PRESS}
+            className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-[0.97] transition-transform"
             aria-label="Back"
           >
             <span className="text-dim text-lg">←</span>
@@ -217,7 +208,7 @@ export default function Chat({ onBack }) {
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-1">
               {isMiniApp && onlineCount != null ? (
-                <span className="font-mono text-dim text-xs">{onlineCount} humans reserved</span>
+                <span className="font-mono text-dim text-xs tabular-nums">{onlineCount} humans reserved</span>
               ) : useMocks ? (
                 <span className="font-mono text-amber text-xs">Dev preview — simulated messages</span>
               ) : (
@@ -249,7 +240,7 @@ export default function Chat({ onBack }) {
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />
           <span className="font-mono text-dim text-xs">
-            {isMiniApp ? 'LOBBY · TODAY' : `DAY ${Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % 10 + 1} · TODAY`}
+            LOBBY · TODAY
           </span>
           <div className="flex-1 h-px bg-ember" />
         </div>
@@ -261,14 +252,12 @@ export default function Chat({ onBack }) {
 
         {/* Empty state */}
         {!chatLoading && messages.length === 0 && (
-          <div className="text-center py-8 px-2">
-            <div className="flex justify-center mb-3">
-              <DozingCat size={64} />
-            </div>
-            <p className="text-bone font-body text-sm mb-1">No messages yet</p>
-            <p className="text-bone/55 font-body text-xs mb-5">Be the first to say something to the survivors.</p>
-            <MotifFrieze className="w-full opacity-85" />
-          </div>
+          <EmptyState
+            motif="cat"
+            title="No messages yet"
+            body="Be the first to say something to the survivors."
+            className="py-8"
+          />
         )}
 
         <AnimatePresence initial={false}>
@@ -312,14 +301,18 @@ export default function Chat({ onBack }) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="px-5 pt-4 pb-24 bg-ash border-t border-ember">
+      {/* Input — sits above BottomNav with shared safe-area offset */}
+      <div
+        className="relative z-10 px-5 pt-3 bg-ash/80 backdrop-blur-md border-t border-ember/40"
+        style={{ paddingBottom: "calc(4.5rem + env(safe-area-inset-bottom, 0px))" }}
+      >
         {/* Mode toggle — Lobby (broadcast to survivors) or DM (private to a single recipient) */}
         <div className="flex gap-2 mb-2.5">
           <button
             type="button"
             onClick={() => setChatMode('lobby')}
-            className={`flex-1 py-2 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
+            {...CUE_PRESS}
+            className={`flex-1 py-2 rounded-xl font-mono text-xs uppercase tracking-wider active:scale-[0.97] transition-transform ${
               chatMode === 'lobby' ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
             }`}
           >
@@ -328,7 +321,8 @@ export default function Chat({ onBack }) {
           <button
             type="button"
             onClick={() => setChatMode('dm')}
-            className={`flex-1 py-2 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
+            {...CUE_PRESS}
+            className={`flex-1 py-2 rounded-xl font-mono text-xs uppercase tracking-wider active:scale-[0.97] transition-transform ${
               chatMode === 'dm' ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
             }`}
           >
@@ -363,9 +357,11 @@ export default function Chat({ onBack }) {
             </div>
           </div>
           <button
+            type="button"
             onClick={handleSend}
             disabled={!canSend || sending}
-            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg transition-all active:scale-90 ${
+            {...CUE_PRESS}
+            className={`w-12 h-12 rounded-2xl flex items-center justify-center font-display text-lg transition-transform active:scale-[0.97] ${
               canSend && !sending ? 'bg-blood text-white' : 'bg-ember text-dim'
             }`}
           >
@@ -378,7 +374,7 @@ export default function Chat({ onBack }) {
             : `Private message via World Chat to @${toUser || '…'}`}
         </p>
       </div>
-    </div>
+    </AppShell>
   );
 }
 

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { useWorld } from "./WorldProvider.jsx";
 
-const RoundContext = createContext(null);
+export const RoundContext = createContext(null);
 const DEFAULT_YOU = {
   isAuthed: false,
   isPaid: false,

@@ -28,6 +28,7 @@ import {
   OutcomeCeremony,
 } from "./beatUi.jsx";
 import { haptic } from "../lib/haptics.js";
+import { MOTION_SPRING } from "../lib/motion.js";
 
 export function IntroBeat({ onStart, onExit, soundEnabled, onToggleSound }) {
   const { nextBeat } = useSpeedRun();
@@ -255,7 +256,7 @@ function LiveTally({ real = 0, fake = 0 }) {
           <p className="font-mono text-[10px] text-neon uppercase tracking-widest">Human</p>
           <p className="font-display text-3xl text-neon leading-none tabular-nums">{real}</p>
         </div>
-        <p className="font-mono text-dim text-xs pb-1">
+        <p className="font-mono text-dim text-xs pb-1 tabular-nums">
           {total === 0 ? "awaiting votes" : `${realPct}% · ${fakePct}%`}
         </p>
         <div className="text-right">
@@ -398,7 +399,7 @@ export function D1AuditBeat() {
         {votable.map((_, i) => (
           <span
             key={i}
-            className={`h-1.5 rounded-full transition-all duration-300 ${
+            className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ${
               i < currentIdx
                 ? "w-4 bg-neon"
                 : i === currentIdx
@@ -417,7 +418,7 @@ export function D1AuditBeat() {
             initial={{ opacity: 0, x: 40 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -40 }}
-            transition={{ type: "spring", damping: 26, stiffness: 280 }}
+            transition={MOTION_SPRING.snappy}
             className="flex-1 flex flex-col bg-smoke/80 border border-ember/40 rounded-3xl overflow-hidden backdrop-blur-sm min-h-0"
           >
             {/* Image — fills available space */}

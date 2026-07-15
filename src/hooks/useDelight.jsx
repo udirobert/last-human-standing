@@ -23,7 +23,7 @@ export function useConfetti() {
 // Confetti Component
 export function Confetti({ particles }) {
   return (
-    <div className="fixed inset-0 pointer-events-none z-50 overflow-hidden">
+    <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden">
       {particles.map((p) => (
         <div
           key={p.id}
@@ -113,7 +113,7 @@ export function ButtonFeedback({ children, onClick, className = '', ...props }) 
       onMouseDown={() => setPressed(true)}
       onMouseUp={() => setPressed(false)}
       onMouseLeave={() => setPressed(false)}
-      className={`transition-all duration-150 ${pressed ? 'scale-95' : 'hover:scale-105'} ${className}`}
+      className={`transition-transform duration-150 ${pressed ? 'scale-95' : 'hover:scale-105'} ${className}`}
       {...props}
     >
       {children}

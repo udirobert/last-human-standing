@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useWorld } from '../world/WorldProvider.jsx';
+import AppShell, { SHELL_BOTTOM_PAD } from './AppShell.jsx';
+import ScreenLoader from './ui/ScreenLoader.jsx';
 
 const ADMIN_ADDRESS = import.meta.env.VITE_ADMIN_ADDRESS;
 
@@ -16,7 +18,7 @@ async function adminFetch(path, options = {}) {
   return res.json();
 }
 
-export default function AdminDashboard() {
+export default function AdminDashboard({ onBack }) {
   const { user } = useWorld();
   const [tabs, setTabs] = useState('overview');
   const [data, setData] = useState({
@@ -143,29 +145,52 @@ export default function AdminDashboard() {
 
   if (!isAdmin) {
     return (
-      <div className="min-h-screen bg-ash flex flex-col items-center justify-center px-5 py-10 font-body">
-        <div className="text-center">
-          <p className="font-display text-4xl text-bone mb-4">🔒 Admin Only</p>
-          <p className="text-dim font-mono text-sm">Connect your admin wallet to access the dashboard.</p>
+      <AppShell phase="prelaunch">
+        <div className="relative z-10 flex-1 min-h-0 flex flex-col items-center justify-center px-5 py-10">
+          <div className="text-center">
+            <p className="font-display text-4xl text-bone mb-4">Admin Only</p>
+            <p className="text-dim font-mono text-sm mb-6">Connect your admin wallet to access the dashboard.</p>
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="px-5 py-2.5 rounded-xl bg-smoke border border-ember/40 text-bone font-mono text-sm hover:border-amber/60 active:scale-95 transition-[transform,border-color]"
+              >
+                ← Back to Survive
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      </AppShell>
     );
   }
 
   return (
-    <div className="min-h-screen bg-ash flex flex-col font-body pb-24">
-      <div className="px-5 pt-8 pb-4 border-b border-ember">
-        <h1 className="font-display text-3xl text-bone tracking-wide">ADMIN DASHBOARD</h1>
-        <p className="text-dim font-mono text-xs mt-1">Manage rounds, view players, monitor anti-cheat flags</p>
+    <AppShell phase="prelaunch">
+      <div className="relative z-10 px-5 pt-8 pb-4 border-b border-ember/40 flex items-start gap-3">
+        {onBack && (
+          <button
+            type="button"
+            onClick={onBack}
+            className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-[transform,border-color] shrink-0 mt-0.5"
+            aria-label="Back to Survive"
+          >
+            <span className="text-dim text-lg">←</span>
+          </button>
+        )}
+        <div className="min-w-0">
+          <h1 className="font-display text-3xl text-bone tracking-wide">ADMIN DASHBOARD</h1>
+          <p className="text-dim font-mono text-xs mt-1">Manage rounds, view players, monitor anti-cheat flags</p>
+        </div>
       </div>
 
       {error && (
-        <div className="mx-5 mt-4 bg-blood/10 border border-blood/30 rounded-xl p-3 text-blood text-xs font-mono">
+        <div className="relative z-10 mx-5 mt-4 bg-blood/10 border border-blood/30 rounded-xl p-3 text-blood text-xs font-mono">
           {error}
         </div>
       )}
 
-      <div className="px-5 py-4 border-b border-ember flex gap-2 overflow-x-auto">
+      <div className="relative z-10 px-5 py-4 border-b border-ember/40 flex gap-2 overflow-x-auto">
         {['overview', 'rounds', 'players', 'flags', 'actions'].map((tab) => (
           <button
             key={tab}
@@ -177,9 +202,9 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-       <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
+       <div className={`relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-5 py-4 ${SHELL_BOTTOM_PAD}`}>
          {loading ? (
-           <div className="text-center py-12 text-dim font-mono">Loading…</div>
+           <ScreenLoader kind="detail" />
          ) : tabs === 'overview' ? (
            <OverviewPanel data={data} />
          ) : tabs === 'rounds' ? (
@@ -192,7 +217,7 @@ export default function AdminDashboard() {
            <ActionsPanel gameState={data.gameState} onCloseDay={handleCloseDay} onTriggerRounds={handleTriggerRounds} />
          ) : null}
        </div>
-    </div>
+    </AppShell>
   );
 }
 
@@ -244,7 +269,7 @@ function StatCard({ label, value, className = '' }) {
   return (
     <div className="bg-smoke border border-ember rounded-2xl p-4">
       <p className="text-dim text-xs font-mono uppercase tracking-wide">{label}</p>
-      <p className={`font-display text-2xl text-bone mt-1 ${className}`}>{value}</p>
+      <p className={`font-display text-2xl text-bone mt-1 tabular-nums ${className}`}>{value}</p>
     </div>
   );
 }

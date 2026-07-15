@@ -61,7 +61,7 @@ export default function ArsenalCard() {
       <div className="grid grid-cols-4 gap-2">
         {stats.map((s) => (
           <div key={s.label} className="text-center">
-            <p className={`font-display text-xl leading-none ${
+            <p className={`font-display text-xl leading-none tabular-nums ${
               s.tone === "amber" ? "text-amber" :
               s.tone === "neon" ? "text-neon" :
               s.tone === "bone" ? "text-bone" : "text-dim"
@@ -73,7 +73,7 @@ export default function ArsenalCard() {
         ))}
       </div>
       {daysInvested > 0 && (
-        <p className="text-dim/70 text-[9px] font-mono mt-2 text-center border-t border-ember/20 pt-2">
+        <p className="text-dim/70 text-[9px] font-mono mt-2 text-center border-t border-ember/20 pt-2 tabular-nums">
           {daysInvested} day{daysInvested !== 1 ? "s" : ""} invested — don&apos;t lose your progress
         </p>
       )}

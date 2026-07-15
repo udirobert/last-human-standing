@@ -1,23 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-
-// Random survival tips database
-const TIPS = [
-  "Trust no one. Especially that survivor in the corner.",
-  "If it seems too good to be true, it's probably a trap.",
-  "Your check-in is your lifeline. Never miss one.",
-  "Coalitions win wars. Find allies wisely.",
-  "The safest seat at the table is the one you're willing to burn.",
-  "When in doubt, observe. Knowledge is survival.",
-  "Every vote matters. Choose wisely.",
-  "The desert rewards patience.",
-  "Never reveal your strategy until you must.",
-  "Today's ally could be tomorrow's threat.",
-  "Water is life. Guard your resources.",
-  "The shadows hide more than just survivors.",
-  "A single decision can change everything.",
-  "Trust the process. Trust yourself.",
-  "The game doesn't end when you think it does.",
-];
+import { SURVIVAL_TIPS } from '../lib/copy.js';
 
 // Easter egg triggers
 const EASTER_EGGS = {
@@ -29,7 +11,7 @@ export function useSurvivalTips() {
   const [currentTip, setCurrentTip] = useState(null);
 
   const showRandomTip = useCallback(() => {
-    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    const tip = SURVIVAL_TIPS[Math.floor(Math.random() * SURVIVAL_TIPS.length)];
     setCurrentTip(tip);
   }, []);
 
@@ -40,7 +22,7 @@ export function useSurvivalTips() {
   return { currentTip, showRandomTip, dismissTip };
 }
 
-// Tip toast component
+/** Toast layer ~45 — above BottomNav (40), below overlays (70) */
 export function TipToast({ tip, onDismiss }) {
   useEffect(() => {
     const timer = setTimeout(onDismiss, 5000);
@@ -48,16 +30,25 @@ export function TipToast({ tip, onDismiss }) {
   }, [onDismiss]);
 
   return (
-    <div className="tip-toast fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up px-4">
-      <div className="bg-smoke border border-ember rounded-xl px-5 py-3 shadow-2xl max-w-sm">
-        <div className="text-xs text-amber font-mono tracking-widest uppercase mb-1">💀 Survival tip</div>
-        <div className="text-bone text-sm font-body">{tip}</div>
+    <div
+      className="tip-toast fixed left-1/2 -translate-x-1/2 z-[45] animate-toast-up px-4"
+      style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
+    >
+      <div className="bg-smoke/95 backdrop-blur-md border border-amber/30 rounded-2xl px-5 py-3 shadow-2xl max-w-sm">
+        <div className="text-[10px] text-amber font-mono tracking-[0.18em] uppercase mb-1">Survival tip</div>
+        <div className="text-bone text-sm font-body leading-snug">{tip}</div>
+        <button
+          type="button"
+          onClick={onDismiss}
+          className="mt-2 font-mono text-[10px] text-dim underline decoration-dotted underline-offset-2"
+        >
+          Dismiss
+        </button>
       </div>
     </div>
   );
 }
 
-// Easter egg tracker
 export function useEasterEgg(eggId) {
   const [count, setCount] = useState(() => {
     try {
@@ -84,17 +75,17 @@ export function useEasterEgg(eggId) {
   return { count, increment, unlocked, requirement: EASTER_EGGS[eggId]?.required };
 }
 
-// Secret message component
 export function SecretMessage({ message, onDismiss }) {
   return (
-    <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 animate-fade-in p-4">
-      <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-amber-500/30 rounded-2xl p-8 max-w-sm text-center">
+    <div className="fixed inset-0 z-[70] bg-ash/90 backdrop-blur-md flex items-center justify-center animate-fade-in p-4">
+      <div className="bg-smoke border border-amber/30 rounded-2xl p-8 max-w-sm text-center shadow-2xl">
         <div className="text-4xl mb-4">🔮</div>
-        <div className="text-amber-400 text-lg font-bold mb-2">Secret Unlocked!</div>
-        <div className="text-gray-300 mb-6">{message}</div>
+        <div className="font-display text-2xl text-amber tracking-wide mb-2">Secret unlocked</div>
+        <div className="text-bone/80 font-body text-sm mb-6 leading-relaxed">{message}</div>
         <button
+          type="button"
           onClick={onDismiss}
-          className="px-6 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold rounded-lg transition-colors"
+          className="px-6 py-2.5 bg-amber text-ash font-mono text-sm rounded-xl active:scale-95 transition-transform"
         >
           Accept
         </button>
@@ -103,7 +94,6 @@ export function SecretMessage({ message, onDismiss }) {
   );
 }
 
-// Particle effects for celebrations
 export function useParticles() {
   const [particles, setParticles] = useState([]);
 
@@ -124,7 +114,6 @@ export function useParticles() {
   return { particles, burst };
 }
 
-// Surprising notification (like "Someone is watching your profile...")
 export function useSuspenseNotification() {
   const [notification, setNotification] = useState(null);
 
@@ -150,24 +139,26 @@ export function SuspenseNotification({ notification, onDismiss }) {
   if (!notification) return null;
 
   return (
-    <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
-      <div className="bg-red-900/80 border border-red-500/50 rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3">
-        <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-        <span className="text-red-200 text-sm">{notification}</span>
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-[45] animate-toast-down"
+      style={{ top: "calc(4.5rem + env(safe-area-inset-top, 0px))" }}
+    >
+      <div className="bg-blood/20 border border-blood/40 rounded-xl px-5 py-3 shadow-2xl flex items-center gap-3 backdrop-blur-md">
+        <div className="w-2 h-2 bg-blood rounded-full animate-pulse" />
+        <span className="text-bone text-sm font-body">{notification}</span>
       </div>
     </div>
   );
 }
 
-// Streak fire animation
 export function StreakFire({ count }) {
   if (count < 3) return null;
-  
+
   return (
     <div className="relative inline-flex items-center">
       <span className="text-2xl animate-pulse">🔥</span>
-      <span className="ml-1 text-amber-400 font-bold">{count}</span>
-      {count >= 7 && <span className="ml-1 text-xs text-amber-300">ON FIRE!</span>}
+      <span className="ml-1 text-amber font-display text-lg tabular-nums">{count}</span>
+      {count >= 7 && <span className="ml-1 text-[10px] font-mono text-amber/80 tracking-wider">ON FIRE</span>}
     </div>
   );
 }

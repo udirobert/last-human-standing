@@ -130,7 +130,7 @@ export default function WildcardPanel() {
               key={c.address}
               onClick={() => handleVote(c.address)}
               disabled={submitting || voted !== null}
-              className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all active:scale-[0.98] ${
+              className={`w-full flex items-center justify-between p-3 rounded-xl border transition-[transform,background-color,border-color,opacity] active:scale-[0.98] ${
                 isMyVote
                   ? "bg-purple-500/20 border-purple-400/50"
                   : voted

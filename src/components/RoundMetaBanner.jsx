@@ -28,7 +28,10 @@ export default function RoundMetaBanner() {
     : "bg-smoke border-ember text-dim";
 
   return (
-    <div className="fixed top-14 left-3 right-3 z-50 pointer-events-none">
+    <div
+      className="fixed left-3 right-3 z-[45] pointer-events-none"
+      style={{ top: "calc(3.5rem + env(safe-area-inset-top, 0px))" }}
+    >
       <div className={`mx-auto max-w-md border rounded-xl px-3 py-2 ${classes}`}>
         {isLoading ? (
           <p className="text-xs font-mono text-center">Loading live round status…</p>
@@ -38,7 +41,7 @@ export default function RoundMetaBanner() {
               Can’t load live round status — using defaults.
             </p>
             {ageText && (
-              <p className="text-[10px] font-mono text-center opacity-80">{ageText}</p>
+              <p className="text-[10px] font-mono text-center opacity-80 tabular-nums">{ageText}</p>
             )}
             {error && (
               <p className="text-[10px] font-mono text-center opacity-70 break-words">

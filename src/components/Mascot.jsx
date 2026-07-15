@@ -177,9 +177,18 @@ export default function Mascot({
     <div
       ref={containerRef}
       className={`relative inline-flex flex-col items-center ${interactive ? "cursor-pointer" : ""}`}
+      role={interactive ? "button" : undefined}
+      tabIndex={interactive ? 0 : undefined}
+      aria-label={interactive ? `Interact with ${name || "your guide"}` : undefined}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleTap}
+      onKeyDown={(event) => {
+        if (interactive && (event.key === "Enter" || event.key === " ")) {
+          event.preventDefault();
+          handleTap();
+        }
+      }}
     >
       {/* Pulsing halo — gives the mascot a "presence". Pulses twice
           on mount then settles so it doesn't run forever on every
@@ -197,7 +206,7 @@ export default function Mascot({
       )}
 
       <motion.div
-        initial={{ scale: 0, rotate: -180, opacity: 0 }}
+        initial={{ scale: 0.92, rotate: -8, opacity: 0 }}
         animate={
           variant === "idle" && motionAnimate
             ? motionAnimate
@@ -312,7 +321,7 @@ export default function Mascot({
                   )}
 
             {/* Smile (only if no custom expression provides one) */}
-            {!["sad", "sleeping", "shocked", "determined", "proud"].includes(variant) && (
+            {!customExpression && (
               <path d="M-6 -8 Q0 -4 6 -8" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
             )}
 
@@ -374,9 +383,9 @@ export default function Mascot({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-2 px-3 py-1 bg-gray-800/80 rounded-full border border-gray-700"
+          className="mt-2 px-3 py-1 bg-smoke/80 rounded-full border border-ember/40"
         >
-          <span className="text-amber-400 text-xs font-medium">{name}</span>
+          <span className="text-amber text-xs font-mono">{name}</span>
         </motion.div>
       )}
 
@@ -385,12 +394,12 @@ export default function Mascot({
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="absolute -top-12 left-1/2 -translate-x-1/2 bg-gray-800 border border-gray-600 rounded-xl px-3 py-1.5 shadow-lg z-20"
+          className="absolute -top-12 left-1/2 -translate-x-1/2 bg-smoke border border-ember/50 rounded-xl px-3 py-1.5 shadow-lg z-20"
         >
-          <span className="text-gray-300 text-xs whitespace-nowrap">
+          <span className="text-bone/80 text-xs whitespace-nowrap font-body">
             {tapCount > 0 ? `${5 - tapCount} more...` : "Tap me!"}
           </span>
-          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-gray-800" />
+          <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-8 border-l-transparent border-r-transparent border-t-smoke" />
         </motion.div>
       )}
     </div>
@@ -437,6 +446,51 @@ function Burst() {
 
 function getExpression(variant) {
   switch (variant) {
+    case "excited":
+      return (
+        <>
+          <path d="M-11 -18 Q-6 -24 -1 -18" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M1 -18 Q6 -24 11 -18" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M-7 -8 Q0 0 7 -8" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill={P.foam} />
+        </>
+      );
+    case "celebrating":
+    case "cheering":
+      return (
+        <>
+          <path d="M-11 -19 Q-6 -13 -1 -19" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M1 -19 Q6 -13 11 -19" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M-8 -9 Q0 2 8 -9 Q0 -3 -8 -9" fill={P.espresso} />
+        </>
+      );
+    case "thinking":
+      return (
+        <>
+          <circle cx="-6" cy="-18" r="4" fill={P.foam} />
+          <circle cx="6" cy="-18" r="4" fill={P.foam} />
+          <circle cx="-4.5" cy="-19.5" r="2.5" fill={P.espresso} />
+          <circle cx="7.5" cy="-19.5" r="2.5" fill={P.espresso} />
+          <path d="M-4 -7 Q1 -9 6 -7" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" fill="none" />
+        </>
+      );
+    case "worried":
+      return (
+        <>
+          <path d="M-10 -22 L-2 -20" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" />
+          <path d="M10 -22 L2 -20" stroke={P.espresso} strokeWidth="2" strokeLinecap="round" />
+          <circle cx="-6" cy="-17" r="3" fill={P.espresso} />
+          <circle cx="6" cy="-17" r="3" fill={P.espresso} />
+          <path d="M-6 -5 Q0 -10 6 -5" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+        </>
+      );
+    case "winner":
+      return (
+        <>
+          <path d="M-11 -19 Q-6 -24 -1 -19" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M1 -19 Q6 -24 11 -19" stroke={P.espresso} strokeWidth="2.5" strokeLinecap="round" fill="none" />
+          <path d="M-8 -8 Q0 -1 8 -8" stroke={P.espresso} strokeWidth="3" strokeLinecap="round" fill="none" />
+        </>
+      );
     case "sad":
       return (
         <>

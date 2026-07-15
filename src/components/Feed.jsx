@@ -7,13 +7,17 @@ import { useTrustTier } from '../hooks/useTrustTier.js';
 import VoteGateBanner from './VoteGateBanner.jsx';
 import { MiniKit } from "@worldcoin/minikit-js";
 import FAQModal from './FAQModal.jsx';
-import AmbientBackdrop from './AmbientBackdrop.jsx';
+import AppShell, { SHELL_BOTTOM_PAD } from './AppShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import { useDelight } from './DelightProvider.jsx';
+import { useMascotEvent } from './MascotEventProvider.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
-import MotifFrieze from './ui/MotifFrieze.jsx';
 import { MascotAvatar } from './Mascot.jsx';
+import EmptyState from './EmptyState.jsx';
 import { HumanCta } from './ui/CraftCta.jsx';
+import { haptic } from '../lib/haptics.js';
+import ScreenLoader from './ui/ScreenLoader.jsx';
+import { CUE_PRESS } from '../lib/cuelume.js';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -44,7 +48,7 @@ function LiveTally({ real = 0, fake = 0 }) {
           <p className="font-mono text-[10px] text-neon uppercase tracking-widest">Human</p>
           <p className="font-display text-3xl text-neon leading-none tabular-nums">{real}</p>
         </div>
-        <p className="font-mono text-dim text-xs pb-1">
+        <p className="font-mono text-dim text-xs pb-1 tabular-nums">
           {total === 0 ? 'awaiting votes' : `${realPct}% · ${fakePct}%`}
         </p>
         <div className="text-right">
@@ -86,6 +90,7 @@ export default function Feed({ onBack, onCheckIn }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
   const { verification, phase, you } = useRound();
   const { unlockAchievement, checkAchievement } = useDelight();
+  const { dispatchMascotEvent } = useMascotEvent();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
   const [voteMeta, setVoteMeta] = useState({});
@@ -178,7 +183,7 @@ export default function Feed({ onBack, onCheckIn }) {
   const handleVote = async (id, type) => {
     if (!canVote) return;
     if (voted[id]) return;
-    if (navigator.vibrate) navigator.vibrate(type === 'real' ? 15 : [10, 30, 10]);
+    haptic(type === 'real' ? 'light' : 'warning');
     setVoted((v) => ({ ...v, [id]: type }));
     setSubmissions((subs) =>
       subs.map((s) =>
@@ -190,6 +195,12 @@ export default function Feed({ onBack, onCheckIn }) {
 
     // Achievement: first vote (press sound from data-cuelume-press on the button)
     unlockAchievement?.('first_vote');
+    // Transient mascot reaction to the vote
+    dispatchMascotEvent({
+      type: "vote_react",
+      variant: type === "real" ? "excited" : "thinking",
+      message: null,
+    });
 
     if (walletAuthed && entryPaid) {
       try {
@@ -252,12 +263,11 @@ export default function Feed({ onBack, onCheckIn }) {
   const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
-      <AmbientBackdrop phase={phase === 'live' ? 'live' : 'prelaunch'} />
+    <AppShell phase={phase === 'live' ? 'live' : 'prelaunch'}>
 
-      <div className="relative z-10 px-4 pt-12 pb-3 sticky top-0 bg-ash/90 backdrop-blur-md z-20">
+      <div className="relative z-10 px-4 pt-10 pb-3 sticky top-0 bg-ash/80 backdrop-blur-md z-20">
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
+          <button type="button" onClick={onBack} {...CUE_PRESS} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-[0.97] transition-transform" aria-label="Back">
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1 min-w-0">
@@ -270,14 +280,16 @@ export default function Feed({ onBack, onCheckIn }) {
         <div className="flex gap-2 mb-2 items-center overflow-x-auto">
           {['all', 'pending', 'verified', 'flagged'].map((key) => (
             <button
+              type="button"
               key={key}
               onClick={() => setFilter(key)}
-              className={`px-3 py-1.5 rounded-full text-xs font-mono border shrink-0 ${filter === key ? 'border-bone text-bone' : 'border-ember text-dim'}`}
+              {...CUE_PRESS}
+              className={`px-3 py-1.5 rounded-full text-xs font-mono border shrink-0 active:scale-[0.97] transition-transform ${filter === key ? 'border-bone text-bone' : 'border-ember text-dim'}`}
             >
               {key === 'verified' ? 'HUMAN' : key === 'flagged' ? 'SUS' : key === 'pending' ? 'TRIAL' : 'ALL'}
             </button>
           ))}
-          <button onClick={handleRefresh} className="ml-auto px-3 py-1.5 rounded-full text-xs font-mono border border-ember text-dim shrink-0">
+          <button type="button" onClick={handleRefresh} {...CUE_PRESS} className="ml-auto px-3 py-1.5 rounded-full text-xs font-mono border border-ember text-dim shrink-0 active:scale-[0.97] transition-transform">
             {refreshing ? '...' : 'LIVE'}
           </button>
         </div>
@@ -292,7 +304,7 @@ export default function Feed({ onBack, onCheckIn }) {
         )}
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 space-y-5 pb-24">
+      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 space-y-5 ${SHELL_BOTTOM_PAD}`}>
         {useMocks && !isMiniApp && (
           <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5 mx-1">
             Dev preview — sample submissions. Live data appears in production builds.
@@ -306,25 +318,28 @@ export default function Feed({ onBack, onCheckIn }) {
           </p>
         )}
         <VoteGateBanner />
+        <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
+          Vote the proof, not the person. Don&apos;t redistribute photos off the app.
+        </p>
         {loading && submissions.length === 0 && (
-          <div className="text-dim font-mono text-sm text-center py-12">Loading the trial…</div>
+          <ScreenLoader kind="list" />
         )}
 
         {!loading && filtered.length === 0 && (
-          <div className="text-center py-12 px-4">
-            <div className="flex justify-center mb-4">
-              <ThemeMotif emoji={(findTheme(TODAY_THEME.theme) || TODAY_THEME).emoji} size={72} label={TODAY_THEME.theme} />
-            </div>
-            <p className="text-bone/70 font-body text-sm mb-4">No submissions yet for {TODAY_THEME.theme}.</p>
-            {onCheckIn && walletAuthed && entryPaid ? (
-              <HumanCta onClick={onCheckIn}>
-                Be the first to check in →
-              </HumanCta>
-            ) : (
-              <p className="text-dim font-mono text-xs">Submissions appear here the moment players check in.</p>
-            )}
-            <MotifFrieze className="w-full mt-8 opacity-85" />
-          </div>
+          <EmptyState
+            motif="coffee"
+            title={`No submissions yet for ${TODAY_THEME.theme}`}
+            body={
+              onCheckIn && walletAuthed && entryPaid
+                ? null
+                : "Submissions appear here the moment players check in."
+            }
+            action={
+              onCheckIn && walletAuthed && entryPaid ? (
+                <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>
+              ) : null
+            }
+          />
         )}
 
         <AnimatePresence>
@@ -445,15 +460,18 @@ export default function Feed({ onBack, onCheckIn }) {
                   {isExpanded && (
                     <div className="mt-4 space-y-2">
                       <button
+                        type="button"
                         onClick={() => handleChallenge(sub)}
-                        className="w-full py-3 rounded-2xl bg-amber/10 border border-amber/30 text-amber font-mono text-sm"
+                        {...CUE_PRESS}
+                        className="w-full py-3 rounded-2xl bg-amber/10 border border-amber/30 text-amber font-mono text-sm active:scale-[0.97] transition-transform"
                       >
                         Challenge in chat
                       </button>
                       <button
                         type="button"
                         onClick={() => setFired((v) => ({ ...v, [sub.id]: !v[sub.id] }))}
-                        className={`w-full py-3 rounded-2xl border font-mono text-sm transition-colors ${
+                        {...CUE_PRESS}
+                        className={`w-full py-3 rounded-2xl border font-mono text-sm active:scale-[0.97] transition-transform ${
                           fired[sub.id]
                             ? "bg-amber/15 border-amber/40 text-amber"
                             : "bg-ash border-ember text-dim"
@@ -472,6 +490,6 @@ export default function Feed({ onBack, onCheckIn }) {
           })}
         </AnimatePresence>
       </div>
-    </div>
+    </AppShell>
   );
 }

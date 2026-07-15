@@ -5,6 +5,7 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { useDelight } from "./DelightProvider.jsx";
 import Mascot from "./Mascot.jsx";
 import TrustBadge from "./TrustBadge.jsx";
+import WhatsPublicChip from "./WhatsPublicChip.jsx";
 import BrowserWalletPay from "../wallet/BrowserWalletPay.jsx";
 import { ENTRY_FEE_WLD } from "../config/humanityProviders.js";
 import { useEntryMode } from "../hooks/useEntryMode.js";
@@ -23,8 +24,9 @@ import ExitIntentPrompt from "./ui/ExitIntentPrompt.jsx";
 import SharePanel from "./prelaunch/SharePanel.jsx";
 import { markJustReserved } from "../lib/postReserve.js";
 import { CUE_PRESS } from "../lib/cuelume.js";
-import { HumanCta } from "./ui/CraftCta.jsx";
+import { CompactButton, HumanCta } from "./ui/CraftCta.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
+import { MOTION_SPRING } from "../lib/motion.js";
 
 const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 
@@ -149,7 +151,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
           {stepLabels.map((_, i) => (
             <div
               key={i}
-              className="h-1 rounded-full transition-all duration-300 ease-out"
+              className="h-1 rounded-full transition-[width,background-color,opacity] duration-300 ease-out"
               style={{
                 width: i === step ? "24px" : "12px",
                 backgroundColor: i <= step ? "rgb(var(--color-blood))" : "rgb(var(--color-ember))",
@@ -193,7 +195,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             </section>
 
             {/* Animated gameplay loop demo — see the game before you commit */}
-            <section className="px-5 pb-10">
+            <section className="max-w-[560px] mx-auto px-5 pb-10">
               <p className="font-display text-3xl text-bone text-center tracking-wide mb-5">SEE THE LOOP</p>
               <GameplayLoopDemo />
             </section>
@@ -214,16 +216,13 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
 
               <CohortTicker pollMs={15000} />
 
-              <motion.button
-                type="button"
-                onClick={() => setStep(1)}
-                className="w-full py-5 rounded-2xl bg-amber text-[#1a1206] font-body font-semibold text-lg active:scale-[0.97] transition-transform shadow-[0_10px_30px_-8px_rgba(255,184,0,0.5)]"
-              >
+              <HumanCta onClick={() => setStep(1)} className="!max-w-none !py-5 !text-lg">
                 Reserve your slot →
-              </motion.button>
+              </HumanCta>
 
-              <div className="flex justify-center pt-1">
+              <div className="flex justify-center items-center gap-2 flex-wrap pt-1">
                 <TrustBadge size="sm" />
+                <WhatsPublicChip />
               </div>
             </section>
           </motion.div>
@@ -235,7 +234,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+            transition={MOTION_SPRING.snappy}
             className="flex-1 flex flex-col min-h-0"
           >
             <StageShell
@@ -317,7 +316,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+            transition={MOTION_SPRING.snappy}
             className="flex-1 flex flex-col min-h-0"
           >
             <StageShell
@@ -348,7 +347,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                         {q.options.map((opt) => {
                           const selected = profile[q.id] === opt.value;
                           return (
-                            <button
+                            <CompactButton
                               key={opt.value}
                               type="button"
                               onClick={() => {
@@ -356,8 +355,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                                 setProfile(next);
                                 try { localStorage.setItem("lhs_profile", JSON.stringify(next)); } catch { /* ignore */ }
                               }}
-                              {...CUE_PRESS}
-                              className={`w-full flex items-center gap-3 rounded-2xl p-3 border text-left transition-all active:scale-[0.97] ${
+                              className={`w-full flex items-center gap-3 rounded-2xl p-3 border text-left ${
                                 selected
                                   ? "bg-amber/15 border-amber/60"
                                   : "bg-smoke/70 border-ember/40 hover:border-amber/30"
@@ -375,7 +373,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                               {selected && (
                                 <span className="ml-auto text-amber text-sm shrink-0">✓</span>
                               )}
-                            </button>
+                            </CompactButton>
                           );
                         })}
                       </div>
@@ -402,7 +400,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
             initial={{ opacity: 0, transform: "translateX(16px) scale(0.98)" }}
             animate={{ opacity: 1, transform: "translateX(0) scale(1)" }}
             exit={{ opacity: 0, transform: "translateX(-16px) scale(0.98)" }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+            transition={MOTION_SPRING.snappy}
             className="flex-1 flex flex-col min-h-0"
           >
             <StageShell
@@ -533,13 +531,12 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
 
                     {!isWorldApp && (
                       <StageSection index={5}>
-                        <button
-                          type="button"
+                        <CompactButton
                           onClick={() => { markOnboardingDone(); onEnter(); }}
-                          className="w-full py-2.5 rounded-xl text-dim font-body text-sm hover:text-bone active:scale-[0.97] transition-all"
+                          className="w-full py-2.5 rounded-xl text-dim font-body text-sm hover:text-bone"
                         >
                           Just looking? Browse the feed →
-                        </button>
+                        </CompactButton>
                       </StageSection>
                     )}
 

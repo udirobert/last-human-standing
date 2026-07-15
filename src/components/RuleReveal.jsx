@@ -7,6 +7,9 @@ import ThemeMotif from "./ui/ThemeMotif.jsx";
 import ThemeFairness from "./ThemeFairness.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta, GhostLink } from "./ui/CraftCta.jsx";
+import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
+import OverlayPortal from "./OverlayPortal.jsx";
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
 const SEEN_KEY = "lhs_round_unlocks_seen";
 
@@ -89,27 +92,35 @@ export default function RuleReveal({ onAudit }) {
     if (goAudit) onAudit();
   }, [currentDay, you?.isEliminated, onAudit, dismiss]);
 
+  const trapRef = useFocusTrap(Boolean(unlock), { onEscape: dismiss });
+
   return (
+    <OverlayPortal>
     <AnimatePresence>
       {unlock && (
         <motion.div
           key={unlock.id}
+          ref={trapRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-labelledby="rule-reveal-title"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center px-6 overflow-y-auto"
+          transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+          className="fixed inset-0 z-[70] flex flex-col items-center justify-center px-6 overflow-y-auto overscroll-y-contain outline-none"
           style={{
             background: "radial-gradient(120% 90% at 50% 0%, rgba(74,50,33,0.97) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
+            paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))",
+            paddingTop: "max(1.5rem, env(safe-area-inset-top, 0px))",
           }}
         >
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12 }}
-            transition={{ type: "spring", duration: 0.45, bounce: 0.12 }}
+            transition={MOTION_SPRING.snappy}
             className="w-full max-w-sm text-center"
           >
             <p className="font-mono text-amber/90 uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
@@ -169,5 +180,6 @@ export default function RuleReveal({ onAudit }) {
         </motion.div>
       )}
     </AnimatePresence>
+    </OverlayPortal>
   );
 }

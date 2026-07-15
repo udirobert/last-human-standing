@@ -10,6 +10,9 @@ import MascotGuide from "./ui/MascotGuide.jsx";
 import { useDelight } from "./DelightProvider.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import { haptic } from "../lib/haptics.js";
+import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
+import OverlayPortal from "./OverlayPortal.jsx";
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
 /**
  * GameMoment — full-screen cinematic overlays for the two most
@@ -74,7 +77,7 @@ export default function GameMoment({
   }
 
   return (
-    <>
+    <OverlayPortal>
       <AnimatePresence mode="wait">
         {result.survived ? (
           <SurvivalMoment
@@ -87,6 +90,7 @@ export default function GameMoment({
             photoUploadFailed={photoUploadFailed}
             playerName={playerName}
             photoUrl={photoUrl}
+            shareOpen={showShareSheet}
           />
         ) : (
           <EliminationMoment
@@ -98,6 +102,7 @@ export default function GameMoment({
             shareCopied={shareCopied}
             playerName={playerName}
             photoUrl={photoUrl}
+            shareOpen={showShareSheet}
           />
         )}
       </AnimatePresence>
@@ -114,7 +119,7 @@ export default function GameMoment({
         onNativeShare={onShare}
         onClose={() => setShowShareSheet(false)}
       />
-    </>
+    </OverlayPortal>
   );
 }
 
@@ -147,19 +152,28 @@ function MomentCardPreview({ kind, name, day, rank, cap, photoUrl }) {
   );
 }
 
-function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName, photoUrl }) {
+function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName, photoUrl, shareOpen }) {
   const { handleMascotClick } = useDelight();
   // Haptic celebration
   useEffect(() => {
     haptic("success");
   }, []);
 
+  // Yield the trap to ShareSheet while it's stacked on top
+  const trapRef = useFocusTrap(!shareOpen, { onEscape: onDismiss });
+
   return (
     <motion.div
+      ref={trapRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Day ${currentDay ?? ""} survived — rank ${result.rank}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto py-8"
+      transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto overscroll-y-contain py-8 outline-none"
     >
       {/* Pulse rings behind the checkmark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -181,7 +195,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
       <motion.div
         initial={{ scale: 0, rotate: -180 }}
         animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
+        transition={{ ...MOTION_SPRING.gentle, bounce: 0.3 }}
         className="w-24 h-24 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-5 relative z-10 shrink-0 overflow-hidden"
       >
         <ThemeMotif emoji="🌅" size={64} label="survived" />
@@ -197,10 +211,10 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         <p className="font-mono text-neon text-sm tracking-widest uppercase mb-2">
           Day {currentDay ?? "—"} · Survived
         </p>
-        <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow">
+        <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow tabular-nums">
           RANK #{result.rank}
         </p>
-        <p className="text-dim font-body text-sm">
+        <p className="text-dim font-body text-sm tabular-nums">
           of {result.survivalCap} surviving today
         </p>
         {result.gpsShared && (
@@ -270,12 +284,15 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
   );
 }
 
-function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName, photoUrl }) {
+function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName, photoUrl, shareOpen }) {
   const { handleMascotClick } = useDelight();
   // Haptic thud — heavy, single pulse
   useEffect(() => {
     haptic("error");
   }, []);
+
+  // Yield the trap to ShareSheet while it's stacked on top
+  const trapRef = useFocusTrap(!shareOpen, { onEscape: onDismiss });
 
   // Fetch the vote breakdown for this day's submission — "why was I eliminated"
   const [verdict, setVerdict] = useState(null);
@@ -303,10 +320,16 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
 
   return (
     <motion.div
+      ref={trapRef}
+      tabIndex={-1}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Eliminated on day ${currentDay ?? ""} — rank ${result.rank}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto py-8"
+      transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto overscroll-y-contain py-8 outline-none"
     >
       {/* Red vignette */}
       <motion.div
@@ -337,10 +360,10 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         <p className="font-display text-5xl text-blood leading-none mb-2 animate-glow">
           ELIMINATED
         </p>
-        <p className="text-bone font-mono text-base mb-1">
+        <p className="text-bone font-mono text-base mb-1 tabular-nums">
           You survived {daysSurvived} day{Number(daysSurvived) !== 1 ? "s" : ""}
         </p>
-        <p className="text-dim font-mono text-sm">
+        <p className="text-dim font-mono text-sm tabular-nums">
           Rank #{result.rank} of {result.survivalCap} · Top {percentile}%
         </p>
 
@@ -352,7 +375,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
             transition={{ delay: 0.5, type: "spring", bounce: 0.3 }}
             className="mt-3 inline-block px-4 py-2 rounded-full bg-amber/15 border border-amber/50"
           >
-            <p className="font-mono text-amber text-xs tracking-wide">
+            <p className="font-mono text-amber text-xs tracking-wide tabular-nums">
               So close — {spotsAway} {spotsAway === 1 ? "spot" : "spots"} from survival
             </p>
           </motion.div>
@@ -413,7 +436,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
                   className="bg-neon/40 flex items-center justify-center"
                   style={{ width: `${verdict.votes.realPct}%` }}
                 >
-                  <span className="text-neon font-mono text-[10px]">{verdict.votes.realPct}%</span>
+                  <span className="text-neon font-mono text-[10px] tabular-nums">{verdict.votes.realPct}%</span>
                 </div>
               )}
               {verdict.votes.fakePct != null && verdict.votes.fakePct > 0 && (
@@ -421,13 +444,13 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
                   className="bg-blood/40 flex items-center justify-center"
                   style={{ width: `${verdict.votes.fakePct}%` }}
                 >
-                  <span className="text-blood font-mono text-[10px]">{verdict.votes.fakePct}%</span>
+                  <span className="text-blood font-mono text-[10px] tabular-nums">{verdict.votes.fakePct}%</span>
                 </div>
               )}
             </div>
             <div className="flex justify-between mt-1.5">
-              <p className="text-neon font-mono text-[10px]">🧍 HUMAN · {verdict.votes.real}</p>
-              <p className="text-blood font-mono text-[10px]">SUS · {verdict.votes.fake}</p>
+              <p className="text-neon font-mono text-[10px] tabular-nums">🧍 HUMAN · {verdict.votes.real}</p>
+              <p className="text-blood font-mono text-[10px] tabular-nums">SUS · {verdict.votes.fake}</p>
             </div>
             {wasFlagged && (
               <p className="text-dim text-[10px] font-mono mt-2 text-center leading-relaxed">

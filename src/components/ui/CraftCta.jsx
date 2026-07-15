@@ -5,9 +5,10 @@ import { CUE_PRESS, CUE_HOVER } from "../../lib/cuelume.js";
  * HumanCta = warm conversion (LandingHero). GameCta = system actions.
  */
 
-export function HumanCta({ children, onClick, disabled, className = "", type = "button" }) {
+export function HumanCta({ children, onClick, disabled, className = "", type = "button", ...props }) {
   return (
     <button
+      {...props}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -20,7 +21,7 @@ export function HumanCta({ children, onClick, disabled, className = "", type = "
   );
 }
 
-export function GameCta({ children, onClick, disabled, tone = "blood", className = "", type = "button" }) {
+export function GameCta({ children, onClick, disabled, tone = "blood", className = "", type = "button", ...props }) {
   const tones = {
     blood: "bg-blood text-bone",
     amber: "bg-amber text-ash",
@@ -30,6 +31,7 @@ export function GameCta({ children, onClick, disabled, tone = "blood", className
   };
   return (
     <button
+      {...props}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -43,13 +45,28 @@ export function GameCta({ children, onClick, disabled, tone = "blood", className
   );
 }
 
-export function GhostLink({ children, onClick, className = "" }) {
+export function GhostLink({ children, onClick, className = "", ...props }) {
   return (
     <button
+      {...props}
       type="button"
       onClick={onClick}
       {...CUE_PRESS}
       className={`font-mono text-dim text-xs underline decoration-dotted underline-offset-2 ${className}`}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** Shared tactile behavior for compact/icon/segmented controls. */
+export function CompactButton({ children, className = "", type = "button", ...props }) {
+  return (
+    <button
+      {...props}
+      type={type}
+      {...CUE_PRESS}
+      className={`active:scale-[0.97] transition-[transform,color,background-color,border-color,opacity] duration-150 disabled:opacity-40 disabled:pointer-events-none ${className}`}
     >
       {children}
     </button>

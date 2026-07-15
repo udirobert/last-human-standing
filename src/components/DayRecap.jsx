@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { getDayRecapMascot } from "../lib/copy.js";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta } from "./ui/CraftCta.jsx";
+import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
+import OverlayPortal from "./OverlayPortal.jsx";
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
 /**
  * DayRecap — a cinematic full-screen overlay shown when a day closes.
@@ -65,7 +68,7 @@ export default function DayRecap() {
     }
   }, []);
 
-  const dismiss = () => setShow(false);
+  const dismiss = useCallback(() => setShow(false), []);
 
   const survived = recapData?.survivors ?? "—";
   const eliminated = recapData?.eliminated ?? "—";
@@ -78,23 +81,33 @@ export default function DayRecap() {
   const youEliminated = you?.isEliminated === true && you?.eliminatedAtDay === day;
   const personalResult = youSurvived ? "survived" : youEliminated ? "eliminated" : null;
   const recapMascot = getDayRecapMascot({ personalResult });
+  const trapRef = useFocusTrap(show, { onEscape: dismiss });
 
   return (
+    <OverlayPortal>
     <AnimatePresence>
       {show && (
         <motion.div
+          ref={trapRef}
+          tabIndex={-1}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Day recap"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-40 flex flex-col items-center justify-center px-5 overflow-y-auto"
+          transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+          className="fixed inset-0 z-[70] flex flex-col items-center justify-center px-5 overflow-y-auto overscroll-y-contain outline-none"
           style={{
             background: "radial-gradient(120% 90% at 50% 0%, rgba(74,50,33,0.97) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
+            paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))",
+            paddingTop: "max(1.5rem, env(safe-area-inset-top, 0px))",
           }}
         >
           <motion.div
             initial={{ scale: 0.92, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", duration: 0.5, bounce: 0.15 }}
+            transition={MOTION_SPRING.gentle}
             className="text-center w-full max-w-sm"
           >
             <p className="font-mono text-dim text-sm tracking-widest uppercase mb-3">
@@ -143,7 +156,7 @@ export default function DayRecap() {
               transition={{ delay: 0.5 }}
               className="text-bone font-body text-sm mt-6"
             >
-              <span className="font-display text-2xl text-amber">{remaining}</span> humans remain
+              <span className="font-display text-2xl text-amber tabular-nums">{remaining}</span> humans remain
             </motion.p>
 
             <HumanCta onClick={dismiss} className="mt-8">
@@ -155,6 +168,7 @@ export default function DayRecap() {
         </motion.div>
       )}
     </AnimatePresence>
+    </OverlayPortal>
   );
 }
 

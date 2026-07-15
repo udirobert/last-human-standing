@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { GameCta } from './ui/CraftCta.jsx';
 
 /**
  * WaitlistCard — captures bounced visitors on the welcome screen.
@@ -113,13 +114,13 @@ export default function WaitlistCard({ source = 'welcome_screen', variant = 'def
                 className="w-full bg-ash border border-ember/40 rounded-lg px-3 py-2 font-mono text-sm text-bone placeholder:text-dim focus:outline-none focus:border-blood/70 transition-colors"
               />
             </div>
-            <button
+            <GameCta
               type="submit"
               disabled={status === 'submitting'}
-              className="w-full mt-3 py-2.5 rounded-lg bg-blood text-bone font-display text-sm tracking-widest uppercase active:scale-95 transition-transform disabled:opacity-50"
+              className="mt-3 !max-w-none !py-2.5 !rounded-lg !font-display !text-sm tracking-widest uppercase"
             >
               {status === 'submitting' ? 'sending…' : status === 'error' ? 'retry' : 'notify me →'}
-            </button>
+            </GameCta>
             <p className="text-[10px] font-mono text-dim mt-2 text-center">
               We never share or sell contact info.
             </p>

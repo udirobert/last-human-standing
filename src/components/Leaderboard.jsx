@@ -6,7 +6,9 @@ import { usePolling } from '../hooks/usePolling.js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import Countdown from './Countdown.jsx';
 import FAQModal from './FAQModal.jsx';
-import AmbientBackdrop from './AmbientBackdrop.jsx';
+import AppShell, { SHELL_BOTTOM_PAD } from './AppShell.jsx';
+import OverlayPortal from './OverlayPortal.jsx';
+import EmptyState from './EmptyState.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import BubbleLoader from './ui/BubbleLoader.jsx';
 import Mascot, { MascotAvatar } from './Mascot.jsx';
@@ -88,12 +90,11 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
   const isLive = phase === 'live';
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
-      <AmbientBackdrop phase={isLive ? 'live' : 'prelaunch'} />
+    <AppShell phase={isLive ? 'live' : 'prelaunch'}>
       {/* Header */}
-      <div className="relative z-10 px-5 pt-12 pb-4">
+      <div className="relative z-10 px-5 pt-10 pb-4">
         <div className="flex items-center gap-4 mb-4">
-          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
+          <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-[transform,border-color]" aria-label="Back">
             <span className="text-dim text-lg">←</span>
           </button>
           <div className="flex-1">
@@ -121,7 +122,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               <span>{cohortPct}%</span>
             </div>
             <div className="mt-1 h-1.5 bg-ember rounded-full overflow-hidden">
-              <div className="h-full bg-amber rounded-full transition-all" style={{ width: `${cohortPct}%` }} />
+              <div className="h-full bg-amber rounded-full transition-[width]" style={{ width: `${cohortPct}%` }} />
             </div>
             {cohortFull && (
               <p className="text-neon text-xs font-mono mt-3">✓ Cohort full · waiting for launch</p>
@@ -133,7 +134,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
         <div className="bg-smoke border border-amber/40 rounded-3xl p-5 mb-3">
           <p className="font-mono text-amber text-xs tracking-widest uppercase mb-1">Prize Pool · World Chain</p>
           <div className="flex items-end gap-3 mb-1">
-            <span className="font-display text-5xl text-amber leading-none">
+            <span className="font-display text-5xl text-amber leading-none tabular-nums">
               {prizePoolWld != null ? prizePoolWld.toLocaleString(undefined, { maximumFractionDigits: 2 }) : '—'}
             </span>
             <span className="font-display text-2xl text-amber/60 mb-1">WLD</span>
@@ -143,15 +144,15 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="text-center">
               <p className="font-mono text-dim text-xs">Cohort</p>
-              <p className="font-mono text-bone text-xs mt-0.5">{reservedCount}/{cohortSize}</p>
+              <p className="font-mono text-bone text-xs mt-0.5 tabular-nums">{reservedCount}/{cohortSize}</p>
             </div>
             <div className="text-center">
               <p className="font-mono text-dim text-xs">Alive</p>
-              <p className="font-mono text-bone text-xs mt-0.5">{activePlayers ?? totalPlayers}</p>
+              <p className="font-mono text-bone text-xs mt-0.5 tabular-nums">{activePlayers ?? totalPlayers}</p>
             </div>
             <div className="text-center">
               <p className="font-mono text-dim text-xs">Eliminated</p>
-              <p className="font-mono text-bone text-xs mt-0.5">{totalPlayers > 0 && activePlayers != null ? totalPlayers - activePlayers : 0}</p>
+              <p className="font-mono text-bone text-xs mt-0.5 tabular-nums">{totalPlayers > 0 && activePlayers != null ? totalPlayers - activePlayers : 0}</p>
             </div>
           </div>
           {prizePoolExplorer && (
@@ -181,7 +182,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className={`flex-1 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-all ${
+              className={`flex-1 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-[background-color,color,border-color] ${
                 tab === t.id ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
               }`}
             >
@@ -191,7 +192,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pb-24">
+      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${SHELL_BOTTOM_PAD}`}>
       {/* PRE-LAUNCH: Roster */}
       {isPrelaunch && (tab === 'roster' || tab === 'today') && (
         <div className="px-5 space-y-2">
@@ -233,11 +234,11 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.02 }}
                 onClick={() => setPeekPlayer(r)}
-                className={`flex items-center gap-3 rounded-2xl p-3 cursor-pointer hover:border-amber/40 transition-all ${
+                className={`flex items-center gap-3 rounded-2xl p-3 cursor-pointer hover:border-amber/40 transition-[border-color] ${
                   isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                 }`}
               >
-                <div className="w-7 h-7 rounded-full bg-ember flex items-center justify-center font-display text-xs text-dim">
+                <div className="w-7 h-7 rounded-full bg-ember flex items-center justify-center font-display text-xs text-dim tabular-nums">
                   {i + 1}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -299,10 +300,12 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             Top referrers — priority check-in on Day 1
           </p>
           {refBoard.length === 0 ? (
-            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
-              <p className="text-dim text-sm font-mono">No referrals yet.</p>
-              <p className="text-bone text-xs font-mono mt-1">Be the first — share your link above!</p>
-            </div>
+            <EmptyState
+              motif="bloom"
+              title="No referrals yet"
+              body="Share your invite — friends who join count toward Day 1 priority."
+              className="py-6"
+            />
           ) : (
             refBoard.map((r, i) => (
               <motion.div
@@ -407,11 +410,11 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
                 onClick={() => setPeekPlayer(c)}
-                className={`flex items-center gap-3 rounded-2xl p-4 cursor-pointer hover:border-amber/40 transition-all ${
+                className={`flex items-center gap-3 rounded-2xl p-4 cursor-pointer hover:border-amber/40 transition-[border-color] ${
                   isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg ${
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg tabular-nums ${
                   c.rank === 1 ? 'text-amber' : c.rank <= 3 ? 'text-bone' : 'text-dim'
                 }`}>
                   {c.rank <= 3 ? ['🥇', '🥈', '🥉'][c.rank - 1] : c.rank}
@@ -437,9 +440,12 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
       {isLive && tab === 'late' && (
         <div className="px-5 space-y-2">
           {tooLate.length === 0 ? (
-            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
-              <p className="text-dim text-sm font-mono">No late arrivals yet.</p>
-            </div>
+            <EmptyState
+              motif="cat"
+              title="No late arrivals yet"
+              body="When the survival cap fills, stragglers land here."
+              className="py-6"
+            />
           ) : (
             tooLate.map((c, i) => (
               <motion.div
@@ -448,12 +454,12 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.04 }}
                 onClick={() => setPeekPlayer(c)}
-                className="bg-smoke border border-ember rounded-2xl p-4 flex items-center gap-3 opacity-60 cursor-pointer hover:border-amber/40 hover:opacity-90 transition-all"
+                className="bg-smoke border border-ember rounded-2xl p-4 flex items-center gap-3 opacity-60 cursor-pointer hover:border-amber/40 hover:opacity-90 transition-[border-color,opacity]"
               >
                 <MascotAvatar status="eliminated" size={24} />
                 <div className="flex-1">
                   <p className="font-mono text-bone text-sm line-through">{c.username || shortAddr(c.address)}</p>
-                  <p className="text-dim text-xs mt-0.5">Arrived as #{c.rank}</p>
+                  <p className="text-dim text-xs mt-0.5 tabular-nums">Arrived as #{c.rank}</p>
                 </div>
                 <p className="font-mono text-dim text-xs">{c.distance_m != null ? `${Math.round(c.distance_m)}m` : ''}</p>
               </motion.div>
@@ -468,13 +474,12 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             Top detectives · min 5 votes
           </p>
           {detectiveBoard.length === 0 ? (
-            <div className="bg-smoke border border-ember rounded-2xl p-6 text-center">
-              <p className="text-2xl mb-2">🔍</p>
-              <p className="text-dim text-sm font-mono">No detectives yet.</p>
-              <p className="text-bone text-xs font-mono mt-1">
-                Vote on 5 submissions to earn your rank.
-              </p>
-            </div>
+            <EmptyState
+              motif="cat"
+              title="No detectives yet"
+              body="Vote on 5 submissions to earn your rank."
+              className="py-6"
+            />
           ) : (
             detectiveBoard.map((d, i) => {
               const isYou = myAddr && d.address?.toLowerCase() === myAddr;
@@ -494,7 +499,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                     isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg ${
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg tabular-nums ${
                     rank <= 3 ? 'text-amber' : 'text-dim'
                   }`}>
                     {rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank}
@@ -521,6 +526,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
       )}
 
       {/* Profile Peek Overlay */}
+      <OverlayPortal>
       <AnimatePresence>
         {peekPlayer && (
           <>
@@ -530,7 +536,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
               onClick={() => setPeekPlayer(null)}
-              className="fixed inset-0 bg-ash/80 z-40"
+              className="fixed inset-0 bg-ash/80 z-[70]"
             />
             {/* Slide up card */}
             <motion.div
@@ -538,7 +544,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 250 }}
-              className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-smoke border-t border-ember rounded-t-3xl p-6 z-50 shadow-2xl"
+              className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-smoke border-t border-ember rounded-t-3xl p-6 z-[70] shadow-2xl"
             >
               <div className="w-12 h-1 bg-ember/60 rounded-full mx-auto mb-4" />
               
@@ -574,7 +580,8 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
           </>
         )}
       </AnimatePresence>
+      </OverlayPortal>
       </div>
-    </div>
+    </AppShell>
   );
 }

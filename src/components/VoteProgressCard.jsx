@@ -35,14 +35,14 @@ export default function VoteProgressCard({ onViewFeed, className = "" }) {
           <p className={`font-mono text-[10px] tracking-widest uppercase ${goalMet ? "text-neon" : "text-amber"}`}>
             {goalMet ? "Audit duty done" : "Audit the crowd"}
           </p>
-          <p className="text-bone font-display text-lg leading-tight mt-0.5">
+          <p className="text-bone font-display text-lg leading-tight mt-0.5 tabular-nums">
             {loading && data.votesCastToday == null
               ? "Loading votes…"
               : `${cast} / ${goal} votes today`}
           </p>
         </div>
         {needsVotes > 0 && (
-          <span className="font-mono text-[10px] text-dim bg-ash/60 border border-ember/40 rounded-lg px-2 py-1 shrink-0">
+          <span className="font-mono text-[10px] text-dim bg-ash/60 border border-ember/40 rounded-lg px-2 py-1 shrink-0 tabular-nums">
             {needsVotes} need votes
           </span>
         )}

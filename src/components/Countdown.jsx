@@ -24,22 +24,22 @@ export default function Countdown({ targetIso, className = '' }) {
     return () => clearInterval(t);
   }, [targetMs]);
 
-  if (!targetMs) return <span className={className}>—</span>;
+  if (!targetMs) return <span className={`tabular-nums ${className}`}>—</span>;
 
   if (now.ms <= 0) {
-    return <span className={className}>00:00:00</span>;
+    return <span className={`tabular-nums ${className}`}>00:00:00</span>;
   }
 
   if (now.days > 0) {
     return (
-      <span className={className}>
+      <span className={`tabular-nums ${className}`}>
         {now.days}d {pad(now.hours)}:{pad(now.minutes)}:{pad(now.seconds)}
       </span>
     );
   }
 
   return (
-    <span className={className}>
+    <span className={`tabular-nums ${className}`}>
       {pad(now.hours)}:{pad(now.minutes)}:{pad(now.seconds)}
     </span>
   );

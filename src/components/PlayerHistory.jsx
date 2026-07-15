@@ -1,11 +1,11 @@
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
 import { usePolling } from "../hooks/usePolling.js";
-import AmbientBackdrop from "./AmbientBackdrop.jsx";
-import DozingCat from "./ui/DozingCat.jsx";
-import MotifFrieze from "./ui/MotifFrieze.jsx";
+import AppShell, { SHELL_BOTTOM_PAD } from "./AppShell.jsx";
+import EmptyState from "./EmptyState.jsx";
 import { MascotAvatar } from "./Mascot.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
+import { CompactButton } from "./ui/CraftCta.jsx";
 
 export default function PlayerHistory({ onBack }) {
   const { user } = useWorld();
@@ -37,34 +37,31 @@ export default function PlayerHistory({ onBack }) {
   const ambientPhase = phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch";
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
-      <AmbientBackdrop phase={ambientPhase} />
+    <AppShell phase={ambientPhase}>
 
-      <div className="relative z-10 px-5 pt-12 pb-6 flex items-center gap-4">
-        <button
-          type="button"
+      <div className="relative z-10 px-5 pt-10 pb-6 flex items-center gap-4">
+        <CompactButton
           onClick={onBack}
-          {...CUE_PRESS}
-          className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all"
+          className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60"
           aria-label="Back"
         >
           <span className="text-dim text-lg">←</span>
-        </button>
+        </CompactButton>
         <div>
           <h2 className="font-display text-3xl text-bone tracking-wide">Today</h2>
           <p className="font-body text-bone/55 text-xs">{user?.displayName ?? "Your record"}</p>
         </div>
       </div>
 
-      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 pb-24 space-y-3">
+      <div className={`relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-5 space-y-3 ${SHELL_BOTTOM_PAD}`}>
         {voterStats && (voterStats.total ?? 0) > 0 && (
           <div className="bg-smoke/80 border border-amber/30 rounded-2xl p-4 backdrop-blur-sm">
             <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2">Your vote accuracy</p>
             <div className="flex items-baseline gap-2">
-              <span className="font-display text-4xl text-amber leading-none">
+              <span className="font-display text-4xl text-amber leading-none tabular-nums">
                 {accuracyPct != null ? `${accuracyPct}%` : "—"}
               </span>
-              <span className="font-mono text-dim text-xs">
+              <span className="font-mono text-dim text-xs tabular-nums">
                 ({voterStats.correct}/{voterStats.total} correct)
               </span>
             </div>
@@ -78,14 +75,11 @@ export default function PlayerHistory({ onBack }) {
           Today&apos;s check-ins
         </p>
         {myCheckins.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-10 gap-3 px-4">
-            <DozingCat size={72} />
-            <p className="font-display text-2xl text-bone/80">Nothing logged yet</p>
-            <p className="text-bone/55 font-body text-sm text-center leading-relaxed max-w-xs">
-              Race to the theme location before the survival cap fills.
-            </p>
-            <MotifFrieze className="w-full mt-4 opacity-85" />
-          </div>
+          <EmptyState
+            motif="coffee"
+            title="Nothing logged yet"
+            body="Race to the theme location before the survival cap fills."
+          />
         ) : (
           <div className="space-y-3">
             {myCheckins.slice(0, 20).map((ck) => (
@@ -110,6 +104,6 @@ export default function PlayerHistory({ onBack }) {
           </div>
         )}
       </div>
-    </div>
+    </AppShell>
   );
 }

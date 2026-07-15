@@ -1,11 +1,13 @@
-import { useState, useCallback, useEffect, Component, lazy, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, Component, lazy, Suspense } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
 import ScreenLoader from './components/ui/ScreenLoader.jsx';
+import AmbientBackdrop from './components/AmbientBackdrop.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
+import { MascotEventProvider } from './components/MascotEventProvider.jsx';
 import { useScreenState } from './hooks/useScreenState.js';
 import { useWorld } from './world/WorldProvider.jsx';
 import { useRound } from './world/RoundProvider.jsx';
@@ -38,27 +40,30 @@ class ErrorBoundary extends Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-ash flex flex-col items-center justify-center p-8 text-center">
-          <p className="text-4xl mb-4">💀</p>
-          <p className="font-display text-2xl text-bone mb-2">Something broke</p>
-          <p className="text-dim font-mono text-xs mb-2">We&apos;ve been notified and are looking at it.</p>
-          <p className="text-dim/70 font-mono text-[10px] mb-6 max-w-xs">
-            If this keeps happening, reach out on Discord — include the time it happened and what you were doing.
-          </p>
-          <button
-            onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
-            className="px-6 py-3 rounded-xl bg-blood text-bone font-mono text-sm active:scale-95 transition-transform"
-          >
-            Reload app
-          </button>
-          <a
-            href="https://discord.gg/last-human-standing"
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 font-mono text-dim text-xs underline decoration-dotted underline-offset-2"
-          >
-            Report on Discord →
-          </a>
+        <div className="relative min-h-[100svh] flex flex-col items-center justify-center p-8 text-center overflow-hidden">
+          <AmbientBackdrop phase="ended" />
+          <div className="relative z-10">
+            <p className="text-4xl mb-4">💀</p>
+            <p className="font-display text-2xl text-bone mb-2">Something broke</p>
+            <p className="text-dim font-mono text-xs mb-2">We&apos;ve been notified and are looking at it.</p>
+            <p className="text-dim/70 font-mono text-[10px] mb-6 max-w-xs">
+              If this keeps happening, reach out on Discord — include the time it happened and what you were doing.
+            </p>
+            <button
+              onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
+              className="px-6 py-3 rounded-xl bg-blood text-bone font-mono text-sm active:scale-95 transition-transform"
+            >
+              Reload app
+            </button>
+            <a
+              href="https://discord.gg/last-human-standing"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-3 block font-mono text-dim text-xs underline decoration-dotted underline-offset-2"
+            >
+              Report on Discord →
+            </a>
+          </div>
         </div>
       );
     }
@@ -91,6 +96,7 @@ const SCREENS = {
       validScreens: Object.values(SCREENS),
     });
     const [badges, setBadges] = useState({});
+    const adminEnteredRef = useRef(false);
 
     // Reserved players belong in the lobby — not a duplicate onboarding countdown.
     useEffect(() => {
@@ -117,11 +123,26 @@ const SCREENS = {
       } catch { /* ignore */ }
     }, [screen, entryPaid, you?.isPaid, setScreen, setNavTab]);
 
-    // Check for admin access via URL param or direct navigation
-    const urlParams = new URLSearchParams(window.location.search);
-    const adminParam = urlParams.get('admin') === '1' || window.location.pathname === '/admin';
-    const isAdminEnabled = import.meta.env.VITE_ADMIN_TOKEN && import.meta.env.VITE_ADMIN_TOKEN.trim() !== '';
-    const isAdmin = adminParam && isAdminEnabled;
+    // One-shot admin entry via URL — enter once, then clear the param so
+    // BottomNav / back can leave without being forced back into ADMIN.
+    useEffect(() => {
+      if (adminEnteredRef.current) return;
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminParam = urlParams.get('admin') === '1' || window.location.pathname === '/admin';
+        const isAdminEnabled = import.meta.env.VITE_ADMIN_TOKEN && import.meta.env.VITE_ADMIN_TOKEN.trim() !== '';
+        if (!adminParam || !isAdminEnabled) return;
+
+        adminEnteredRef.current = true;
+        setScreen(SCREENS.ADMIN);
+        setNavTab('admin');
+
+        const url = new URL(window.location.href);
+        url.searchParams.delete('admin');
+        const nextPath = url.pathname === '/admin' ? '/' : url.pathname;
+        window.history.replaceState({}, '', nextPath + url.search + url.hash);
+      } catch { /* ignore */ }
+    }, [setScreen, setNavTab]);
 
     useEffect(() => {
       window.scrollTo({ top: 0, left: 0 });
@@ -170,23 +191,6 @@ const SCREENS = {
       else if (tab === 'leaderboard') setScreen(SCREENS.LEADERBOARD);
     };
 
-    // Auto-redirect to admin screen if admin access is granted
-    useEffect(() => {
-      if (isAdmin && screen !== SCREENS.ADMIN) {
-        setScreen(SCREENS.ADMIN);
-        setNavTab('admin');
-      }
-    }, [isAdmin, screen, setScreen, setNavTab]);
-
-  // Allow admins to access dashboard via URL param or secret route
-  // For security, we'll check if admin token is set and allow direct navigation
-  const handleAdminAccess = () => {
-    if (isAdmin) {
-      setScreen(SCREENS.ADMIN);
-      setNavTab('admin');
-    }
-  };
-
   const isInGame = screen !== SCREENS.ONBOARDING && screen !== SCREENS.CHECKIN && screen !== SCREENS.SPEEDRUN;
 
   return (
@@ -199,7 +203,7 @@ const SCREENS = {
             key="onboarding"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0, transform: "scale(0.97)" }}
+            exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
             <Onboarding
@@ -246,15 +250,15 @@ const SCREENS = {
         {screen === SCREENS.HOME && (
           <motion.div
             key="home"
-            initial={{ opacity: 0, transform: "translateY(20px)" }}
-            animate={{ opacity: 1, transform: "translateY(0)" }}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
             <GameHome
               onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
-              onViewHistory={() => setScreen(SCREENS.HISTORY)}
+              onViewHistory={() => { setScreen(SCREENS.HISTORY); setNavTab('home'); }}
               onRouteToOnboarding={() => {
                 try { sessionStorage.setItem("lhs_enter_reserve", "1"); } catch { /* ignore */ }
                 setScreen(SCREENS.ONBOARDING);
@@ -268,9 +272,9 @@ const SCREENS = {
         {screen === SCREENS.CHECKIN && (
           <motion.div
             key="checkin"
-            initial={{ transform: "translateY(100%)", opacity: 0 }}
-            animate={{ transform: "translateY(0)", opacity: 1 }}
-            exit={{ transform: "translateY(100%)", opacity: 0 }}
+            initial={{ y: "100%", opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: "100%", opacity: 0 }}
             transition={{ type: 'spring', damping: 28, stiffness: 300 }}
           >
             <CheckIn onBack={() => setScreen(SCREENS.HOME)} onSubmit={() => { playSound('success'); setScreen(SCREENS.HOME); }} />
@@ -281,8 +285,8 @@ const SCREENS = {
           <Suspense fallback={<ScreenLoader kind="list" />}>
           <motion.div
             key="feed"
-            initial={{ opacity: 0, transform: "translateX(30px)" }}
-            animate={{ opacity: 1, transform: "translateX(0)" }}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
@@ -298,8 +302,8 @@ const SCREENS = {
           <Suspense fallback={<ScreenLoader kind="chat" />}>
           <motion.div
             key="chat"
-            initial={{ opacity: 0, transform: "translateX(30px)" }}
-            animate={{ opacity: 1, transform: "translateX(0)" }}
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
@@ -312,8 +316,8 @@ const SCREENS = {
         <Suspense fallback={<ScreenLoader kind="list" />}>
         <motion.div
           key="leaderboard"
-          initial={{ opacity: 0, transform: "translateX(30px)" }}
-          animate={{ opacity: 1, transform: "translateX(0)" }}
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         >
@@ -344,8 +348,8 @@ const SCREENS = {
         <Suspense fallback={<ScreenLoader kind="detail" />}>
         <motion.div
           key="history"
-          initial={{ opacity: 0, transform: "translateX(30px)" }}
-          animate={{ opacity: 1, transform: "translateX(0)" }}
+          initial={{ opacity: 0, x: 30 }}
+          animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         >
@@ -357,7 +361,7 @@ const SCREENS = {
 
       {isInGame && (
         <BottomNav
-          current={navTab}
+          current={navTab === 'admin' || navTab === 'history' ? 'home' : navTab}
           onChange={handleNavChange}
           badges={badges}
         />
@@ -370,7 +374,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <DelightProvider showTipOnMount={true}>
-        <AppWithDelight />
+        <MascotEventProvider>
+          <AppWithDelight />
+        </MascotEventProvider>
       </DelightProvider>
     </ErrorBoundary>
   );

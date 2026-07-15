@@ -62,7 +62,7 @@ export default function PrizePots({ prizePool, className = "" }) {
                 initial={{ opacity: 0, y: -5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="text-neon text-[10px] font-mono"
+                className="text-neon text-[10px] font-mono tabular-nums"
               >
                 +${growth.toFixed(2)}
               </motion.span>
@@ -105,7 +105,7 @@ function PotCard({ chain, balance, suffix, address, explorerUrl, empty }) {
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="w-full text-left p-2.5 hover:bg-ash/80 active:scale-[0.98] transition-all"
+        className="w-full text-left p-2.5 hover:bg-ash/80 active:scale-[0.98] transition-[transform,background-color]"
         aria-expanded={expanded}
       >
         <div className="flex items-center justify-between">
@@ -116,7 +116,7 @@ function PotCard({ chain, balance, suffix, address, explorerUrl, empty }) {
             {expanded ? "−" : "+"}
           </span>
         </div>
-        <p className={`font-mono text-sm leading-tight mt-0.5 ${empty ? "text-dim" : "text-amber"}`}>
+        <p className={`font-mono text-sm leading-tight mt-0.5 tabular-nums ${empty ? "text-dim" : "text-amber"}`}>
           {display}
         </p>
       </button>

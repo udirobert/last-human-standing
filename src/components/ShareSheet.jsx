@@ -3,7 +3,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { momentCardDataUrl } from "../lib/shareMoment.js";
 import { renderMomentCard, canvasToPngBlob } from "../lib/momentCard.js";
 import { HumanCta, GameCta, GhostLink } from "./ui/CraftCta.jsx";
-import { CUE_PRESS } from "../lib/cuelume.js";
+import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
+import OverlayPortal from "./OverlayPortal.jsx";
+import { useFocusTrap } from "../hooks/useFocusTrap.js";
 
 /**
  * ShareSheet — the composed-tweet + downloadable-card share pattern.
@@ -91,32 +93,41 @@ export default function ShareSheet({
     }
   };
 
+  const trapRef = useFocusTrap(Boolean(open), { onEscape: onClose });
+
   const handleTweet = () => {
     const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
     window.open(intentUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
+    <OverlayPortal>
     <AnimatePresence>
       {open && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] bg-ash/90 backdrop-blur-sm flex items-end sm:items-center justify-center"
+          transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+          className="fixed inset-0 z-[70] bg-ash/95 backdrop-blur-md flex items-end sm:items-center justify-center"
           onClick={onClose}
         >
           <motion.div
+            ref={trapRef}
+            tabIndex={-1}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="share-sheet-title"
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 40, opacity: 0 }}
-            transition={{ type: "spring", damping: 24 }}
-            className="w-full max-w-md bg-smoke border-t sm:border border-amber/30 rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] overflow-y-auto"
+            transition={MOTION_SPRING.gentle}
+            className="w-full max-w-md bg-smoke border-t sm:border border-amber/30 rounded-t-3xl sm:rounded-3xl p-5 max-h-[85vh] overflow-y-auto outline-none"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-display text-2xl text-bone tracking-wide">
+              <h3 id="share-sheet-title" className="font-display text-2xl text-bone tracking-wide">
                 SHARE
               </h3>
               <button
@@ -187,5 +198,6 @@ export default function ShareSheet({
         </motion.div>
       )}
     </AnimatePresence>
+    </OverlayPortal>
   );
 }

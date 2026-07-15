@@ -2,16 +2,18 @@ import { useEffect, useState, useCallback } from "react";
 
 const KEY = "lhs_screen_state_v1";
 
+/** Screens that are mid-flow / special-access — never restore from storage. */
+const EPHEMERAL = new Set(["checkin", "admin", "speedrun"]);
+
 /**
  * Persistent screen + navTab state. Survives refresh so users don't
  * land back on the Onboarding step 0 every time they reload. The
  * `SCREENS.ONBOARDING` value is the canonical default.
  *
- * Usage:
- *   const { screen, navTab, setScreen, setNavTab, reset } = useScreenState({
- *     defaultScreen: SCREENS.ONBOARDING,
- *     validScreens: Object.values(SCREENS),
- *   });
+ * Ephemeral screens (check-in, admin, speedrun) fall back to home /
+ * onboarding on restore so a refresh never traps someone mid-flow.
+ * Deep links (`?screen=`, `?demo=1`) still win, then are cleared from
+ * the URL so a later refresh doesn't re-deep-link oddly.
  */
 export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
   const fallback = defaultScreen ?? "onboarding";
@@ -20,11 +22,19 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
     [validScreens],
   );
 
+  const resolveRestored = useCallback(
+    (s) => {
+      if (!isValid(s)) return fallback;
+      if (EPHEMERAL.has(s)) {
+        return s === "speedrun" ? fallback : "home";
+      }
+      return s;
+    },
+    [isValid, fallback],
+  );
+
   const [screen, setScreenRaw] = useState(() => {
     try {
-      // Deep links win over persisted state: share landing pages and push
-      // notification clicks open /?screen=feed (etc.) to land on the drama.
-      // /?demo=1 opens the guided speed-run demo.
       const params = new URLSearchParams(window.location.search);
       if (params.get("demo") === "1" && isValid("speedrun")) return "speedrun";
 
@@ -33,8 +43,7 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
 
       const raw = localStorage.getItem(KEY);
       const parsed = raw ? JSON.parse(raw) : null;
-      const s = parsed?.screen ?? fallback;
-      return isValid(s) ? s : fallback;
+      return resolveRestored(parsed?.screen ?? fallback);
     } catch {
       return fallback;
     }
@@ -42,22 +51,58 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
 
   const [navTab, setNavTabRaw] = useState(() => {
     try {
+      const params = new URLSearchParams(window.location.search);
+      const urlScreen = params.get("screen");
+      if (urlScreen === "feed" || urlScreen === "chat" || urlScreen === "leaderboard" || urlScreen === "home") {
+        return urlScreen;
+      }
       const raw = localStorage.getItem(KEY);
       const parsed = raw ? JSON.parse(raw) : null;
-      return parsed?.navTab ?? "home";
+      const tab = parsed?.navTab ?? "home";
+      // Don't restore a nav tab that doesn't map to a BottomNav item
+      if (tab === "admin" || tab === "history") return "home";
+      return tab;
     } catch {
       return "home";
     }
   });
 
-  // Persist on every change.
+  // Clear one-shot deep-link params after they've been consumed.
   useEffect(() => {
     try {
-      localStorage.setItem(KEY, JSON.stringify({ screen, navTab }));
+      const url = new URL(window.location.href);
+      let dirty = false;
+      if (url.searchParams.has("screen")) {
+        url.searchParams.delete("screen");
+        dirty = true;
+      }
+      // Keep ?demo=1 while on speedrun; clear when they leave (handled in App).
+      if (dirty) {
+        window.history.replaceState({}, "", url.pathname + url.search + url.hash);
+      }
     } catch {
       /* ignore */
     }
-  }, [screen, navTab]);
+  }, []);
+
+  // Persist on every change — never write ephemeral screens.
+  useEffect(() => {
+    try {
+      const persistScreen = EPHEMERAL.has(screen)
+        ? screen === "speedrun"
+          ? fallback
+          : "home"
+        : screen;
+      const persistTab =
+        navTab === "admin" || navTab === "history" ? "home" : navTab;
+      localStorage.setItem(
+        KEY,
+        JSON.stringify({ screen: persistScreen, navTab: persistTab }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [screen, navTab, fallback]);
 
   const setScreen = useCallback(
     (next) => {

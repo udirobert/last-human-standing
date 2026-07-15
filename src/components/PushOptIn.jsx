@@ -140,7 +140,7 @@ export default function PushOptIn() {
         <button
           onClick={status === "on" ? handleDisable : handleEnable}
           disabled={busy}
-          className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-all active:scale-95 ${
+          className={`px-3 py-1.5 rounded-lg font-mono text-xs transition-[transform,background-color,color,border-color] active:scale-95 ${
             status === "on"
               ? "bg-ember text-bone border border-ember"
               : "bg-amber text-ash"

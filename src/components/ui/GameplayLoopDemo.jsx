@@ -82,7 +82,7 @@ export default function GameplayLoopDemo() {
             {PHASES.map((p, i) => (
               <span
                 key={p.id}
-                className={`h-1 rounded-full transition-all duration-300 ${
+                className={`h-1 rounded-full transition-[width,background-color] duration-300 ${
                   i === phaseIdx ? "w-4 bg-amber" : i < phaseIdx ? "w-2 bg-amber/40" : "w-2 bg-bone/15"
                 }`}
               />

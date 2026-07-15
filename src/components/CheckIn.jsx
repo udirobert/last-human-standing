@@ -6,7 +6,7 @@ import { useRound } from '../world/RoundProvider.jsx';
 import { TODAY_THEME, findTheme } from '../data/game';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import FAQModal from './FAQModal.jsx';
-import AmbientBackdrop from './AmbientBackdrop.jsx';
+import AppShell from './AppShell.jsx';
 import { StageSection } from './StageShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import BubbleLoader from './ui/BubbleLoader.jsx';
@@ -15,16 +15,18 @@ import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
 import MascotGuide from './ui/MascotGuide.jsx';
 import { useDelight } from './DelightProvider.jsx';
+import { useMascotEvent } from './MascotEventProvider.jsx';
 import { shareMoment } from '../lib/shareMoment.js';
-import { getCheckInMascot } from '../lib/copy.js';
+import { getCheckInMascot, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
 import { haptic } from '../lib/haptics.js';
-import { HumanCta, GameCta } from './ui/CraftCta.jsx';
+import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, phase, refresh: refreshRound } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
-  const { unlockAchievement, checkAchievement, playSound, handleMascotClick } = useDelight();
+  const { unlockAchievement, checkAchievement, playSound, handleMascotClick, recordSurvival } = useDelight();
+  const { dispatchMascotEvent } = useMascotEvent();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
@@ -149,7 +151,7 @@ export default function CheckIn({ onBack, onSubmit }) {
     // If offline, queue the check-in via the service worker
     if (!online) {
       setQueuedCheckin(true);
-      navigator.vibrate?.([20, 30, 20]);
+      haptic('warning');
       setStep(2);
       setResult({ queued: true });
       try {
@@ -164,6 +166,7 @@ export default function CheckIn({ onBack, onSubmit }) {
 
     setStep(1);
     setSubmitError(null);
+    dispatchMascotEvent({ type: "submitting", variant: "determined", message: getCheckInMascot({ step: 1 }).message });
 
     // Upload photo
     let mediaPath = null;
@@ -238,6 +241,7 @@ export default function CheckIn({ onBack, onSubmit }) {
       if (json.survived) {
         haptic('success');
         playSound?.('victory');
+        recordSurvival?.(json.roundId ?? json.checkinId ?? currentDay);
       } else {
         haptic('error');
         playSound?.('error');
@@ -253,18 +257,27 @@ export default function CheckIn({ onBack, onSubmit }) {
       // Clear any previously-queued chip on successful live submit.
       clearQueuedCheckin();
       setStep(2);
+      // Clear the "submitting" durable override so the durable state
+      // (survived / awaiting_audit) can take over once round refreshes,
+      // then fire a transient reaction for the immediate verdict.
+      dispatchMascotEvent(null);
+      dispatchMascotEvent({
+        type: json.survived ? "achievement" : "vote_react",
+        variant: json.survived ? "celebrating" : "sad",
+        message: json.survived ? getCheckInMascot({ step: 2 }).message : null,
+      });
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'check-in failed');
       setStep(0);
+      dispatchMascotEvent(null);
     }
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
-      <AmbientBackdrop
-        phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"}
-        flourishes={false}
-      />
+    <AppShell
+      phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"}
+      flourishes={false}
+    >
       
       {/* Infiltrator threat visual overlay */}
       <AnimatePresence>
@@ -293,11 +306,16 @@ export default function CheckIn({ onBack, onSubmit }) {
       />
 
       {/* Header */}
-      <div className="relative z-10 px-5 pt-12 pb-6 flex items-center gap-4">
-        <button onClick={onBack} className="w-10 h-10 rounded-xl bg-smoke/70 border border-ember/40 flex items-center justify-center hover:border-amber/60 active:scale-90 transition-all" aria-label="Back">
-          <span className="text-dim text-lg">←</span>
-        </button>
-        <div className="flex-1">
+      <div className="relative z-10 px-5 pt-10 pb-6 flex items-center gap-3">
+        <CompactButton
+          onClick={onBack}
+          className="h-10 px-3 rounded-xl bg-smoke/70 border border-ember/40 flex items-center gap-1.5 hover:border-amber/60 shrink-0"
+          aria-label="Back to Survive"
+        >
+          <span className="text-dim text-lg leading-none">←</span>
+          <span className="font-mono text-[10px] tracking-wider uppercase text-dim">Survive</span>
+        </CompactButton>
+        <div className="flex-1 min-w-0">
           <GlitchTitle text="CHECK IN" className="font-display text-3xl text-bone tracking-wide" />
           <p className="font-mono text-dim text-xs">Day {currentDay ?? '—'} · {theme || 'No round set'}</p>
         </div>
@@ -342,7 +360,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                 {round.prompt && <p className="text-dim text-xs font-mono mt-2 relative">{round.prompt}</p>}
                 <ThemeFairness theme={themeData} className="mt-3 relative" />
                 <div className="mt-3 flex justify-between text-xs font-mono text-dim relative">
-                  <span>Slots: {round.slotsRemaining}/{round.survivalCap}</span>
+                  <span className="tabular-nums">Slots: {round.slotsRemaining}/{round.survivalCap}</span>
                   <span>Anywhere on Earth</span>
                 </div>
               </div>
@@ -384,9 +402,9 @@ export default function CheckIn({ onBack, onSubmit }) {
               />
 
               {/* GPS toggle — optional credibility boost */}
-              <button
+              <CompactButton
                 onClick={toggleGps}
-                className={`w-full mb-4 py-3 rounded-2xl font-mono text-sm tracking-wide active:scale-95 transition-all border flex items-center justify-center gap-2 ${
+                className={`w-full mb-4 py-3 rounded-2xl font-mono text-sm tracking-wide border flex items-center justify-center gap-2 ${
                   gpsEnabled
                     ? 'bg-neon/10 border-neon/40 text-neon'
                     : 'bg-smoke border-ember text-dim'
@@ -402,7 +420,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                 ) : (
                   <>📍 Share location (optional · adds credibility for voters)</>
                 )}
-              </button>
+              </CompactButton>
 
               {submitError && (
                 <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 mb-3">
@@ -421,9 +439,9 @@ export default function CheckIn({ onBack, onSubmit }) {
                     </p>
                     <div className="grid grid-cols-2 gap-2">
                       {/* Honest */}
-                      <button
+                      <CompactButton
                         onClick={() => setInfiltratorMode(false)}
-                        className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
+                        className={`py-3 px-2 rounded-xl border ${
                           !infiltratorMode
                             ? 'bg-neon/10 border-neon/50 text-neon'
                             : 'bg-smoke border-ember text-dim'
@@ -432,11 +450,11 @@ export default function CheckIn({ onBack, onSubmit }) {
                         <p className="text-lg mb-0.5">🧍</p>
                         <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
                         <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
-                      </button>
+                      </CompactButton>
                       {/* Infiltrator */}
-                      <button
+                      <CompactButton
                         onClick={() => setInfiltratorMode(true)}
-                        className={`py-3 px-2 rounded-xl border transition-all active:scale-[0.97] ${
+                        className={`py-3 px-2 rounded-xl border ${
                           infiltratorMode
                             ? 'bg-purple-500/20 border-purple-400/60 text-purple-300'
                             : 'bg-smoke border-ember text-dim'
@@ -445,7 +463,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                         <p className="text-lg mb-0.5">🎭</p>
                         <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
                         <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
-                      </button>
+                      </CompactButton>
                     </div>
                   </>
                 ) : (
@@ -476,7 +494,7 @@ export default function CheckIn({ onBack, onSubmit }) {
 
                   {/* Live success rate — turns a blind gamble into a calculated risk */}
                   {infiltratorStats?.successRate != null && (
-                    <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20">
+                    <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20 tabular-nums">
                       📊 {infiltratorStats.successRate}% of infiltrators succeeded ({infiltratorStats.succeeded}/{infiltratorStats.total} attempts)
                     </p>
                   )}
@@ -507,6 +525,18 @@ export default function CheckIn({ onBack, onSubmit }) {
                   </div>
                 </div>
               )}
+
+              <p className="text-dim font-mono text-[10px] leading-relaxed text-center mb-3 px-1">
+                Submitting posts this photo to the day&apos;s audit. Visible to the cohort (and spectators). GPS stays off unless you share it.{" "}
+                <FAQModal
+                  expandOnOpen={FAQ_PUBLIC_PHOTO_INDEX}
+                  trigger={
+                    <span className="text-amber/90 underline decoration-dotted underline-offset-2 hover:text-amber">
+                      What’s public?
+                    </span>
+                  }
+                />
+              </p>
 
               {infiltratorMode && canSubmit ? (
                 <GameCta tone="purple" onClick={handleSubmit} className="animate-pulse-blood">
@@ -569,6 +599,6 @@ export default function CheckIn({ onBack, onSubmit }) {
           )}
         </AnimatePresence>
       )}
-    </div>
+    </AppShell>
   );
 }

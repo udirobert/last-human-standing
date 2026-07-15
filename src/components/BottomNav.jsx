@@ -60,6 +60,10 @@ function IconTrophy({ active }) {
 
 const ICONS = { home: IconHome, feed: IconVote, chat: IconChat, leaderboard: IconTrophy };
 
+/** Approx chrome height for scroll padding elsewhere */
+export const BOTTOM_NAV_OFFSET =
+  "calc(4.25rem + env(safe-area-inset-bottom, 0px))";
+
 export default function BottomNav({
   current,
   onChange,
@@ -73,8 +77,11 @@ export default function BottomNav({
   ];
 
   return (
-    <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-ash/95 backdrop-blur-sm border-t border-ember px-2 py-2 z-50">
-      <div className="flex justify-around items-center relative">
+    <div
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-ash/95 backdrop-blur-sm border-t border-ember px-2 z-40"
+      style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+    >
+      <div className="flex justify-around items-center relative py-2">
         {/* Sliding active pill */}
         {tabs.map((tab) =>
           current === tab.id ? (

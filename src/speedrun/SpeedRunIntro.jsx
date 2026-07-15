@@ -8,6 +8,8 @@ import MascotGuide from "../components/ui/MascotGuide.jsx";
 import { useDelight } from "../components/DelightProvider.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import { CUE_PRESS, CUE_HOVER } from "../lib/cuelume.js";
+import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
+import { HumanCta } from "../components/ui/CraftCta.jsx";
 
 const PAPER_GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
@@ -92,7 +94,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
         <motion.p
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: MOTION_DURATION.slow, ease: MOTION_EASE.out }}
           className="font-mono text-amber/90 uppercase"
           style={{ fontSize: "clamp(10px,1.4vw,13px)", letterSpacing: "0.16em" }}
         >
@@ -102,7 +104,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
         <motion.h1
           initial={{ opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.06, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: MOTION_DURATION.slow, delay: 0.06, ease: MOTION_EASE.out }}
           className="font-display text-bone"
           style={{
             fontSize: "clamp(48px,11vw,120px)",
@@ -121,7 +123,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
         <motion.div
           initial={{ opacity: 0, scale: 0.6 }}
           animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.5, delay: 0.18, type: "spring", bounce: 0.4 }}
+          transition={{ ...MOTION_SPRING.gentle, delay: 0.18, bounce: 0.4 }}
           className="flex justify-center"
           style={{ marginTop: "clamp(10px,1.5vw,16px)" }}
         >
@@ -138,7 +140,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
         <motion.p
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.14, ease: [0.23, 1, 0.32, 1] }}
+          transition={{ duration: MOTION_DURATION.slow, delay: 0.14, ease: MOTION_EASE.out }}
           className="font-body text-bone/90"
           style={{
             fontSize: "clamp(15px,2vw,20px)",
@@ -155,7 +157,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 0.22 }}
+          transition={{ duration: MOTION_DURATION.slow, delay: 0.22 }}
         >
           <MotifFrieze className="w-full" style={{ marginTop: "clamp(22px,3vw,34px)" }} />
           <p className="font-mono text-dim uppercase mt-2.5" style={{ fontSize: 11, letterSpacing: "0.14em" }}>
@@ -166,18 +168,12 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, delay: 0.3 }}
+          transition={{ duration: MOTION_DURATION.slow, delay: 0.3 }}
           style={{ marginTop: "clamp(24px,3vw,34px)" }}
         >
-          <button
-            type="button"
-            onClick={onStart}
-            {...CUE_PRESS}
-            className="font-body font-semibold text-[#1a1206] bg-amber rounded-2xl px-8 py-4 active:scale-[0.97] transition-transform"
-            style={{ fontSize: "clamp(15px,1.6vw,17px)", boxShadow: "0 10px 30px -8px rgba(255,184,0,0.5)" }}
-          >
+          <HumanCta onClick={onStart} className="!px-8">
             Step into day one →
-          </button>
+          </HumanCta>
           <p className="font-mono text-dim mt-4" style={{ fontSize: 11, letterSpacing: "0.06em" }}>
             About ten minutes · no wallet · nowhere live yet
           </p>

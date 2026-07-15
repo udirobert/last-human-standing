@@ -27,10 +27,10 @@ export default function TopReferrersBoard({ className = "" }) {
             className="flex items-center justify-between bg-ash rounded-xl px-3 py-2"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <span className="font-mono text-dim text-xs w-5">#{i + 1}</span>
+              <span className="font-mono text-dim text-xs w-5 tabular-nums">#{i + 1}</span>
               <span className="text-bone text-sm truncate">{row.name}</span>
             </div>
-            <span className="font-mono text-amber text-xs">{row.count}</span>
+            <span className="font-mono text-amber text-xs tabular-nums">{row.count}</span>
           </div>
         ))}
       </div>

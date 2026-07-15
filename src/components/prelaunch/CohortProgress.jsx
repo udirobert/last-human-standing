@@ -18,13 +18,13 @@ export default function CohortProgress({
     <div className={className}>
       <div className="flex items-center justify-between text-xs font-mono">
         <span className="text-dim">{label}</span>
-        <span className={full ? "text-neon" : "text-bone"}>
+        <span className={`tabular-nums ${full ? "text-neon" : "text-bone"}`}>
           {count.toLocaleString()} / {total}
         </span>
       </div>
       <div className="mt-1 h-1.5 bg-ember rounded-full overflow-hidden">
         <div
-          className={`h-full ${barClass} rounded-full transition-all`}
+          className={`h-full ${barClass} rounded-full transition-[width]`}
           style={{ width: `${pct}%` }}
         />
       </div>

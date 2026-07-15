@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import Mascot from '../components/Mascot.jsx';
 
 // Achievement definitions
 export const ACHIEVEMENTS = {
@@ -107,38 +108,46 @@ export const ACHIEVEMENTS = {
   },
 };
 
-// Achievement unlock notification component
-export function AchievementToast({ achievement, onClose }) {
+// Achievement unlock notification — brand tokens, toast layer
+export function AchievementToast({ achievement, mascotName, onClose }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 4000);
     return () => clearTimeout(timer);
   }, [onClose]);
 
   return (
-    <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-50 animate-slide-up">
-      <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl px-6 py-4 shadow-2xl flex items-center gap-4 max-w-sm">
-        <div className="w-12 h-12 bg-black/30 rounded-full flex items-center justify-center text-2xl">
-          {achievement.icon}
+    <div
+      className="fixed left-1/2 -translate-x-1/2 z-[45] animate-toast-up px-4"
+      style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
+    >
+      <div className="bg-smoke/95 backdrop-blur-md border border-amber/40 rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-4 max-w-sm">
+        <div className="relative w-14 h-14 shrink-0" aria-hidden="true">
+          <Mascot variant="proud" size={54} trackCursor={false} />
+          <span className="absolute -right-1 -top-1 w-6 h-6 rounded-full bg-ash border border-amber/50 flex items-center justify-center text-sm">
+            {achievement.icon}
+          </span>
         </div>
-        <div>
-          <div className="text-black font-bold">Achievement Unlocked!</div>
-          <div className="text-black/70 text-sm">{achievement.name}</div>
-          <div className="text-black/60 text-xs">+{achievement.xp} XP</div>
+        <div className="min-w-0">
+          <div className="font-mono text-[10px] text-amber tracking-[0.16em] uppercase">
+            {mascotName || "Survivor"} found something
+          </div>
+          <div className="font-display text-xl text-bone leading-tight">{achievement.name}</div>
+          <div className="font-mono text-[10px] text-dim mt-0.5">+{achievement.xp} XP</div>
         </div>
       </div>
     </div>
   );
 }
 
-// Achievement grid component
+/** Prototype grid — branded but not mounted in main chrome yet. */
 export function AchievementGrid({ unlocked = [] }) {
   const categories = ['checkin', 'streak', 'game', 'social', 'special'];
-  
+
   return (
     <div className="space-y-6">
       {categories.map(cat => (
         <div key={cat}>
-          <h3 className="text-sm uppercase text-gray-500 mb-3">{cat}</h3>
+          <h3 className="font-mono text-[10px] uppercase tracking-widest text-dim mb-3">{cat}</h3>
           <div className="grid grid-cols-3 gap-3">
             {Object.values(ACHIEVEMENTS)
               .filter(a => a.category === cat)
@@ -147,17 +156,17 @@ export function AchievementGrid({ unlocked = [] }) {
                 return (
                   <div
                     key={a.id}
-                    className={`relative p-3 rounded-xl text-center transition-all ${
+                    className={`relative p-3 rounded-xl text-center transition-[background-color,border-color,opacity] ${
                       isUnlocked
-                        ? 'bg-gradient-to-br from-amber-500/20 to-orange-600/20 border border-amber-500/30'
-                        : 'bg-gray-800/50 border border-gray-700 opacity-50'
+                        ? 'bg-amber/10 border border-amber/30'
+                        : 'bg-smoke/60 border border-ember/40 opacity-50'
                     }`}
                   >
                     <div className="text-3xl mb-1">{a.icon}</div>
-                    <div className="text-xs font-medium text-gray-300">{a.name}</div>
+                    <div className="text-[11px] font-body text-bone/80">{a.name}</div>
                     {isUnlocked && (
-                      <div className="absolute top-1 right-1 w-4 h-4 bg-green-400 rounded-full flex items-center justify-center">
-                        <svg className="w-2 h-2 text-black" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="absolute top-1 right-1 w-4 h-4 bg-neon rounded-full flex items-center justify-center">
+                        <svg className="w-2 h-2 text-ash" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
                       </div>
@@ -172,7 +181,6 @@ export function AchievementGrid({ unlocked = [] }) {
   );
 }
 
-// XP and level system
 export const calculateLevel = (xp) => {
   const levels = [0, 100, 300, 600, 1000, 1500, 2100, 2800, 3600, 4500, 5500];
   let level = 0;
@@ -182,22 +190,22 @@ export const calculateLevel = (xp) => {
   const nextLevel = levels[level + 1] || levels[levels.length - 1];
   const prevLevel = levels[level] || 0;
   const progress = ((xp - prevLevel) / (nextLevel - prevLevel)) * 100;
-  
+
   return { level, xp, progress, nextXp: nextLevel };
 };
 
 export function UserLevel({ xp }) {
   const { level, progress, nextXp } = calculateLevel(xp);
-  
+
   return (
-    <div className="bg-gray-800/50 rounded-xl p-4">
+    <div className="bg-smoke/70 border border-ember/40 rounded-xl p-4">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-sm text-gray-400">Level {level}</span>
-        <span className="text-xs text-gray-500">{xp} / {nextXp} XP</span>
+        <span className="font-mono text-xs text-dim">Level {level}</span>
+        <span className="font-mono text-[10px] text-dim">{xp} / {nextXp} XP</span>
       </div>
-      <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
-        <div 
-          className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500"
+      <div className="h-2 bg-ash rounded-full overflow-hidden border border-ember/30">
+        <div
+          className="h-full bg-amber transition-[width] duration-500"
           style={{ width: `${progress}%` }}
         />
       </div>

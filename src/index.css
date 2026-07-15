@@ -23,6 +23,9 @@ html, body {
   background: #0D0D0D;
   position: relative;
   overflow-x: hidden;
+  /* Keep the phone column clear of the home indicator / notch on iOS */
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 /* Noise texture overlay */
@@ -34,7 +37,8 @@ html, body {
   max-width: 100%;
   margin: 0 auto;
   pointer-events: none;
-  z-index: 1000;
+  /* Above page content, below chrome (z-40) and overlays (z-70+) */
+  z-index: 30;
   opacity: 0.03;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
 }
@@ -217,7 +221,11 @@ body.landing-mode .tip-toast {
   animation: bounce-in 0.5s ease-out forwards;
 }
 
-@keyframes slide-up {
+/* Centered-toast entrances — the translateX(-50%) keeps `fixed left-1/2`
+ * elements centered while the keyframe transform overrides the utility
+ * transform. Named toast-* so they never collide with the generic
+ * slide-up/fade-in keyframes generated from tailwind.config.js. */
+@keyframes toast-up {
   0% {
     transform: translateX(-50%) translateY(100%);
     opacity: 0;
@@ -228,11 +236,11 @@ body.landing-mode .tip-toast {
   }
 }
 
-.animate-slide-up {
-  animation: slide-up 0.4s ease-out forwards;
+.animate-toast-up {
+  animation: toast-up 0.4s ease-out forwards;
 }
 
-@keyframes slide-down {
+@keyframes toast-down {
   0% {
     transform: translateX(-50%) translateY(-100%);
     opacity: 0;
@@ -243,21 +251,8 @@ body.landing-mode .tip-toast {
   }
 }
 
-.animate-slide-down {
-  animation: slide-down 0.4s ease-out forwards;
-}
-
-@keyframes fade-in {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-.animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
+.animate-toast-down {
+  animation: toast-down 0.4s ease-out forwards;
 }
 
 @keyframes shimmer {
@@ -291,16 +286,6 @@ body.landing-mode .tip-toast {
 
 .animate-pulse-glow {
   animation: pulse-glow 2s ease-in-out infinite;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
-}
-
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
 }
 
 @keyframes float {

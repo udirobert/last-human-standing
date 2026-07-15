@@ -86,7 +86,7 @@ function WalletModal({ open, onClose, connectors, onConnect, isConnecting }) {
                   disabled={isConnecting}
                   onClick={() => onConnect(connector)}
                   {...CUE_PRESS}
-                  className="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl bg-smoke/80 border border-ember/40 text-left hover:border-amber/50 active:scale-[0.98] transition-all disabled:opacity-50"
+                  className="w-full flex items-center gap-3 py-3.5 px-4 rounded-2xl bg-smoke/80 border border-ember/40 text-left hover:border-amber/50 active:scale-[0.98] transition-[transform,border-color,opacity] disabled:opacity-50"
                 >
                   {connector.icon ? (
                     <img src={connector.icon} alt="" className="w-8 h-8 rounded-lg" />
@@ -211,7 +211,7 @@ export default function BrowserWalletPay({ prizePoolAddress, onPaid, referredBy,
           type="button"
           onClick={() => setSelectedToken(opt.id)}
           {...CUE_PRESS}
-          className={`py-3 rounded-2xl font-body text-sm transition-all ${
+          className={`py-3 rounded-2xl font-body text-sm transition-[background-color,color,border-color] ${
             selectedToken === opt.id
               ? "bg-amber text-[#1a1206] border border-amber font-semibold"
               : "bg-ash/70 text-bone/70 border border-ember/50 hover:border-amber/40"
