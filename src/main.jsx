@@ -9,7 +9,10 @@ import { WorldProvider } from './world/WorldProvider.jsx'
 import { RoundProvider } from './world/RoundProvider.jsx'
 import { wagmiConfig } from './wallet/config.js'
 
-const VITE_WORLD_ID_APP_ID = import.meta.env.VITE_WORLD_ID_APP_ID || ''
+// The Mini App and World ID products may use separate Developer Portal apps.
+// Keep the legacy fallback so existing deployments continue to initialize
+// while the production env is migrated to the explicit Mini App value.
+const VITE_MINI_APP_ID = import.meta.env.VITE_MINI_APP_ID || import.meta.env.VITE_WORLD_ID_APP_ID || ''
 
 // Register service worker for offline support and background sync
 if ('serviceWorker' in navigator) {
@@ -39,12 +42,13 @@ if ('serviceWorker' in navigator) {
 
 const queryClient = new QueryClient();
 
-// Mount MiniKitProvider whenever a World ID app id is configured.
+// Mount MiniKitProvider with the Mini App app id. WorldIdVerify owns the
+// distinct World ID app id used by IDKit proof requests.
 // The provider gracefully handles non-World-App contexts (it logs an
 // informational "MiniKit is not installed" message) and ensures
 // MiniKit is initialized in time for deep-link / store-continuation
 // scenarios that heuristic host detection may miss.
-const shouldMountMiniKit = Boolean(VITE_WORLD_ID_APP_ID);
+const shouldMountMiniKit = Boolean(VITE_MINI_APP_ID);
 
 const appTree = (
   <StrictMode>
@@ -61,7 +65,7 @@ const appTree = (
 );
 
 const wrappedTree = shouldMountMiniKit ? (
-  <MiniKitProvider appId={VITE_WORLD_ID_APP_ID}>{appTree}</MiniKitProvider>
+  <MiniKitProvider appId={VITE_MINI_APP_ID}>{appTree}</MiniKitProvider>
 ) : (
   appTree
 );

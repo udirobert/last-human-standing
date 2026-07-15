@@ -80,6 +80,11 @@ if [ -f "$LOCAL_ENV" ]; then
   for vvar in "VITE_VOTE_REGISTRY_ADDRESS" "VITE_PRIZE_POOL_ADDRESS" "VITE_CELO_PRIZE_POOL_ADDRESS"; do
     grep -qE "^${vvar}=" "$LOCAL_ENV" || VITE_MISSING+=("$vvar")
   done
+  if grep -qE "^VITE_ENABLE_IDKIT=true$" "$LOCAL_ENV"; then
+    for vvar in "VITE_MINI_APP_ID" "VITE_WORLD_ID_APP_ID"; do
+      grep -qE "^${vvar}=" "$LOCAL_ENV" || VITE_MISSING+=("$vvar")
+    done
+  fi
   if [ ${#VITE_MISSING[@]} -gt 0 ]; then
     echo
     fail "Missing VITE_* vars in local .env (build-time, needed by Vite):

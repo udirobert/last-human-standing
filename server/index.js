@@ -70,6 +70,18 @@ const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
 
+function extractWorldIdNullifier(result) {
+  // World ID 3.0 uses nullifier_hash, while IDKit 4.0 returns one proof
+  // response per requested credential. Accept both while migration remains
+  // enabled, but never persist a successful proof without its nullifier.
+  if (typeof result?.nullifier_hash === "string" && result.nullifier_hash) {
+    return result.nullifier_hash;
+  }
+  const responses = Array.isArray(result?.responses) ? result.responses : [];
+  const response = responses.find((item) => typeof item?.nullifier === "string" && item.nullifier);
+  return response?.nullifier ?? null;
+}
+
 // Jury: eliminated players keep playing as the audit jury. Their votes
 // count double once their accuracy record is good enough — this is what
 // keeps the 49 losers voting (the quorum math needs them).
@@ -982,11 +994,15 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
 
     if (!resp.ok) return res.status(400).json({ error: "verify_failed", details: json, used_legacy_fallback: usedLegacyFallback });
 
-    // Extract nullifier from the verified proof for uniqueness tracking
-    const nullifier = idkitResponse.nullifier_hash;
+    // Store the nullifier returned by the verified IDKit response. V4 places
+    // it at responses[n].nullifier; the legacy shape uses nullifier_hash.
+    const nullifier = extractWorldIdNullifier(idkitResponse);
+    if (!nullifier) {
+      return res.status(400).json({ error: "missing_nullifier" });
+    }
 
     if (supabaseAdmin) {
-      await supabaseAdmin.from("users").upsert(
+      const { error: upsertError } = await supabaseAdmin.from("users").upsert(
         {
           address: req.user.address,
           world_id_verified: true, // Legacy flag — kept for backward compat
@@ -997,6 +1013,14 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
         },
         { onConflict: "address" },
       );
+      if (upsertError) {
+        // The unique nullifier index is the replay-protection boundary.
+        // Do not report success if the proof could not be persisted.
+        const duplicate = upsertError.code === "23505";
+        return res.status(duplicate ? 409 : 500).json({
+          error: duplicate ? "nullifier_already_used" : "verification_persist_failed",
+        });
+      }
     }
     return res.json({ ok: true, verified: true, details: json, used_legacy_fallback: usedLegacyFallback });
   } catch (e) {

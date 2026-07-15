@@ -6,7 +6,7 @@ Last Human Standing uses a **pluggable humanity layer** so we are not locked to 
 
 | Provider | Chain / surface | Status | Notes |
 |----------|-----------------|--------|-------|
-| **World ID** | World App + browser (IDKit v4) | Live | Orb verification via `/api/idkit/verify`. RP-signature flow: client fetches `/api/idkit/rp-context` (server signs with `@worldcoin/idkit-server`), widget renders with `IDKitRequestWidget` + `orbLegacy({ signal: wallet })`. Server forwards proof to `https://developer.world.org/api/v4/verify/{rp_id}`. |
+| **World ID** | World App + browser (IDKit v4) | Live | Orb verification via `/api/idkit/verify`. RP-signature flow: client fetches `/api/idkit/rp-context` (server signs with `@worldcoin/idkit-server`), widget requests `proofOfHuman({ signal: wallet })`. Server forwards the IDKit result unchanged to `https://developer.world.org/api/v4/verify/{rp_id}` and stores the verified `responses[].nullifier` for replay protection. |
 | **[Self Protocol](https://docs.self.xyz/)** | Celo + multi-chain ZK passports | Live (Celo Sepolia, mock passport) | Privacy-preserving proof-of-human. Production mainnet flips in via `SELF_MOCK_PASSPORT=false`. Self Pass supports passports/IDs from 60+ countries. |
 | **Wallet + WLD entry** | World Chain | Live | Sybil *cost* signal only — not proof of unique human without PoH. |
 | **Celo wallet path** | Celo | Live | cUSD/USDC entry on Celo (browser path). Pair with Self verification instead of WLD-only browser path. |
@@ -53,7 +53,7 @@ out explicitly:
    renders an explicit "Connect wallet to verify" button instead of opening
    the widget. Opening the widget with an empty signal used to silently
    produce a proof bound to nothing — the fix is to gate the widget on
-   `user?.address` and only hand `signal: walletAddress` to `orbLegacy`
+   `user?.address` and only hand `signal: walletAddress` to `proofOfHuman`
    once a wallet is on file.
 2. **Verification is offered before payment.** The Onboarding "Reserve"
    step renders the World ID + Self verify card *before* the paid card and
@@ -72,6 +72,8 @@ out explicitly:
 | Variable | Purpose |
 |----------|---------|
 | `VITE_ENABLE_IDKIT` | World ID widget in onboarding |
+| `VITE_MINI_APP_ID` | MiniKit launch app id used by `MiniKitProvider` |
+| `VITE_WORLD_ID_APP_ID` | World ID app id used by IDKit proof requests |
 | `VITE_REQUIRE_WORLD_ID_FOR_VOTING` | Gate `/api/vote` on verified PoH |
 | `VITE_ENABLE_SELF` | Show Self verify UI in onboarding |
 | `SELF_ENABLED` | Enable `POST /api/self/verify` on API |

@@ -9,7 +9,7 @@ import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/re
 const mockUseIDKitRequest = vi.fn();
 vi.mock("@worldcoin/idkit", () => ({
   useIDKitRequest: (config) => mockUseIDKitRequest(config),
-  orbLegacy: ({ signal }) => ({ signal }),
+  proofOfHuman: ({ signal }) => ({ signal }),
 }));
 
 // Mock qrcode so we don't try to render an SVG in jsdom.

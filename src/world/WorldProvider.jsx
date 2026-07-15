@@ -379,7 +379,7 @@ export function WorldProvider({ children }) {
     // We just sync our derived flags (hasWorldAppId, isWorldApp,
     // isFarcaster) on mount.
     try {
-      const appId = import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
+      const appId = import.meta.env.VITE_MINI_APP_ID || import.meta.env.VITE_WORLD_ID_APP_ID || undefined;
       setHasWorldAppId(Boolean(appId));
     } catch (e) {
       console.warn("MiniKit install detection failed", e);

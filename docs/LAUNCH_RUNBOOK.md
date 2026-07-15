@@ -107,21 +107,24 @@ signup between the lazy trigger and the actual draw is honoured.
 - [ ] **Run the reset SQL** in `docs/LAUNCH_RESET.md` to clear
   stale dev-session data from the cohort.
 - [x] **Deploy with `scripts/package-release.sh`** (the canonical
-  build + ship path). Latest release: `20260707-203843`.
+  build + ship path). Latest release: `20260715-143634`.
 - [ ] **World ID env vars (if enabling PoH on production)**:
   ```bash
   VITE_ENABLE_IDKIT=true
-  VITE_WORLD_ID_APP_ID=app_xxx             # from World Dev Portal
+  VITE_MINI_APP_ID=app_xxx                 # MiniKit / World App launch app
+  VITE_WORLD_ID_APP_ID=app_xxx             # IDKit / World ID proof app
   VITE_WORLD_ID_ACTION=last-human-standing
   WORLD_ID_RP_ID=rp_xxx                    # server-only
   WORLD_ID_SIGNING_KEY=0x...               # server-only, secp256k1
   ```
-  All five must be set or users see the "World ID disabled"
-  message and can only verify via Self Protocol. The Orb
-  proof's `signal` is bound to the connected wallet, so
-  the client also refuses to open the widget until a wallet
-  is connected — a misconfiguration here manifests as users
-  seeing "Connect wallet to verify" with no obvious next step.
+  `VITE_MINI_APP_ID` and `VITE_WORLD_ID_APP_ID` can point at the same
+  Developer Portal app, but set both explicitly so MiniKit initialization
+  and IDKit proof requests do not depend on a shared fallback. Missing
+  IDKit env makes users see the "World ID disabled" message and they can
+  only verify via Self Protocol. The Orb proof's `signal` is bound to the
+  connected wallet, so the client also refuses to open the widget until a
+  wallet is connected — a misconfiguration here manifests as users seeing
+  "Connect wallet to verify" with no obvious next step.
 - [ ] **Smoke-test the build**: load `/`, see the splash, see
   the FREE ENTRY button on step 2 of Onboarding, see the two-bar
   cohort card on GameHome.
@@ -261,6 +264,8 @@ Compare the output's `winners` list to the one in
 | Celo pot reads 0 forever | `CELO_RPC` rate-limited or unreachable | Set `CELO_RPC` to a paid provider (e.g. `https://celo-mainnet.g.alchemy.com/v2/...`); restart PM2 |
 | `/api/lottery/draw` returns 401 | `VITE_ADMIN_TOKEN` not set or wrong | Set it in the server env, restart PM2 |
 | World ID verify hangs or `verify_failed` in pm2 logs | Mismatch between server `WORLD_ID_RP_ID` + `WORLD_ID_SIGNING_KEY` and the `app_id` registered in the World Dev Portal | Re-pull the rp_id / signing key from the Dev Portal and update `shared/.env`; rebuild and redeploy |
+| World ID returns `missing_nullifier` | IDKit payload did not include either legacy `nullifier_hash` or v4 `responses[].nullifier` | Confirm the client is using `proofOfHuman({ signal })`, then retry from World App and check the raw verify details in PM2 logs |
+| World ID returns `nullifier_already_used` | The same World ID proof/nullifier was already bound to another wallet | Use the original wallet, or clear the conflicting user only if this is confirmed test data |
 | "World ID disabled" in the Onboarding verify card | `VITE_ENABLE_IDKIT=false` (or unset) on server, OR the client bundle was built without that flag | `sed -i 's/^VITE_ENABLE_IDKIT=.*/VITE_ENABLE_IDKIT=true/' /opt/last-human-standing/shared/.env`, then rebuild + redeploy — the VITE_ vars are baked at build time, not read at runtime |
 | Orb opens in World App but the resulting nullifier isn't bound to a wallet | Client was using an empty `signal` (no wallet address); known cause: `WorldIdVerify` rendered before the user had a wallet | Fixed in `22b8a9b` — the widget now gates on `user?.address` and renders "Connect wallet to verify" otherwise |
 
