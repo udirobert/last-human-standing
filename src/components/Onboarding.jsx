@@ -241,7 +241,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               onBack={() => setStep(0)}
               faq
               withAmbient
-              AmbientComponent={<AmbientBackdrop phase={phase} />}
+              AmbientComponent={<AmbientBackdrop phase={phase} populationCount={reservedCount} populationTotal={cohortSize} />}
             >
               <StageSection index={0} className="text-center">
                 <Mascot variant="idle" size={64} interactive onClick={handleMascotClick} />
@@ -323,7 +323,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               onBack={() => setStep(1)}
               faq
               withAmbient
-              AmbientComponent={<AmbientBackdrop phase={phase} />}
+              AmbientComponent={<AmbientBackdrop phase={phase} populationCount={reservedCount} populationTotal={cohortSize} />}
             >
               <StageSection index={0} className="text-center">
                 <MascotGuide
@@ -407,7 +407,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               onBack={() => setShowExitIntent(true)}
               faq
               withAmbient
-              AmbientComponent={<AmbientBackdrop phase={phase} />}
+              AmbientComponent={<AmbientBackdrop phase={phase} populationCount={reservedCount} populationTotal={cohortSize} />}
             >
               <StageSection index={0} className="flex flex-col items-center text-center pt-2 pb-1">
                 <Mascot variant={entryPaid ? "celebrating" : "excited"} size={72} interactive onClick={handleMascotClick} />

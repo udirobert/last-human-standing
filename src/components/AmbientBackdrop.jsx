@@ -1,14 +1,29 @@
 import { motion } from "framer-motion";
 import EmberField from "./ui/EmberField.jsx";
 import AmbientMotifs from "./ui/AmbientMotifs.jsx";
+import TopographicTexture from "./ui/TopographicTexture.jsx";
+import PopulationField from "./ui/PopulationField.jsx";
 
 const PAPER_GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
 /**
- * Shared atmospheric room (docs/ART_DIRECTION.md): warm radial + grain +
- * EmberField + optional soft painted motifs. LandingHero keeps its denser
- * motif layout; elsewhere this stops the human language from falling off a cliff.
+ * Shared atmospheric room (docs/ART_DIRECTION.md).
+ *
+ * Layer stack (bottom to top):
+ *   1. Warm radial gradient — the "lit room"
+ *   2. Topographic contour texture — the game's geographic identity
+ *   3. Paper grain — tactile surface
+ *   4. Color pools — slow-pulsing warm light
+ *   5. Population field — warm dots representing the surviving field.
+ *      This is the brand essence: you see the crowd, you feel them thin.
+ *   6. EmberField — concentric ripple near the bottom
+ *   7. AmbientMotifs — soft corner flourishes (off by default now; the
+ *      population dots and topo texture carry the character)
+ *
+ * Population data is optional. When provided, the backdrop becomes a
+ * living representation of game state. When absent (e.g. SpeedRun), it
+ * falls back to a static ambient field.
  */
 const ROOMS = {
   prelaunch: "radial-gradient(130% 95% at 50% 0%, #4a3221 0%, #2a1c14 42%, #16100c 100%)",
@@ -33,31 +48,40 @@ const PALETTES = {
   ],
 };
 
-const PARTICLES = [
-  { x: 12, y: 18, duration: 7, delay: 0 },
-  { x: 78, y: 22, duration: 9, delay: 1.5 },
-  { x: 25, y: 65, duration: 8, delay: 0.8 },
-  { x: 88, y: 70, duration: 10, delay: 2.2 },
-  { x: 50, y: 40, duration: 11, delay: 0.4 },
-  { x: 15, y: 80, duration: 9, delay: 1.2 },
-  { x: 65, y: 12, duration: 8, delay: 0.6 },
-  { x: 40, y: 88, duration: 10, delay: 1.8 },
-];
+// Topo seeds per phase — the "map" shifts as the game progresses
+const TOPO_SEEDS = { prelaunch: 17, live: 42, ended: 89 };
 
 export default function AmbientBackdrop({
   phase = "prelaunch",
   ember = true,
-  /** Soft corner artefacts. Off on ceremony screens that already own a large ThemeMotif. */
-  flourishes = true,
+  /** Soft corner artefacts. Off by default — population dots + topo carry
+   *  the character now. Enable on ceremony screens that want extra warmth. */
+  flourishes = false,
+  /** Population field: number of alive/reserved players. */
+  populationCount,
+  /** Population field: total cohort size. */
+  populationTotal,
+  /** Population field: whether to show a winner glow on the last dot. */
+  populationWinner = false,
 }) {
   const palette = PALETTES[phase] ?? PALETTES.prelaunch;
   const room = ROOMS[phase] ?? ROOMS.prelaunch;
-  const particleTone = phase === "live" ? "bg-neon/50" : "bg-amber/50";
+  const topoSeed = TOPO_SEEDS[phase] ?? TOPO_SEEDS.prelaunch;
+
+  // Resolve population data — fall back to sensible defaults per phase
+  const popCount = populationCount ?? (phase === "ended" ? 1 : phase === "prelaunch" ? 0 : 25);
+  const popTotal = populationTotal ?? 50;
+  const popWinner = populationWinner || phase === "ended";
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden -z-0" aria-hidden="true">
+      {/* 1. Warm radial gradient — the lit room */}
       <div className="absolute inset-0" style={{ background: room }} />
 
+      {/* 2. Topographic contour texture — geographic identity */}
+      <TopographicTexture seed={topoSeed} opacity={phase === "ended" ? 0.03 : 0.045} />
+
+      {/* 3. Paper grain — tactile surface */}
       <div
         className="absolute inset-0"
         style={{
@@ -68,6 +92,7 @@ export default function AmbientBackdrop({
         }}
       />
 
+      {/* 4. Color pools — slow-pulsing warm light */}
       {palette.map((p, i) => (
         <motion.div
           key={`${phase}-${i}`}
@@ -78,24 +103,23 @@ export default function AmbientBackdrop({
         />
       ))}
 
+      {/* 5. Population field — the living crowd, the brand essence */}
+      <PopulationField
+        count={popCount}
+        total={popTotal}
+        phase={phase}
+        winner={popWinner}
+      />
+
+      {/* 6. EmberField — concentric ripple near the bottom */}
       {ember && (
         <div className="absolute inset-0 overflow-hidden">
           <EmberField cy={82} />
         </div>
       )}
 
+      {/* 7. AmbientMotifs — soft corner flourishes (optional) */}
       {flourishes && <AmbientMotifs />}
-
-      {PARTICLES.map((p, i) => (
-        <motion.span
-          key={i}
-          initial={{ y: 0, opacity: 0 }}
-          animate={{ y: [0, -28, 0], opacity: [0, 0.55, 0] }}
-          transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
-          className={`absolute w-1 h-1 rounded-full ${particleTone}`}
-          style={{ left: `${p.x}%`, top: `${p.y}%` }}
-        />
-      ))}
     </div>
   );
 }

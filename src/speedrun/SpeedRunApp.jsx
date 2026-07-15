@@ -194,9 +194,17 @@ function SpeedRunShell({ onReserve, onExit }) {
     );
   }
 
+  // Demo population: the field thins as the demo progresses through days
+  const demoPopulation = [50, 25, 12, 6, 3, 1][demoDay] ?? 50;
+
   return (
     <div className="relative h-[100svh] max-h-[100svh] flex flex-col font-body pb-10 overflow-hidden bg-transparent">
-      <AmbientBackdrop phase={phase} />
+      <AmbientBackdrop
+        phase={phase}
+        populationCount={demoPopulation}
+        populationTotal={50}
+        populationWinner={phase === "ended"}
+      />
       <PlayChrome
         demoDay={demoDay}
         beat={beat}

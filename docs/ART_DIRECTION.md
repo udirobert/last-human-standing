@@ -112,12 +112,27 @@ still runs the routine screens.
   standings/history), day recap, finale.
 - **AmbientBackdrop** (`AmbientBackdrop.jsx`) — shared warm room for every
   player shell (home, feed, chat, standings, history, onboarding stages,
-  speed-run mid-arc): radial “lit room,” paper grain, EmberField ripple,
-  phase-tinted pools. Transparent page shells so the room shows through.
+  speed-run mid-arc). Layer stack: warm radial gradient → topographic contour
+  texture → paper grain → phase-tinted color pools → **population field**
+  (warm dots representing the surviving field) → EmberField ripple → optional
+  AmbientMotifs. The population field is the brand essence: you see the crowd,
+  you feel them thin. In prelaunch, dots appear as players reserve. In live,
+  eliminated dots fade. In ended, one bright dot remains. Population data flows
+  from `useRound` + `useStats` through `AppShell`.
+- **TopographicTexture** (`ui/TopographicTexture.jsx`) — faint contour lines
+  under the warm gradient. The game's premise is proving you're somewhere real;
+  the topo pattern grounds the backdrop in physical geography. Deterministic
+  seeded shapes (per-phase seed) with a gentle breathing animation on the
+  innermost rings. 3-4.5% opacity — structural, not decorative.
+- **PopulationField** (`ui/PopulationField.jsx`) — warm dots scattered across
+  the backdrop, each representing a player. Deterministic positions (seeded,
+  min-distance constraint) so dots don't jump when count changes. Eliminated
+  dots fade in place. Winner dot gets a crown glow. rAF drift for organic
+  motion. Reduced-motion: static. Max 50 dots (cohort size).
 - **AmbientMotifs** (`AmbientMotifs.jsx`) — soft corner flourishes (tree, cat,
-  coffee, ramen) inside the backdrop so the hand doesn’t vanish after landing.
-  Optional `flourishes={false}` when a ceremony already owns a large ThemeMotif
-  (check-in). LandingHero / SpeedRunIntro keep their denser floating set.
+  coffee, ramen). Off by default now — the population dots and topo texture
+  carry the character. Enable with `flourishes` on ceremony screens that want
+  extra warmth. LandingHero / SpeedRunIntro keep their denser floating set.
 - **Craft dialect (demo ↔ real)** — `CraftCta.jsx` (HumanCta / GameCta) +
   `src/lib/cuelume.js` interaction layer. Speed-run `beatUi.jsx` ceremonies
   (`DayReveal`, `CutCeremony`, `OutcomeCeremony`) share MotifFrieze / DozingCat
