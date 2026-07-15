@@ -7,6 +7,7 @@ import NetworkPill from './ui/NetworkPill.jsx';
 import FAQModal from './FAQModal.jsx';
 import AppShell from './AppShell.jsx';
 import EmptyState from './EmptyState.jsx';
+import ChatPreview from './ChatPreview.jsx';
 import { CHAT_COPY } from '../lib/copy.js';
 import { CUE_PRESS } from '../lib/cuelume.js';
 
@@ -204,13 +205,17 @@ export default function Chat({ onBack }) {
           <div className="flex-1">
             <div className="flex items-center gap-2">
               <h2 className="font-display text-3xl text-bone tracking-wide leading-none">Survivors lobby</h2>
-              <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
+              {phase !== "prelaunch" && (
+                <div className="w-2 h-2 rounded-full bg-neon animate-pulse" />
+              )}
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-1">
               {isMiniApp && onlineCount != null ? (
                 <span className="font-mono text-dim text-xs tabular-nums">{onlineCount} humans reserved</span>
               ) : useMocks ? (
                 <span className="font-mono text-amber text-xs">Dev preview — simulated messages</span>
+              ) : phase === "prelaunch" ? (
+                <span className="font-mono text-dim text-xs">Opens when the game goes live</span>
               ) : (
                 <span className="font-mono text-dim text-xs">Talk with the living</span>
               )}
@@ -220,18 +225,20 @@ export default function Chat({ onBack }) {
         </div>
       </div>
 
-      {/* Context banner */}
-      <div className="mx-5 mt-3 bg-smoke/80 border border-ember/40 rounded-xl px-4 py-2.5">
-        <p className="text-bone/70 text-xs font-body leading-relaxed">
-          {isMiniApp
-            ? (chatMode === 'lobby'
-                ? 'Lobby chat — all survivors can see your messages.'
-                : `Direct message via World Chat · to @${toUser || '…'}`)
-            : (chatMode === 'lobby'
-                ? 'Lobby chat — visible to all survivors.'
-                : `Sends via World Chat · to @${toUser || '…'}`)}
-        </p>
-      </div>
+      {/* Context banner — hidden in prelaunch (ChatPreview covers this) */}
+      {phase !== "prelaunch" && (
+        <div className="mx-5 mt-3 bg-smoke/80 border border-ember/40 rounded-xl px-4 py-2.5">
+          <p className="text-bone/70 text-xs font-body leading-relaxed">
+            {isMiniApp
+              ? (chatMode === 'lobby'
+                  ? 'Lobby chat — all survivors can see your messages.'
+                  : `Direct message via World Chat · to @${toUser || '…'}`)
+              : (chatMode === 'lobby'
+                  ? 'Lobby chat — visible to all survivors.'
+                  : `Sends via World Chat · to @${toUser || '…'}`)}
+          </p>
+        </div>
+      )}
 
       {/* Messages */}
       <NetworkPill error={chatError} onRetry={loadMessages} />
@@ -250,14 +257,18 @@ export default function Chat({ onBack }) {
           <ScreenLoader kind="chat" />
         )}
 
-        {/* Empty state */}
+        {/* Empty state — prelaunch shows educational preview, live shows simple empty */}
         {!chatLoading && messages.length === 0 && (
-          <EmptyState
-            motif="cat"
-            title="No messages yet"
-            body="Be the first to say something to the survivors."
-            className="py-8"
-          />
+          phase === "prelaunch" ? (
+            <ChatPreview />
+          ) : (
+            <EmptyState
+              motif="cat"
+              title="No messages yet"
+              body="Be the first to say something to the survivors."
+              className="py-8"
+            />
+          )
         )}
 
         <AnimatePresence initial={false}>
