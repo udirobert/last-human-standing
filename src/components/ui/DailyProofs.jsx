@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { DAILY_THEMES, COHORT_SCHEDULE } from "../../data/game";
 import ThemeMotif from "./ThemeMotif.jsx";
@@ -34,6 +34,36 @@ export default function DailyProofs() {
   const [selected, setSelected] = useState(null);
   const reduce = useReducedMotion();
   const idFor = (t) => `theme-world-${t.id}`;
+  
+  // Shuffle day assignments every 5-8 seconds to create mystery
+  // Players see all themes with day labels, but the mapping keeps changing
+  const [shuffledSchedule, setShuffledSchedule] = useState(() => {
+    const picked = [...DAILY_THEMES].sort(() => Math.random() - 0.5).slice(0, 5);
+    return picked.map((theme, i) => ({
+      ...COHORT_SCHEDULE[i],
+      theme: theme.theme,
+      emoji: theme.emoji,
+    }));
+  });
+  
+  useEffect(() => {
+    let timeout;
+    const scheduleNext = () => {
+      timeout = setTimeout(() => {
+        setShuffledSchedule(() => {
+          const picked = [...DAILY_THEMES].sort(() => Math.random() - 0.5).slice(0, 5);
+          return picked.map((theme, i) => ({
+            ...COHORT_SCHEDULE[i],
+            theme: theme.theme,
+            emoji: theme.emoji,
+          }));
+        });
+        scheduleNext();
+      }, 5000 + Math.random() * 3000);
+    };
+    scheduleNext();
+    return () => clearTimeout(timeout);
+  }, []);
 
   return (
     <section className="w-full max-w-[860px] mx-auto px-5">
@@ -52,11 +82,9 @@ export default function DailyProofs() {
 
       <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 list-none p-0 m-0">
         {DAILY_THEMES.map((t) => {
-          // Match against the cohort schedule so scheduled themes get a
-          // "DAY N · LABEL" overlay that tells the user exactly when to
-          // expect them. Unscheduled themes still render but without the
-          // overlay — they stay in the deck as teasers / decoys.
-          const scheduled = COHORT_SCHEDULE.find((s) => s.theme === t.theme);
+          // Match against the shuffled schedule (not the real one)
+          // so day labels keep moving around, creating mystery
+          const scheduled = shuffledSchedule.find((s) => s.theme === t.theme);
           return (
             <li key={t.id}>
               <button

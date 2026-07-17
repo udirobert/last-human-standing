@@ -147,10 +147,10 @@ function GetReadyCard() {
       </p>
       <div className="space-y-2.5">
         <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
-          <span className="text-2xl shrink-0">{day1.emoji}</span>
+          <span className="text-2xl shrink-0">❓</span>
           <div className="flex-1 min-w-0">
             <p className="font-display text-bone text-sm leading-tight">
-              Day 1: {day1.theme}
+              Day 1: ???
             </p>
             <p className="text-dim text-[10px] font-mono mt-0.5">
               {day1.dayLabel} · 50 → {day1.cap} survivors
@@ -158,10 +158,10 @@ function GetReadyCard() {
           </div>
         </div>
         <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
-          <span className="text-2xl shrink-0">{day3.emoji}</span>
+          <span className="text-2xl shrink-0">🔮</span>
           <div className="flex-1 min-w-0">
             <p className="font-display text-bone text-sm leading-tight">
-              Day 3: {day3.theme}
+              Day 3: ???
             </p>
             <p className="text-dim text-[10px] font-mono mt-0.5">
               {day3.dayLabel} · line up a real human
