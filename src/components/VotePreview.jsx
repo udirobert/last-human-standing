@@ -24,7 +24,7 @@ const STEPS = [
   {
     icon: "📸",
     title: "Players check in",
-    body: "Each day has a theme — a café, a park, a gym. Players snap a photo proving they're really there.",
+    body: "Each day has a theme. Players snap a photo proving they're really there.",
   },
   {
     icon: "⚖️",

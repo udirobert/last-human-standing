@@ -59,7 +59,7 @@ export default function CheckInPreview() {
           Prove you're human. Stay alive.
         </p>
         <p className="text-dim text-xs leading-relaxed max-w-sm mx-auto">
-          Each day has a theme — a café, a park, a gym. Get there, snap a
+          Each day has a theme. Get there, snap a
           photo with GPS, and submit before the survival cap fills. The
           crowd audits your proof. Survive or get eliminated.
         </p>

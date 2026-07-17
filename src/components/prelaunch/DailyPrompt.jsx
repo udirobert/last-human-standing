@@ -9,19 +9,19 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const PROMPTS = [
   {
-    id: "weird-cafe",
-    q: "What's the weirdest place that still counts as 'AT A CAFÉ'?",
+    id: "weird-proof",
+    q: "What's the weirdest place that still counts as a valid proof photo?",
     options: [
-      "A literal café",
-      "A food truck with seating",
-      "Someone's kitchen during brunch",
-      "A coworking space with free coffee",
+      "A literal location",
+      "A creative setup with props",
+      "Someone's unusual living space",
+      "A public place with unexpected context",
     ],
   },
   {
     id: "day-1-theme",
-    q: "Predict Day 1's theme. What place type will it be?",
-    options: ["A park", "A café", "A bus stop", "A bookshop"],
+    q: "Day 1 is tomorrow. What do you think the theme will involve?",
+    options: ["Somewhere social", "Somewhere public", "Somewhere private", "Something unexpected"],
   },
   {
     id: "would-you-lie",

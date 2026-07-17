@@ -255,9 +255,9 @@ function CountdownCard({ launchAt, split }) {
   // T-minus rotating copy — cycles through schedule-themed hints every 5s
   // so the countdown feels concrete instead of abstract.
   const tMinusLines = useMemo(() => [
-    `tomorrow · find a café ☕`,
-    `day 3 · line up a real human 🤝`,
-    `day 4 · hunt for a bookstore 📚`,
+    `tomorrow · find your proof ☕`,
+    `day 3 · prove you know someone 🤝`,
+    `day 4 · hunt for the hidden 📚`,
     `day 5 · rise before the sun 🌅`,
     `50 humans · 5 days · 1 winner`,
     `the crowd votes · stay honest`,
@@ -286,7 +286,7 @@ function CountdownCard({ launchAt, split }) {
         ? <Countdown targetIso={launchAt} className="font-display text-5xl text-bone leading-none animate-glow relative" />
         : <p className="font-display text-3xl text-dim relative">TBA</p>}
       <p className="font-display text-bone text-lg tracking-wide mt-3 relative">
-        <span className="text-amber">☕ AT A CAFÉ</span>
+        <span className="text-amber">???</span>
         <span className="text-dim mx-2">·</span>
         <span className="text-bone/80">50 → 25</span>
       </p>
