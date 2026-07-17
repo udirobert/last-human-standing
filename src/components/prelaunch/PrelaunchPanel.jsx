@@ -166,25 +166,6 @@ function GetReadyCard() {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
-          <span className="text-2xl shrink-0">💬</span>
-          <div className="flex-1 min-w-0">
-            <p className="font-display text-bone text-sm leading-tight">
-              Join the Telegram
-            </p>
-            <p className="text-dim text-[10px] font-mono mt-0.5">
-              chat with other humans
-            </p>
-          </div>
-          <a
-            href="https://t.co/placeholder"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-1.5 rounded-lg bg-neon/15 border border-neon/40 text-neon font-mono text-[10px] hover:bg-neon/25 transition-colors"
-          >
-            JOIN
-          </a>
-        </div>
       </div>
     </div>
   );
