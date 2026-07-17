@@ -104,6 +104,8 @@ export default function PrelaunchPanel({
 
       <CountdownCard launchAt={launchAt} split={split} />
 
+      <LotteryStatus launchAt={launchAt} />
+
       <PrizePots prizePool={prizePool} />
 
       {friendsInCohort != null && friendsInCohort > 0 && (
@@ -165,6 +167,57 @@ function GetReadyCard() {
               {day3.dayLabel} · line up a real human
             </p>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LotteryStatus({ launchAt }) {
+  const [status, setStatus] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchStatus = async () => {
+      try {
+        const r = await fetch("/api/lottery/status");
+        if (!r.ok) return;
+        const data = await r.json();
+        if (!cancelled) setStatus(data);
+      } catch { /* ignore */ }
+    };
+    fetchStatus();
+    return () => { cancelled = true; };
+  }, []);
+
+  if (!status) return null;
+
+  const { minCandidates, maxDelayHours, freeRegistered } = status;
+  const hasEnough = freeRegistered >= minCandidates;
+
+  return (
+    <div className="border border-amber/30 rounded-3xl p-4 bg-smoke/50 backdrop-blur-sm">
+      <div className="flex items-start gap-3">
+        <div className="text-2xl shrink-0">🎲</div>
+        <div className="flex-1 min-w-0">
+          <p className="font-display text-bone text-sm leading-tight mb-1">
+            Free lottery mechanics
+          </p>
+          <p className="text-dim text-[10px] font-body leading-relaxed">
+            {hasEnough ? (
+              <>
+                <span className="text-neon">✓ {freeRegistered} free users registered</span>
+                <span className="mx-1">·</span>
+                draw fires at launch (or when {minCandidates} sign up)
+              </>
+            ) : (
+              <>
+                Draw fires when <span className="text-amber">{minCandidates} free users</span> sign up
+                <span className="mx-1">·</span>
+                or {maxDelayHours}h after launch (whichever first)
+              </>
+            )}
+          </p>
         </div>
       </div>
     </div>

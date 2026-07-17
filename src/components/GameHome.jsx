@@ -21,6 +21,7 @@ import ArsenalCard from './ArsenalCard.jsx';
 import DayRecap from './DayRecap.jsx';
 import RuleReveal from './RuleReveal.jsx';
 import Mascot from './Mascot.jsx';
+import DayZeroBanner from './DayZeroBanner.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from './MascotEventProvider.jsx';
 
@@ -99,6 +100,8 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           />
         </div>
       </div>
+
+      <DayZeroBanner />
 
       <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${SHELL_BOTTOM_PAD}`}>
         {(isLive || isEnded) && (
