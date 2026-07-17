@@ -79,7 +79,23 @@ function HeroCountdown({ targetIso }) {
 }
 
 export default function LandingHero({ targetIso, reservedCount = 0, cohortSize = 50, onReserve, onDetails, onSpeedRun }) {
-  const filling = reservedCount > 0 && reservedCount < cohortSize;
+  // Tiered urgency — shifts with cohort fill so the scarcity copy feels real
+  // instead of shouting "filling fast" at 2/50.
+  let statusLine;
+  if (reservedCount === 0) {
+    statusLine = { text: "Be among the first", urgent: false };
+  } else if (reservedCount < 15) {
+    statusLine = { text: "Early birds", urgent: false };
+  } else if (reservedCount < 30) {
+    statusLine = { text: "Filling up", urgent: false };
+  } else if (reservedCount < 45) {
+    statusLine = { text: "Slots filling fast", urgent: true };
+  } else if (reservedCount < cohortSize) {
+    statusLine = { text: "Almost full", urgent: true };
+  } else {
+    statusLine = { text: "COHORT FULL · join the waitlist", urgent: true };
+  }
+  const filling = statusLine.urgent;
 
   return (
     <section
@@ -234,10 +250,16 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
 
         <div className="mt-5 font-mono text-dim" style={{ fontSize: "12px" }}>
           <span className="inline-flex items-center gap-2 align-middle">
-            <span className="w-2 h-2 rounded-full bg-neon" style={{ boxShadow: "0 0 10px #00FF94" }} />
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{
+                background: filling ? "#FFB800" : "#00FF94",
+                boxShadow: filling ? "0 0 10px rgba(255,184,0,0.7)" : "0 0 10px #00FF94",
+              }}
+            />
             <b className="text-bone font-semibold tabular-nums">{reservedCount.toLocaleString()}</b>
             <span>
-              of {cohortSize} reserved{filling ? " · filling fast" : ""}
+              of {cohortSize} reserved · <span className={filling ? "text-amber" : ""}>{statusLine.text}</span>
             </span>
           </span>
         </div>

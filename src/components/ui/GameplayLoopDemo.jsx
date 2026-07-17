@@ -107,7 +107,7 @@ export default function GameplayLoopDemo() {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2, type: "spring", bounce: 0.4 }}
                 >
-                  <ThemeMotif emoji="🚇" size={80} label="transit" />
+                  <ThemeMotif emoji="☕" size={80} label="café" />
                 </motion.div>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -115,7 +115,7 @@ export default function GameplayLoopDemo() {
                   transition={{ delay: 0.4 }}
                   className="font-display text-2xl text-bone text-center leading-tight"
                 >
-                  ON PUBLIC TRANSIT
+                  AT A CAFÉ
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -145,15 +145,15 @@ export default function GameplayLoopDemo() {
                 </div>
                 <div className="flex-1 rounded-xl overflow-hidden border border-ember/30 relative">
                   <img
-                    src={proofSceneDataUri({ scene: "transit", seed: 99, width: 300, height: 400 })}
+                    src={proofSceneDataUri({ scene: "cafe", seed: 99, width: 300, height: 400 })}
                     alt="your proof"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute bottom-0 inset-x-0 p-2 bg-gradient-to-t from-ash/90 to-transparent">
-                    <p className="font-body text-bone/90 text-[11px] leading-snug">Line 3. Standing room only.</p>
+                    <p className="font-body text-bone/90 text-[11px] leading-snug">Corner spot. Double espresso.</p>
                   </div>
                 </div>
-                <p className="font-mono text-[9px] text-dim text-center">GPS shared · 14:32</p>
+                <p className="font-mono text-[9px] text-dim text-center">GPS shared · 09:14</p>
               </motion.div>
             )}
 

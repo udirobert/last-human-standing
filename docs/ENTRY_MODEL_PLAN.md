@@ -135,7 +135,7 @@ The client uses `split.paidCount / split.paidSlots` and `split.freeCount / split
 GET /api/lottery/status
 → {
   "ok": true,
-  "drawAt": "2026-07-17T18:00:00Z",
+  "drawAt": "2026-07-18T18:00:00Z",
   "status": "pending" | "drawn" | "closed",
   "freeRegistered": 12,
   "freeSlots": 25,

@@ -5,7 +5,7 @@ import { proofSceneDataUri } from "../components/ui/proofSceneData.js";
 /**
  * 5-day speed-run — compressed cohort myth.
  *
- * Spoiler discipline: demo themes are outside the real Jul 17–21 schedule
+ * Spoiler discipline: demo themes are outside the real Jul 18–22 schedule
  * and use a scrambled order. Mechanics + RuleReveal copy stay real.
  */
 

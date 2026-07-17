@@ -83,7 +83,7 @@ Copy `.env.example` → `.env`. New values for the cohort/geo model:
 
 ```bash
 # Pre-launch / cohort
-GAME_LAUNCH_AT=2026-07-17T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
+GAME_LAUNCH_AT=2026-07-18T18:00:00Z   # ISO timestamp; before this → "prelaunch" phase
 COHORT_SIZE=50                         # max reservations before pre-launch closes early
 
 # Daily round defaults

@@ -1,4 +1,4 @@
-# Launch runbook — 2026-07-17 18:00 UTC
+# Launch runbook — 2026-07-18 18:00 UTC
 
 This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`
@@ -18,8 +18,8 @@ and the lottery draws.
 > - **July 1** was missed with the production API down (nginx
 >   502 — the PM2 process was not serving). Detected 2026-07-07.
 >
-> The new target is **Friday 2026-07-17 18:00 UTC**, giving four
-> extra days of signup runway (bumped from July 14 on 2026-07-13).
+> The new target is **Saturday 2026-07-18 18:00 UTC**, giving one
+> extra day of signup runway (bumped from July 17 on 2026-07-17).
 > mechanics release: lethal votes (DQ-and-replace), real
 > infiltrator stakes, the jury system, weighted lottery v2,
 > working push notifications, the public spectator feed, and
@@ -30,7 +30,7 @@ and the lottery draws.
 ### Done — code-complete, tested, deployed
 
 - ✅ **Cap decay** (migration 009): `survival_cap_for_day()` — 25→12→6→3→1
-- ✅ **Round schedule** (migration 010 + 014): 5 daily rounds for July 17–21
+- ✅ **Round schedule** (migration 010 + 014 + 017): 5 daily rounds for July 18–22
 - ✅ **Streak tracking** (migration 011): `checkin_streak`, `award_streak_bonuses()`
 - ✅ **Wildcard revival** (migration 011): `revive_votes` table, `revive_player()`, UI (`WildcardPanel.jsx`)
 - ✅ **Winner payout** (migration 012): `payouts` table, automatic onchain payout via `ariaBroadcastPayoutTx()`, `/api/payout/status`, `/api/admin/retry-payout`
@@ -96,7 +96,7 @@ signup between the lazy trigger and the actual draw is honoured.
   **Migrations 009–012 (applied 2026-07-07):**
   - 009: Cap decay — `survival_cap_for_day(day)` SQL function
     (Day 1→25, Day 2→12, Day 3→6, Day 4→3, Day 5+→1).
-  - 010: Round schedule — 5 daily rounds created for July 17–21 (014 shifts dates if 010 already applied with July 14–19).
+  - 010: Round schedule — 5 daily rounds created for July 18–22 (014 shifts dates if 010 already applied with July 14–19; 017 shifts again to July 18–22 if 014 already applied with July 17–21).
     Themes: Café → Park → Friend → Bookstore → Sunrise.
   - 011: Streaks + wildcard — `checkin_streak` column,
     `award_streak_bonuses()`, `revive_votes` table,
@@ -238,7 +238,7 @@ import('./server/lib/lottery.js').then(({ drawLottery, lotterySeed, ALGORITHM_VE
   // For a re-run, export the candidate list from Supabase and pass it in.
   const candidates = [/* ...from supabase, ordered by reserved_at asc... */];
   const result = drawLottery(candidates, {
-    launchAtIso: '2026-07-17T18:00:00Z',
+    launchAtIso: '2026-07-18T18:00:00Z',
     cohort: 1,
     slots: 25,
   });
@@ -382,3 +382,4 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-07-13 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-07-14T18:00:00Z` to `2026-07-17T18:00:00Z` (Friday). Migration 014 shifts scheduled round windows +3 days. New lottery seed: `2026-07-17T18:00:00Z:cohort-1:lottery`. |
 | 2026-07-13 | `20260713-190918` | **Prelaunch UX + audit engagement + Jul 17 launch.** Simplified reserve (wallet→pay; verify collapsed in lobby); reserved players route to GameHome; `VoteProgressCard` + `GET /api/audit/status`; audit nudge push at T+2h; rounds rescheduled Jul 17–21; `GAME_LAUNCH_AT=2026-07-17T18:00:00Z`. |
 | 2026-07-13 | `20260713-204523` | **Craft continuity (demo ↔ real).** Shared warm `AmbientBackdrop` + `AmbientMotifs` across player shells; MotifFrieze / ThemeMotif / DozingCat on onboarding, empties, speed-run quiet beats (`beatUi` Cut/Outcome/DayReveal), GameMoment; Cuelume + CraftCta app-wide; browser wallet list in a connect modal (not dumped on reserve); history phase-tinted room. |
+| 2026-07-17 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-07-17T18:00:00Z` to `2026-07-18T18:00:00Z` (Saturday). Migration 017 shifts scheduled round windows +1 day (Jul 18–22). New lottery seed: `2026-07-18T18:00:00Z:cohort-1:lottery`. |

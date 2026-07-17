@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useRound } from "../../world/RoundProvider.jsx";
 import Countdown from "../Countdown.jsx";
 import CohortProgress from "./CohortProgress.jsx";
@@ -12,6 +12,7 @@ import MotifFrieze from "../ui/MotifFrieze.jsx";
 import { HumanCta } from "../ui/CraftCta.jsx";
 import CoffeeBrew from "../ui/CoffeeBrew.jsx";
 import { COHORT } from "../../lib/copy.js";
+import { COHORT_SCHEDULE } from "../../data/game";
 
 /**
  * The single prelaunch surface. Composes all prelaunch widgets
@@ -99,6 +100,8 @@ export default function PrelaunchPanel({
         <PostReserveExtras reservedAt={reservedAt} phase={phase} />
       )}
 
+      {isReserved && <GetReadyCard />}
+
       <CountdownCard launchAt={launchAt} split={split} />
 
       <PrizePots prizePool={prizePool} />
@@ -131,7 +134,82 @@ export default function PrelaunchPanel({
   );
 }
 
+function GetReadyCard() {
+  const day1 = COHORT_SCHEDULE[0];
+  const day3 = COHORT_SCHEDULE[2];
+
+  return (
+    <div className="border border-neon/30 rounded-3xl p-5 bg-smoke/60 backdrop-blur-sm">
+      <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-3 text-center">
+        Get ready
+      </p>
+      <div className="space-y-2.5">
+        <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
+          <span className="text-2xl shrink-0">{day1.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-bone text-sm leading-tight">
+              Day 1: {day1.theme}
+            </p>
+            <p className="text-dim text-[10px] font-mono mt-0.5">
+              {day1.dayLabel} · 50 → {day1.cap} survivors
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
+          <span className="text-2xl shrink-0">{day3.emoji}</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-bone text-sm leading-tight">
+              Day 3: {day3.theme}
+            </p>
+            <p className="text-dim text-[10px] font-mono mt-0.5">
+              {day3.dayLabel} · line up a real human
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
+          <span className="text-2xl shrink-0">💬</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-display text-bone text-sm leading-tight">
+              Join the Telegram
+            </p>
+            <p className="text-dim text-[10px] font-mono mt-0.5">
+              chat with other humans
+            </p>
+          </div>
+          <a
+            href="https://t.co/placeholder"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-lg bg-neon/15 border border-neon/40 text-neon font-mono text-[10px] hover:bg-neon/25 transition-colors"
+          >
+            JOIN
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CountdownCard({ launchAt, split }) {
+  // T-minus rotating copy — cycles through schedule-themed hints every 5s
+  // so the countdown feels concrete instead of abstract.
+  const tMinusLines = useMemo(() => [
+    `tomorrow · find a café ☕`,
+    `day 3 · line up a real human 🤝`,
+    `day 4 · hunt for a bookstore 📚`,
+    `day 5 · rise before the sun 🌅`,
+    `50 humans · 5 days · 1 winner`,
+    `the crowd votes · stay honest`,
+  ], []);
+
+  const [lineIdx, setLineIdx] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLineIdx((i) => (i + 1) % tMinusLines.length);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [tMinusLines.length]);
+
   return (
     <div
       className="border border-amber/35 rounded-3xl p-6 relative overflow-hidden"
@@ -146,6 +224,14 @@ function CountdownCard({ launchAt, split }) {
       {launchAt
         ? <Countdown targetIso={launchAt} className="font-display text-5xl text-bone leading-none animate-glow relative" />
         : <p className="font-display text-3xl text-dim relative">TBA</p>}
+      <p className="font-display text-bone text-lg tracking-wide mt-3 relative">
+        <span className="text-amber">☕ AT A CAFÉ</span>
+        <span className="text-dim mx-2">·</span>
+        <span className="text-bone/80">50 → 25</span>
+      </p>
+      <p className="font-mono text-dim text-[10px] tracking-widest uppercase mt-1 relative">
+        snap your proof from anywhere on Earth
+      </p>
 
       <div className="mt-5 space-y-3 relative">
         <CohortProgress
@@ -168,8 +254,12 @@ function CountdownCard({ launchAt, split }) {
       </div>
 
       <MotifFrieze className="w-full mt-5 opacity-90" />
-      <p className="font-mono text-dim uppercase text-center mt-2" style={{ fontSize: 10, letterSpacing: "0.14em" }}>
-        the little proofs you&apos;re human
+      <p
+        className="font-mono text-amber/80 uppercase text-center mt-2 transition-opacity duration-500"
+        style={{ fontSize: 10, letterSpacing: "0.14em", opacity: 1 }}
+        key={lineIdx}
+      >
+        {tMinusLines[lineIdx]}
       </p>
     </div>
   );

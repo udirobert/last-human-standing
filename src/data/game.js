@@ -95,6 +95,19 @@ export const DAILY_THEMES = [
 
 export const TODAY_THEME = DAILY_THEMES[Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % DAILY_THEMES.length];
 
+/**
+ * The cohort 1 schedule — 5 daily themes with their day number, date, and
+ * survival cap. Used by DailyProofs (day-label overlay) and CountdownCard
+ * (T-minus rotating copy) so the UI always reflects the real calendar.
+ */
+export const COHORT_SCHEDULE = [
+  { day: 1, theme: "AT A CAFÉ",      emoji: "☕", date: "2026-07-18", cap: 25, dayLabel: "SAT" },
+  { day: 2, theme: "AT A PARK",      emoji: "🌳", date: "2026-07-19", cap: 12, dayLabel: "SUN" },
+  { day: 3, theme: "WITH A FRIEND",  emoji: "🤝", date: "2026-07-20", cap: 6,  dayLabel: "MON" },
+  { day: 4, theme: "AT A BOOKSTORE", emoji: "📚", date: "2026-07-21", cap: 3,  dayLabel: "TUE" },
+  { day: 5, theme: "OUTSIDE AT SUNRISE", emoji: "🌅", date: "2026-07-22", cap: 1, dayLabel: "WED" },
+];
+
 /** Resolve theme metadata by round name / place type / id. */
 export function findTheme(labelOrId) {
   if (labelOrId == null) return TODAY_THEME;
