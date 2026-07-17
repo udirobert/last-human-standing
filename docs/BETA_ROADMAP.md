@@ -97,7 +97,7 @@ curl -X POST https://YOUR_DOMAIN/api/admin/trigger-rounds \
 - No on-chain prize distribution (manual transfer to winner)
 - Single cohort only (no multi-cohort support)
 - Browser PoH is optional (World ID / Self Protocol not required for Celo beta)
-- No spectator mode (observers can use demo mode)
+- ~~No spectator mode~~ — resolved: `SpectatorPanel` explains audit/vote/chat role + jury ticket earning for non-players
 
 ---
 

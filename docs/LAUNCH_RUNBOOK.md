@@ -25,7 +25,7 @@ and the lottery draws.
 > working push notifications, the public spectator feed, and
 > the ended-phase winner ceremony.
 
-## Pre-launch status (updated 2026-07-13)
+## Pre-launch status (updated 2026-07-17)
 
 ### Done — code-complete, tested, deployed
 
@@ -41,14 +41,25 @@ and the lottery draws.
 - ✅ **Elimination ceremony**: survival summary, jury CTA, share copy
 - ✅ **Jury UI**: MissionBoard shows jury status, accuracy, tickets
 - ✅ **Onboarding pot display**: prize pot prominent on welcome + reserve
-- ✅ **All 133 tests passing**, lint clean, build succeeds
-- ✅ **Migrations 009–012 applied** to remote Supabase
-- ✅ **Deployed to production** (release `20260707-203843`)
+- ✅ **All 178 tests passing**, lint clean, build succeeds
+- ✅ **Migrations 009–017 applied** to remote Supabase
+- ✅ **Launch date bumped to 2026-07-18T18:00:00Z** (migration 017)
+- ✅ **Reset SQL applied** — stale dev data cleared (2026-07-17)
+- ✅ **Telegram tile removed** from GetReadyCard
+- ✅ **UX enhancements deployed** (release 20260717-152557):
+  - P0-1: Lottery visibility chip (shows draw mechanics)
+  - P0-2: DayZeroBanner (T-2h countdown ritual)
+  - P1-1: Check-in ritual (animated motif morph during photo capture)
+  - P1-2: Voting narrative arc (VerdictHour banner at T-2h, JuryStakes card)
+  - P1-3: Time-aware countdown copy (changes at T-24h, T-1h)
+  - P1-4: Cohort fill tiers (Open → Filling fast → Almost full → Full)
+  - P2-1: Elimination funnel (JuryOnboarding component for eliminated players)
+  - P2-2: Spectator panel (SpectatorPanel for non-players)
+- ✅ **Deployed to production** (release `20260717-152557`)
 
 ### Remaining — requires human action
 
 - ⬜ **Seed the prize pool**: transfer cUSD/WLD to the prize wallet before launch. With 25 paid entries at 1 WLD, the pot is ~$25 — insufficient for a 5-day engagement. Recommended: $500–1000 minimum, or raise the entry fee to 5 WLD.
-- ⬜ **Run the reset SQL** (`docs/LAUNCH_RESET.md`) to clear stale dev data
 - ⬜ **Dry-run the full game loop**: create a test round that opens/closes in minutes, submit check-ins, cast votes, trigger `close_day`, verify cap decay + verdicts + DQ-and-replace + streak bonuses + elimination + winner detection + payout
 - ⬜ **Set World ID env vars** if enabling PoH (see T-24h section)
 - ⬜ **Smoke-test the build** on a phone
@@ -383,3 +394,5 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-07-13 | `20260713-190918` | **Prelaunch UX + audit engagement + Jul 17 launch.** Simplified reserve (wallet→pay; verify collapsed in lobby); reserved players route to GameHome; `VoteProgressCard` + `GET /api/audit/status`; audit nudge push at T+2h; rounds rescheduled Jul 17–21; `GAME_LAUNCH_AT=2026-07-17T18:00:00Z`. |
 | 2026-07-13 | `20260713-204523` | **Craft continuity (demo ↔ real).** Shared warm `AmbientBackdrop` + `AmbientMotifs` across player shells; MotifFrieze / ThemeMotif / DozingCat on onboarding, empties, speed-run quiet beats (`beatUi` Cut/Outcome/DayReveal), GameMoment; Cuelume + CraftCta app-wide; browser wallet list in a connect modal (not dumped on reserve); history phase-tinted room. |
 | 2026-07-17 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-07-17T18:00:00Z` to `2026-07-18T18:00:00Z` (Saturday). Migration 017 shifts scheduled round windows +1 day (Jul 18–22). New lottery seed: `2026-07-18T18:00:00Z:cohort-1:lottery`. |
+| 2026-07-17 | `20260717-135159` | Launch date bump + reset SQL + Telegram tile removed. |
+| 2026-07-17 | `20260717-152557` | **Full UX ritual pass.** P0: `LotteryStatus` chip in PrelaunchPanel (draw mechanics: minCandidates, maxDelayHours, freeRegistered); `DayZeroBanner` activates T-2h before round opens with pulsing motif + countdown, morphs to "Day is live" at T-0. P1: `CheckIn` ritual mode (animated motif morph during photo capture with overlay text); `VerdictHour` banner at T-2h in Feed with countdown + "Final votes needed"; `JuryStakes` card showing ticket rewards (+1/+3/+5); time-aware countdown copy in `LandingHero` ("Cohort 1 begins" → "Day 1 begins" at T-24h → "Live in" at T-1h); cohort fill tiers (Open → Filling fast → Almost full → Full) in PrelaunchPanel. P2: `JuryOnboarding` component for eliminated players (jury status, progress to jury, cohort 2 transition); `SpectatorPanel` for non-players (audit/vote/chat role explanation, jury ticket earning, cohort 2 CTA). Telegram tile removed from GetReadyCard. Reset SQL applied (5 stale dev rows cleared). 178 tests passing. |
