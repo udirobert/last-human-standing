@@ -19,6 +19,17 @@ const DEFAULT_YOU = {
   votesResolved: 0,
   checkinStreak: 0,
 };
+const DEFAULT_AGENTS = {
+  enabled: false,
+  maxRatio: 0.25,
+  minCount: 5,
+  maxSlots: 0,
+  agentCount: 0,
+  humanCount: 0,
+  humanSlots: 50,
+  slotsRemaining: { humans: 50, agents: 0 },
+};
+
 const DEFAULT_STATE = {
   phase: "prelaunch",
   launchAt: null,
@@ -27,11 +38,14 @@ const DEFAULT_STATE = {
   reservedCount: 0,
   cohortFull: false,
   cohort: { size: 50, paidSlots: 25, freeSlots: 25, paidCount: 0, freeCount: 0 },
+  agents: DEFAULT_AGENTS,
+  silentVerification: false,
   currentDay: null,
   round: null,
   you: DEFAULT_YOU,
   winner: null,
   payout: null,
+  breakdown: null,
   lastDayClose: null,
   defaults: { survivalCap: 25, radiusM: 100 },
   verification: {
@@ -79,11 +93,14 @@ export function RoundProvider({ children }) {
           reservedCount: data.reservedCount ?? 0,
           cohortFull: Boolean(data.cohortFull),
           cohort: data.cohort ?? { size: 50, paidSlots: 25, freeSlots: 25, paidCount: 0, freeCount: 0 },
+          agents: { ...DEFAULT_AGENTS, ...(data.agents ?? {}) },
+          silentVerification: Boolean(data.silentVerification),
           currentDay: data.currentDay ?? null,
           round: data.round ?? null,
           you: { ...DEFAULT_YOU, ...(data.you ?? {}) },
           winner: data.winner ?? null,
           payout: data.payout ?? null,
+          breakdown: data.breakdown ?? null,
           lastDayClose: data.lastDayClose ?? null,
           defaults: { ...DEFAULT_STATE.defaults, ...(data.defaults ?? {}) },
           verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },

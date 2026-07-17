@@ -6,12 +6,13 @@ import { useTrustTier } from "../hooks/useTrustTier.js";
 
 export default function ModeBanner() {
   const { isWorldApp, isFarcaster, installAttempted, walletAuthed, humanityProvider } = useWorld();
-  const { isLoading, usesDemoState, refresh } = useRound();
+  const { isLoading, usesDemoState, refresh, silentVerification } = useRound();
   const { tier } = useTrustTier();
 
   const mode = useMemo(() => {
     if (!installAttempted || isLoading) return { label: "Syncing", tone: "dim" };
-    if (tier === "verified") {
+    // Silent verification: hide PoH provider labels during play — uncertainty is the game.
+    if (tier === "verified" && !silentVerification) {
       return {
         label: humanityProvider === "self" ? "Verified · Self" : "Verified · World ID",
         tone: "neon",
@@ -21,7 +22,7 @@ export default function ModeBanner() {
     if (isWorldApp) return { label: "World App", tone: "amber" };
     if (walletAuthed) return { label: "Browser", tone: "indigo" };
     return { label: "Not signed in", tone: "amber" };
-  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier, walletAuthed, humanityProvider]);
+  }, [isWorldApp, isFarcaster, installAttempted, isLoading, tier, walletAuthed, humanityProvider, silentVerification]);
 
   const classes =
     mode.tone === "neon"

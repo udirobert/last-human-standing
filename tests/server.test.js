@@ -233,6 +233,16 @@ describe("server hardening", () => {
     expect(typeof res.body.cohortFull).toBe("boolean");
   });
 
+  it("GET /api/game/state includes agent seat config (flagged off by default)", async () => {
+    const res = await request(app).get("/api/game/state");
+    expect(res.status).toBe(200);
+    expect(res.body.agents).toBeDefined();
+    expect(res.body.agents.enabled).toBe(false);
+    expect(res.body.agents.maxSlots).toBe(0);
+    expect(typeof res.body.agents.humanSlots).toBe("number");
+    expect(res.body.silentVerification).toBe(false);
+  });
+
   it("POST /api/logout returns ok without session", async () => {
     const res = await request(app).post("/api/logout");
     expect(res.status).toBe(200);

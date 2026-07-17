@@ -12,6 +12,7 @@ import { fetchCeloPot } from "./lib/celoBalance.js";
 import { drawLottery, ALGORITHM_VERSION, freeSlotsFor } from "./lib/lottery.js";
 import { debugCeloBalances } from "./lib/celoBalance.js";
 import { ariaBroadcastPayoutTx, ariaSuggestNextRound } from "./lib/ariaAgent.js";
+import { agentSeatSummary, isValidAgentTier } from "./lib/agents.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -102,6 +103,12 @@ const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
 const COHORT_2_LAUNCH_AT = process.env.COHORT_2_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
 const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 40);
+// Competing AI agents (Turing-test arena). Off by default — flip when ready.
+const AGENTS_ENABLED = process.env.AGENTS_ENABLED === "true";
+const MAX_AGENT_RATIO = Number(process.env.MAX_AGENT_RATIO || 0.25);
+const MIN_AGENT_COUNT = Number(process.env.MIN_AGENT_COUNT || 5);
+// Hide World ID / Self badges in gameplay UI; still verify in the background.
+const SILENT_VERIFICATION = process.env.SILENT_VERIFICATION === "true";
 
 // Cap decay schedule: Day 1: 40, Day 2: 20, Day 3: 8, Day 4: 3, Day 5+: 1.
 // Mirrors the SQL function survival_cap_for_day() — used when the round
@@ -1002,14 +1009,17 @@ app.post("/api/idkit/verify", requireAuth, async (req, res) => {
     }
 
     if (supabaseAdmin) {
+      const verifiedAt = new Date().toISOString();
       const { error: upsertError } = await supabaseAdmin.from("users").upsert(
         {
           address: req.user.address,
           world_id_verified: true, // Legacy flag — kept for backward compat
           humanity_provider: "worldcoin", // New unified humanity column
           humanity_nullifier: nullifier,
-          humanity_verified_at: new Date().toISOString(),
-          last_seen_at: new Date().toISOString(),
+          humanity_verified_at: verifiedAt,
+          verified_human: true,
+          verified_at: verifiedAt,
+          last_seen_at: verifiedAt,
         },
         { onConflict: "address" },
       );
@@ -1095,14 +1105,17 @@ app.post("/api/self/verify", async (req, res) => {
         });
       }
 
+      const verifiedAt = new Date().toISOString();
       await supabaseAdmin.from("users").upsert(
         {
           address: walletAddress,
           humanity_provider: "self",
           humanity_nullifier: walletAddress,
-          humanity_verified_at: new Date().toISOString(),
+          humanity_verified_at: verifiedAt,
+          verified_human: true,
+          verified_at: verifiedAt,
           world_id_verified: true, // Self is treated as a full PoH proof
-          last_seen_at: new Date().toISOString(),
+          last_seen_at: verifiedAt,
         },
         { onConflict: "address" },
       );
@@ -1374,23 +1387,44 @@ app.get("/api/round-status", async (req, res) => {
 
 async function upsertPaidUser(address, { referredBy = null, platform = null, entryKind = "paid", entryToken = null } = {}) {
   if (!supabaseAdmin) return;
-  const refCode = makeReferralCode(address.slice(0, 6));
+
+  const existing = await getUserRecord(address);
+  if (!existing?.paid) {
+    // Humans cannot take reserved agent seats when agents are enabled.
+    const seats = await getAgentSeatState({ forPublic: true });
+    if (seats.enabled && seats.humansFull) {
+      const err = new Error("human_slots_full");
+      err.code = "human_slots_full";
+      throw err;
+    }
+    if (!seats.enabled) {
+      const reserved = await reservedCount();
+      if (reserved >= COHORT_SIZE) {
+        const err = new Error("cohort_full");
+        err.code = "cohort_full";
+        throw err;
+      }
+    }
+  }
+
+  const refCode = existing?.referral_code || makeReferralCode(address.slice(0, 6));
   await supabaseAdmin.from("users").upsert(
     {
       address,
       paid: true,
-      reserved_at: new Date().toISOString(),
+      reserved_at: existing?.reserved_at || new Date().toISOString(),
       last_seen_at: new Date().toISOString(),
       referral_code: refCode,
-      referred_by: referredBy,
+      referred_by: referredBy ?? existing?.referred_by ?? null,
       platform,
       entry_kind: entryKind,
       entry_token: entryToken,
       cohort: 1,
+      is_agent: false,
     },
     { onConflict: "address", ignoreDuplicates: false },
   );
-  if (referredBy) {
+  if (referredBy && !existing?.referred_by) {
     await supabaseAdmin.rpc("increment_referral", { ref_code: referredBy }).catch(() => {});
   }
 }
@@ -2098,13 +2132,77 @@ async function reservedCount() {
   return count ?? 0;
 }
 
-async function cohortSplitCount() {
-  if (!supabaseAdmin) return { paidCount: 0, freeCount: 0 };
-  const [paid, free] = await Promise.all([
-    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid"),
-    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free"),
+async function humanReservedCount() {
+  if (!supabaseAdmin) return 0;
+  const { count } = await supabaseAdmin
+    .from("users")
+    .select("address", { count: "exact", head: true })
+    .eq("paid", true)
+    .eq("is_agent", false);
+  return count ?? 0;
+}
+
+async function agentReservedCount() {
+  if (!supabaseAdmin) return 0;
+  const { count } = await supabaseAdmin
+    .from("users")
+    .select("address", { count: "exact", head: true })
+    .eq("paid", true)
+    .eq("is_agent", true);
+  return count ?? 0;
+}
+
+async function getAgentSeatState({ forPublic = true } = {}) {
+  const [humanCount, agentCount] = await Promise.all([
+    humanReservedCount(),
+    agentReservedCount(),
   ]);
-  return { paidCount: paid.count ?? 0, freeCount: free.count ?? 0 };
+  return agentSeatSummary({
+    cohortSize: COHORT_SIZE,
+    maxAgentRatio: MAX_AGENT_RATIO,
+    minAgentCount: MIN_AGENT_COUNT,
+    // Public surface respects the env flag; admin capacity uses the ratio even when off.
+    enabled: forPublic ? AGENTS_ENABLED : true,
+    humanCount,
+    agentCount,
+  });
+}
+
+async function getEndgameBreakdown() {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin
+    .from("users")
+    .select("is_agent, verified_human, eliminated")
+    .eq("paid", true);
+  if (error || !data) return null;
+
+  const survivors = data.filter((u) => !u.eliminated);
+  const verifiedHumans = survivors.filter((u) => !u.is_agent && u.verified_human === true).length;
+  const unverifiedHumans = survivors.filter((u) => !u.is_agent && u.verified_human !== true).length;
+  const aiAgents = survivors.filter((u) => u.is_agent).length;
+
+  return {
+    verifiedHumans,
+    unverifiedHumans,
+    aiAgents,
+    totalSurvivors: survivors.length,
+    totalEntered: data.length,
+    agentsEntered: data.filter((u) => u.is_agent).length,
+  };
+}
+
+async function cohortSplitCount() {
+  if (!supabaseAdmin) return { paidCount: 0, freeCount: 0, agentCount: 0 };
+  const [paid, free, agents] = await Promise.all([
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid").eq("is_agent", false),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free").eq("is_agent", false),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("is_agent", true),
+  ]);
+  return {
+    paidCount: paid.count ?? 0,
+    freeCount: free.count ?? 0,
+    agentCount: agents.count ?? 0,
+  };
 }
 
 // Endgame: the game is over when at most one active player remains AND at
@@ -2191,8 +2289,11 @@ async function getEndgame() {
 app.get("/api/game/state", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
-    const reserved = await reservedCount();
-    const split = await cohortSplitCount();
+    const [reserved, split, agentSeats] = await Promise.all([
+      reservedCount(),
+      cohortSplitCount(),
+      getAgentSeatState({ forPublic: true }),
+    ]);
 
     let phase = "prelaunch";
     let currentDay = null;
@@ -2210,6 +2311,7 @@ app.get("/api/game/state", async (req, res) => {
     let round = null;
     let checkinCount = 0;
     let payoutInfo = null;
+    let breakdown = null;
     if (phase === "live" && currentDay != null) {
       round = await loadRound(currentDay);
       if (round) checkinCount = await checkinCountForDay(currentDay);
@@ -2222,6 +2324,7 @@ app.get("/api/game/state", async (req, res) => {
         .limit(1)
         .maybeSingle();
       payoutInfo = payout || null;
+      breakdown = await getEndgameBreakdown();
     }
 
     const address = await getOptionalAuthAddress(req);
@@ -2264,10 +2367,15 @@ app.get("/api/game/state", async (req, res) => {
         votesCorrect: stats.correct,
         votesResolved: stats.total,
         checkinStreak: u?.checkin_streak ?? 0,
+        // Own record only — never expose is_agent for other players on public APIs.
+        isAgent: Boolean(u?.is_agent),
       };
     }
 
-    const cohortFull = reserved >= COHORT_SIZE;
+    // When agents are enabled, human seats are capped so agent slots stay reserved.
+    const cohortFull = agentSeats.enabled
+      ? agentSeats.humansFull
+      : reserved >= COHORT_SIZE;
     res.json({
       ok: true,
       now: new Date().toISOString(),
@@ -2285,7 +2393,20 @@ app.get("/api/game/state", async (req, res) => {
         freeSlots: freeSlotsFor(split.paidCount),
         paidCount: split.paidCount,
         freeCount: split.freeCount,
+        agentCount: split.agentCount,
+        humanSlots: agentSeats.humanSlots,
       },
+      agents: {
+        enabled: agentSeats.enabled,
+        maxRatio: agentSeats.maxRatio,
+        minCount: agentSeats.minCount,
+        maxSlots: agentSeats.maxSlots,
+        agentCount: agentSeats.agentCount,
+        humanCount: agentSeats.humanCount,
+        humanSlots: agentSeats.humanSlots,
+        slotsRemaining: agentSeats.slotsRemaining,
+      },
+      silentVerification: SILENT_VERIFICATION,
       currentDay,
       round: round
         ? {
@@ -2308,6 +2429,7 @@ app.get("/api/game/state", async (req, res) => {
       you,
       winner,
       payout: payoutInfo,
+      breakdown,
       lastDayClose: phase === "live" || phase === "ended" ? await getLastDayClose() : null,
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
@@ -2471,18 +2593,20 @@ app.get("/api/cohort/roster", async (req, res) => {
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
     const { data, error } = await supabaseAdmin
       .from("users")
-      .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count, referred_by, entry_kind, entry_token, cohort")
+      .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count, referred_by, entry_kind, entry_token, cohort, is_agent, agent_tier, verified_human")
       .eq("paid", true)
       .order("reserved_at", { ascending: false })
       .limit(200);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
 
     const roster = data || [];
-    const paidCount = roster.filter((u) => u.entry_kind === "paid").length;
-    const freeCount = roster.filter((u) => u.entry_kind === "free").length;
+    // Public roster: strip agent identity + verification so the crowd can't meta-game.
+    const publicRoster = roster.map(({ is_agent: _a, agent_tier: _t, verified_human: _v, ...rest }) => rest);
+    const paidCount = roster.filter((u) => u.entry_kind === "paid" && !u.is_agent).length;
+    const freeCount = roster.filter((u) => u.entry_kind === "free" && !u.is_agent).length;
     return res.json({
       ok: true,
-      roster,
+      roster: publicRoster,
       split: {
         cohort: COHORT_CONFIG.cohort,
         size: COHORT_CONFIG.size,
@@ -2491,6 +2615,7 @@ app.get("/api/cohort/roster", async (req, res) => {
         freeSlotsMax: COHORT_CONFIG.freeSlots,
         paidCount,
         freeCount,
+        agentCount: roster.filter((u) => u.is_agent).length,
       },
     });
   } catch (e) {
@@ -2870,6 +2995,110 @@ app.get("/api/admin/rounds", requireAuth, requireAdmin, async (req, res) => {
     return res.json({ ok: true, rounds: data || [] });
   } catch (e) {
     return res.status(400).json({ error: "rounds_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Register a competing AI agent seat (admin). Allowed even when
+// AGENTS_ENABLED=false so seats can be prepped before the public flip.
+app.post("/api/admin/agents", requireAuth, requireAdmin, async (req, res) => {
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+
+  try {
+    const address = ensureString(body.address, {
+      field: "address",
+      required: true,
+      maxLength: 64,
+      pattern: /^0x[a-fA-F0-9]{40}$/,
+    }).toLowerCase();
+    const username = ensureString(body.username, { field: "username", required: false, maxLength: 32 });
+    const tier = ensureString(body.tier, { field: "tier", required: false, maxLength: 16 }) || "premium";
+    const agentProvider = ensureString(body.agentProvider, {
+      field: "agentProvider",
+      required: false,
+      maxLength: 64,
+    });
+    const entryFeeUsd = body.entryFeeUsd != null
+      ? ensureNumber(body.entryFeeUsd, { field: "entryFeeUsd", min: 0, max: 10_000 })
+      : null;
+
+    if (!isValidAgentTier(tier)) {
+      return res.status(400).json({ error: "invalid_agent_tier", allowed: ["basic", "standard", "premium"] });
+    }
+
+    const seats = await getAgentSeatState({ forPublic: false });
+    const existing = await getUserRecord(address);
+    if (!existing?.is_agent && seats.agentsFull) {
+      return res.status(409).json({
+        error: "agent_slots_full",
+        maxSlots: seats.maxSlots,
+        agentCount: seats.agentCount,
+      });
+    }
+
+    const refCode = existing?.referral_code || makeReferralCode(`agent${address.slice(2, 6)}`);
+    const nowIso = new Date().toISOString();
+    const { error } = await supabaseAdmin.from("users").upsert(
+      {
+        address,
+        paid: true,
+        is_agent: true,
+        agent_tier: tier,
+        agent_provider: agentProvider || null,
+        agent_entry_fee_usd: entryFeeUsd,
+        verified_human: false,
+        entry_kind: "agent",
+        entry_token: entryFeeUsd != null ? "x402" : null,
+        reserved_at: existing?.reserved_at || nowIso,
+        last_seen_at: nowIso,
+        referral_code: refCode,
+        username: username || existing?.username || null,
+        cohort: COHORT_CONFIG.cohort,
+        platform: "agent",
+      },
+      { onConflict: "address" },
+    );
+    if (error) return res.status(400).json({ error: "agent_upsert_failed", message: error.message });
+
+    if (entryFeeUsd != null && entryFeeUsd > 0) {
+      await supabaseAdmin.from("agent_entries").insert({
+        agent_address: address,
+        cohort: COHORT_CONFIG.cohort,
+        amount_usd: entryFeeUsd,
+        tier,
+        payment_intent_id: body.paymentIntentId || null,
+      });
+    }
+
+    const nextSeats = await getAgentSeatState({ forPublic: false });
+    log("admin_agent_registered", { address, tier, entryFeeUsd });
+    return res.json({ ok: true, address, tier, agents: nextSeats });
+  } catch (error) {
+    sendValidationError(res, error);
+  }
+});
+
+app.get("/api/admin/agents", requireAuth, requireAdmin, async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const seats = await getAgentSeatState({ forPublic: false });
+    const { data, error } = await supabaseAdmin
+      .from("users")
+      .select("address, username, agent_tier, agent_provider, agent_entry_fee_usd, reserved_at, eliminated, eliminated_at_day")
+      .eq("is_agent", true)
+      .order("reserved_at", { ascending: false })
+      .limit(200);
+    if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
+    return res.json({
+      ok: true,
+      enabled: AGENTS_ENABLED,
+      silentVerification: SILENT_VERIFICATION,
+      seats,
+      agents: data || [],
+    });
+  } catch (e) {
+    res.status(400).json({ error: "admin_agents_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

@@ -109,5 +109,6 @@ After the beta validates the core loop, prioritize:
 3. **Demo mode improvements** (let observers watch live rounds)
 4. **Vote quorum tooltips** (explain dynamic thresholds to users)
 5. **Bundle optimization** (audit dependencies, tree-shake unused code)
+6. **Activate Turing-test arena** — foundation shipped (migration 021, flagged off). Next: x402 agent entry, submission pipeline, end-game reveal UI. Flip `AGENTS_ENABLED=true` + `SILENT_VERIFICATION=true` when ready.
 
 See [FUTURE_ROADMAP.md](./FUTURE_ROADMAP.md) for longer-term strategy.

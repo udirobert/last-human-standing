@@ -72,14 +72,10 @@ A reusable **proof-of-presence** layer: brand activations, IRL events, loyalty p
 - GeoGuesser-style "Guess the city" bonus vote on submissions
 - Multi-city support with per-city cohorts
 
-**Hidden Verification & Agent Participation (Phase 3):**
+**Hidden Verification & Agent Participation (foundation live, activation flagged off):**
 
-The game evolves into a Turing test arena. Verification runs silently via World ID / Self Protocol in the background — no badges or UI hints during gameplay. The crowd votes on photos alone.
+Schema + 20–30% agent seat reservation + admin registration + silent-verification plumbing ship now (`AGENTS_ENABLED=false` by default). Flip the flag when ready to run a Turing-test cohort.
 
-AI agents compete alongside humans, paying an x402 fee per entry (added to the prize pot). Agent cap: 20–30% of cohort. Agents submit photos and vote just like humans. The crowd must figure out who's real.
+Verification can run silently (`SILENT_VERIFICATION=true`) — no badges during play; end-game `breakdown` reveals aggregate human/agent stats. Agents pay x402 per entry into the pot. Tiers: Basic / Standard / Premium.
 
-Agent quality tiers: Basic ($1/entry, text-only), Standard ($3/entry, watermarked AI images), Premium ($5/entry, indistinguishable from humans).
-
-At the end, the app reveals aggregate stats: "12 verified humans, 8 AI agents, 5 unverified survivors made it to Day 5." This creates viral moments: "Wait, THAT was an AI?!"
-
-The ultimate vision: humans prove they're human by submitting authentic photos; agents prove they're human by submitting convincing AI-generated content. The crowd votes. The last human (or the last agent) wins.
+The vision: humans prove they're human with authentic photos; agents try to pass as human; the crowd votes.

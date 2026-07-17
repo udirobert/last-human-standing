@@ -51,14 +51,28 @@ export default function AdminDashboard({ onBack }) {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [gameState, rounds, users, flags, stats] = await Promise.all([
+      const [gameState, rounds, users, flags, stats, agents] = await Promise.all([
         adminFetch('/api/game/state'),
         adminFetch('/api/admin/rounds'),
         adminFetch('/api/cohort/roster'),
         adminFetch('/api/admin/flags'),
         adminFetch('/api/stats'),
+        adminFetch('/api/admin/agents'),
       ]);
-      setData({ gameState, rounds: rounds.rounds || [], users: users.roster || [], flags: flags.flags || [], stats });
+      const agentRows = (agents.agents || []).map((a) => ({
+        ...a,
+        is_agent: true,
+        entry_kind: 'agent',
+        world_id_verified: false,
+      }));
+      const humanRows = (users.roster || []).filter((u) => u.entry_kind !== 'agent');
+      setData({
+        gameState,
+        rounds: rounds.rounds || [],
+        users: [...agentRows, ...humanRows],
+        flags: flags.flags || [],
+        stats,
+      });
     } catch (e) {
       setError(e.message);
     } finally {
@@ -225,8 +239,11 @@ function OverviewPanel({ data }) {
   const { gameState, stats, users, flags } = data;
   const totalPlayers = users.length;
   const activePlayers = users.filter(u => !u.eliminated).length;
-  const verifiedPlayers = users.filter(u => u.world_id_verified || u.humanity_nullifier).length;
+  const verifiedPlayers = users.filter(u => u.world_id_verified || u.humanity_nullifier || u.verified_human).length;
   const eliminatedPlayers = users.filter(u => u.eliminated).length;
+  const agentCount = gameState?.agents?.agentCount ?? users.filter(u => u.is_agent || u.entry_kind === 'agent').length;
+  const agentSlots = gameState?.agents?.maxSlots ?? 0;
+  const agentsEnabled = Boolean(gameState?.agents?.enabled);
 
   return (
     <div className="space-y-4">
@@ -234,13 +251,23 @@ function OverviewPanel({ data }) {
         <StatCard label="Phase" value={gameState?.phase ?? '—'} />
         <StatCard label="Current Day" value={gameState?.currentDay ?? '—'} />
         <StatCard label="Prize Pool" value={stats?.prizePool?.balanceWld ? `${stats.prizePool.balanceWld.toFixed(2)} WLD` : '—'} />
-        <StatCard label="Cohort Fill" value={gameState?.reservedCount ? `${gameState.reservedCount}/${gameState.cohortSize}` : '—'} />
+        <StatCard label="Cohort Fill" value={gameState?.reservedCount != null ? `${gameState.reservedCount}/${gameState.cohortSize}` : '—'} />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <StatCard label="Total Players" value={totalPlayers} />
         <StatCard label="Active" value={activePlayers} className="text-neon" />
         <StatCard label="Eliminated" value={eliminatedPlayers} className="text-blood" />
         <StatCard label="Verified Humans" value={verifiedPlayers} className="text-amber" />
+        <StatCard
+          label={agentsEnabled ? "Agent seats" : "Agent seats (off)"}
+          value={`${agentCount}/${agentSlots}`}
+          className="text-indigo"
+        />
+        <StatCard
+          label="Silent verify"
+          value={gameState?.silentVerification ? "ON" : "OFF"}
+          className={gameState?.silentVerification ? "text-amber" : ""}
+        />
       </div>
       <div className="bg-smoke border border-ember rounded-2xl p-4">
         <h3 className="font-display text-lg text-bone mb-3">Anti-Cheat Flags (Recent)</h3>
@@ -361,10 +388,11 @@ function PlayersPanel({ users }) {
               <div className="flex items-center gap-3">
                 <span className="font-mono text-xs text-dim">{u.address.slice(0, 8)}…</span>
                 {u.username && <span className="text-bone font-mono text-sm">@{u.username}</span>}
+                {(u.is_agent || u.entry_kind === 'agent') && <span className="px-2 py-1 rounded-full bg-indigo/10 text-indigo border border-indigo/30 font-mono text-xs">Agent</span>}
                 {u.world_id_verified && <span className="px-2 py-1 rounded-full bg-neon/10 text-neon border border-neon/30 font-mono text-xs">Verified</span>}
                 {u.humanity_nullifier && !u.world_id_verified && <span className="px-2 py-1 rounded-full bg-amber/10 text-amber border border-amber/30 font-mono text-xs">Self Protocol</span>}
                 {u.eliminated && <span className="px-2 py-1 rounded-full bg-blood/10 text-blood border border-blood/30 font-mono text-xs">Eliminated Day {u.eliminated_at_day}</span>}
-                {!u.eliminated && !u.world_id_verified && !u.humanity_nullifier && <span className="px-2 py-1 rounded-full bg-ember text-dim border border-ember font-mono text-xs">Provisional</span>}
+                {!u.eliminated && !u.is_agent && u.entry_kind !== 'agent' && !u.world_id_verified && !u.humanity_nullifier && <span className="px-2 py-1 rounded-full bg-ember text-dim border border-ember font-mono text-xs">Provisional</span>}
               </div>
               <div className="text-dim text-xs font-mono flex gap-4">
                 <span>Refs: {u.referral_count || 0}</span>

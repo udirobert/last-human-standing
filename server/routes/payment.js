@@ -198,6 +198,9 @@ export default function paymentRoutes({
       log("pay_confirm_success", { address: req.user.address, platform: "world" });
       res.json({ ok: true, paid: true, details: json });
     } catch (e) {
+      if (e?.code === "human_slots_full" || e?.code === "cohort_full") {
+        return res.status(409).json({ error: e.code });
+      }
       log("pay_confirm_error", { address: req.user.address, message: e instanceof Error ? e.message : "unknown" });
       res.status(400).json({ error: "payment_confirm_failed", message: e instanceof Error ? e.message : "unknown_error" });
     }
@@ -240,6 +243,9 @@ export default function paymentRoutes({
 
       res.json({ ok: true, paid: true, address, txHash });
     } catch (error) {
+      if (error?.code === "human_slots_full" || error?.code === "cohort_full") {
+        return res.status(409).json({ error: error.code });
+      }
       sendValidationError(res, error);
     }
   });
@@ -269,7 +275,14 @@ export default function paymentRoutes({
       setSessionCookie(res, sessionId);
       log("free_entry_guest", { address });
     }
-    await upsertPaidUser(address, { platform: "free_entry", entryKind: "free" });
+    try {
+      await upsertPaidUser(address, { platform: "free_entry", entryKind: "free" });
+    } catch (e) {
+      if (e?.code === "human_slots_full" || e?.code === "cohort_full") {
+        return res.status(409).json({ error: e.code });
+      }
+      throw e;
+    }
     log("free_entry", { address });
     res.json({ ok: true, paid: true, entryKind: "free", address });
   });
@@ -317,6 +330,9 @@ export default function paymentRoutes({
 
       res.json({ ok: true, paid: true, address, txHash, token, chain: "celo" });
     } catch (error) {
+      if (error?.code === "human_slots_full" || error?.code === "cohort_full") {
+        return res.status(409).json({ error: error.code });
+      }
       sendValidationError(res, error);
     }
   });

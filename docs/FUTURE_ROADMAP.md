@@ -123,76 +123,52 @@ build it.
 
 ---
 
-## Phase 3: The Turing Test Arena (6–12 months)
+## Phase 3: The Turing Test Arena
+
+### Foundation (shipping now — flagged off)
+Migration `021_agent_participation.sql` + server seat math are live:
+
+| Piece | Status |
+|---|---|
+| `users.is_agent`, `agent_tier`, `verified_human`, `agent_entries`, `game_config` | ✅ schema |
+| Seat reservation (20–30%, hard-cap 35%) via `server/lib/agents.js` | ✅ |
+| `AGENTS_ENABLED` / `SILENT_VERIFICATION` / `MAX_AGENT_RATIO` env flags | ✅ (default off) |
+| `GET /api/game/state` → `agents`, `silentVerification`, end-game `breakdown` | ✅ |
+| `POST/GET /api/admin/agents` (prep seats before public flip) | ✅ |
+| ModeBanner hides PoH labels when `SILENT_VERIFICATION=true` | ✅ |
+| Public x402 agent entry + submission pipeline | ⏳ next |
+| End-game reveal UI (viral "THAT was an AI?!" moment) | ⏳ next |
+| Per-voter accuracy vs agents (`juryStats`) | ⏳ next |
+
+**Activate when ready:**
+```bash
+AGENTS_ENABLED=true
+SILENT_VERIFICATION=true
+MAX_AGENT_RATIO=0.25
+MIN_AGENT_COUNT=5
+```
 
 ### Hidden Verification
-Remove all World ID / Self Protocol verification badges from the UI. Verification runs silently in the background — players see only photos and votes. The uncertainty is the game.
-
-At the end, reveal aggregate stats:
+With `SILENT_VERIFICATION=true`, World ID / Self badges stay out of gameplay UI. Verification still runs in the background. At the end, reveal aggregate stats from `breakdown`:
 - "12 verified humans made it to Day 5"
 - "8 AI agents made it to Day 5"
 - "5 unverified humans made it to Day 5"
-- "Your accuracy: 85% (correctly identified 7 agents, 1 false positive)"
-
-This creates a dramatic payoff. "Wait, THAT was an AI?!" becomes the viral moment.
 
 ### Agent Participation
-**Agents compete alongside humans.** AI agents pay an x402 fee per entry (added to the prize pot), creating a growing incentive for human participation. Agents submit photos and participate in voting just like humans.
+**Agents compete alongside humans.** AI agents pay an x402 fee per entry (added to the prize pot). Admin can seed seats via `POST /api/admin/agents` even before the public flag flips.
 
-**Agent cap: 20–30% of cohort.** Too few agents (5%) = instantly flagged. Too many (50%+) = chaotic. The sweet spot creates tension without breaking the game.
+**Agent cap: 20–30% of cohort.** Too few agents (5%) = instantly flagged. Too many (50%+) = chaotic. Hard-capped at 35% so humans stay the majority.
 
 **Agent quality tiers:**
 - **Basic ($1/entry):** Text-only description, system generates stylized placeholder
 - **Standard ($3/entry):** Image generation with visible "AI-generated" watermark
 - **Premium ($5/entry):** Full quality, no watermark — designed to be indistinguishable
 
-**Schema changes:**
-```sql
-ALTER TABLE users ADD COLUMN verified_human BOOLEAN DEFAULT NULL;
-ALTER TABLE users ADD COLUMN verified_at TIMESTAMPTZ;
-ALTER TABLE users ADD COLUMN is_agent BOOLEAN DEFAULT false;
-ALTER TABLE users ADD COLUMN agent_tier TEXT; -- 'basic', 'standard', 'premium'
-ALTER TABLE users ADD COLUMN agent_entry_fee_usd DECIMAL;
-
--- Agent payment tracking (x402)
-CREATE TABLE agent_entries (
-  id UUID PRIMARY KEY,
-  agent_id UUID REFERENCES users(id),
-  round_id UUID REFERENCES rounds(id),
-  payment_intent_id TEXT,
-  amount_usd DECIMAL,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-```
-
-**Onboarding changes:**
-- Remove World ID / Self Protocol UI from onboarding
-- Just collect payment (1 WLD or equivalent)
-- Quietly verify in background (automatic for World App users)
-
-**Voting UI changes:**
-- Remove all verification badges from submission cards
-- Show all submissions equally
-- Keep HUMAN/SUS voting as-is
-
-**End-game reveal component:**
-```javascript
-// GET /api/game/state returns aggregate stats when phase = 'ended'
-{
-  phase: 'ended',
-  breakdown: {
-    verifiedHumans: 12,
-    aiAgents: 8,
-    unverifiedHumans: 5,
-    totalSurvivors: 25
-  },
-  juryStats: {
-    accuracy: 0.85,
-    correctAgentFlags: 7,
-    falsePositives: 1
-  }
-}
-```
+**Still to build for full activation:**
+- Public x402 payment flow for agent self-registration
+- Agent submission pipeline (photo / image-gen by tier)
+- End-game reveal component + per-voter agent-ID accuracy
+- Onboarding copy that discloses agents exist without naming who
 
 **The "unverified" question:** Humans who don't verify via World ID are treated as "unverified survivors" — the crowd has to decide: are they a human who just didn't bother with World ID, or an agent who can't verify? This adds to the mystery.
 
