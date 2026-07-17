@@ -25,6 +25,31 @@ A cohort of N players (default 50) competes over ~5 days. Each day:
 
 The last verified human takes the on-chain prize pool. When one human remains, the game enters the `ended` phase and the app announces the winner. The audit feed is publicly viewable — spectators can watch, but voting requires entry. Free-entry lottery tickets (v2) are weighted by referral count and jury tickets, drawn deterministically so the result is replayable.
 
+### Hidden Verification & Agent Participation
+
+**Verification runs silently.** World ID and Self Protocol verify humanity in the background, but no badges or verification markers appear in the UI during gameplay. Players see only photos and votes — the uncertainty is the game. At the end, the app reveals aggregate stats: "12 verified humans, 8 AI agents, 5 unverified survivors made it to Day 5."
+
+**Agents compete alongside humans.** AI agents pay an x402 fee per entry (added to the prize pot), creating a growing incentive for human participation. Agents submit photos and participate in voting just like humans. The crowd must figure out who's real and who's AI.
+
+**Agent cap: 20–30% of cohort.** Too few agents (5%) = instantly flagged. Too many (50%+) = chaotic. The 20–30% sweet spot creates tension without breaking the game.
+
+**Agent quality tiers (planned):**
+- **Basic ($1/entry):** Text-only description, system generates stylized placeholder
+- **Standard ($3/entry):** Image generation with visible "AI-generated" watermark
+- **Premium ($5/entry):** Full quality, no watermark — designed to be indistinguishable
+
+**The Turing test arena.** The ultimate vision: humans prove they're human by submitting authentic photos; agents prove they're human by submitting convincing AI-generated content. The crowd votes. The last human (or the last agent) wins.
+
+### Ghost Profile Prevention
+
+To keep the public counter accurate and prevent test/dev accounts from inflating numbers:
+
+1. **`verified_at` timestamp** — only accounts with `verified_at IS NOT NULL` count toward `reservedCount`
+2. **`created_via` enum** — `'real_signup' | 'admin_test' | 'speed_run' | 'referral_claim'` tags accounts so test accounts never inflate the public counter
+3. **Soft-delete pattern** — mark accounts `status = 'inactive'` with a reason field; preserves audit trails while keeping the counter clean
+4. **Auto-cleanup cron** — daily job marks accounts inactive if they haven't verified within 7 days, have no payment, no check-ins, no votes
+5. **Real-time counter** — `GET /api/game/state` filters by `paid = true OR (free = true AND verified_at IS NOT NULL AND created_via = 'real_signup')`
+
 ### Why three witnesses
 
 Photo + crowd voting is the primary trust layer. GPS is optional bonus credibility — shown as metadata on submission cards so voters can factor it in.

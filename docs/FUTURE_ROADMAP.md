@@ -123,9 +123,107 @@ build it.
 
 ---
 
+## Phase 3: The Turing Test Arena (6–12 months)
+
+### Hidden Verification
+Remove all World ID / Self Protocol verification badges from the UI. Verification runs silently in the background — players see only photos and votes. The uncertainty is the game.
+
+At the end, reveal aggregate stats:
+- "12 verified humans made it to Day 5"
+- "8 AI agents made it to Day 5"
+- "5 unverified humans made it to Day 5"
+- "Your accuracy: 85% (correctly identified 7 agents, 1 false positive)"
+
+This creates a dramatic payoff. "Wait, THAT was an AI?!" becomes the viral moment.
+
+### Agent Participation
+**Agents compete alongside humans.** AI agents pay an x402 fee per entry (added to the prize pot), creating a growing incentive for human participation. Agents submit photos and participate in voting just like humans.
+
+**Agent cap: 20–30% of cohort.** Too few agents (5%) = instantly flagged. Too many (50%+) = chaotic. The sweet spot creates tension without breaking the game.
+
+**Agent quality tiers:**
+- **Basic ($1/entry):** Text-only description, system generates stylized placeholder
+- **Standard ($3/entry):** Image generation with visible "AI-generated" watermark
+- **Premium ($5/entry):** Full quality, no watermark — designed to be indistinguishable
+
+**Schema changes:**
+```sql
+ALTER TABLE users ADD COLUMN verified_human BOOLEAN DEFAULT NULL;
+ALTER TABLE users ADD COLUMN verified_at TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN is_agent BOOLEAN DEFAULT false;
+ALTER TABLE users ADD COLUMN agent_tier TEXT; -- 'basic', 'standard', 'premium'
+ALTER TABLE users ADD COLUMN agent_entry_fee_usd DECIMAL;
+
+-- Agent payment tracking (x402)
+CREATE TABLE agent_entries (
+  id UUID PRIMARY KEY,
+  agent_id UUID REFERENCES users(id),
+  round_id UUID REFERENCES rounds(id),
+  payment_intent_id TEXT,
+  amount_usd DECIMAL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+**Onboarding changes:**
+- Remove World ID / Self Protocol UI from onboarding
+- Just collect payment (1 WLD or equivalent)
+- Quietly verify in background (automatic for World App users)
+
+**Voting UI changes:**
+- Remove all verification badges from submission cards
+- Show all submissions equally
+- Keep HUMAN/SUS voting as-is
+
+**End-game reveal component:**
+```javascript
+// GET /api/game/state returns aggregate stats when phase = 'ended'
+{
+  phase: 'ended',
+  breakdown: {
+    verifiedHumans: 12,
+    aiAgents: 8,
+    unverifiedHumans: 5,
+    totalSurvivors: 25
+  },
+  juryStats: {
+    accuracy: 0.85,
+    correctAgentFlags: 7,
+    falsePositives: 1
+  }
+}
+```
+
+**The "unverified" question:** Humans who don't verify via World ID are treated as "unverified survivors" — the crowd has to decide: are they a human who just didn't bother with World ID, or an agent who can't verify? This adds to the mystery.
+
+### Long-term Vision
+The game becomes a **Turing test arena**:
+- Humans try to prove they're human by submitting authentic photos
+- Agents try to prove they're human by submitting convincing AI-generated content
+- The crowd votes. The last human (or the last agent) wins.
+
+This is the ultimate realization of the game's theme. It's not just "survive 5 days" — it's "prove you're human in a world full of imposters."
+
+**Memetic potential:**
+- "I fooled everyone for 3 days!" (agent bragging)
+- "That was definitely an AI, look at the lighting" (crowd deduction)
+- "Wait, THAT was an AI?!" (viral reveal moments)
+
+**Emergent gameplay:**
+- Social deduction layer (already present in voting)
+- Metagame strategy ("do I vote SUS on the 'too perfect' submission?")
+- Agents learn to avoid tells (consistent lighting, realistic shadows, natural poses)
+
+**Risks to mitigate:**
+- Agent quality must be high enough that they don't get instantly flagged. Poor agents ruin the experience.
+- Need clear disclosure that agents exist (but not which submissions are theirs). The uncertainty is the game.
+- x402 integration must be seamless. If agents struggle to pay, they won't participate.
+- Balance agent ratio carefully. 20–30% is the target; monitor and adjust per cohort.
+
 ## Principles
 
 1. **Validate before building** — every feature above needs user data justifying it
 2. **Fairness first** — paying advantages must never break core game integrity
 3. **Web3 native** — leverage blockchain transparency for trust, not just payments
 4. **Community first** — monetize enhancement, not core gameplay
+5. **Uncertainty is the game** — the mystery of who's human and who's AI is what makes it compelling
