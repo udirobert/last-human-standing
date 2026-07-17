@@ -40,6 +40,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [submitError, setSubmitError] = useState(null);
   const [photoUploadFailed, setPhotoUploadFailed] = useState(false);
   const [infiltratorMode, setInfiltratorMode] = useState(false);
+  const [ritualMode, setRitualMode] = useState(false);
   // Day 1 is honest-only — establishes a baseline so infiltrator attempts
   // on Day 2+ are actually detectable. Also protects new players from
   // instant DQ on their first check-in.
@@ -144,7 +145,23 @@ export default function CheckIn({ onBack, onSubmit }) {
 
   const canSubmit = photoFile != null; // photo is the primary proof
 
-  const handlePhotoSelect = () => fileRef.current?.click();
+  const handlePhotoSelect = () => {
+    setRitualMode(true);
+    // Small delay so the morph animation is visible before file picker opens
+    setTimeout(() => fileRef.current?.click(), 400);
+  };
+
+  const handlePhotoCapture = (e) => {
+    const f = e.target.files?.[0];
+    if (!f) {
+      setRitualMode(false);
+      return;
+    }
+    setPhotoFile(f);
+    setPhotoPreview(URL.createObjectURL(f));
+    // Ritual completes when photo lands — brief hold so morph is visible
+    setTimeout(() => setRitualMode(false), 600);
+  };
 
   const handleSubmit = async () => {
     if (!canSubmit) return;
@@ -298,12 +315,7 @@ export default function CheckIn({ onBack, onSubmit }) {
         accept="image/*"
         capture="environment"
         className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (!f) return;
-          setPhotoFile(f);
-          setPhotoPreview(URL.createObjectURL(f));
-        }}
+        onChange={handlePhotoCapture}
       />
 
       {/* Header */}
@@ -386,16 +398,56 @@ export default function CheckIn({ onBack, onSubmit }) {
                   </button>
                 </div>
               ) : (
-                <button
-                  type="button"
-                  onClick={handlePhotoSelect}
-                  {...CUE_PRESS}
-                  className="mb-5 w-full bg-smoke/50 border border-dashed border-amber/35 rounded-3xl py-8 flex flex-col items-center justify-center gap-3 active:scale-[0.99] transition-transform"
+                <motion.div
+                  layout
+                  transition={{ type: "spring", duration: 0.6, bounce: 0.2 }}
+                  className="mb-5 relative"
                 >
-                  <ThemeMotif emoji={themeData.emoji} size={64} label={theme} />
-                  <span className="text-bone font-body text-sm">Snap your proof of presence</span>
-                  <span className="text-dim font-mono text-[10px] uppercase tracking-wider">The crowd will vote on it</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={handlePhotoSelect}
+                    {...CUE_PRESS}
+                    className="w-full bg-smoke/50 border border-dashed border-amber/35 rounded-3xl py-8 flex flex-col items-center justify-center gap-3 active:scale-[0.99] transition-transform"
+                  >
+                    <motion.div
+                      animate={ritualMode ? { scale: 1.5, opacity: 0.3 } : { scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    >
+                      <ThemeMotif emoji={themeData.emoji} size={64} label={theme} />
+                    </motion.div>
+                    <motion.span
+                      animate={ritualMode ? { opacity: 0 } : { opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-bone font-body text-sm"
+                    >
+                      Snap your proof of presence
+                    </motion.span>
+                    <motion.span
+                      animate={ritualMode ? { opacity: 0 } : { opacity: 1 }}
+                      transition={{ duration: 0.3 }}
+                      className="text-dim font-mono text-[10px] uppercase tracking-wider"
+                    >
+                      The crowd will vote on it
+                    </motion.span>
+                  </button>
+                  {ritualMode && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                    >
+                      <div className="text-center">
+                        <div className="text-neon font-mono text-sm uppercase tracking-widest">
+                          capturing your moment
+                        </div>
+                        <div className="text-dim font-mono text-xs mt-1">
+                          {theme}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </motion.div>
               )}
 
               {/* Caption */}

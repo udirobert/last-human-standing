@@ -38,6 +38,72 @@ const STATUS_MASCOT = {
   flagged: 'eliminated',
 };
 
+function VerdictHour({ round }) {
+  const [timeLeft, setTimeLeft] = useState('');
+  const [isVerdictHour, setIsVerdictHour] = useState(false);
+
+  useEffect(() => {
+    if (!round?.closes_at) return;
+
+    const checkTime = () => {
+      const closesAt = new Date(round.closes_at);
+      const now = new Date();
+      const hoursLeft = (closesAt - now) / (1000 * 60 * 60);
+
+      setIsVerdictHour(hoursLeft <= 2 && hoursLeft > 0);
+
+      if (hoursLeft > 0) {
+        const hours = Math.floor(hoursLeft);
+        const minutes = Math.floor((hoursLeft - hours) * 60);
+        setTimeLeft(`${hours}h ${minutes}m`);
+      }
+    };
+
+    checkTime();
+    const interval = setInterval(checkTime, 60000); // check every minute
+    return () => clearInterval(interval);
+  }, [round?.closes_at]);
+
+  if (!isVerdictHour) return null;
+
+  return (
+    <div className="mx-1 mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber/20 via-ember/20 to-amber/20 border border-amber/50 animate-pulse">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="font-display text-lg text-amber">⚖️ Verdict Hour</p>
+          <p className="font-mono text-xs text-bone/80">Final votes needed</p>
+        </div>
+        <div className="text-right">
+          <p className="font-display text-2xl text-amber tabular-nums">{timeLeft}</p>
+          <p className="font-mono text-xs text-bone/60">until close</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JuryStakes() {
+  return (
+    <div className="mx-1 mb-4 p-3 rounded-2xl bg-smoke/60 border border-ember/30">
+      <p className="font-mono text-xs text-amber mb-2">🎫 Jury Rewards</p>
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div>
+          <p className="font-display text-lg text-neon">+1</p>
+          <p className="font-mono text-[10px] text-bone/60">per correct vote</p>
+        </div>
+        <div>
+          <p className="font-display text-lg text-amber">+3</p>
+          <p className="font-mono text-[10px] text-bone/60">3-day streak</p>
+        </div>
+        <div>
+          <p className="font-display text-lg text-ember">+5</p>
+          <p className="font-mono text-[10px] text-bone/60">5-day streak</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function LiveTally({ real = 0, fake = 0 }) {
   const total = real + fake;
   const realPct = total > 0 ? Math.round((real / total) * 100) : 50;
@@ -89,7 +155,7 @@ const useMocks = import.meta.env.DEV;
 
 export default function Feed({ onBack, onCheckIn }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
-  const { verification, phase, you } = useRound();
+  const { round, verification, phase, you } = useRound();
   const { unlockAchievement, checkAchievement } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
@@ -319,6 +385,8 @@ export default function Feed({ onBack, onCheckIn }) {
           </p>
         )}
         <VoteGateBanner />
+        <VerdictHour round={round} />
+        <JuryStakes />
         {phase !== "prelaunch" && (
           <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
             Vote the proof, not the person. Don&apos;t redistribute photos off the app.

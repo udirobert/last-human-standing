@@ -19,6 +19,8 @@ import DozingCat from "./ui/DozingCat.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta, GameCta } from "./ui/CraftCta.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
+import JuryOnboarding from "./JuryOnboarding.jsx";
+import SpectatorPanel from "./SpectatorPanel.jsx";
 
 function formatWindow(iso) {
   if (!iso) return null;
@@ -392,77 +394,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       {canAudit && <VoteProgressCard onViewFeed={onViewFeed} />}
 
       {eliminated ? (
-        <div className="bg-blood/10 border border-blood/30 rounded-xl p-4 mb-3 space-y-3">
-          <div>
-            <p className="font-display text-xl text-blood">Eliminated{you?.eliminatedAtDay ? ` · Day ${you.eliminatedAtDay}` : ""}</p>
-            <p className="text-dim text-xs font-mono mt-1">
-              You survived {you?.eliminatedAtDay ?? "—"} day{(you?.eliminatedAtDay ?? 0) !== 1 ? "s" : ""}. The game isn't over for you.
-            </p>
-          </div>
-
-          {/* Survival summary stats */}
-          <div className="grid grid-cols-3 gap-2 text-center">
-            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
-              <p className="text-dim text-[9px] font-mono uppercase">Days</p>
-              <p className="text-bone font-display text-lg">{you?.eliminatedAtDay ?? "—"}</p>
-            </div>
-            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30 flex flex-col items-center justify-center gap-1">
-              <p className="text-dim text-[9px] font-mono uppercase">Streak</p>
-              <div className="flex items-center gap-1">
-                <p className="text-amber font-display text-lg tabular-nums">{you?.checkinStreak ?? 0}</p>
-                {(you?.checkinStreak ?? 0) > 0 && <StreakBloom streak={you.checkinStreak} size={22} />}
-              </div>
-            </div>
-            <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
-              <p className="text-dim text-[9px] font-mono uppercase">Top %</p>
-              <p className="text-bone font-display text-lg tabular-nums">
-                {you?.eliminatedAtDay ? Math.round((Number(you.eliminatedAtDay) * 100) / 5) : "—"}%
-              </p>
-            </div>
-          </div>
-
-          {/* Jury status card */}
-          <div className={`rounded-xl p-3 border ${you?.isJury ? "bg-amber/10 border-amber/40" : "bg-ash/60 border-ember/40"}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <p className={`font-mono text-xs uppercase tracking-widest ${you?.isJury ? "text-amber" : "text-dim"}`}>
-                {you?.isJury ? "Jury member · ×2" : "Voting — earn jury status"}
-              </p>
-            </div>
-            {you?.isJury ? (
-              <p className="text-amber text-sm font-mono">
-                Your votes count ×{you.juryWeight ?? 2}. Keep voting accurately to earn lottery tickets for the next cohort.
-              </p>
-            ) : (
-              <p className="text-dim text-xs font-mono">
-                Vote on {Math.max(0, 5 - (you?.votesResolved ?? 0))} more submission{Math.max(0, 5 - (you?.votesResolved ?? 0)) !== 1 ? "s" : ""} with ≥80% accuracy to become a juror. Jury votes count double.
-              </p>
-            )}
-          </div>
-
-          {/* Vote accuracy stats */}
-          {(you?.votesResolved ?? 0) > 0 && (
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
-                <p className="text-dim text-[9px] font-mono uppercase">Accuracy</p>
-                <p className="text-bone font-display text-lg tabular-nums">
-                  {you?.voteAccuracy != null ? `${Math.round(you.voteAccuracy * 100)}%` : "—"}
-                </p>
-              </div>
-              <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
-                <p className="text-dim text-[9px] font-mono uppercase">Correct</p>
-                <p className="text-bone font-display text-lg tabular-nums">{you?.votesCorrect ?? 0}</p>
-              </div>
-              <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">
-                <p className="text-dim text-[9px] font-mono uppercase">Tickets</p>
-                <p className="text-amber font-display text-lg tabular-nums">{you?.juryTickets ?? 0}</p>
-              </div>
-            </div>
-          )}
-
-          <p className="text-dim text-[11px] font-body leading-relaxed">
-            Jury tickets weight your next cohort&apos;s lottery draw. Every correct verdict vote earns +1 ticket. Catch an infiltrator → +2 tickets.
-          </p>
-        </div>
+        <JuryOnboarding user={you} onViewFeed={onViewFeed} />
       ) : checkedIn ? (
         round?.status === "closed" ? (
           <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3 mb-3`}>
@@ -496,22 +428,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           </div>
         )
       ) : isSpectator ? (
-        <div className="space-y-2 mb-3">
-          <div className="bg-ash/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm flex gap-3 items-start">
-            <DozingCat size={44} />
-            <div>
-              <p className="font-mono text-dim text-xs uppercase tracking-widest mb-1">
-                Spectator mode
-              </p>
-              <p className="text-bone text-sm font-body leading-relaxed">
-                You&apos;re not in this cohort. You can audit, vote, and chat — but no check-in.
-              </p>
-            </div>
-          </div>
-          <GameCta onClick={onViewFeed} className="!text-base">
-            Open audit feed →
-          </GameCta>
-        </div>
+        <SpectatorPanel onViewFeed={onViewFeed} />
       ) : (
         <HumanCta onClick={onCheckIn} className="mb-3 animate-pulse-blood">
           Check in now →

@@ -1,0 +1,56 @@
+import { motion } from "framer-motion";
+import DozingCat from "./ui/DozingCat.jsx";
+import ThemeMotif from "./ui/ThemeMotif.jsx";
+import MascotGuide from "./ui/MascotGuide.jsx";
+import { GameCta } from "./ui/CraftCta.jsx";
+import { CUE_PRESS } from "../lib/cuelume.js";
+
+/**
+ * SpectatorPanel - shown to users who are watching but not in the current cohort.
+ * Explains their role (audit, vote, chat) and encourages joining the next cohort.
+ */
+export default function SpectatorPanel({ onViewFeed }) {
+  return (
+    <div className="space-y-3 mb-3">
+      <div className="bg-ash/70 border border-ember/40 rounded-2xl p-4 backdrop-blur-sm">
+        <div className="flex items-start gap-3 mb-3">
+          <MascotGuide
+            variant="watching"
+            size={48}
+            message="You're watching this cohort. Your votes help the jury."
+            position="top"
+          />
+        </div>
+
+        <div className="space-y-2 mb-3">
+          <div className="bg-smoke/50 border border-ember/30 rounded-xl p-3">
+            <p className="font-mono text-amber text-xs uppercase tracking-widest mb-1">Your role</p>
+            <p className="text-bone text-sm font-body leading-relaxed">
+              You can audit check-ins, vote on submissions, and chat with players — but you can't check in today.
+            </p>
+          </div>
+
+          <div className="bg-neon/10 border border-neon/30 rounded-xl p-3">
+            <p className="font-mono text-neon text-xs uppercase tracking-widest mb-1">Earn jury tickets</p>
+            <p className="text-bone text-sm font-body leading-relaxed">
+              Vote accurately to earn jury tickets. These weight your lottery draw for the next cohort — get in early, vote well, and you're more likely to be selected.
+            </p>
+          </div>
+        </div>
+
+        <GameCta onClick={onViewFeed} className="!text-base w-full">
+          Open audit feed →
+        </GameCta>
+      </div>
+
+      <div className="bg-ember/5 border border-ember/30 rounded-2xl p-3 text-center">
+        <p className="text-dim text-xs font-mono mb-1">
+          Want to play in the next cohort?
+        </p>
+        <p className="text-bone text-sm font-body">
+          Jury tickets give you priority in the lottery. Vote well today to improve your odds.
+        </p>
+      </div>
+    </div>
+  );
+}
