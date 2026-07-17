@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import ThemeMotif from "./ThemeMotif.jsx";
 import CoffeeBrew from "./CoffeeBrew.jsx";
 import DozingCat from "./DozingCat.jsx";
@@ -39,11 +40,24 @@ const PAPER_GRAIN =
 
 function HeroCountdown({ targetIso }) {
   const [t, setT] = useState(() => diff(targetIso));
+  const [cycleIndex, setCycleIndex] = useState(0);
+  
+  // Cycle through mystery emojis for theme teasers
+  const mysteryEmojis = ["❓", "🔮", "✨", "🎯", "🎲", "🌟"];
+  
   useEffect(() => {
     if (!targetIso) return undefined;
     const id = setInterval(() => setT(diff(targetIso)), 1000);
     return () => clearInterval(id);
   }, [targetIso]);
+  
+  useEffect(() => {
+    const emojiInterval = setInterval(() => {
+      setCycleIndex((i) => (i + 1) % mysteryEmojis.length);
+    }, 4000);
+    return () => clearInterval(emojiInterval);
+  }, []);
+  
   if (!targetIso) return null;
 
   const units = [
@@ -52,28 +66,70 @@ function HeroCountdown({ targetIso }) {
     ["min", t.m],
     ["sec", t.s],
   ];
+  
+  // Dramatic copy based on time remaining
+  let countdownCopy = "The game begins";
+  if (t.d === 0 && t.h < 24) {
+    countdownCopy = "Tomorrow, the proof begins";
+  } else if (t.d === 0 && t.h < 1) {
+    countdownCopy = "The moment is now";
+  } else if (t.d < 3) {
+    countdownCopy = "Your proof awaits";
+  }
+
   return (
-    <div className="flex items-start justify-center" style={{ gap: "clamp(8px,1.6vw,18px)" }}>
-      {units.map(([label, value], i) => (
-        <div key={label} className="flex items-start" style={{ gap: "clamp(8px,1.6vw,18px)" }}>
-          <div className="flex flex-col items-center">
-            <span className="font-display text-bone leading-[0.86] tabular-nums" style={{ fontSize: "clamp(44px,9vw,92px)" }}>
-              {String(value).padStart(2, "0")}
-            </span>
-            <span
-              className="font-mono text-dim uppercase mt-1.5"
-              style={{ fontSize: "clamp(8px,1vw,11px)", letterSpacing: "0.2em" }}
-            >
-              {label}
-            </span>
+    <div className="flex flex-col items-center">
+      <div className="flex items-start justify-center mb-4" style={{ gap: "clamp(8px,1.6vw,18px)" }}>
+        {units.map(([label, value], i) => (
+          <div key={label} className="flex items-start" style={{ gap: "clamp(8px,1.6vw,18px)" }}>
+            <div className="flex flex-col items-center">
+              <span className="font-display text-bone leading-[0.86] tabular-nums" style={{ fontSize: "clamp(44px,9vw,92px)" }}>
+                {String(value).padStart(2, "0")}
+              </span>
+              <span
+                className="font-mono text-dim uppercase mt-1.5"
+                style={{ fontSize: "clamp(8px,1vw,11px)", letterSpacing: "0.2em" }}
+              >
+                {label}
+              </span>
+            </div>
+            {i < 3 && (
+              <span className="font-display text-amber/50 leading-[0.86]" style={{ fontSize: "clamp(40px,8vw,84px)" }}>
+                :
+              </span>
+            )}
           </div>
-          {i < 3 && (
-            <span className="font-display text-amber/50 leading-[0.86]" style={{ fontSize: "clamp(40px,8vw,84px)" }}>
-              :
-            </span>
-          )}
-        </div>
-      ))}
+        ))}
+      </div>
+      
+      {/* Cycling mystery theme preview */}
+      <div className="flex items-center gap-2">
+        <motion.span
+          key={cycleIndex}
+          initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 0.8, rotate: 10 }}
+          transition={{ duration: 0.4 }}
+          className="text-3xl"
+          aria-hidden
+        >
+          {mysteryEmojis[cycleIndex]}
+        </motion.span>
+        <span className="font-mono text-amber/80 text-xs uppercase tracking-widest">
+          {countdownCopy}
+        </span>
+        <motion.span
+          key={cycleIndex + 10}
+          initial={{ opacity: 0, scale: 0.8, rotate: 10 }}
+          animate={{ opacity: 1, scale: 1, rotate: 0 }}
+          exit={{ opacity: 0, scale: 0.8, rotate: -10 }}
+          transition={{ duration: 0.4 }}
+          className="text-3xl"
+          aria-hidden
+        >
+          {mysteryEmojis[(cycleIndex + 3) % mysteryEmojis.length]}
+        </motion.span>
+      </div>
     </div>
   );
 }

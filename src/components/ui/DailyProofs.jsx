@@ -100,7 +100,14 @@ export default function DailyProofs() {
               >
                 {/* Day label overlay — top-left corner */}
                 {scheduled && (
-                  <span className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-amber/20 border border-amber/40 px-1.5 py-0.5">
+                  <motion.span
+                    key={scheduled.day + t.id}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.3 }}
+                    className="absolute top-1.5 left-1.5 flex items-center gap-1 rounded-full bg-amber/20 border border-amber/40 px-1.5 py-0.5"
+                  >
                     <span className="font-mono text-amber text-[8px] tracking-widest uppercase">
                       DAY {scheduled.day}
                     </span>
@@ -108,7 +115,7 @@ export default function DailyProofs() {
                     <span className="font-mono text-dim text-[8px] uppercase">
                       {scheduled.dayLabel}
                     </span>
-                  </span>
+                  </motion.span>
                 )}
                 {/* Hidden while open so the morphing hero isn't duplicated behind the modal. */}
                 <motion.div

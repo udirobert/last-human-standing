@@ -9,7 +9,7 @@ A mobile-first World Mini App: **a daily real-world elimination game for verifie
 
 A cohort of N players (default 50) competes over ~5 days. Each day:
 
-1. Admin reveals the day's **theme** (e.g., "AT A CAFÉ", "AT A PARK") and **prompt**
+1. A **theme** is revealed at round open — each day has a unique real-world challenge (e.g., "AT A CAFÉ", "AT A PARK", "WITH A FRIEND"). **Pre-launch, themes are hidden**: the DailyProofs wheel cycles day-labels randomly across all 10 possible themes every 5–8 seconds, and the GetReadyCard uses cycling mystery emojis (❓🔮🎲🎯✨🌟) so no one can map which theme falls on which day. The mapping stays secret until the round opens.
 2. The check-in window opens (e.g., 4 hours)
 3. Players check in from **anywhere on Earth** with:
    - **Photo** (required) — capture a photo matching the theme
@@ -20,6 +20,8 @@ A cohort of N players (default 50) competes over ~5 days. Each day:
 6. **Infiltrator Mode:** Opt in and let the crowd judge you. Voted HUMAN → immunity through the next day's cut. Flagged → DQ'd and any held immunity is burned. Infiltrator status is hidden from the audit feed. Voters earn accuracy stats for catching them.
 7. **Jury system:** Eliminated players keep playing as the jury — their votes count double once their audit accuracy is ≥80% (min 5 resolved votes), and every correct verdict vote earns a jury ticket that weights the next cohort's free-entry lottery.
 8. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
+
+**Theme reveal moment:** When a round opens, a dramatic full-screen animation briefly shows the theme, emoji, and description before fading away — making each day's reveal feel special and building daily return motivation.
 
 The last verified human takes the on-chain prize pool. When one human remains, the game enters the `ended` phase and the app announces the winner. The audit feed is publicly viewable — spectators can watch, but voting requires entry. Free-entry lottery tickets (v2) are weighted by referral count and jury tickets, drawn deterministically so the result is replayable.
 
@@ -37,6 +39,9 @@ The social deduction layer (HUMAN/SUS voting + Infiltrator mode) is what makes c
 
 Before a cohort starts, the app shows a **countdown** plus a **"RESERVE YOUR SLOT"** CTA:
 
+- **Dramatic countdown**: The landing hero features a live countdown with cycling mystery emojis (❓🔮✨🎯🎲🌟) that rotate every 4 seconds, creating anticipation while keeping themes hidden
+- **Social proof**: Real-time cohort progress bar showing X/50 reserved, plus referral tracking ("X friend(s) joined through your invite")
+- **Onboarding tutorial**: New players see an animated 4-step walkthrough (check-in → vote → survive → win) before reserving
 - Wallet auth + 1 WLD entry fee locks your spot.
 - The pot grows on World Chain as players reserve.
 - Cohort caps at `COHORT_SIZE` (default 50).

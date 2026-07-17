@@ -42,10 +42,20 @@ and the lottery draws.
 - ✅ **Jury UI**: MissionBoard shows jury status, accuracy, tickets
 - ✅ **Onboarding pot display**: prize pot prominent on welcome + reserve
 - ✅ **All 178 tests passing**, lint clean, build succeeds
-- ✅ **Migrations 009–017 applied** to remote Supabase
+- ✅ **Migrations 009–018 applied** to remote Supabase
 - ✅ **Launch date bumped to 2026-07-18T18:00:00Z** (migration 017)
 - ✅ **Reset SQL applied** — stale dev data cleared (2026-07-17)
+- ✅ **Ghost profiles cleared** (migration 018) — 27 test/free accounts deleted, reservedCount reset to 0
 - ✅ **Telegram tile removed** from GetReadyCard
+- ✅ **Theme schedule hidden**:
+  - `DailyProofs` wheel shuffles day↔theme assignments every 5–8s with animated transitions
+  - `GetReadyCard` uses cycling mystery emojis (❓🔮🎲🎯✨🌟) + "???" theme labels
+  - `CountdownCard` shows "???" instead of explicit Day 1 theme
+  - `DailyPrompt` questions use vague category hints, never specific themes
+  - `VotePreview` and `CheckInPreview` use generic "theme" language
+- ✅ **Theme reveal moment** (`ThemeReveal.jsx`): dramatic full-screen animation when each round opens, showing day label + emoji + description for 3 seconds
+- ✅ **Onboarding tutorial** (`OnboardingTutorial.jsx`): animated 4-step walkthrough (check-in → vote → survive → win) shown to non-reserved users
+- ✅ **Social proof elements**: cohort progress bar in GetReadyCard + referral count display
 - ✅ **UX enhancements deployed** (release 20260717-152557):
   - P0-1: Lottery visibility chip (shows draw mechanics)
   - P0-2: DayZeroBanner (T-2h countdown ritual)
@@ -396,3 +406,4 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 | 2026-07-17 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-07-17T18:00:00Z` to `2026-07-18T18:00:00Z` (Saturday). Migration 017 shifts scheduled round windows +1 day (Jul 18–22). New lottery seed: `2026-07-18T18:00:00Z:cohort-1:lottery`. |
 | 2026-07-17 | `20260717-135159` | Launch date bump + reset SQL + Telegram tile removed. |
 | 2026-07-17 | `20260717-152557` | **Full UX ritual pass.** P0: `LotteryStatus` chip in PrelaunchPanel (draw mechanics: minCandidates, maxDelayHours, freeRegistered); `DayZeroBanner` activates T-2h before round opens with pulsing motif + countdown, morphs to "Day is live" at T-0. P1: `CheckIn` ritual mode (animated motif morph during photo capture with overlay text); `VerdictHour` banner at T-2h in Feed with countdown + "Final votes needed"; `JuryStakes` card showing ticket rewards (+1/+3/+5); time-aware countdown copy in `LandingHero` ("Cohort 1 begins" → "Day 1 begins" at T-24h → "Live in" at T-1h); cohort fill tiers (Open → Filling fast → Almost full → Full) in PrelaunchPanel. P2: `JuryOnboarding` component for eliminated players (jury status, progress to jury, cohort 2 transition); `SpectatorPanel` for non-players (audit/vote/chat role explanation, jury ticket earning, cohort 2 CTA). Telegram tile removed from GetReadyCard. Reset SQL applied (5 stale dev rows cleared). 178 tests passing. |
+| 2026-07-17 | `20260717-160000` | **Theme mystery & pre-launch polish.** Migration 018: clear 27 ghost free profiles, reset reservedCount to 0. Theme hiding: DailyProofs wheel shuffles day↔theme assignments every 5-8s with animated transitions; GetReadyCard uses cycling mystery emojis (❓🔮🎲🎯✨🌟) + "???" theme labels; CountdownCard shows "???" instead of explicit Day 1 theme; DailyPrompt questions use vague category hints. Theme reveal moment (ThemeReveal.jsx): dramatic full-screen animation when each round opens, showing day label + emoji + description for 3 seconds. Onboarding tutorial (OnboardingTutorial.jsx): animated 4-step walkthrough (check-in → vote → survive → win) shown to non-reserved users. Social proof: cohort progress bar in GetReadyCard + referral count display. LandingHero dramatic countdown with cycling mystery emojis. 178 tests passing. |

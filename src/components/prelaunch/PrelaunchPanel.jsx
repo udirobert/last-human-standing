@@ -13,6 +13,7 @@ import { HumanCta } from "../ui/CraftCta.jsx";
 import CoffeeBrew from "../ui/CoffeeBrew.jsx";
 import { COHORT } from "../../lib/copy.js";
 import { COHORT_SCHEDULE } from "../../data/game";
+import OnboardingTutorial from "../OnboardingTutorial.jsx";
 
 /**
  * The single prelaunch surface. Composes all prelaunch widgets
@@ -96,6 +97,10 @@ export default function PrelaunchPanel({
         </div>
       )}
 
+      {!isReserved && variant === "home" && (
+        <OnboardingTutorial />
+      )}
+
       {isReserved && (
         <PostReserveExtras reservedAt={reservedAt} phase={phase} />
       )}
@@ -139,6 +144,7 @@ export default function PrelaunchPanel({
 function GetReadyCard() {
   const day1 = COHORT_SCHEDULE[0];
   const day3 = COHORT_SCHEDULE[2];
+  const { you, reservedCount } = useRound();
 
   // Cycle through mystery emojis to keep users guessing
   const [day1Emoji, setDay1Emoji] = useState(() => {
@@ -166,6 +172,10 @@ function GetReadyCard() {
       clearInterval(interval2);
     };
   }, []);
+
+  // Social proof: show referral count if user has referred friends
+  const referralCount = you?.referralCount ?? 0;
+  const friendsInCohort = referralCount > 0 ? `${referralCount} friend${referralCount !== 1 ? 's' : ''} joined through your invite` : null;
 
   return (
     <div className="border border-neon/30 rounded-3xl p-5 bg-smoke/60 backdrop-blur-sm">
@@ -195,6 +205,25 @@ function GetReadyCard() {
             </p>
           </div>
         </div>
+      </div>
+      
+      {/* Social proof: cohort status */}
+      <div className="mt-4 pt-3 border-t border-ember/30">
+        <div className="flex items-center justify-between text-[10px] font-mono">
+          <span className="text-dim">Cohort</span>
+          <span className="text-bone">{reservedCount}/50 reserved</span>
+        </div>
+        <div className="mt-2 h-1.5 bg-smoke/40 rounded-full overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-amber to-neon transition-all duration-500"
+            style={{ width: `${Math.min(100, (reservedCount / 50) * 100)}%` }}
+          />
+        </div>
+        {friendsInCohort && (
+          <p className="text-neon text-[10px] font-mono mt-2 text-center">
+            ✓ {friendsInCohort}
+          </p>
+        )}
       </div>
     </div>
   );
