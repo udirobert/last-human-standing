@@ -140,6 +140,33 @@ function GetReadyCard() {
   const day1 = COHORT_SCHEDULE[0];
   const day3 = COHORT_SCHEDULE[2];
 
+  // Cycle through mystery emojis to keep users guessing
+  const [day1Emoji, setDay1Emoji] = useState(() => {
+    const emojis = ["❓", "🔮", "🎲", "🎯", "✨", "🌟"];
+    return emojis[Math.floor(Math.random() * emojis.length)];
+  });
+  
+  const [day3Emoji, setDay3Emoji] = useState(() => {
+    const emojis = ["🔮", "❓", "🎲", "🎯", "✨", "🌟"];
+    return emojis[Math.floor(Math.random() * emojis.length)];
+  });
+
+  useEffect(() => {
+    const emojis = ["❓", "🔮", "🎲", "🎯", "✨", "🌟"];
+    const interval1 = setInterval(() => {
+      setDay1Emoji(emojis[Math.floor(Math.random() * emojis.length)]);
+    }, 3000 + Math.random() * 2000);
+    
+    const interval2 = setInterval(() => {
+      setDay3Emoji(emojis[Math.floor(Math.random() * emojis.length)]);
+    }, 3000 + Math.random() * 2000);
+    
+    return () => {
+      clearInterval(interval1);
+      clearInterval(interval2);
+    };
+  }, []);
+
   return (
     <div className="border border-neon/30 rounded-3xl p-5 bg-smoke/60 backdrop-blur-sm">
       <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-3 text-center">
@@ -147,7 +174,7 @@ function GetReadyCard() {
       </p>
       <div className="space-y-2.5">
         <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
-          <span className="text-2xl shrink-0">❓</span>
+          <span className="text-2xl shrink-0 transition-all duration-300">{day1Emoji}</span>
           <div className="flex-1 min-w-0">
             <p className="font-display text-bone text-sm leading-tight">
               Day 1: ???
@@ -158,7 +185,7 @@ function GetReadyCard() {
           </div>
         </div>
         <div className="flex items-center gap-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3">
-          <span className="text-2xl shrink-0">🔮</span>
+          <span className="text-2xl shrink-0 transition-all duration-300">{day3Emoji}</span>
           <div className="flex-1 min-w-0">
             <p className="font-display text-bone text-sm leading-tight">
               Day 3: ???
