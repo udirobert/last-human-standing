@@ -57,7 +57,7 @@ export function useTrustTier() {
             : reportedProvider === "world"
               ? "Verified · World ID"
               : "Verified",
-        provisional: "Provisional — signed in, verify to unlock full trust",
+        provisional: "Provisional — verify World ID or Self for full trust",
         unverified: "Browsing — reserve a slot to play",
       },
     };

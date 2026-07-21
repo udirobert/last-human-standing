@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
+import { MascotEventContext } from "../context/MascotEventContext.js";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { MASCOT_LINES, getProfiledMascotLines } from "../lib/copy.js";
@@ -25,8 +26,6 @@ import { MASCOT_LINES, getProfiledMascotLines } from "../lib/copy.js";
  * and lets the mascot react ONCE when a rank or verdict changes rather
  * than merely recomputing on every render.
  */
-
-const MascotEventContext = createContext(null);
 
 /** Event types that auto-expire (time-boxed). */
 const TRANSIENT_TYPES = new Set([
@@ -148,10 +147,4 @@ export function MascotEventProvider({ children }) {
       {children}
     </MascotEventContext.Provider>
   );
-}
-
-export function useMascotEvent() {
-  const ctx = useContext(MascotEventContext);
-  if (!ctx) throw new Error("useMascotEvent must be used within <MascotEventProvider />");
-  return ctx;
 }

@@ -7,19 +7,24 @@ import ScreenLoader from "../ui/ScreenLoader.jsx";
 const SelfVerify = lazy(() => import("../SelfVerify.jsx"));
 
 /**
- * Collapsed-by-default humanity verify — wallet + pay happen first;
- * this lives in the lobby for optional power-up.
+ * Humanity verify — wallet + pay happen first; this lives in the lobby.
+ * Browser players see it expanded by default (defaultOpen).
  */
-export default function VerifyOptIn() {
-  const [open, setOpen] = useState(false);
+export default function VerifyOptIn({ defaultOpen = false }) {
+  const [open, setOpen] = useState(defaultOpen);
   const { tier } = useTrustTier();
-  const { isFarcaster } = useWorld();
+  const { isFarcaster, isWorldApp } = useWorld();
 
   if (tier === "verified") return null;
 
   const worldEnabled = import.meta.env.VITE_ENABLE_IDKIT === "true";
   const selfEnabled = import.meta.env.VITE_ENABLE_SELF === "true";
   if (!worldEnabled && !selfEnabled) return null;
+
+  const isBrowser = !isWorldApp;
+  const headline = isBrowser
+    ? "Verify your humanity (recommended)"
+    : "Verify your humanity (optional)";
 
   return (
     <div className="bg-smoke/70 rounded-2xl border border-neon/30 backdrop-blur-sm overflow-hidden">
@@ -30,10 +35,12 @@ export default function VerifyOptIn() {
       >
         <div className="min-w-0">
           <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-            Verify your humanity (optional)
+            {headline}
           </p>
           <p className="text-dim text-[11px] font-mono leading-relaxed">
-            ×2 jury voting power · priority for cohort 2 · ~30 seconds
+            {isBrowser
+              ? "Browser accounts stay provisional until verified — required for voting when PoH gate is on."
+              : "×2 jury voting power · priority for cohort 2 · ~30 seconds"}
           </p>
         </div>
         <span className="font-mono text-dim text-xs shrink-0 mt-0.5">{open ? "▲" : "▼"}</span>

@@ -18,6 +18,7 @@ const DEFAULT_YOU = {
   votesCorrect: 0,
   votesResolved: 0,
   checkinStreak: 0,
+  eliminationReason: null,
 };
 const DEFAULT_AGENTS = {
   enabled: false,

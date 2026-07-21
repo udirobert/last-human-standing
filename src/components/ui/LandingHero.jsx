@@ -38,12 +38,11 @@ function diff(targetIso) {
 const PAPER_GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
+const MYSTERY_EMOJIS = ["❓", "🔮", "✨", "🎯", "🎲", "🌟"];
+
 function HeroCountdown({ targetIso }) {
   const [t, setT] = useState(() => diff(targetIso));
   const [cycleIndex, setCycleIndex] = useState(0);
-  
-  // Cycle through mystery emojis for theme teasers
-  const mysteryEmojis = ["❓", "🔮", "✨", "🎯", "🎲", "🌟"];
   
   useEffect(() => {
     if (!targetIso) return undefined;
@@ -53,7 +52,7 @@ function HeroCountdown({ targetIso }) {
   
   useEffect(() => {
     const emojiInterval = setInterval(() => {
-      setCycleIndex((i) => (i + 1) % mysteryEmojis.length);
+      setCycleIndex((i) => (i + 1) % MYSTERY_EMOJIS.length);
     }, 4000);
     return () => clearInterval(emojiInterval);
   }, []);
@@ -113,7 +112,7 @@ function HeroCountdown({ targetIso }) {
           className="text-3xl"
           aria-hidden
         >
-          {mysteryEmojis[cycleIndex]}
+          {MYSTERY_EMOJIS[cycleIndex]}
         </motion.span>
         <span className="font-mono text-amber/80 text-xs uppercase tracking-widest">
           {countdownCopy}
@@ -127,7 +126,7 @@ function HeroCountdown({ targetIso }) {
           className="text-3xl"
           aria-hidden
         >
-          {mysteryEmojis[(cycleIndex + 3) % mysteryEmojis.length]}
+          {MYSTERY_EMOJIS[(cycleIndex + 3) % MYSTERY_EMOJIS.length]}
         </motion.span>
       </div>
     </div>

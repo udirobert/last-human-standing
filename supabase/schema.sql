@@ -113,6 +113,8 @@ create table if not exists public.submissions (
 );
 
 alter table public.submissions add column if not exists is_infiltrator boolean not null default false;
+alter table public.submissions add column if not exists photo_hash text;
+create index if not exists submissions_photo_hash_idx on public.submissions(photo_hash) where photo_hash is not null;
 create index if not exists submissions_day_idx on public.submissions(day);
 create index if not exists submissions_day_address_idx on public.submissions(day, address);
 create index if not exists submissions_created_at_idx on public.submissions(created_at desc);

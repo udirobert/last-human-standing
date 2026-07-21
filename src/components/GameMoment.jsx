@@ -9,6 +9,7 @@ import ShareSheet from "./ShareSheet.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { useDelight } from "./DelightProvider.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
+import { formatEliminationReason } from "../lib/eliminationReason.js";
 import { haptic } from "../lib/haptics.js";
 import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
 import OverlayPortal from "./OverlayPortal.jsx";
@@ -317,6 +318,17 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
   // Was the elimination due to being flagged (DQ'd) vs ranked out?
   const wasFlagged = verdict?.status === "flagged";
   const wasInfiltrator = verdict?.wasInfiltrator;
+  const immediateReason = formatEliminationReason(
+    !result.survived
+      ? {
+          code: rank > cap && cap > 0 ? "too_slow" : "ranked_out",
+          day: currentDay,
+          rank,
+          cap,
+          spotsAway: rank > cap && cap > 0 ? rank - cap : null,
+        }
+      : null,
+  );
 
   return (
     <motion.div
@@ -366,6 +378,11 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         <p className="text-dim font-mono text-sm tabular-nums">
           Rank #{result.rank} of {result.survivalCap} · Top {percentile}%
         </p>
+        {immediateReason && (!verdict || verdict.votes?.total === 0) && (
+          <p className="text-bone/70 text-sm font-body mt-3 max-w-xs mx-auto leading-relaxed">
+            {immediateReason.body}
+          </p>
+        )}
 
         {/* Near-miss banner — the most powerful re-engagement trigger */}
         {nearMiss && (

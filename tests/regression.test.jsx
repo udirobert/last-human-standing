@@ -418,7 +418,8 @@ describe("Reduced-motion mascot", () => {
 // ===========================================================================
 // 8. MascotEventProvider — durable state derivation + dispatch
 // ===========================================================================
-import { MascotEventProvider, useMascotEvent } from "../src/components/MascotEventProvider.jsx";
+import { MascotEventProvider } from "../src/components/MascotEventProvider.jsx";
+import { useMascotEvent } from "../src/hooks/useMascotEvent.js";
 
 function MascotEventHarness() {
   const { mascotEvent, durableEvent, dispatchMascotEvent } = useMascotEvent();

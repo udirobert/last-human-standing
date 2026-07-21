@@ -471,7 +471,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                       </div>
                       <p className="text-bone/70 text-sm font-body mb-2 leading-relaxed">{ENTRY.paid.blurb}</p>
                       <p className="text-dim text-[11px] font-mono mb-4 leading-relaxed">
-                        Humanity verify is optional — unlock it in the lobby after you pay.
+                        Browser players: verify humanity after paying to unlock full trust and voting weight.
                       </p>
 
                       {isWorldApp ? (

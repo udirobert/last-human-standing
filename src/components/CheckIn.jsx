@@ -15,12 +15,13 @@ import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
 import MascotGuide from './ui/MascotGuide.jsx';
 import { useDelight } from './DelightProvider.jsx';
-import { useMascotEvent } from './MascotEventProvider.jsx';
+import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import { shareMoment } from '../lib/shareMoment.js';
 import { getCheckInMascot, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
 import { haptic } from '../lib/haptics.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
 import CheckInPreview from './CheckInPreview.jsx';
+import { hashPhotoFile } from '../lib/photoHash.js';
 import { CUE_PRESS } from '../lib/cuelume.js';
 
 export default function CheckIn({ onBack, onSubmit }) {
@@ -188,6 +189,15 @@ export default function CheckIn({ onBack, onSubmit }) {
 
     // Upload photo
     let mediaPath = null;
+    let photoHash = null;
+    if (photoFile) {
+      try {
+        photoHash = await hashPhotoFile(photoFile);
+      } catch {
+        photoHash = null;
+      }
+    }
+
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const supabaseAnon = import.meta.env.VITE_SUPABASE_ANON_KEY;
     if (photoFile && supabaseUrl && supabaseAnon) {
@@ -231,6 +241,7 @@ export default function CheckIn({ onBack, onSubmit }) {
         theme,
         caption,
         mediaPath,
+        photoHash,
         isInfiltrator: infiltratorMode,
       });
     } catch {

@@ -1,7 +1,13 @@
+import { useRef } from 'react';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
+import { useTrustTier } from '../hooks/useTrustTier.js';
 import TrustBadge from './TrustBadge.jsx';
+import TrustTierBanner from './TrustTierBanner.jsx';
+import DayBriefing from './DayBriefing.jsx';
+import RulesDrawer from './RulesDrawer.jsx';
+import VerifyOptIn from './prelaunch/VerifyOptIn.jsx';
 import WhatsPublicChip from './WhatsPublicChip.jsx';
 import EarlyBadge from './prelaunch/EarlyBadge.jsx';
 import PrelaunchPanel from './prelaunch/PrelaunchPanel.jsx';
@@ -24,7 +30,7 @@ import Mascot from './Mascot.jsx';
 import DayZeroBanner from './DayZeroBanner.jsx';
 import ThemeReveal from './ThemeReveal.jsx';
 import { useDelight } from './DelightProvider.jsx';
-import { useMascotEvent } from './MascotEventProvider.jsx';
+import { useMascotEvent } from '../hooks/useMascotEvent.js';
 
 /**
  * GameHome — persistent Survive view.
@@ -32,7 +38,7 @@ import { useMascotEvent } from './MascotEventProvider.jsx';
  * Badges, arsenal, waitlist live below the fold.
  */
 export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRouteToOnboarding, onRefresh }) {
-  const { user, hasQueuedCheckin, clearQueuedCheckin, entryPaid } = useWorld();
+  const { user, hasQueuedCheckin, clearQueuedCheckin, entryPaid, isWorldApp } = useWorld();
   const {
     phase, launchAt, currentDay,
     cohortSize, reservedCount, cohortFull,
@@ -40,6 +46,8 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
     usesDemoState, refresh: refreshRound,
   } = useRound();
   const { stats } = useStats();
+  const { tier } = useTrustTier();
+  const verifyRef = useRef(null);
   const { mascotName, showNameModal, handleMascotClick } = useDelight();
   const { mascotEvent } = useMascotEvent();
 
@@ -56,8 +64,10 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
     <AppShell phase={phase}>
       <DayRecap />
       {isLive && <RuleReveal onAudit={onViewFeed} />}
+      {isLive && <DayBriefing />}
 
-      <div className="absolute top-4 right-4 z-20">
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+        <RulesDrawer />
         <FAQModal />
       </div>
 
@@ -106,6 +116,12 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       <ThemeReveal />
 
       <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${SHELL_BOTTOM_PAD}`}>
+        {(isLive || isEnded) && isReserved && tier !== 'verified' && (
+          <StageSection index={0} className="relative z-10 px-5 mb-3">
+            <TrustTierBanner onVerify={() => verifyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+          </StageSection>
+        )}
+
         {(isLive || isEnded) && (
           <StageSection index={0} className="relative z-10">
             <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
@@ -209,6 +225,11 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
             {isPrelaunch && <EarlyBadge size="sm" reservedAt={user?.reservedAt} />}
             <ModeBanner />
           </div>
+          {isReserved && tier !== 'verified' && (
+            <div ref={verifyRef} id="verify-section" className="mt-3">
+              <VerifyOptIn defaultOpen={!isWorldApp} />
+            </div>
+          )}
         </StageSection>
 
         {isPrelaunch && (

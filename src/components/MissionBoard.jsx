@@ -3,7 +3,8 @@ import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useDelight } from "./DelightProvider.jsx";
-import { useMascotEvent } from "./MascotEventProvider.jsx";
+import { useMascotEvent } from "../hooks/useMascotEvent.js";
+import EliminationReasonCard from "./EliminationReasonCard.jsx";
 import { TODAY_THEME, findTheme } from "../data/game";
 import { missionMantra, getMissionMascot, getEndgameMascot } from "../lib/copy.js";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
@@ -394,7 +395,12 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       {canAudit && <VoteProgressCard onViewFeed={onViewFeed} />}
 
       {eliminated ? (
-        <JuryOnboarding user={you} onViewFeed={onViewFeed} />
+        <div className="space-y-3">
+          {you?.eliminationReason && (
+            <EliminationReasonCard reason={you.eliminationReason} />
+          )}
+          <JuryOnboarding user={you} onViewFeed={onViewFeed} />
+        </div>
       ) : checkedIn ? (
         round?.status === "closed" ? (
           <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3 mb-3`}>

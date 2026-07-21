@@ -10,7 +10,7 @@ import FAQModal from './FAQModal.jsx';
 import AppShell, { SHELL_BOTTOM_PAD } from './AppShell.jsx';
 import GlitchTitle from './ui/GlitchTitle.jsx';
 import { useDelight } from './DelightProvider.jsx';
-import { useMascotEvent } from './MascotEventProvider.jsx';
+import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import ThemeMotif from './ui/ThemeMotif.jsx';
 import { MascotAvatar } from './Mascot.jsx';
 import EmptyState from './EmptyState.jsx';
