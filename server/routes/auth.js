@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { Router } from "express";
 import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
+import { loadReachability } from "../lib/reachability.js";
 import { ensureObjectBody, sendValidationError, ensureString } from "../lib/validators.js";
 
 /**
@@ -117,6 +118,17 @@ export default function authRoutes({
     const userRecord = await getUserRecord(req.user.address);
     const humanityVerified =
       Boolean(userRecord?.world_id_verified) || Boolean(userRecord?.humanity_nullifier);
+
+    let reachability = null;
+    if (supabaseAdmin) {
+      const state = await loadReachability(supabaseAdmin, req.user.address);
+      reachability = {
+        eligible: state.eligible,
+        missing: state.missing,
+        channels: state.channels,
+      };
+    }
+
     res.json({
       ok: true,
       address: req.user.address,
@@ -130,6 +142,10 @@ export default function authRoutes({
       reservedAt: userRecord?.reserved_at ?? null,
       cohort: userRecord?.cohort ?? null,
       entryKind: userRecord?.entry_kind ?? null,
+      contactEmail: userRecord?.contact_email ?? null,
+      telegramLinked: Boolean(userRecord?.telegram_user_id),
+      farcasterFid: userRecord?.farcaster_fid ?? null,
+      reachability,
     });
   });
 

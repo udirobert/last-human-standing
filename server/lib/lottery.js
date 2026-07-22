@@ -180,7 +180,8 @@ export const COHORT_FREE_SLOTS = 25;
  * Capped at COHORT_SIZE and floored at 0 so the math is always
  * coherent: a free lottery of 25 with 25 paid = full cohort.
  */
-export function freeSlotsFor(paidCount) {
+export function freeSlotsFor(paidCount, cohortSize = COHORT_SIZE) {
   const paid = Math.max(0, Number.isFinite(paidCount) ? paidCount : 0);
-  return Math.max(0, Math.min(COHORT_SIZE, COHORT_SIZE - paid));
+  const cap = Math.max(0, Number.isFinite(cohortSize) ? cohortSize : COHORT_SIZE);
+  return Math.max(0, Math.min(cap, cap - paid));
 }

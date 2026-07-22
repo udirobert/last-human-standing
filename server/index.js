@@ -20,6 +20,8 @@ import cors from "cors";
 import pushRoutes from "./routes/push.js";
 import authRoutes from "./routes/auth.js";
 import paymentRoutes from "./routes/payment.js";
+import profileRoutes from "./routes/profile.js";
+import telegramRoutes from "./routes/telegram.js";
 import referralRoutes from "./routes/referral.js";
 import ariaRoutes from "./routes/aria.js";
 import activityRoutes from "./routes/activity.js";
@@ -131,14 +133,13 @@ const ADMIN_ADDRESS = process.env.ADMIN_ADDRESS || null;
 let balanceCache = { value: 0, fetchedAt: 0 };
 let celoBalanceCache = { value: null, fetchedAt: 0 };
 
-// Cohort composition. 25 paid (guaranteed) + 25 free (lottery).
-// 50 humans, one cohort. Override per-cohort later via the
-// lottery_results table.
+// Cohort composition. Half paid (guaranteed) + half free (lottery).
+// Override per-cohort later via the lottery_results table.
 const COHORT_CONFIG = {
   cohort: 1,
-  size: 50,
-  paidSlots: 25,
-  freeSlots: 25,
+  size: COHORT_SIZE,
+  paidSlots: Math.ceil(COHORT_SIZE / 2),
+  freeSlots: Math.floor(COHORT_SIZE / 2),
 };
 
 function now() {
@@ -1314,7 +1315,7 @@ app.get("/api/stats", async (req, res) => {
       cohort: {
         size: COHORT_CONFIG.size,
         paidSlots: COHORT_CONFIG.paidSlots,
-        freeSlots: freeSlotsFor(paidCount),
+        freeSlots: freeSlotsFor(paidCount, COHORT_SIZE),
         freeSlotsMax: COHORT_CONFIG.freeSlots,
         paidCount,
         freeCount,
@@ -2421,7 +2422,7 @@ app.get("/api/game/state", async (req, res) => {
       cohortFull,
       cohort: {
         ...COHORT_CONFIG,
-        freeSlots: freeSlotsFor(split.paidCount),
+        freeSlots: freeSlotsFor(split.paidCount, COHORT_SIZE),
         paidCount: split.paidCount,
         freeCount: split.freeCount,
         agentCount: split.agentCount,
@@ -2642,7 +2643,7 @@ app.get("/api/cohort/roster", async (req, res) => {
         cohort: COHORT_CONFIG.cohort,
         size: COHORT_CONFIG.size,
         paidSlots: COHORT_CONFIG.paidSlots,
-        freeSlots: freeSlotsFor(paidCount),
+        freeSlots: freeSlotsFor(paidCount, COHORT_SIZE),
         freeSlotsMax: COHORT_CONFIG.freeSlots,
         paidCount,
         freeCount,
@@ -2769,7 +2770,7 @@ async function computeFreeLotterySlots(cohort) {
     .eq("paid", true)
     .eq("entry_kind", "paid")
     .eq("cohort", cohort);
-  return freeSlotsFor(count ?? 0);
+  return freeSlotsFor(count ?? 0, COHORT_SIZE);
 }
 
 async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
@@ -3099,6 +3100,9 @@ app.use("/api", paymentRoutes({
   SESSION_COOKIE,
   rateLimitStorage,
 }));
+
+app.use("/api", profileRoutes({ requireAuth, supabaseAdmin, log, rateLimit, rateLimitStorage }));
+app.use("/api", telegramRoutes({ supabaseAdmin, log }));
 
 app.use("/api", referralRoutes({ supabaseAdmin }));
 app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));

@@ -1,13 +1,15 @@
 # Launch reset — pre-flight SQL
 
-Run before 2026-07-18 18:00 UTC. Idempotent. Safe to re-run.
+Run before **2026-07-29 18:00 UTC**. Idempotent. Safe to re-run.
 
-> **Re-launch context.** This reset was re-run on 2026-06-15
-> after the June 14 launch produced an empty lottery draw
-> (no signups at T-0). The cohort was emptied, the lottery
-> row deleted, and `GAME_LAUNCH_AT` was bumped to
-> 2026-06-17T18:00:00Z. The same SQL below is what you'd
-> re-run for any future reset.
+> **Re-launch context.**
+> - **2026-06-15** — June 14 empty draw; bumped to Jun 17.
+> - **2026-07-17** — Jul 18 prep; ghost profiles cleared.
+> - **2026-07-22** — Jul 18 launch ran with 1 signup and 0
+>   check-ins; lottery drew `[]` on Jul 19. Migrations **023**
+>   (round bump) + **024** (cohort reset) + `GAME_LAUNCH_AT=
+>   2026-07-29T18:00:00Z` restore prelaunch. Run:
+>   `bash scripts/relaunch-prep.sh [--update-env]`
 
 ## Clear stale dev-session cohort data
 
@@ -29,6 +31,18 @@ delete from public.users
 ```
 
 Expected result: 5 rows deleted.
+
+## Clear stale lottery draw (required on re-launch)
+
+If a prior launch already drew (even with an empty cohort), delete
+the row so the lazy draw can fire again with the new seed:
+
+```sql
+delete from public.lottery_results where cohort = 1;
+```
+
+Or apply migration `024_cohort1_relaunch_reset.sql` (includes this
+plus check-in/vote cleanup and elimination reset).
 
 ## Reset game-progress state (between cohorts / re-launches)
 

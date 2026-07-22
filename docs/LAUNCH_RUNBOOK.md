@@ -1,31 +1,33 @@
-# Launch runbook — 2026-07-18 18:00 UTC
+# Launch runbook — 2026-07-29 18:00 UTC
 
 This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`
 and the lottery draws.
 
-> **Re-launch context.** Three prior launches have been missed:
-> - **June 14** ran with zero signups; the lazy draw fired on
->   an empty cohort and produced an empty result. State was
->   reset, lazy-draw gating added, and the date bumped.
-> - **June 17** the second attempt also landed with zero
->   signups — the app was still landing in a broken state for
->   new users (World ID verify was a dead end, the post-payment
->   placement was wrong, the empty states were text-only, and
->   the offline / photo-upload / verify-success paths were
->   silent). All of those are now fixed in release
->   `20260619-094447` (see Post-launch release history).
-> - **July 1** was missed with the production API down (nginx
->   502 — the PM2 process was not serving). Detected 2026-07-07.
+> **Re-launch context.** Prior launches missed or stalled:
+> - **June 14** — empty lottery draw; lazy-draw gating added.
+> - **June 17** — zero signups; UX fixes shipped.
+> - **July 1** — production API down (nginx 502).
+> - **July 18** — clock advanced with 1 signup, 0 check-ins;
+>   lottery drew `[]` on Jul 19. Zombie `live` state reset via
+>   migrations **023–024** and `GAME_LAUNCH_AT` bump.
 >
-> The new target is **Saturday 2026-07-18 18:00 UTC**, giving one
-> extra day of signup runway (bumped from July 17 on 2026-07-17).
-> mechanics release: lethal votes (DQ-and-replace), real
-> infiltrator stakes, the jury system, weighted lottery v2,
-> working push notifications, the public spectator feed, and
-> the ended-phase winner ceremony.
+> **New target: Wednesday 2026-07-29 18:00 UTC** — 25-person
+> closed beta (`COHORT_SIZE=25`, `LOTTERY_MIN_CANDIDATES=5`).
+> Prep script: `bash scripts/relaunch-prep.sh [--update-env]`.
 
-## Pre-launch status (updated 2026-07-17)
+## Pre-launch status (updated 2026-07-22)
+
+### Jul 29 re-launch prep
+
+- ⬜ **Apply migrations 023–024** — `bash scripts/relaunch-prep.sh`
+- ⬜ **Bump production env** — `bash scripts/relaunch-prep.sh --update-env`
+  sets `GAME_LAUNCH_AT=2026-07-29T18:00:00Z`, `COHORT_SIZE=25`,
+  `COHORT_2_LAUNCH_AT=2026-08-12T18:00:00Z`, `LOTTERY_MIN_CANDIDATES=5`
+- ⬜ **Deploy latest code** (`fd8c7f6`+) — trust UX, elimination copy, photo dedup
+- ⬜ **Seed prize pool** — $200–500+ cUSD/WLD minimum for 25-person beta
+- ⬜ **Dry-run full game loop** on a short admin round
+- ⬜ **Verify phase=prelaunch** via `/api/game/state` before promoting
 
 ### Done — code-complete, tested, deployed
 

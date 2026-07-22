@@ -23,6 +23,14 @@ create table if not exists public.users (
   platform text
 );
 
+alter table public.users add column if not exists contact_email text;
+alter table public.users add column if not exists telegram_user_id bigint;
+alter table public.users add column if not exists telegram_username text;
+alter table public.users add column if not exists telegram_link_token text;
+alter table public.users add column if not exists telegram_link_expires_at timestamptz;
+alter table public.users add column if not exists farcaster_fid bigint;
+alter table public.users add column if not exists reachability_completed_at timestamptz;
+
 alter table public.users add column if not exists reserved_at timestamptz;
 alter table public.users add column if not exists eliminated boolean not null default false;
 alter table public.users add column if not exists eliminated_at_day int;

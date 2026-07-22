@@ -22,6 +22,7 @@ import ShrinkingPot from "./ui/ShrinkingPot.jsx";
 import GameplayLoopDemo from "./ui/GameplayLoopDemo.jsx";
 import ExitIntentPrompt from "./ui/ExitIntentPrompt.jsx";
 import SharePanel from "./prelaunch/SharePanel.jsx";
+import ReachabilitySetup from "./prelaunch/ReachabilitySetup.jsx";
 import { markJustReserved } from "../lib/postReserve.js";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import { CompactButton, HumanCta } from "./ui/CraftCta.jsx";
@@ -33,6 +34,8 @@ const ONBOARDING_KEY = "lhs_onboarding_v2_done";
 export default function Onboarding({ onEnter, onSpeedRun }) {
   const {
     isWorldApp,
+    isFarcaster,
+    farcasterUser,
     walletAuthed,
     entryPaid,
     lastError,
@@ -57,6 +60,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
   });
   const [authing, setAuthing] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [freeEntryBusy, setFreeEntryBusy] = useState(false);
   const [showPersonalize, setShowPersonalize] = useState(false);
   const [mascotName, setMascotName] = useState(() => {
     try { return localStorage.getItem("lhs_mascot_name") || ""; } catch { return ""; }
@@ -503,29 +507,38 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                     </StageSection>
 
                     {isFree && (
-                      <StageSection index={4} className="bg-smoke/70 border border-neon/25 rounded-3xl p-5 backdrop-blur-sm">
-                        <div className="flex items-baseline justify-between mb-2">
-                          <p className="font-display text-2xl text-neon">{ENTRY.free.title}</p>
-                          <p className="font-mono text-[10px] text-dim uppercase">{ENTRY.free.cardLabel}</p>
-                        </div>
-                        <p className="text-bone/70 text-sm font-body mb-4 leading-relaxed">{ENTRY.free.blurb}</p>
-                        <HumanCta
-                          onClick={async () => {
+                      <StageSection index={4}>
+                        <ReachabilitySetup
+                          walletAuthed={walletAuthed}
+                          onWalletAuth={handleWalletAuth}
+                          authing={authing}
+                          isWorldApp={isWorldApp}
+                          isFarcaster={isFarcaster}
+                          farcasterUser={farcasterUser}
+                          user={user}
+                          freeEntryBusy={freeEntryBusy}
+                          onFreeEntry={async () => {
+                            if (freeEntryBusy) return;
+                            setFreeEntryBusy(true);
                             try {
-                              const resp = await fetch("/api/pay/free-entry", { method: "POST", credentials: "include" });
-                              if (!resp.ok) throw new Error(`free_entry_failed_${resp.status}`);
+                              const resp = await fetch("/api/pay/free-entry", {
+                                method: "POST",
+                                credentials: "include",
+                              });
                               const data = await resp.json().catch(() => ({}));
+                              if (!resp.ok) {
+                                throw new Error(data.error || `free_entry_${resp.status}`);
+                              }
                               markBrowserPaid(data.address);
                               markOnboardingDone();
                               if (phase === "prelaunch") goToLobby();
                             } catch (e) {
                               console.error("free entry failed:", e);
+                            } finally {
+                              setFreeEntryBusy(false);
                             }
                           }}
-                          className="!bg-neon !text-ash !shadow-[0_10px_30px_-8px_rgba(0,255,148,0.35)]"
-                        >
-                          {ENTRY.free.cta}
-                        </HumanCta>
+                        />
                       </StageSection>
                     )}
 
