@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MiniKitProvider } from '@worldcoin/minikit-js/minikit-provider'
+import './sentry.js'  // Initialize Sentry before anything else
 import './index.css'
 import App from './App.jsx'
 import { WorldProvider } from './world/WorldProvider.jsx'

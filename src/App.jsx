@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef, Component, lazy, Suspense } from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
+import * as Sentry from '@sentry/react';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
@@ -26,6 +27,7 @@ class ErrorBoundary extends Component {
   static getDerivedStateFromError() { return { hasError: true }; }
   componentDidCatch(err, info) {
     console.error('ErrorBoundary caught:', err, info);
+    Sentry.captureException(err, { contexts: { react: info } });
     const body = {
       message: err instanceof Error ? err.message : String(err),
       stack: err instanceof Error ? err.stack : null,

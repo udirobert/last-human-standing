@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/node";
 import express from "express";
 import cookieParser from "cookie-parser";
 import crypto from "crypto";
@@ -35,6 +36,18 @@ import {
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
 import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
 
+// ─── Sentry initialization (before anything else) ─────────────────────
+const SENTRY_DSN = process.env.SENTRY_DSN;
+if (SENTRY_DSN) {
+  Sentry.init({
+    dsn: SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    enabled: Boolean(SENTRY_DSN),
+    tracesSampleRate: process.env.NODE_ENV === "production" ? 0.1 : 1.0,
+    sendDefaultPii: false,
+  });
+}
+
 // ─── Process-level error handlers ───────────────────────────────────────
 // Without these, an unhandled promise rejection or uncaught exception
 // kills the entire server process silently. We catch, log, and exit
@@ -42,12 +55,14 @@ import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
 process.on("unhandledRejection", (reason) => {
   const msg = reason instanceof Error ? reason.stack || reason.message : String(reason);
   console.error(JSON.stringify({ time: new Date().toISOString(), event: "unhandled_rejection", error: msg }));
+  if (SENTRY_DSN) Sentry.captureException(reason);
   // PM2 / Docker will restart — don't leave the process in an unknown state
   process.exitCode = 1;
 });
 
 process.on("uncaughtException", (err) => {
   console.error(JSON.stringify({ time: new Date().toISOString(), event: "uncaught_exception", error: err.stack || err.message }));
+  if (SENTRY_DSN) Sentry.captureException(err);
   process.exitCode = 1;
 });
 
@@ -3171,6 +3186,12 @@ app.use((err, req, res, _next) => {
     message: IS_PROD ? "Something went wrong" : (err instanceof Error ? err.message : "unknown_error"),
   });
 });
+
+// Sentry Express error handler — must be after all routes and the
+// built-in error handler, and before app.listen.
+if (SENTRY_DSN) {
+  Sentry.setupExpressErrorHandler(app);
+}
 
 export { app };
 
