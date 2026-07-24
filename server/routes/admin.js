@@ -141,6 +141,12 @@ export default function adminRoutes(deps) {
       );
       if (error) return res.status(400).json({ error: "agent_upsert_failed", message: error.message });
 
+      // Ensure cohort participation row exists for the agent.
+      await supabaseAdmin.rpc("ensure_cohort_participation", {
+        p_address: address,
+        p_cohort: COHORT_CONFIG.cohort,
+      }).catch(() => {});
+
       if (entryFeeUsd != null && entryFeeUsd > 0) {
         await supabaseAdmin.from("agent_entries").insert({
           agent_address: address,

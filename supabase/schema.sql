@@ -742,3 +742,31 @@ begin
   return result;
 end;
 $$;
+
+-- =============== Multi-cohort elimination scoping ===============
+-- Per-cohort game state (eliminated, streak, immunity) lives in
+-- cohort_participations, not on users directly. A trigger syncs the
+-- active cohort's state back to users.* for backward compat.
+-- See migration 026_cohort_participations.sql for full function defs.
+
+create table if not exists public.cohort_participations (
+  id bigserial primary key,
+  cohort int not null,
+  address text not null references public.users(address) on delete cascade,
+  joined_at timestamptz not null default now(),
+  eliminated boolean not null default false,
+  eliminated_at_day int,
+  immunity_until_day int,
+  checkin_streak int not null default 0,
+  last_checkin_day int,
+  revived boolean not null default false,
+  unique(cohort, address)
+);
+
+create index if not exists cohort_participations_cohort_idx
+  on public.cohort_participations(cohort);
+create index if not exists cohort_participations_address_idx
+  on public.cohort_participations(address);
+create index if not exists cohort_participations_active_idx
+  on public.cohort_participations(cohort)
+  where eliminated = false;

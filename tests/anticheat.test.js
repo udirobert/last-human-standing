@@ -4,6 +4,8 @@ import {
   checkGpsPlausibility,
   checkTimingAnomaly,
   checkVoteRing,
+  checkVelocitySpoof,
+  haversineMeters,
   flagSubmission,
 } from "../server/anticheat.js";
 
@@ -248,5 +250,83 @@ describe("flagSubmission", () => {
       reason: "gps_outside_radius",
       metadata: {},
     });
+  });
+});
+
+describe("haversineMeters", () => {
+  it("returns 0 for identical coordinates", () => {
+    expect(haversineMeters(40.7128, -74.006, 40.7128, -74.006)).toBe(0);
+  });
+
+  it("computes distance between NYC and LA (~3935 km)", () => {
+    const d = haversineMeters(40.7128, -74.006, 34.0522, -118.2437);
+    expect(d).toBeGreaterThan(3_900_000);
+    expect(d).toBeLessThan(4_000_000);
+  });
+
+  it("computes short distance correctly", () => {
+    // ~111 km per degree of latitude
+    const d = haversineMeters(0, 0, 1, 0);
+    expect(d).toBeGreaterThan(110_000);
+    expect(d).toBeLessThan(112_000);
+  });
+});
+
+describe("checkVelocitySpoof", () => {
+  const now = Date.parse("2026-07-29T18:00:00Z");
+
+  it("returns null when prevLat or prevLng is null", () => {
+    expect(checkVelocitySpoof(null, null, now, 40.7, -74.0, now + 3600_000)).toBeNull();
+  });
+
+  it("returns null when prev coords are not numbers", () => {
+    expect(checkVelocitySpoof("abc", "def", now, 40.7, -74.0, now + 3600_000)).toBeNull();
+  });
+
+  it("returns null when prevTimeMs is invalid", () => {
+    expect(checkVelocitySpoof(40.7, -74.0, "not-a-date", 40.7, -74.0, now + 3600_000)).toBeNull();
+  });
+
+  it("returns null when elapsed time is zero or negative (clock skew)", () => {
+    expect(checkVelocitySpoof(40.7, -74.0, now, 40.7, -74.0, now)).toBeNull();
+    expect(checkVelocitySpoof(40.7, -74.0, now + 1000, 40.7, -74.0, now)).toBeNull();
+  });
+
+  it("does not flag plausible travel (NYC to LA over 6 hours)", () => {
+    // ~3935 km in 6 hours = ~655 km/h = ~182 m/s, under 300 m/s threshold
+    const d = haversineMeters(40.7128, -74.006, 34.0522, -118.2437);
+    const speedMs = d / (6 * 3600);
+    expect(speedMs).toBeLessThan(300);
+    expect(checkVelocitySpoof(40.7128, -74.006, now, 34.0522, -118.2437, now + 6 * 3600_000)).toBeNull();
+  });
+
+  it("flags impossible travel (NYC to LA in 1 minute)", () => {
+    const result = checkVelocitySpoof(40.7128, -74.006, now, 34.0522, -118.2437, now + 60_000);
+    expect(result).toBe("velocity_spoof");
+  });
+
+  it("flags impossible travel (NYC to Tokyo in 1 hour)", () => {
+    // Tokyo: ~35.6762, 139.6503, distance ~10800 km
+    // 10800 km/h = 3000 m/s, far above threshold
+    const result = checkVelocitySpoof(40.7128, -74.006, now, 35.6762, 139.6503, now + 3600_000);
+    expect(result).toBe("velocity_spoof");
+  });
+
+  it("does not flag short-distance movement (walking within a city)", () => {
+    // ~1 km in 10 minutes = ~1.67 m/s
+    const result = checkVelocitySpoof(40.7128, -74.006, now, 40.7210, -74.0010, now + 600_000);
+    expect(result).toBeNull();
+  });
+
+  it("respects custom maxSpeedMs threshold", () => {
+    // ~111 km in 1 hour = ~30.8 m/s
+    // Default threshold (300 m/s) won't flag, but 10 m/s will
+    expect(checkVelocitySpoof(0, 0, now, 1, 0, now + 3600_000)).toBeNull();
+    expect(checkVelocitySpoof(0, 0, now, 1, 0, now + 3600_000, 10)).toBe("velocity_spoof");
+  });
+
+  it("accepts ISO string for prevTimeMs", () => {
+    const iso = new Date(now).toISOString();
+    expect(checkVelocitySpoof(40.7128, -74.006, iso, 34.0522, -118.2437, now + 60_000)).toBe("velocity_spoof");
   });
 });

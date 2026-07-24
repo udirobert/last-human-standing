@@ -5,7 +5,7 @@ import { verifySiweMessage } from "@worldcoin/minikit-js/siwe";
 import { verifyMessage } from "viem";
 import { signRequest as idkitSignRequest } from "@worldcoin/idkit-server";
 import { getSupabaseAdmin } from "./supabase.js";
-import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission } from "./anticheat.js";
+import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, checkVelocitySpoof, flagSubmission } from "./anticheat.js";
 import { rateLimit } from "./rateLimit.js";
 import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
@@ -662,6 +662,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "blob:", "https://*.supabase.co"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", "data:"],
+      workerSrc: ["'self'", "blob:"],
     },
   },
 }));
@@ -1431,6 +1432,13 @@ async function upsertPaidUser(address, { referredBy = null, platform = null, ent
   if (referredBy && !existing?.referred_by) {
     await supabaseAdmin.rpc("increment_referral", { ref_code: referredBy }).catch(() => {});
   }
+  // Ensure a cohort_participations row exists for this user.
+  // Per-cohort state (eliminated, streak, immunity) lives there now;
+  // the trigger syncs it back to users.* for backward compat.
+  await supabaseAdmin.rpc("ensure_cohort_participation", {
+    p_address: address,
+    p_cohort: COHORT_CONFIG.cohort,
+  }).catch(() => {});
 }
 
 app.post("/api/upload-url", requireAuth, async (req, res) => {
@@ -2570,6 +2578,26 @@ app.post(
         if (timingReason) log("anticheat_flag", { reason: timingReason, address: req.user.address, day });
       }
 
+      // Anti-cheat: velocity spoof — compare with previous check-in GPS
+      if (supabaseAdmin && hasUserGps) {
+        const { data: prevCheckin } = await supabaseAdmin
+          .from("checkins")
+          .select("lat,lng,created_at,day")
+          .eq("address", req.user.address)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (prevCheckin?.lat != null && prevCheckin?.lng != null) {
+          const velocityReason = checkVelocitySpoof(
+            prevCheckin.lat, prevCheckin.lng, prevCheckin.created_at,
+            lat, lng, Date.now(),
+          );
+          if (velocityReason) {
+            log("anticheat_flag", { reason: velocityReason, address: req.user.address, day, prevDay: prevCheckin.day });
+          }
+        }
+      }
+
       const cap = round.survival_cap ?? survivalCapForDay(round.day);
       const username = userRec?.username ?? null;
 
@@ -2590,15 +2618,23 @@ app.post(
           return res.status(400).json({ error: "db_insert_failed", message: error.message });
         }
         if (!data?.survived) {
-          await supabaseAdmin.from("users").update({ eliminated: true, eliminated_at_day: day }).eq("address", req.user.address);
+          // Update cohort_participations (the trigger syncs users.eliminated).
+          await supabaseAdmin.from("cohort_participations")
+            .update({ eliminated: true, eliminated_at_day: day })
+            .eq("address", req.user.address)
+            .eq("cohort", COHORT_CONFIG.cohort);
           log("checkin_eliminated", { address: req.user.address, day, rank: data?.rank });
         } else {
           log("checkin_survived", { address: req.user.address, day, rank: data?.rank });
         }
 
-        // Track streak: update last_checkin_day so award_streak_bonuses
-        // can compute consecutive check-ins at day close.
-        await supabaseAdmin.from("users").update({ last_checkin_day: day }).eq("address", req.user.address);
+        // Track streak: update last_checkin_day on cohort_participations
+        // so award_streak_bonuses can compute consecutive check-ins at day close.
+        // The trigger syncs this to users.last_checkin_day for backward compat.
+        await supabaseAdmin.from("cohort_participations")
+          .update({ last_checkin_day: day })
+          .eq("address", req.user.address)
+          .eq("cohort", COHORT_CONFIG.cohort);
 
         const { data: ckId } = await supabaseAdmin
           .from("checkins")

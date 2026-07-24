@@ -84,6 +84,57 @@ function checkVoteRing(voterAddress, submissionId, allVotes, submissions, minSam
 }
 
 /**
+ * Haversine distance in meters between two lat/lng points.
+ */
+export function haversineMeters(lat1, lng1, lat2, lng2) {
+  const R = 6371000;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+/**
+ * Velocity spoof detection — flags impossible travel between check-ins.
+ *
+ * Compares the user's previous check-in GPS coords with the current
+ * submission. If the implied speed exceeds a plausible maximum
+ * (commercial air travel + margin), the check-in is flagged.
+ *
+ * @param {number|null} prevLat - Previous check-in latitude
+ * @param {number|null} prevLng - Previous check-in longitude
+ * @param {number|string|null} prevTimeMs - Previous check-in timestamp (ms epoch or ISO)
+ * @param {number} curLat - Current check-in latitude
+ * @param {number} curLng - Current check-in longitude
+ * @param {number} curTimeMs - Current check-in timestamp (ms epoch)
+ * @param {number} maxSpeedMs - Max plausible speed in m/s (default 300 = ~1080 km/h, above commercial flight ceiling)
+ * @returns {string|null} reason if flagged, null if clean
+ */
+function checkVelocitySpoof(prevLat, prevLng, prevTimeMs, curLat, curLng, curTimeMs, maxSpeedMs = 300) {
+  if (prevLat == null || prevLng == null) return null;
+  if (typeof prevLat !== "number" || typeof prevLng !== "number") return null;
+  if (typeof curLat !== "number" || typeof curLng !== "number") return null;
+
+  const prevMs = typeof prevTimeMs === "string" ? Date.parse(prevTimeMs) : prevTimeMs;
+  if (!prevMs || typeof prevMs !== "number") return null;
+
+  const elapsedMs = curTimeMs - prevMs;
+  if (elapsedMs <= 0) return null; // clock skew or same-tick, can't evaluate
+
+  const distanceM = haversineMeters(prevLat, prevLng, curLat, curLng);
+  const speedMs = distanceM / (elapsedMs / 1000);
+
+  if (speedMs > maxSpeedMs) {
+    return "velocity_spoof";
+  }
+
+  return null;
+}
+
+/**
  * @param {import("./supabase.js").SupabaseClient|null} supabaseAdmin
  * @param {number} submissionId
  * @param {string} reason
@@ -98,4 +149,4 @@ async function flagSubmission(supabaseAdmin, submissionId, reason, metadata = {}
   });
 }
 
-export { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, flagSubmission };
+export { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, checkVelocitySpoof, flagSubmission };

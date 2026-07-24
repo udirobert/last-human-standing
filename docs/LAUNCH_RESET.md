@@ -61,6 +61,22 @@ update public.users
 -- full wipe: update public.users set jury_tickets = 0;
 ```
 
+### Also reset cohort_participations (migration 026+)
+
+If the `cohort_participations` table exists (migration 026+), reset
+per-cohort state there too. The trigger syncs `users.*` automatically:
+
+```sql
+update public.cohort_participations
+   set eliminated = false,
+       eliminated_at_day = null,
+       immunity_until_day = null,
+       checkin_streak = 0,
+       last_checkin_day = null,
+       revived = false
+ where cohort = 1;
+```
+
 ## Verify the migration ran
 
 ```sql
