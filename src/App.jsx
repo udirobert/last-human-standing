@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef, Component, lazy, Suspense } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, MotionConfig } from 'framer-motion';
 import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
@@ -377,11 +377,13 @@ const SCREENS = {
 export default function App() {
   return (
     <ErrorBoundary>
-      <DelightProvider showTipOnMount={true}>
-        <MascotEventProvider>
-          <AppWithDelight />
-        </MascotEventProvider>
-      </DelightProvider>
+      <MotionConfig reducedMotion="user">
+        <DelightProvider showTipOnMount={true}>
+          <MascotEventProvider>
+            <AppWithDelight />
+          </MascotEventProvider>
+        </DelightProvider>
+      </MotionConfig>
     </ErrorBoundary>
   );
 }
