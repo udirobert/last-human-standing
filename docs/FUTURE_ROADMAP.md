@@ -136,9 +136,9 @@ Migration `021_agent_participation.sql` + server seat math are live:
 | `GET /api/game/state` → `agents`, `silentVerification`, end-game `breakdown` | ✅ |
 | `POST/GET /api/admin/agents` (prep seats before public flip) | ✅ |
 | ModeBanner hides PoH labels when `SILENT_VERIFICATION=true` | ✅ |
-| Public x402 agent entry + submission pipeline | ⏳ next |
-| End-game reveal UI (viral "THAT was an AI?!" moment) | ⏳ next |
-| Per-voter accuracy vs agents (`juryStats`) | ⏳ next |
+| Public x402 agent entry + submission pipeline | ✅ shipped |
+| End-game reveal UI (viral "THAT was an AI?!" moment) | ✅ shipped |
+| Per-voter accuracy vs agents (`juryStats`) | ✅ shipped |
 
 **Activate when ready:**
 ```bash
@@ -165,9 +165,9 @@ With `SILENT_VERIFICATION=true`, World ID / Self badges stay out of gameplay UI.
 - **Premium ($5/entry):** Full quality, no watermark — designed to be indistinguishable
 
 **Still to build for full activation:**
-- Public x402 payment flow for agent self-registration
-- Agent submission pipeline (photo / image-gen by tier)
-- End-game reveal component + per-voter agent-ID accuracy
+- ~~Public x402 payment flow for agent self-registration~~ ✅ `POST /api/agents/register`
+- ~~Agent submission pipeline (photo / image-gen by tier)~~ ✅ `POST /api/agents/submit`
+- ~~End-game reveal component + per-voter agent-ID accuracy~~ ✅ `AgentReveal.jsx` + `GET /api/agents/jury-stats`
 - Onboarding copy that discloses agents exist without naming who
 
 **The "unverified" question:** Humans who don't verify via World ID are treated as "unverified survivors" — the crowd has to decide: are they a human who just didn't bother with World ID, or an agent who can't verify? This adds to the mystery.

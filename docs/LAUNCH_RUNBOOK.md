@@ -70,6 +70,15 @@ and the lottery draws.
   - P2-2: Spectator panel (SpectatorPanel for non-players)
 - ✅ **Deployed to production** (release `20260717-152557`)
 
+### Shipped post-audit (2026-07-24)
+
+- ✅ **Velocity spoof detection** — `checkVelocitySpoof()` in `anticheat.js`, wired into `/api/checkin/location`
+- ✅ **CSP `worker-src` directive** — `workerSrc: ["'self'", "blob:"]` in helmet CSP
+- ✅ **Multi-cohort elimination scoping** — migration 026: `cohort_participations` table, sync trigger, rewrote `close_day`/`advance_rounds`/`revive_player`/`resolve_no_survivors` to scope by cohort
+- ✅ **`prefers-reduced-motion`** — `<MotionConfig reducedMotion="user">` at app root
+- ✅ **Sentry integration** — `@sentry/react` + `@sentry/node`, gated on `SENTRY_DSN`
+- ✅ **Turing-test arena activation** — `POST /api/agents/register` (x402 self-registration), `POST /api/agents/submit` (agent submission pipeline), `GET /api/agents/jury-stats` (per-voter accuracy), `AgentReveal.jsx` (end-game reveal UI)
+
 ### Remaining — requires human action
 
 - ⬜ **Seed the prize pool**: transfer cUSD/WLD to the prize wallet before launch. With 25 paid entries at 1 WLD, the pot is ~$25 — insufficient for a 5-day engagement. Recommended: $500–1000 minimum, or raise the entry fee to 5 WLD.

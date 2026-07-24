@@ -28,6 +28,7 @@ import ariaRoutes from "./routes/aria.js";
 import activityRoutes from "./routes/activity.js";
 import farcasterRoutes from "./routes/farcaster.js";
 import shareRoutes from "./routes/share.js";
+import agentRoutes from "./routes/agents.js";
 import adminRoutes from "./routes/admin.js";
 import {
   ensureObjectBody, ensureString, ensureNumber, ensureBoolean,
@@ -3160,6 +3161,10 @@ app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));
 app.use("/api", activityRoutes({ supabaseAdmin, log }));
 app.use("/", farcasterRoutes({ supabaseAdmin, log }));
 app.use("/api", shareRoutes({ supabaseAdmin, log }));
+app.use("/api", agentRoutes({
+  requireAuth, supabaseAdmin, log, rateLimitStorage,
+  getAgentSeatState, upsertPaidUser, COHORT_CONFIG, AGENTS_ENABLED,
+}));
 
 // ─── Global error handlers ──────────────────────────────────────────────
 // 404 catch-all — any unmatched /api/* path returns JSON, not HTML.

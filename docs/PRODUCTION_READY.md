@@ -160,31 +160,31 @@
 | Geo CheckIn UI | ✅ |
 | Phase-aware Home + Standings | ✅ |
 | Sessions DB-backed (Supabase) | ✅ |
-| Anti-cheat: GPS plausibility + timing + vote ring | ✅ |
-| Structured logs + client error reporting | ✅ |
+| Anti-cheat: GPS plausibility + timing + vote ring + velocity spoof | ✅ |
+| Structured logs + client error reporting + Sentry | ✅ |
 | Browser wallet payment flow | ✅ |
-| Auto-round scheduler | ✅ Shipped today |
-| helmet + cors middleware | ✅ Shipped today |
+| Auto-round scheduler (advisory-locked) | ✅ |
+| helmet + cors middleware + CSP worker-src | ✅ |
 
-### 4b. Critical gaps 🔴
+### 4b. Critical gaps (updated 2026-07-24)
 | Issue | Impact | Fix |
 |---|---|---|
-| `secure: true` not set on session cookies in production | Session hijacking risk | Add to `SESSION_COOKIE_OPTS` in prod |
-| Multi-cohort: `eliminated` is global, not per-cohort | A user eliminated in cohort 1 can't rejoin cohort 2 | Add `cohort_id` to `users` or separate `cohort_participations` table |
+| ~~`secure: true` not set on session cookies in production~~ | ~~Session hijacking risk~~ | Fixed: `secure: IS_PROD` in `setSessionCookie()` |
+| ~~Multi-cohort: `eliminated` is global, not per-cohort~~ | ~~A user eliminated in cohort 1 can't rejoin cohort 2~~ | Fixed: `cohort_participations` table (migration 026) scopes per-cohort state; sync trigger mirrors to `users.*` |
 | Browser users have no PoH layer | Sybil attacks possible via multiple wallets | Add World ID Flex or wire existing World ID verify into browser path |
-| Auto-scheduler not safe on multi-instance | Rounds may close multiple times under load | Use Supabase advisory lock or move scheduler to pg_cron |
+| ~~Auto-scheduler not safe on multi-instance~~ | ~~Rounds may close multiple times under load~~ | Fixed: `pg_advisory_xact_lock(42424201)` in `advance_rounds()` |
 
-### 4c. Medium gaps 🟡
+### 4c. Medium gaps (updated 2026-07-24)
 | Issue | Impact | Fix |
 |---|---|
-| Sentry not integrated | No production error visibility | Add `@sentry/react` + `SENTRY_DSN` |
+| ~~Sentry not integrated~~ | ~~No production error visibility~~ | Fixed: `@sentry/react` + `@sentry/node` integrated, gated on `SENTRY_DSN` |
 | Prize pool distribution is manual | Trust bottleneck, no automation | Implement on-chain distribution or multi-sig script |
-| No rate limit on `/api/checkin/location` per wallet | Bot submission possible | Add per-wallet + per-IP rate limit |
+| ~~No rate limit on `/api/checkin/location` per wallet~~ | ~~Bot submission possible~~ | Fixed: `checkin:` (10/min) and `geo:` (20/min) rate limits |
 | Vote quorum not publicly configurable | Hardcoded thresholds | Move to environment variables or round config |
-| No velocity spoof detection | GPS can be spoofed | Implement `last_known_location` tracking |
-| No photo deduplication | Same photo can be re-submitted | Hash uploaded photos, check for duplicates |
-| No `prefers-reduced-motion` support | Motion sensitivity | Add `usePrefersReducedMotion` or CSS media query |
-| No CSP `worker-src` directive | Blocks future Web Workers | Add `worker-src 'self' blob:` to helmet CSP |
+| ~~No velocity spoof detection~~ | ~~GPS can be spoofed~~ | Fixed: `checkVelocitySpoof()` in `anticheat.js`, wired into `/api/checkin/location` |
+| ~~No photo deduplication~~ | ~~Same photo can be re-submitted~~ | Fixed: `photoDedup.js` + migration 022, `checkPhotoDuplicate()` in check-in flow |
+| ~~No `prefers-reduced-motion` support~~ | ~~Motion sensitivity~~ | Fixed: `<MotionConfig reducedMotion="user">` at app root + CSS media query |
+| ~~No CSP `worker-src` directive~~ | ~~Blocks future Web Workers~~ | Fixed: `workerSrc: ["'self'", "blob:"]` in helmet CSP |
 
 ### 4d. Low gaps ⚪
 | Issue | Fix |

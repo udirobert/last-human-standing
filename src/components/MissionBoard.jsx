@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useDelight } from "./DelightProvider.jsx";
+import AgentReveal from "./AgentReveal.jsx";
 import { useMascotEvent } from "../hooks/useMascotEvent.js";
 import EliminationReasonCard from "./EliminationReasonCard.jsx";
 import { TODAY_THEME, findTheme } from "../data/game";
@@ -32,7 +33,7 @@ function formatWindow(iso) {
   }
 }
 
-function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
+function EndedCeremony({ winner, you, payout, breakdown, currentDay, onViewFeed }) {
   const { handleMascotClick } = useDelight();
   const youWon = Boolean(
     winner?.address && you?.address && winner.address.toLowerCase() === you.address.toLowerCase(),
@@ -194,6 +195,8 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
         </div>
       )}
 
+      {breakdown && <AgentReveal />}
+
       <HumanCta onClick={shareWin} className="mt-4">
         {youWon ? "Share your victory card →" : "Share the result →"}
       </HumanCta>
@@ -208,7 +211,7 @@ function EndedCeremony({ winner, you, payout, currentDay, onViewFeed }) {
 }
 
 export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
-  const { phase, isLive, isEnded, currentDay, round, you, winner, payout } = useRound();
+  const { phase, isLive, isEnded, currentDay, round, you, winner, payout, breakdown } = useRound();
   const { handleMascotClick } = useDelight();
   const { mascotEvent } = useMascotEvent();
 
@@ -275,6 +278,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         winner={winner}
         you={you}
         payout={payout}
+        breakdown={breakdown}
         currentDay={currentDay}
         onViewFeed={onViewFeed}
       />

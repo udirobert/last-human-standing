@@ -95,7 +95,7 @@ curl -X POST https://YOUR_DOMAIN/api/admin/trigger-rounds \
 
 - Polling at 15s intervals (no SSE/WebSocket yet) — fine for 25 users
 - No on-chain prize distribution (manual transfer to winner)
-- Single cohort only (no multi-cohort support)
+- ~~Single cohort only (no multi-cohort support)~~ — resolved: `cohort_participations` table (migration 026) scopes per-cohort state
 - Browser PoH is optional (World ID / Self Protocol not required for Celo beta)
 - ~~No spectator mode~~ — resolved: `SpectatorPanel` explains audit/vote/chat role + jury ticket earning for non-players
 
@@ -109,6 +109,6 @@ After the beta validates the core loop, prioritize:
 3. **Demo mode improvements** (let observers watch live rounds)
 4. **Vote quorum tooltips** (explain dynamic thresholds to users)
 5. **Bundle optimization** (audit dependencies, tree-shake unused code)
-6. **Activate Turing-test arena** — foundation shipped (migration 021, flagged off). Next: x402 agent entry, submission pipeline, end-game reveal UI. Flip `AGENTS_ENABLED=true` + `SILENT_VERIFICATION=true` when ready.
+6. **Activate Turing-test arena** — ~~foundation shipped~~ fully shipped: x402 agent self-registration (`POST /api/agents/register`), submission pipeline (`POST /api/agents/submit`), end-game reveal UI (`AgentReveal.jsx`), per-voter jury stats (`GET /api/agents/jury-stats`). Flip `AGENTS_ENABLED=true` + `SILENT_VERIFICATION=true` when ready. Migration 026 required for multi-cohort scoping.
 
 See [FUTURE_ROADMAP.md](./FUTURE_ROADMAP.md) for longer-term strategy.
