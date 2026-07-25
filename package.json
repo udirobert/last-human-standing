@@ -15,6 +15,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@daytona/sdk": "^0.200.1",
     "@farcaster/miniapp-sdk": "^0.3.0",
     "@selfxyz/core": "^1.2.0-beta.1",
     "@selfxyz/qrcode": "^1.0.24",

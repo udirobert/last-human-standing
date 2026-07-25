@@ -2490,6 +2490,25 @@ app.get("/api/game/state", async (req, res) => {
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
 
+    // Test-only session bypass: creates a session for any address
+    // without SIWE wallet signing. Requires ADMIN_TOKEN. Used by
+    // the Daytona E2E test harness to simulate multiple players.
+    // Never available without admin auth.
+    app.post("/api/test/session", requireAdmin, async (req, res) => {
+      const body = ensureObjectBody(req, res);
+      if (!body) return;
+      try {
+        const address = ensureString(body.address, {
+          field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
+        });
+        const sessionId = await createSessionRecord(address);
+        setSessionCookie(res, sessionId);
+        res.json({ ok: true, address, sessionId });
+      } catch (error) {
+        sendValidationError(res, error);
+      }
+    });
+
     // Lazy lottery draw — the first /api/game/state call after
     // GAME_LAUNCH_AT triggers the deterministic draw. Idempotent:
     // subsequent calls (and concurrent calls) return the stored
