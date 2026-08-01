@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import FAQModal from "./FAQModal.jsx";
 import { MOTION_SPRING } from "../lib/motion.js";
@@ -58,11 +58,12 @@ export default function StageShell({
  * stagger delay based on its index. Use inside <StageShell>.
  */
 export function StageSection({ children, index = 0, className = "" }) {
+  const reduce = useReducedMotion();
   return (
     <motion.section
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ ...MOTION_SPRING.snappy, delay: 0.06 + index * 0.06 }}
+      initial={reduce ? false : { y: 12 }}
+      animate={{ y: 0 }}
+      transition={reduce ? { duration: 0 } : { ...MOTION_SPRING.snappy, delay: 0.06 + index * 0.06 }}
       className={className}
     >
       {children}

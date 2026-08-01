@@ -1,0 +1,151 @@
+{
+  "success": true,
+  "value": {
+    "executive_summary": "This one-time design pass preserves Last Human Standing’s binding visual thesis—cold system, warm human—while targeting the smallest, highest-impact changes that restore trust, clarity, and progress through the core journeys. The major issues cluster around (a) prelaunch theme exposure that reveals the full theme vocabulary, (b) inconsistent, multi-source state signaling for launch and cohort, (c) motion-reliant content that appears missing or unreadable in static captures, and (d) a profile/CTA rhythm that can obscure next actions or stall progression on mobile. The strongest opportunities are to (1) unify a single source of truth for round/cohort state, (2) hide prelaunch themes or render placeholders, (3) clarify primary actions with explicit destinations, (4) render essential content by default (with motion as enhancement), and (5) harden the two-answer profile handoff with a predictable, visible progression. Preserve the gouache language, motif frieze, and game shell while tightening state integrity and accessibility. Lead with one clear question per screen: “What must I do next, and what happens if it fails?”",
+    "findings": [
+      {
+        "category": "State integrity and cross-route color/labels",
+        "confidence": 0.92,
+        "evidence": "The landing hero shows 00:00:00:00, Tomorrow, 50 humans, and 0 of 25 reserved; audit/home screens show conflicting day/theme signals (e.g., Day 3 theme “WITH A FRIEND” vs audit “EATING SOMETHING”). The public DOM reveals a round/name object used across home/audit, yet inconsistent copy persists across breakpoints.",
+        "journey": "Journey 1 — Visitor understanding and reservation start",
+        "needs_user_test": true,
+        "rationale": "Inconsistent cross-screen state undermines trust and reservation clarity; needs validation that a single source of truth can be enforced in code and copy.",
+        "recommendation": "Consolidate round/cohort state into a single authoritative state object; render a non-conflicting loading/retry state when reconciliation fails; ensure home/audit headers derive from the same round/name object.",
+        "screen": "Landing (prelaunch) / Home vs Audit header",
+        "severity": "high",
+        "user_consequence": "Users see contradictory cohort size and theme information, reducing trust and likelihood to reserve."
+      },
+      {
+        "category": "Prelaunch theme exposure (hidden themes)",
+        "confidence": 0.9,
+        "evidence": "Prelaunch DOM renders ten theme buttons with accessible names (e.g., Day 1 · SAT · AT A CAFÉ — see details), exposing the full theme set before reveal.",
+        "journey": "Journey 1 — Visitor understanding and reservation start",
+        "needs_user_test": true,
+        "rationale": "This directly violates the stated prelaunch rule to keep themes hidden; it creates actionable disclosures and keyboard focus burden.",
+        "recommendation": "Replace prelaunch with mystery/placeholders or a single noninteractive wheel; reveal real named cards only after the round opens. Convert What’s public into a native control with clear prelaunch state semantics.",
+        "screen": "Landing (prelaunch) / Theme wheel",
+        "severity": "high",
+        "user_consequence": "Assistive tech users and keyboard users receive a complete map of themes before reveal, leading to reduced perceived fairness and trust."
+      },
+      {
+        "category": "Motion gating and essential content visibility",
+        "confidence": 0.88,
+        "evidence": "Large sections below hero initialize with opacity:0 or rely on in-view animation; in reduced-motion preferences content remains unreadable in static captures; accessibility patterns show decorative strings (ABCDEFGH12345678, D1-D5) leaking into narration.",
+        "journey": "Journey 1 — Visitor and Journey 4 — Returning user",
+        "needs_user_test": true,
+        "rationale": "Gating essential information behind animations fractures accessibility and beta-readiness, particularly for users with reduced motion.",
+        "recommendation": "Render essential headings/content by default; apply motion as a progressive enhancement after a motion-ready flag; honor prefers-reduced-motion to show final state immediately. Remove non-essential decorative text from the accessibility tree or mark aria-hidden where appropriate.",
+        "screen": "Landing hero; subsequent sections (How it works, loop, rules)",
+        "severity": "high",
+        "user_consequence": "Early users may see empty or unreadable content, leading to confusion and drop-offs; screen readers may narrate decorative noise."
+      },
+      {
+        "category": "Action hierarchy and path clarity at first interaction",
+        "confidence": 0.85,
+        "evidence": "Primary actions on landing include two bold CTAs (Reserve your slot, Try the 15-min speed run) with similar emphasis; See how it works is visually prominent but secondary; profile step shows optional personalization preceding a dominant Build my profile; in some captures, two-answer CTA state does not visibly advance.",
+        "journey": "Journey 1 — Visitor; Journey 2 — Profile flow",
+        "needs_user_test": true,
+        "rationale": "Ambiguity about which action advances the core path delays commitment and increases cognitive load.",
+        "recommendation": "Make Reserve the single primary action on first visit. Re-label the speed-run as a clearly secondary option; move See how it works to proximity with a short, explicit hook. In profile, present two explicit actions: Personalize my guide and Skip to reservation; ensure the CTA advances are visible within the first viewport or provide a sticky progress footer.",
+        "screen": "Landing hero; Mobile reserve flow; Profile step",
+        "severity": "high",
+        "user_consequence": "Visitors may choose a non-reservational path or abandon due to unclear next step."
+      },
+      {
+        "category": "Profile two-answer flow and progress visibility",
+        "confidence": 0.86,
+        "evidence": "Two-answer CTA appeared after two selections and then labeled See my plan; in some builds, activation did not visibly advance; current live build progresses after one activation, but earlier captures showed fold-in-progress issues.",
+        "journey": "Journey 1 — Visitor → Profile flow",
+        "needs_user_test": true,
+        "rationale": "Inconsistent progression and fold-based visibility impede mobile usability and trust during a critical bottleneck step.",
+        "recommendation": "Add a sticky, in-shell footer showing 2 of 3 answered with a clear destination label (e.g., Continue to Day 2). Ensure focus transfer to the next heading and provide a brief loading state. Validate across 320–430px widths with touch and keyboard automation.",
+        "screen": "Mobile profile flow",
+        "severity": "high",
+        "user_consequence": "Two-answer progression may be invisible, causing user confusion and drop-off."
+      },
+      {
+        "category": "Spectator/audit theme-consistency and modal behavior",
+        "confidence": 0.8,
+        "evidence": "Theme identity in home vs audit is inconsistent (e.g., Day 3 shows WITH A FRIEND; audit shows EATING SOMETHING); briefing modal requires two activations to close; background content remains tabbable when modal is open.",
+        "journey": "Journey 3 — Spectator/audit flow",
+        "needs_user_test": true,
+        "rationale": "State mismatch blocks the audit path; modal interactions must be accessible and predictable.",
+        "recommendation": "Synchronize home/audit round headers; implement a single, properly labeled modal with inert background and proper focus management per ARIA dialog patterns; ensure Escape closes and focus returns to invoking control.",
+        "screen": "Spectator home; Audit feed; Day briefing modal",
+        "severity": "high",
+        "user_consequence": "Inconsistent theme state undermines audit integrity; modal interaction can feel like a failure."
+      },
+      {
+        "category": "Empty/audit-locked states and reward copy",
+        "confidence": 0.83,
+        "evidence": "Audit empty state shows voting locked with no contextual action; rewards copy inconsistent with beta roadmap (+1 vs +3,+5 vs roadmap).",
+        "journey": "Journey 3 — Spectator/audit and Journey 4 — Returning user",
+        "needs_user_test": true,
+        "rationale": "Empty and locked states must guide users to next steps; mismatched reward text undermines trust.",
+        "recommendation": "Explain lock cause with a native CTA (Reserve/Sign in/Retry) and status updates; align reward copy with roadmap and reveal actual calculations in a testable way.",
+        "screen": "Audit feed; Rewards panel",
+        "severity": "high",
+        "user_consequence": "Spectators may abandon due to a dead-end state or misaligned incentives."
+      },
+      {
+        "category": "Returning-player handoff and next-action clarity",
+        "confidence": 0.84,
+        "evidence": "Survived result emphasizes Share card; subsequent “Continue” with generic destination; accessibility overlay contains decorative text; two-step day briefing requires multiple activations to dismiss.",
+        "journey": "Journey 4 — Returning player",
+        "needs_user_test": true,
+        "rationale": "Returning-player continuity must be explicit and friction-free to sustain daily cadence.",
+        "recommendation": "Prioritize explicit destination labels (e.g., Continue to Day 2; Continue to close day) and elevate the next-date action above sharing. Clean up accessibility noise by hiding decorative strings from AT while retaining the warm motifs.",
+        "screen": "Returning-player flow; Day close ceremony",
+        "severity": "medium",
+        "user_consequence": "Users may lose track of the next action after a completed day."
+      }
+    ],
+    "mobile_test_script": [
+      "1) Load prelaunch on mobile (320×568, 375×812). Verify prelaunch theme wheel renders placeholders or a noninteractive group; confirm no direct access to individual theme names. 2) Verify the hero’s countdown state transitions when the beta opens (cohort size derived from a single source of truth). 3) On the Reserve flow, ensure single primary action (Reserve) is visually dominant and the speed-run option is clearly secondary. 4) In the profile step, ensure two answers reveal a clearly labeled next action and that the CTA becomes visible within the first viewport or via a sticky footer. 5) Open the spectator/audit path; ensure the audit header theme is consistent with the home state and the briefing modal closes in one step with proper focus restoration. 6) Test reduced-motion: all essential content should be visible with prefers-reduced-motion; verify Escape closes modals and focus returns to the invoking control. 7) Validate empty/locked audit states with a contextual action (Sign in or Retry) and a last-checked time. 8) For returning players, verify the next-action CTA is explicit (e.g., Continue to Day 2) and that sharing remains optional. 9) Run a cold start, warm start, and stale-storage test to confirm state reconciliation and correct first render. 10) Perform automated keyboard and touch regression tests across widths 320–430px with two-answer flows and profile progress.",
+      "strengths_to_preserve|The binding art direction (cold system, warm human), gouache motifs, central game shell, hand-painted elements, and warm-ceremony cadence.",
+      "top_five_changes:[{"
+    ],
+    "strengths_to_preserve": [],
+    "top_five_changes": [
+      {
+        "expected_impact": "Restore state integrity by unifying round/cohort source of truth and fail-closed on contradictions across home/audit/proof screens.",
+        "implementation_scope": "Front-end state model; ensure a single authoritative source; add reconciliations and explicit loading/retry UI.",
+        "priority": 1,
+        "title": "Bind authoritative round/cohort state across journeys"
+      },
+      {
+        "expected_impact": "Hide prelaunch themes; render placeholders and/or a noninteractive explanatory group until reveal to preserve hidden-theme intent.",
+        "implementation_scope": "UI rendering path for prelaunch; conditional placeholders; native controls accessibility fixes.",
+        "priority": 2,
+        "title": "Conceal prelaunch themes with placeholders until reveal"
+      },
+      {
+        "expected_impact": "Clarify primary-action hierarchy and destinations to reduce mobile friction.",
+        "implementation_scope": "Rename actionable CTAs to explicit destinations; collapse competing primary actions; ensure destinations on next screen.",
+        "priority": 3,
+        "title": "Clarify action destinations and reduce competing primary paths"
+      },
+      {
+        "expected_impact": "Render essential content by default; move motion to enhancement only.",
+        "implementation_scope": "CSS/markup changes to remove initial opacity gating; add motion-ready class; honor reduced-motion across all major screens.",
+        "priority": 4,
+        "title": "Make essential content visible without depending on motion"
+      },
+      {
+        "expected_impact": "Stabilize the profile two-answer flow with a sticky footer and explicit progression.",
+        "implementation_scope": "UI footer, visible progress indicator, and focus/scroll management; regression tests across mobile widths.",
+        "priority": 5,
+        "title": "Harden profile progression with sticky footer and destination labels"
+      }
+    ],
+    "unresolved_questions": [
+      "What is the authoritative beta cohort size and payout model for production (25 vs 50; automatic vs manual payout)?",
+      "Are prelaunch themes truly intended to be hidden in all states, or is the exposure a temporary artifact during a buggy prelaunch state?",
+      "Is the two-step day briefing modality intentional, or should it be collapsed into a single-step flow?",
+      "Should spectators be allowed to vote before slot reservation is paid, or is voting gatekeeper tied strictly to an active cohort?",
+      "What exact copy and data source should drive reward bonuses (the roadmap vs UI text), and how will this be validated in beta?",
+      "How should the accessibility tree handle decorative background strings to avoid exposing non-informative language to ATs?",
+      "Is the two-answer CTA behavior a regression or a deliberate product decision, and how should regression testing be structured to catch reoccurrence?"
+    ]
+  }
+}

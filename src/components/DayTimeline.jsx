@@ -1,11 +1,12 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { DAILY_LOOP } from "../lib/copy.js";
+import { entranceMotion } from "../lib/motion.js";
 
 /**
  * DayTimeline — "how it works" as a warm, editorial numbered flow for the
  * landing narrative (docs/ART_DIRECTION.md). Four beats of a single day, big
  * amber numerals down a connecting rail. Replaced the old cold ash-circle +
- * emoji row. Animates in on scroll.
+ * emoji row. Animates in on scroll without gating content behind opacity.
  *
  * Copy lives in lib/copy.js (DAILY_LOOP) — the documented single source of
  * truth for "how to play" — not hardcoded here, so this can't drift from
@@ -14,15 +15,16 @@ import { DAILY_LOOP } from "../lib/copy.js";
 const STEPS = DAILY_LOOP;
 
 export default function DayTimeline() {
+  const reduce = useReducedMotion();
+  const entrance = entranceMotion(reduce, "x");
+
   return (
     <div className="w-full">
       {STEPS.map((step, i) => (
         <motion.div
           key={step.num}
-          initial={{ opacity: 0, x: -12 }}
-          whileInView={{ opacity: 1, x: 0 }}
-          viewport={{ once: true, margin: "-40px" }}
-          transition={{ delay: i * 0.08, type: "spring", damping: 20 }}
+          {...entrance}
+          transition={{ delay: reduce ? 0 : i * 0.08, type: "spring", damping: 20 }}
           className="flex gap-4"
         >
           {/* numeral + connecting rail */}

@@ -76,7 +76,7 @@ export default function DailyProofs() {
           A new proof you're human
         </h2>
         <p className="font-body text-dim text-sm sm:text-base mt-2 max-w-md mx-auto">
-          A real-world theme drops each day. Tap one — then snap your proof from anywhere on Earth.
+          Possible proofs you might get. Day assignments stay secret until each morning — tap a card to see what it asks for.
         </p>
       </div>
 

@@ -268,39 +268,41 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
 
         {/* CTAs — stack on mobile, side by side ≥ sm */}
         <div
-          className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center justify-center gap-3"
+          className="flex flex-col items-stretch sm:items-center justify-center gap-3 w-full max-w-md mx-auto"
           style={{ marginTop: "clamp(24px,3vw,34px)" }}
         >
           <button
             type="button"
             onClick={onReserve}
             {...CUE_PRESS}
-            className="font-body font-semibold text-[#1a1206] bg-amber rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform"
+            className="font-body font-semibold text-[#1a1206] bg-amber rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform w-full"
             style={{ fontSize: "clamp(15px,1.6vw,17px)", boxShadow: "0 10px 30px -8px rgba(255,184,0,0.5)" }}
           >
             Reserve your slot →
           </button>
-          {onSpeedRun && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 w-full">
             <button
               type="button"
-              onClick={onSpeedRun}
-              {...CUE_PRESS}
-              className="font-body font-semibold text-bone bg-blood/90 rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform"
-              style={{ fontSize: "clamp(15px,1.6vw,17px)" }}
+              onClick={onDetails}
+              {...CUE_HOVER}
+              data-cuelume-press="tick"
+              className="font-body font-semibold text-bone bg-transparent border border-bone/20 rounded-2xl px-6 py-3.5 active:scale-[0.97] transition-transform sm:flex-1"
+              style={{ fontSize: "clamp(14px,1.5vw,16px)" }}
             >
-              Try the 15-min speed run →
+              See how it works ↓
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onDetails}
-            {...CUE_HOVER}
-            data-cuelume-press="tick"
-            className="font-body font-semibold text-bone bg-transparent border border-bone/20 rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform"
-            style={{ fontSize: "clamp(15px,1.6vw,17px)" }}
-          >
-            See how it works ↓
-          </button>
+            {onSpeedRun && (
+              <button
+                type="button"
+                onClick={onSpeedRun}
+                {...CUE_PRESS}
+                className="font-body font-semibold text-bone/85 bg-transparent border border-bone/15 rounded-2xl px-6 py-3.5 active:scale-[0.97] transition-transform sm:flex-1"
+                style={{ fontSize: "clamp(14px,1.5vw,16px)" }}
+              >
+                Free 15-min practice →
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="mt-5 font-mono text-dim" style={{ fontSize: "12px" }}>

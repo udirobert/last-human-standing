@@ -204,9 +204,9 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
               <GameplayLoopDemo />
             </section>
 
-            {/* The stakes — 50 → 1, and the pot. */}
+            {/* The stakes — cohort → 1, and the pot. */}
             <div className="pb-10">
-              <ShrinkingPot prizePool={pot} />
+              <ShrinkingPot prizePool={pot} cohortSize={cohortSize} />
             </div>
 
             {/* On-chain detail + live proof + reserve. */}
@@ -342,7 +342,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                 <p className="text-bone/60 text-sm font-body">Three questions. Takes 10 seconds.</p>
               </StageSection>
 
-              <div className="mt-4 space-y-5 flex-1">
+              <div className="mt-4 space-y-5 flex-1 pb-28">
                 {PROFILE_QUESTIONS.map((q, qi) => (
                   <StageSection key={q.id} index={qi + 1}>
                     <div>
@@ -386,14 +386,18 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                 ))}
               </div>
 
-              <StageSection index={5}>
+              <div className="sticky bottom-0 z-20 -mx-6 px-6 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] bg-gradient-to-t from-ash via-ash/95 to-ash/0">
+                <p className="font-mono text-dim text-[10px] tracking-widest uppercase text-center mb-2">
+                  {Object.keys(profile).length} of 3 answered
+                  {Object.keys(profile).length < 2 ? " · answer 2 to continue" : " · next: reserve"}
+                </p>
                 <HumanCta
                   onClick={() => setStep(3)}
                   disabled={Object.keys(profile).length < 2}
                 >
-                  {Object.keys(profile).length < 2 ? "Answer at least 2 →" : "See my plan →"}
+                  {Object.keys(profile).length < 2 ? "Answer at least 2 →" : "Continue to reserve →"}
                 </HumanCta>
-              </StageSection>
+              </div>
             </StageShell>
           </motion.div>
         )}

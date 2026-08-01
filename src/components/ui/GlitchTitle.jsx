@@ -1,24 +1,29 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 
 /**
  * GlitchTitle - A premium retro-sci-fi text reveal that cycles through 
  * random characters before settling into the final text.
  */
 export default function GlitchTitle({ text, className = "", delay = 0 }) {
+  const reduce = useReducedMotion();
   const [displayedText, setDisplayedText] = useState(text);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
+    if (reduce) {
+      setDisplayedText(text);
+      return undefined;
+    }
     if (delay > 0) {
       const t = setTimeout(() => setStarted(true), delay * 1000);
       return () => clearTimeout(t);
     }
     setStarted(true);
-  }, [delay]);
+  }, [delay, reduce, text]);
 
   useEffect(() => {
-    if (!started) return;
+    if (reduce || !started) return;
 
     let interval;
     let iterations = 0;
@@ -48,17 +53,18 @@ export default function GlitchTitle({ text, className = "", delay = 0 }) {
     }, 25);
 
     return () => clearInterval(interval);
-  }, [started, text]);
+  }, [started, text, reduce]);
 
   return (
     <motion.h1
       className={className}
-      initial={{ opacity: 0 }}
+      initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.1 }}
+      transition={{ duration: reduce ? 0 : 0.1 }}
       style={{ whiteSpace: "pre-line" }}
+      aria-label={text}
     >
-      {displayedText}
+      <span aria-hidden="true">{displayedText}</span>
     </motion.h1>
   );
 }

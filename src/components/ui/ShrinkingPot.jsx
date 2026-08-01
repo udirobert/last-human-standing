@@ -1,23 +1,35 @@
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
+import { entranceMotion } from "../../lib/motion.js";
 
 /**
  * ShrinkingPot — the stakes beat for the landing narrative
- * (docs/ART_DIRECTION.md). Dramatizes the elimination funnel: 50 humans enter,
- * the crowd votes people out each day, and one is left standing to take the
- * whole pot. Each row is a huddle of warm human-dots that visibly thins out —
- * the cold machine narrows the field; one warm human remains.
+ * (docs/ART_DIRECTION.md). Dramatizes the elimination funnel from the live
+ * cohort size down to one winner. Each row is a huddle of warm human-dots that
+ * visibly thins out — the cold machine narrows the field; one warm human remains.
  *
- * Pure: takes the /api/stats `prizePool` object (optional) for the live total.
+ * Pure: takes the /api/stats `prizePool` object (optional) for the live total
+ * and `cohortSize` so the funnel matches the authoritative game state.
  */
 
-const FUNNEL = [
-  { label: "50 reserve their slot", count: 50 },
-  { label: "Day 1 · 25 survive", count: 25 },
-  { label: "Day 2 · 12 survive", count: 12 },
-  { label: "Day 3 · 6 survive", count: 6 },
-  { label: "Day 4 · 3 survive", count: 3 },
-  { label: "Day 5 · the last human", count: 1, winner: true },
-];
+/** Mirrors server survivalCapForDay — clipped to the live cohort size. */
+function funnelFor(cohortSize) {
+  const n = Math.max(1, Number(cohortSize) || 50);
+  const dayCaps = [40, 20, 8, 3, 1];
+  const rows = [{ label: `${n} reserve their slot`, count: n }];
+  let prev = n;
+  dayCaps.forEach((cap, i) => {
+    const day = i + 1;
+    const count = Math.min(n, cap);
+    if (day === 5) {
+      rows.push({ label: "Day 5 · the last human", count: 1, winner: true });
+      return;
+    }
+    if (count >= prev) return; // no cut that day at this cohort size
+    rows.push({ label: `Day ${day} · ${count} survive`, count });
+    prev = count;
+  });
+  return rows;
+}
 
 function potTotal(prizePool) {
   if (!prizePool) return null;
@@ -26,8 +38,12 @@ function potTotal(prizePool) {
   return total > 0 ? total : null;
 }
 
-export default function ShrinkingPot({ prizePool }) {
+export default function ShrinkingPot({ prizePool, cohortSize = 50 }) {
   const total = potTotal(prizePool);
+  const funnel = funnelFor(cohortSize);
+  const reduce = useReducedMotion();
+  const entrance = entranceMotion(reduce, "y");
+  const enterLabel = funnel[0]?.count === 50 ? "Fifty enter. One remains." : `${funnel[0]?.count ?? cohortSize} enter. One remains.`;
 
   return (
     <section className="w-full max-w-[560px] mx-auto px-5">
@@ -37,24 +53,22 @@ export default function ShrinkingPot({ prizePool }) {
           className="font-display text-bone tracking-wide mt-1"
           style={{ fontSize: "clamp(30px,5vw,52px)", lineHeight: 0.95 }}
         >
-          Fifty enter. One remains.
+          {enterLabel}
         </h2>
       </div>
 
       <div className="space-y-2.5">
-        {FUNNEL.map((row, i) => (
+        {funnel.map((row, i) => (
           <motion.div
             key={row.label}
-            initial={{ opacity: 0, y: 12 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-40px" }}
-            transition={{ delay: i * 0.12, type: "spring", damping: 20 }}
+            {...entrance}
+            transition={{ delay: reduce ? 0 : i * 0.12, type: "spring", damping: 20 }}
             className={`flex items-center gap-3 rounded-2xl border p-3 ${
               row.winner ? "bg-amber/10 border-amber/50" : "bg-smoke/40 border-ember/40"
             }`}
           >
             <div className="flex-1 flex flex-wrap gap-1 items-center min-w-0">
-              {Array.from({ length: row.count }).map((_, d) => (
+              {Array.from({ length: Math.min(row.count, 50) }).map((_, d) => (
                 <span
                   key={d}
                   className="rounded-full"
@@ -81,10 +95,8 @@ export default function ShrinkingPot({ prizePool }) {
 
       {/* the pot */}
       <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-40px" }}
-        transition={{ delay: 0.7, type: "spring", damping: 20 }}
+        {...entrance}
+        transition={{ delay: reduce ? 0 : 0.7, type: "spring", damping: 20 }}
         className="mt-4 text-center rounded-2xl bg-smoke/50 border border-ember/40 p-5"
       >
         <p className="font-mono text-dim uppercase text-[10px] tracking-[0.2em]">Winner takes</p>
