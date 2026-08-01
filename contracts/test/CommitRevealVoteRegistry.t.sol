@@ -51,4 +51,20 @@ contract CommitRevealVoteRegistryTest {
         );
         require(!succeeded, "mismatched reveal was accepted");
     }
+
+    function testRelayerCommitAndRevealOnBehalfOfVoter() public {
+        uint64 commitDeadline = uint64(block.timestamp + 100);
+        registry.createRound(2, commitDeadline, uint64(block.timestamp + 200));
+
+        bytes32 salt = keccak256("relayer-path");
+        bytes32 commitment = registry.commitmentFor(2, 11, VOTER, false, salt);
+        registry.commitRelayerVote(2, 11, VOTER, commitment);
+
+        vm.warp(commitDeadline);
+        registry.revealRelayerVote(2, 11, VOTER, false, salt);
+
+        (uint256 human, uint256 sus) = registry.getTally(2, 11);
+        require(human == 0, "unexpected HUMAN vote");
+        require(sus == 1, "sus vote was not counted");
+    }
 }

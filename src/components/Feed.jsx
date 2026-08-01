@@ -19,6 +19,9 @@ import { HumanCta } from './ui/CraftCta.jsx';
 import { haptic } from '../lib/haptics.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
+import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
+import { saveCommitBallot, getCommitBallot } from '../lib/commitRevealStore.js';
+import RevealVotesPanel from './RevealVotesPanel.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -106,7 +109,16 @@ function JuryStakes() {
   );
 }
 
-function LiveTally({ real = 0, fake = 0 }) {
+function LiveTally({ real = 0, fake = 0, sealed = false, commitCount = 0 }) {
+  if (sealed) {
+    return (
+      <div className="mt-3 rounded-xl border border-ember/40 bg-ash/60 px-3 py-3 text-center">
+        <p className="font-mono text-amber text-[10px] uppercase tracking-widest mb-1">Sealed ballots</p>
+        <p className="font-display text-3xl text-bone leading-none tabular-nums">{commitCount}</p>
+        <p className="font-mono text-dim text-[10px] mt-1">HUMAN/SUS hidden until reveal</p>
+      </div>
+    );
+  }
   const total = real + fake;
   const realPct = total > 0 ? Math.round((real / total) * 100) : 50;
   const fakePct = total > 0 ? 100 - realPct : 50;
@@ -156,8 +168,8 @@ function getDetectiveTitle(resolved, accuracy) {
 const useMocks = import.meta.env.DEV;
 
 export default function Feed({ onBack, onCheckIn, onReserve }) {
-  const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
-  const { round, verification, phase, you, currentDay, refresh } = useRound();
+  const { walletAuthed, entryPaid, sendWorldChat, isMiniApp, user } = useWorld();
+  const { round, verification, phase, you, currentDay, refresh, commitReveal, cohort } = useRound();
   const { unlockAchievement, checkAchievement } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
@@ -172,9 +184,15 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
   const [challengeToast, setChallengeToast] = useState(null);
   const [loadError, setLoadError] = useState(null);
   const [feedCheckedAt, setFeedCheckedAt] = useState(null);
+  const [commitError, setCommitError] = useState(null);
 
   const { canVote, voteBlockedReason } = useTrustTier();
   const activeTheme = resolveActiveTheme(round);
+  const crEnabled = Boolean(commitReveal?.enabled);
+  const crPhase = commitReveal?.phase;
+  const voterAddress = user?.address || you?.address || null;
+  const cohortNumber = Number(cohort?.cohort ?? 1);
+  const roundId = round?.day ?? currentDay;
 
   // Public read — spectators and eliminated players watch the same feed.
   // Only voting is gated (server-side + canVote), never watching.
@@ -203,6 +221,8 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
             fires: s.fires || 0,
             accuracy: s.accuracy ?? null,
             voteQuorum: s.voteQuorum || s.vote_quorum || null,
+            sealed: Boolean(s.sealed),
+            commitCount: s.commitCount ?? 0,
           })),
         );
       }
@@ -221,6 +241,24 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [loadFeed]);
+
+  // Restore locally committed ballots after refresh.
+  useEffect(() => {
+    if (!crEnabled || !voterAddress || roundId == null || !submissions.length) return;
+    const next = {};
+    for (const sub of submissions) {
+      const ballot = getCommitBallot({
+        cohort: cohortNumber,
+        roundId,
+        submissionId: sub.id,
+        voter: voterAddress,
+      });
+      if (ballot?.status === "committed" || ballot?.status === "revealed") {
+        next[sub.id] = ballot.vote;
+      }
+    }
+    if (Object.keys(next).length) setVoted((prev) => ({ ...next, ...prev }));
+  }, [crEnabled, voterAddress, roundId, cohortNumber, submissions]);
 
   // The audit is a live spectacle — poll so tallies move without refresh.
   useEffect(() => {
@@ -255,7 +293,78 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
   const handleVote = async (id, type) => {
     if (!canVote) return;
     if (voted[id]) return;
+    if (crEnabled && crPhase === "reveal") return;
     haptic(type === 'real' ? 'light' : 'warning');
+    setCommitError(null);
+
+    // Achievement + mascot reaction fire immediately for tactile feedback
+    unlockAchievement?.('first_vote');
+    dispatchMascotEvent({
+      type: "vote_react",
+      variant: type === "real" ? "excited" : "thinking",
+      message: null,
+    });
+
+    if (crEnabled && crPhase === "commit") {
+      if (!walletAuthed || !entryPaid || !voterAddress || !commitReveal?.registry || !roundId) {
+        setCommitError("commit_reveal_misconfigured");
+        return;
+      }
+      const existing = getCommitBallot({
+        cohort: cohortNumber,
+        roundId,
+        submissionId: id,
+        voter: voterAddress,
+      });
+      if (existing?.status === "committed") {
+        setVoted((v) => ({ ...v, [id]: existing.vote }));
+        return;
+      }
+      try {
+        const salt = randomSalt();
+        const commitment = commitmentFor({
+          registry: commitReveal.registry,
+          chainId: commitReveal.chainId,
+          roundId,
+          submissionId: id,
+          voter: voterAddress,
+          vote: type,
+          salt,
+        });
+        const resp = await fetch("/api/vote/commit", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ submissionId: id, roundId, vote: type, commitment }),
+        });
+        const data = await resp.json().catch(() => ({}));
+        if (!resp.ok) {
+          setCommitError(data.error || "commit_failed");
+          return;
+        }
+        saveCommitBallot({
+          cohort: cohortNumber,
+          roundId,
+          submissionId: id,
+          voter: voterAddress,
+          vote: type,
+          salt,
+          commitment,
+        });
+        setVoted((v) => ({ ...v, [id]: type }));
+        setSubmissions((subs) =>
+          subs.map((s) =>
+            s.id === id
+              ? { ...s, sealed: true, commitCount: (s.commitCount || 0) + (data.alreadyCommitted ? 0 : 1) }
+              : s,
+          ),
+        );
+      } catch {
+        setCommitError("commit_network");
+      }
+      return;
+    }
+
     setVoted((v) => ({ ...v, [id]: type }));
     setSubmissions((subs) =>
       subs.map((s) =>
@@ -264,15 +373,6 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
           : s,
       ),
     );
-
-    // Achievement: first vote (press sound from data-cuelume-press on the button)
-    unlockAchievement?.('first_vote');
-    // Transient mascot reaction to the vote
-    dispatchMascotEvent({
-      type: "vote_react",
-      variant: type === "real" ? "excited" : "thinking",
-      message: null,
-    });
 
     if (walletAuthed && entryPaid) {
       try {
@@ -287,12 +387,10 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
           if (data?.juryWeight) {
             setVoteMeta((m) => ({ ...m, [id]: { juryWeight: data.juryWeight } }));
           }
-          // Post-vote feedback: if the verdict resolved, show whether you agreed
           if (data?.status && data.status !== "pending") {
             const agreed = (data.status === "verified" && type === "real") ||
                            (data.status === "flagged" && type === "fake");
             setVoteFeedback((f) => ({ ...f, [id]: { status: data.status, agreed } }));
-            // Auto-clear feedback after 4s
             setTimeout(() => setVoteFeedback((f) => { const n = { ...f }; delete n[id]; return n; }), 4000);
           }
           if (data?.status || data?.voteQuorum) {
@@ -406,6 +504,27 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
         <VoteGateBanner onReserve={onReserve} />
         <VerdictHour round={round} />
         <JuryStakes />
+        {crEnabled && crPhase === "reveal" && voterAddress && roundId != null && (
+          <RevealVotesPanel
+            cohort={cohortNumber}
+            roundId={roundId}
+            voter={voterAddress}
+            revealDeadline={commitReveal?.revealDeadline}
+            onRevealed={() => loadFeed()}
+          />
+        )}
+        {crEnabled && crPhase === "commit" && (
+          <p className="mx-1 px-3 py-2 rounded-xl border border-amber/40 bg-amber/10 font-mono text-[10px] text-amber leading-relaxed text-center">
+            Commit–reveal is on. Your HUMAN/SUS choice is sealed until reveal
+            {commitReveal?.commitDeadline
+              ? ` · opens ${new Date(commitReveal.commitDeadline).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}`
+              : ""}
+            .
+          </p>
+        )}
+        {commitError && (
+          <p className="mx-1 text-blood font-mono text-[10px] text-center">{commitError}</p>
+        )}
         {phase !== "prelaunch" && (
           <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
             Vote the proof, not the person. Don&apos;t redistribute photos off the app.
@@ -497,21 +616,34 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
                     <p className="text-bone text-sm leading-relaxed mb-1">{sub.caption}</p>
                   )}
 
-                  <LiveTally real={sub.votes.real} fake={sub.votes.fake} />
+                  <LiveTally
+                    real={sub.votes.real}
+                    fake={sub.votes.fake}
+                    sealed={Boolean(sub.sealed)}
+                    commitCount={sub.commitCount || 0}
+                  />
 
-                  <div className="mt-2 h-1 bg-ash rounded-full overflow-hidden">
-                    <div className="h-full bg-amber/70 rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
-                  </div>
+                  {!sub.sealed && (
+                    <div className="mt-2 h-1 bg-ash rounded-full overflow-hidden">
+                      <div className="h-full bg-amber/70 rounded-full transition-[width] duration-500" style={{ width: `${progress}%` }} />
+                    </div>
+                  )}
                   <p className="text-dim text-[10px] font-mono mt-1">
-                    Quorum {totalVotes}/{quorum}
-                    {myVote ? ` · you voted ${myVote === 'real' ? 'HUMAN' : 'SUS'}` : ''}
+                    {sub.sealed
+                      ? `${sub.commitCount || 0} sealed`
+                      : `Quorum ${totalVotes}/${quorum}`}
+                    {myVote
+                      ? (sub.sealed || (crEnabled && crPhase === "commit")
+                        ? ` · you committed ${myVote === "real" ? "HUMAN" : "SUS"}`
+                        : ` · you voted ${myVote === "real" ? "HUMAN" : "SUS"}`)
+                      : ""}
                   </p>
 
                   <div className="mt-4 grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => handleVote(sub.id, 'real')}
-                      disabled={Boolean(myVote) || !canVote}
+                      disabled={Boolean(myVote) || !canVote || (crEnabled && crPhase !== "commit")}
                       data-cuelume-press="chime"
                       data-cuelume-release="release"
                       className={`py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform disabled:opacity-45 ${
@@ -525,7 +657,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
                     <button
                       type="button"
                       onClick={() => handleVote(sub.id, 'fake')}
-                      disabled={Boolean(myVote) || !canVote}
+                      disabled={Boolean(myVote) || !canVote || (crEnabled && crPhase !== "commit")}
                       data-cuelume-press="press"
                       data-cuelume-release="release"
                       className={`py-4 rounded-2xl font-display text-xl tracking-widest active:scale-[0.97] transition-transform disabled:opacity-45 ${

@@ -36,6 +36,14 @@ import {
 } from "./lib/validators.js";
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
 import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
+import {
+  COMMIT_REVEAL_VOTING_ENABLED,
+  COMMIT_REVEAL_REGISTRY_ADDRESS,
+  COMMIT_REVEAL_CHAIN_ID,
+  buildCommitRevealState,
+  verifyClientCommitment,
+  enqueueCommitRevealJob,
+} from "./lib/commitReveal.js";
 import { Group } from "@semaphore-protocol/group";
 import { createSemaphoreAuditVerifier } from "./lib/semaphoreAudit.js";
 
@@ -1357,6 +1365,33 @@ function computeVoteStatus(votes, quorum) {
   return { status: "pending", total, realPct, fakePct };
 }
 
+/** Recompute public tallies + first-transition jury awards after a vote lands in `votes`. */
+async function settleSubmissionVotes(submissionId) {
+  const countedVotes = { real: 0, fake: 0 };
+  const { data: subVotes } = await supabaseAdmin
+    .from("votes")
+    .select("vote,weight")
+    .eq("submission_id", submissionId);
+  for (const v of subVotes || []) {
+    const w = Number(v.weight) || 1;
+    if (v.vote === "real") countedVotes.real += w;
+    if (v.vote === "fake") countedVotes.fake += w;
+  }
+
+  const { data: subRow } = await supabaseAdmin.from("submissions").select("vote_quorum,status").eq("id", submissionId).single();
+  const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
+  const computed = computeVoteStatus(countedVotes, quorum);
+  if (computed.status !== "pending" && subRow?.status === "pending") {
+    await supabaseAdmin.from("submissions").update({ status: computed.status }).eq("id", submissionId);
+    try {
+      await supabaseAdmin.rpc("award_jury_tickets", { p_submission_id: submissionId, p_final_status: computed.status });
+    } catch (e) {
+      log("jury_ticket_error", { submissionId, error: e instanceof Error ? e.message : String(e) });
+    }
+  }
+  return { countedVotes, status: computed.status, voteQuorum: quorum };
+}
+
 async function getDynamicVoteQuorum() {
   let effective = VOTE_QUORUM;
   let reason = "normal";
@@ -1632,21 +1667,48 @@ app.get("/api/feed", async (req, res) => {
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
 
     const ids = subs.map((s) => s.id);
+    const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+    const currentDay = launchAtMs && Date.now() >= launchAtMs ? currentDayNumber(launchAtMs) : null;
+    const openRound = currentDay != null ? await loadRound(currentDay) : null;
+    const commitReveal = buildCommitRevealState(openRound);
+    const sealTallies = commitReveal.enabled && commitReveal.phase === "commit";
+
     const voteCounts = new Map();
+    const commitCounts = new Map();
     if (ids.length > 0) {
-      const { data: agg, error: aggErr } = await supabaseAdmin.from("votes").select("submission_id,vote,weight").in("submission_id", ids);
-      if (!aggErr && Array.isArray(agg)) {
-        for (const row of agg) {
-          const cur = voteCounts.get(row.submission_id) || { real: 0, fake: 0 };
-          const w = Number(row.weight) || 1;
-          if (row.vote === "real") cur.real += w;
-          if (row.vote === "fake") cur.fake += w;
-          voteCounts.set(row.submission_id, cur);
+      if (sealTallies) {
+        const { data: commits, error: commitErr } = await supabaseAdmin
+          .from("vote_commits")
+          .select("submission_id")
+          .in("submission_id", ids)
+          .eq("phase", "committed");
+        if (!commitErr && Array.isArray(commits)) {
+          for (const row of commits) {
+            commitCounts.set(row.submission_id, (commitCounts.get(row.submission_id) || 0) + 1);
+          }
+        }
+      } else {
+        const { data: agg, error: aggErr } = await supabaseAdmin.from("votes").select("submission_id,vote,weight").in("submission_id", ids);
+        if (!aggErr && Array.isArray(agg)) {
+          for (const row of agg) {
+            const cur = voteCounts.get(row.submission_id) || { real: 0, fake: 0 };
+            const w = Number(row.weight) || 1;
+            if (row.vote === "real") cur.real += w;
+            if (row.vote === "fake") cur.fake += w;
+            voteCounts.set(row.submission_id, cur);
+          }
         }
       }
     }
 
-    const withVotes = subs.map((s) => ({ ...s, votes: voteCounts.get(s.id) || { real: 0, fake: 0 }, mediaUrl: null, voteQuorum: s.vote_quorum ?? VOTE_QUORUM }));
+    const withVotes = subs.map((s) => ({
+      ...s,
+      votes: sealTallies ? { real: 0, fake: 0 } : (voteCounts.get(s.id) || { real: 0, fake: 0 }),
+      commitCount: sealTallies ? (commitCounts.get(s.id) || 0) : null,
+      sealed: sealTallies,
+      mediaUrl: null,
+      voteQuorum: s.vote_quorum ?? VOTE_QUORUM,
+    }));
     for (const item of withVotes) {
       if (!item.media_path) continue;
       if (!SUPABASE_BUCKET_PRIVATE) {
@@ -1657,7 +1719,7 @@ app.get("/api/feed", async (req, res) => {
       }
     }
 
-    return res.json({ ok: true, submissions: withVotes });
+    return res.json({ ok: true, submissions: withVotes, commitReveal });
   } catch (e) {
     res.status(400).json({ error: "feed_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
@@ -1877,6 +1939,12 @@ app.post(
   requireAuth,
   rateLimit({ keyFn: (req) => `vote:${req.user?.address || req.ip}`, limit: 30, windowMs: 60_000, storage: rateLimitStorage }),
   async (req, res) => {
+    if (COMMIT_REVEAL_VOTING_ENABLED) {
+      return res.status(409).json({
+        error: "commit_reveal_required",
+        message: "Use POST /api/vote/commit then /api/vote/reveal while COMMIT_REVEAL_VOTING_ENABLED is on.",
+      });
+    }
     const body = ensureObjectBody(req, res);
     if (!body) return;
 
@@ -1971,49 +2039,24 @@ app.post(
           log("reciprocity_notify_error", { submissionId, error: String(e) });
         }
 
-        const countedVotes = { real: 0, fake: 0 };
-        const { data: subVotes } = await supabaseAdmin
-          .from("votes")
-          .select("vote,weight")
-          .eq("submission_id", submissionId);
-        for (const v of subVotes || []) {
-          const w = Number(v.weight) || 1;
-          if (v.vote === "real") countedVotes.real += w;
-          if (v.vote === "fake") countedVotes.fake += w;
-        }
-
-        const { data: subRow } = await supabaseAdmin.from("submissions").select("vote_quorum,status").eq("id", submissionId).single();
-        const quorum = subRow?.vote_quorum ?? VOTE_QUORUM;
-        const computed = computeVoteStatus(countedVotes, quorum);
-        if (computed.status !== "pending" && subRow?.status === "pending") {
-          // First transition out of pending: lock the verdict and pay the
-          // jury. Later votes don't re-award (close_day only finalizes
-          // still-pending submissions, so no double-award there either).
-          await supabaseAdmin.from("submissions").update({ status: computed.status }).eq("id", submissionId);
-          try {
-            await supabaseAdmin.rpc("award_jury_tickets", { p_submission_id: submissionId, p_final_status: computed.status });
-          } catch (e) {
-            log("jury_ticket_error", { submissionId, error: e instanceof Error ? e.message : String(e) });
-          }
-
+        const settled = await settleSubmissionVotes(submissionId);
+        if (settled.status !== "pending") {
           // Vote feedback — notify each voter whether they were right.
-          // This closes the engagement loop: vote → verdict → feedback.
           try {
             const { data: allVotes } = await supabaseAdmin
               .from("votes")
               .select("voter_address,vote")
               .eq("submission_id", submissionId);
-            const finalStatus = computed.status; // "verified" or "flagged"
             for (const v of allVotes || []) {
               const wasCorrect =
-                (finalStatus === "verified" && v.vote === "real") ||
-                (finalStatus === "flagged" && v.vote === "fake");
+                (settled.status === "verified" && v.vote === "real") ||
+                (settled.status === "flagged" && v.vote === "fake");
               const stats = await getVoterStats(v.voter_address);
               sendPushToAddress(supabaseAdmin, v.voter_address, {
                 title: wasCorrect ? "✅ You were right!" : "❌ You were wrong",
                 body: wasCorrect
                   ? `+1 jury ticket. Accuracy: ${stats.accuracy ?? "—"}%`
-                  : `The crowd voted ${finalStatus}. Accuracy: ${stats.accuracy ?? "—"}%`,
+                  : `The crowd voted ${settled.status}. Accuracy: ${stats.accuracy ?? "—"}%`,
                 data: { type: "vote_feedback", correct: wasCorrect, accuracy: stats.accuracy },
               }).catch(() => {});
             }
@@ -2022,8 +2065,200 @@ app.post(
           }
         }
 
-        return res.json({ ok: true, votes: countedVotes, status: computed.status, voteQuorum: quorum, juryWeight: weight, onchain: Boolean(process.env.VOTE_REGISTRY_ADDRESS) });
+        return res.json({
+          ok: true,
+          votes: settled.countedVotes,
+          status: settled.status,
+          voteQuorum: settled.voteQuorum,
+          juryWeight: weight,
+          onchain: Boolean(process.env.VOTE_REGISTRY_ADDRESS),
+        });
       }
+    } catch (error) {
+      sendValidationError(res, error);
+    }
+  },
+);
+
+// ─── Commit–reveal voting (privacy v1; flag default off) ────────────────
+app.post(
+  "/api/vote/commit",
+  requireAuth,
+  rateLimit({ keyFn: (req) => `vote-commit:${req.user?.address || req.ip}`, limit: 30, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    if (!COMMIT_REVEAL_VOTING_ENABLED) return res.status(404).json({ error: "commit_reveal_disabled" });
+    if (!COMMIT_REVEAL_REGISTRY_ADDRESS) return res.status(501).json({ error: "commit_reveal_registry_unset" });
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+
+    try {
+      const submissionId = ensureNumber(body.submissionId, { field: "submissionId", required: true, integer: true, min: 1 });
+      const roundId = ensureNumber(body.roundId, { field: "roundId", required: true, integer: true, min: 1 });
+      const vote = ensureEnum(body.vote, { field: "vote", required: true, values: ["real", "fake"] });
+      const commitment = ensureString(body.commitment, { field: "commitment", required: true, maxLength: 66 });
+      if (!/^0x[0-9a-fA-F]{64}$/.test(commitment)) return res.status(400).json({ error: "invalid_commitment" });
+      if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+
+      const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+      const currentDay = launchAtMs && Date.now() >= launchAtMs ? currentDayNumber(launchAtMs) : null;
+      const round = currentDay != null ? await loadRound(currentDay) : null;
+      const cr = buildCommitRevealState(round);
+      if (cr.phase !== "commit") return res.status(409).json({ error: "commit_phase_closed", phase: cr.phase });
+
+      if (REQUIRE_WORLD_ID_FOR_VOTING) {
+        const user = await getUserRecord(req.user.address);
+        const verified = Boolean(user?.world_id_verified) || Boolean(user?.humanity_nullifier);
+        if (!verified) return res.status(403).json({ error: "humanity_verification_required" });
+      }
+
+      const voter = req.user.address;
+      // Salt stays client-held until reveal. We persist the vote + commitment
+      // server-side (service-role only) so reveal can recompute the preimage.
+
+      const { data: existing } = await supabaseAdmin
+        .from("vote_commits")
+        .select("commitment,phase")
+        .eq("submission_id", submissionId)
+        .eq("voter_address", voter)
+        .maybeSingle();
+      if (existing) {
+        if (existing.commitment.toLowerCase() !== commitment.toLowerCase()) {
+          return res.status(409).json({ error: "already_committed_different" });
+        }
+        return res.json({ ok: true, alreadyCommitted: true, phase: existing.phase, commitment });
+      }
+
+      const { error } = await supabaseAdmin.from("vote_commits").insert({
+        cohort: COHORT_CONFIG.cohort,
+        round_id: roundId,
+        submission_id: submissionId,
+        voter_address: voter,
+        vote,
+        commitment,
+        phase: "committed",
+      });
+      if (error) {
+        if (error.code === "23505") return res.status(409).json({ error: "already_committed" });
+        return res.status(400).json({ error: "vote_commit_failed", message: error.message });
+      }
+
+      await enqueueCommitRevealJob(supabaseAdmin, {
+        jobType: "commit",
+        submissionId,
+        voterAddress: voter,
+        vote,
+        roundId,
+        commitment,
+      });
+
+      return res.json({
+        ok: true,
+        commitment,
+        phase: "committed",
+        commitDeadline: cr.commitDeadline,
+        revealDeadline: cr.revealDeadline,
+      });
+    } catch (error) {
+      sendValidationError(res, error);
+    }
+  },
+);
+
+app.post(
+  "/api/vote/reveal",
+  requireAuth,
+  rateLimit({ keyFn: (req) => `vote-reveal:${req.user?.address || req.ip}`, limit: 40, windowMs: 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    if (!COMMIT_REVEAL_VOTING_ENABLED) return res.status(404).json({ error: "commit_reveal_disabled" });
+    if (!COMMIT_REVEAL_REGISTRY_ADDRESS) return res.status(501).json({ error: "commit_reveal_registry_unset" });
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+
+    try {
+      const submissionId = ensureNumber(body.submissionId, { field: "submissionId", required: true, integer: true, min: 1 });
+      const vote = ensureEnum(body.vote, { field: "vote", required: true, values: ["real", "fake"] });
+      const salt = ensureString(body.salt, { field: "salt", required: true, maxLength: 66 });
+      if (!/^0x[0-9a-fA-F]{64}$/.test(salt)) return res.status(400).json({ error: "invalid_salt" });
+      if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+
+      const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
+      const currentDay = launchAtMs && Date.now() >= launchAtMs ? currentDayNumber(launchAtMs) : null;
+      const round = currentDay != null ? await loadRound(currentDay) : null;
+      const cr = buildCommitRevealState(round);
+      if (cr.phase !== "reveal") return res.status(409).json({ error: "reveal_phase_closed", phase: cr.phase });
+
+      const voter = req.user.address;
+      const { data: commitRow, error: commitReadError } = await supabaseAdmin
+        .from("vote_commits")
+        .select("*")
+        .eq("submission_id", submissionId)
+        .eq("voter_address", voter)
+        .maybeSingle();
+      if (commitReadError) return res.status(400).json({ error: "vote_commit_read_failed", message: commitReadError.message });
+      if (!commitRow) return res.status(404).json({ error: "no_commitment" });
+      if (commitRow.phase === "revealed") return res.json({ ok: true, alreadyRevealed: true });
+      if (commitRow.vote !== vote) return res.status(400).json({ error: "vote_mismatch" });
+
+      const check = verifyClientCommitment({
+        registry: COMMIT_REVEAL_REGISTRY_ADDRESS,
+        chainId: COMMIT_REVEAL_CHAIN_ID,
+        roundId: commitRow.round_id,
+        submissionId,
+        voter,
+        vote,
+        salt,
+        commitment: commitRow.commitment,
+      });
+      if (!check.ok) return res.status(400).json({ error: "invalid_reveal", expected: check.expected });
+
+      let weight = 1;
+      const voterRec = await getUserRecord(voter);
+      if (voterRec?.eliminated) {
+        const stats = await getVoterStats(voter);
+        if (stats.total >= JURY_MIN_RESOLVED && (stats.accuracy ?? 0) >= JURY_MIN_ACCURACY) {
+          weight = JURY_WEIGHT;
+        }
+      }
+
+      const { data: castResult, error: castError } = await supabaseAdmin.rpc("cast_vote", {
+        p_submission_id: submissionId,
+        p_voter_address: voter,
+        p_vote: vote,
+        p_weight: weight,
+      });
+      if (castError) {
+        if (String(castError.message || "").includes("duplicate")) {
+          // Already in votes — still mark commit revealed + enqueue onchain reveal.
+        } else {
+          return res.status(400).json({ error: "db_vote_failed", message: castError.message });
+        }
+      } else if (!castResult?.[0]?.inserted && !castResult?.[0]?.duplicate) {
+        return res.status(400).json({ error: "vote_insert_failed" });
+      }
+
+      await supabaseAdmin
+        .from("vote_commits")
+        .update({ phase: "revealed", revealed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+        .eq("id", commitRow.id);
+
+      await enqueueCommitRevealJob(supabaseAdmin, {
+        jobType: "reveal",
+        submissionId,
+        voterAddress: voter,
+        vote,
+        roundId: commitRow.round_id,
+        commitment: commitRow.commitment,
+        salt,
+      });
+
+      const settled = await settleSubmissionVotes(submissionId);
+      return res.json({
+        ok: true,
+        votes: settled.countedVotes,
+        status: settled.status,
+        voteQuorum: settled.voteQuorum,
+        juryWeight: weight,
+      });
     } catch (error) {
       sendValidationError(res, error);
     }
@@ -2589,11 +2824,14 @@ app.get("/api/game/state", async (req, res) => {
             survivalCap: round.survival_cap ?? survivalCapForDay(currentDay),
             opensAt: round.opens_at,
             closesAt: round.closes_at,
+            commitDeadline: round.commit_deadline ?? null,
+            revealDeadline: round.reveal_deadline ?? null,
             status: round.status,
             checkinCount,
             slotsRemaining: Math.max(0, (round.survival_cap ?? survivalCapForDay(currentDay)) - checkinCount),
           }
         : null,
+      commitReveal: buildCommitRevealState(round),
       you,
       winner,
       payout: payoutInfo,

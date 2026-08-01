@@ -71,37 +71,75 @@ contract CommitRevealVoteRegistry {
     /// @notice Stores a commitment without exposing the HUMAN/SUS decision.
     /// @dev Compute with commitmentFor(...) off-chain, then submit the result.
     function commitVote(uint256 roundId, uint256 submissionId, bytes32 commitment) external {
-        Round memory round = rounds[roundId];
-        if (!round.exists) revert UnknownRound();
-        if (block.timestamp >= round.commitDeadline) revert CommitPhaseClosed();
-        if (commitment == bytes32(0)) revert EmptyCommitment();
-        if (commitments[roundId][submissionId][msg.sender] != bytes32(0)) revert AlreadyCommitted();
+        _commit(roundId, submissionId, msg.sender, commitment);
+    }
 
-        commitments[roundId][submissionId][msg.sender] = commitment;
-        emit VoteCommitted(roundId, submissionId, msg.sender, commitment);
+    /// @notice Owner/relayer commit on behalf of a voter (server signing key path).
+    function commitRelayerVote(
+        uint256 roundId,
+        uint256 submissionId,
+        address voter,
+        bytes32 commitment
+    ) external {
+        if (msg.sender != owner) revert OnlyOwner();
+        _commit(roundId, submissionId, voter, commitment);
     }
 
     /// @notice Reveals a committed ballot after the commit deadline.
     /// @dev A voter that never reveals is intentionally excluded from the tally.
     function revealVote(uint256 roundId, uint256 submissionId, bool isHuman, bytes32 salt) external {
+        _reveal(roundId, submissionId, msg.sender, isHuman, salt);
+    }
+
+    /// @notice Owner/relayer reveal on behalf of a voter (server signing key path).
+    function revealRelayerVote(
+        uint256 roundId,
+        uint256 submissionId,
+        address voter,
+        bool isHuman,
+        bytes32 salt
+    ) external {
+        if (msg.sender != owner) revert OnlyOwner();
+        _reveal(roundId, submissionId, voter, isHuman, salt);
+    }
+
+    function _commit(uint256 roundId, uint256 submissionId, address voter, bytes32 commitment) internal {
+        Round memory round = rounds[roundId];
+        if (!round.exists) revert UnknownRound();
+        if (block.timestamp >= round.commitDeadline) revert CommitPhaseClosed();
+        if (commitment == bytes32(0)) revert EmptyCommitment();
+        if (voter == address(0)) revert OnlyOwner();
+        if (commitments[roundId][submissionId][voter] != bytes32(0)) revert AlreadyCommitted();
+
+        commitments[roundId][submissionId][voter] = commitment;
+        emit VoteCommitted(roundId, submissionId, voter, commitment);
+    }
+
+    function _reveal(
+        uint256 roundId,
+        uint256 submissionId,
+        address voter,
+        bool isHuman,
+        bytes32 salt
+    ) internal {
         Round memory round = rounds[roundId];
         if (!round.exists) revert UnknownRound();
         if (block.timestamp < round.commitDeadline) revert RevealPhaseNotOpen();
         if (block.timestamp >= round.revealDeadline) revert RevealPhaseClosed();
-        if (revealed[roundId][submissionId][msg.sender]) revert AlreadyRevealed();
+        if (revealed[roundId][submissionId][voter]) revert AlreadyRevealed();
 
-        bytes32 commitment = commitments[roundId][submissionId][msg.sender];
+        bytes32 commitment = commitments[roundId][submissionId][voter];
         if (commitment == bytes32(0)) revert NoCommitment();
-        if (commitment != commitmentFor(roundId, submissionId, msg.sender, isHuman, salt)) revert InvalidReveal();
+        if (commitment != commitmentFor(roundId, submissionId, voter, isHuman, salt)) revert InvalidReveal();
 
-        revealed[roundId][submissionId][msg.sender] = true;
+        revealed[roundId][submissionId][voter] = true;
         Tally storage tally = tallies[roundId][submissionId];
         if (isHuman) {
             tally.human += 1;
         } else {
             tally.sus += 1;
         }
-        emit VoteRevealed(roundId, submissionId, msg.sender, isHuman);
+        emit VoteRevealed(roundId, submissionId, voter, isHuman);
     }
 
     /// @notice Returns the canonical commitment preimage for an audit ballot.

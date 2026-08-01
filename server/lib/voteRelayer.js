@@ -1,5 +1,5 @@
 import { createWalletClient, http } from "viem";
-import { celo } from "viem/chains";
+import { celo, worldchain } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
@@ -9,17 +9,28 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const CELO_RPC = process.env.CELO_RPC || "https://forno.celo.org";
 const CELO_SIGNING_KEY = process.env.CELO_SIGNING_KEY;
 const VOTE_REGISTRY_ADDRESS = process.env.VOTE_REGISTRY_ADDRESS;
+const COMMIT_REVEAL_REGISTRY_ADDRESS = process.env.COMMIT_REVEAL_REGISTRY_ADDRESS;
+const COMMIT_REVEAL_CHAIN_ID = Number(process.env.COMMIT_REVEAL_CHAIN_ID || 42220);
 const BATCH_SIZE = Number(process.env.VOTE_BATCH_SIZE || 1);
 const POLL_INTERVAL = Number(process.env.VOTE_POLL_INTERVAL || 15_000);
 
-let abi = null;
+let legacyAbi = null;
+let commitRevealAbi = null;
 try {
   const artifact = JSON.parse(
     readFileSync(resolve(__dirname, "../../contracts/VoteRegistry.json"), "utf8"),
   );
-  abi = artifact.abi;
+  legacyAbi = artifact.abi;
 } catch {
-  // No ABI available — relayer will skip onchain mode
+  // No ABI available — relayer will skip legacy onchain mode
+}
+try {
+  const artifact = JSON.parse(
+    readFileSync(resolve(__dirname, "../../contracts/CommitRevealVoteRegistry.json"), "utf8"),
+  );
+  commitRevealAbi = artifact.abi;
+} catch {
+  // Optional until compiled
 }
 
 let _supabaseAdmin = null;
@@ -49,6 +60,7 @@ export async function enqueueVote(submissionId, voterAddress, vote, supabaseClie
     voter_address: voterAddress,
     vote,
     status: "pending",
+    job_type: "legacy",
   });
   if (error) {
     console.error(JSON.stringify({
@@ -98,10 +110,22 @@ async function getQueueSize() {
   return count ?? 0;
 }
 
+function resolveCommitRevealChain() {
+  if (COMMIT_REVEAL_CHAIN_ID === worldchain.id) return worldchain;
+  return celo;
+}
+
 export function startVoteRelayer({ log, supabaseAdmin }) {
-  if (!VOTE_REGISTRY_ADDRESS || !CELO_SIGNING_KEY || !abi) {
+  const hasLegacy = Boolean(VOTE_REGISTRY_ADDRESS && CELO_SIGNING_KEY && legacyAbi);
+  const hasCommitReveal = Boolean(COMMIT_REVEAL_REGISTRY_ADDRESS && CELO_SIGNING_KEY && commitRevealAbi);
+
+  if (!hasLegacy && !hasCommitReveal) {
     log("vote_relayer_offline", {
-      reason: !VOTE_REGISTRY_ADDRESS ? "no_contract_address" : !CELO_SIGNING_KEY ? "no_signing_key" : "no_abi",
+      reason: !CELO_SIGNING_KEY
+        ? "no_signing_key"
+        : !VOTE_REGISTRY_ADDRESS && !COMMIT_REVEAL_REGISTRY_ADDRESS
+          ? "no_contract_address"
+          : "no_abi",
     });
     return;
   }
@@ -114,15 +138,19 @@ export function startVoteRelayer({ log, supabaseAdmin }) {
   _supabaseAdmin = supabaseAdmin;
 
   const account = privateKeyToAccount(CELO_SIGNING_KEY);
-  const walletClient = createWalletClient({
-    account,
-    chain: celo,
-    transport: http(CELO_RPC),
-  });
+  const legacyClient = hasLegacy
+    ? createWalletClient({ account, chain: celo, transport: http(CELO_RPC) })
+    : null;
+  const crChain = resolveCommitRevealChain();
+  const crRpc = process.env.COMMIT_REVEAL_RPC || CELO_RPC;
+  const commitRevealClient = hasCommitReveal
+    ? createWalletClient({ account, chain: crChain, transport: http(crRpc) })
+    : null;
 
   log("vote_relayer_started", {
     address: account.address,
-    contract: VOTE_REGISTRY_ADDRESS,
+    legacyContract: VOTE_REGISTRY_ADDRESS || null,
+    commitRevealContract: COMMIT_REVEAL_REGISTRY_ADDRESS || null,
     batchSize: BATCH_SIZE,
   });
 
@@ -143,13 +171,53 @@ export function startVoteRelayer({ log, supabaseAdmin }) {
 
       for (const v of batch) {
         try {
-          const hash = await walletClient.writeContract({
-            address: VOTE_REGISTRY_ADDRESS,
-            abi,
-            functionName: "castRelayerVote",
-            args: [BigInt(v.submission_id), v.voter_address, v.vote === "real"],
-          });
-          log("vote_relayer_tx", { id: v.id, hash, submissionId: v.submission_id });
+          const jobType = v.job_type || "legacy";
+          let hash;
+
+          if (jobType === "commit") {
+            if (!commitRevealClient || !COMMIT_REVEAL_REGISTRY_ADDRESS) {
+              throw new Error("commit_reveal_relayer_unavailable");
+            }
+            hash = await commitRevealClient.writeContract({
+              address: COMMIT_REVEAL_REGISTRY_ADDRESS,
+              abi: commitRevealAbi,
+              functionName: "commitRelayerVote",
+              args: [
+                BigInt(v.round_id),
+                BigInt(v.submission_id),
+                v.voter_address,
+                v.commitment,
+              ],
+            });
+          } else if (jobType === "reveal") {
+            if (!commitRevealClient || !COMMIT_REVEAL_REGISTRY_ADDRESS) {
+              throw new Error("commit_reveal_relayer_unavailable");
+            }
+            hash = await commitRevealClient.writeContract({
+              address: COMMIT_REVEAL_REGISTRY_ADDRESS,
+              abi: commitRevealAbi,
+              functionName: "revealRelayerVote",
+              args: [
+                BigInt(v.round_id),
+                BigInt(v.submission_id),
+                v.voter_address,
+                v.vote === "real",
+                v.salt,
+              ],
+            });
+          } else {
+            if (!legacyClient || !VOTE_REGISTRY_ADDRESS) {
+              throw new Error("legacy_relayer_unavailable");
+            }
+            hash = await legacyClient.writeContract({
+              address: VOTE_REGISTRY_ADDRESS,
+              abi: legacyAbi,
+              functionName: "castRelayerVote",
+              args: [BigInt(v.submission_id), v.voter_address, v.vote === "real"],
+            });
+          }
+
+          log("vote_relayer_tx", { id: v.id, hash, submissionId: v.submission_id, jobType });
           await markDone(v.id, hash);
           await new Promise((r) => setTimeout(r, 100));
         } catch (err) {

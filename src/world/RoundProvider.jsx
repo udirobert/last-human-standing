@@ -49,6 +49,7 @@ const DEFAULT_STATE = {
   breakdown: null,
   lastDayClose: null,
   defaults: { survivalCap: 25, radiusM: 100 },
+  commitReveal: { enabled: false },
   verification: {
     voteQuorum: 25,
     voteQuorumNormal: 25,
@@ -104,6 +105,7 @@ export function RoundProvider({ children }) {
           breakdown: data.breakdown ?? null,
           lastDayClose: data.lastDayClose ?? null,
           defaults: { ...DEFAULT_STATE.defaults, ...(data.defaults ?? {}) },
+          commitReveal: data.commitReveal ?? { enabled: false },
           verification: { ...DEFAULT_STATE.verification, ...(data.verification ?? {}) },
         });
         setStatus("ready");

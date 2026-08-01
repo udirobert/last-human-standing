@@ -67,6 +67,43 @@ VOTE_CHAIN=celo VOTE_RPC=<rpc-url> VOTE_SIGNING_KEY=<key> node scripts/compile-a
 
 Use `VOTE_CHAIN=worldchain` for a World-native cohort. Deployment is intentionally separate from the live application rollout: the client and server must be updated to generate, persist and reveal the voter-held salts before the new registry is enabled.
 
+## Application foundation (default off)
+
+Commit–reveal client + API scaffolding is in the repo and **disabled by default**. Live `/api/vote` tallies stay unchanged until the flag is turned on.
+
+| Env var | Purpose |
+|---|---|
+| `COMMIT_REVEAL_VOTING_ENABLED` | Must be `"true"` to activate. Default unset/false. |
+| `COMMIT_REVEAL_REGISTRY_ADDRESS` | Deployed `CommitRevealVoteRegistry` address. |
+| `COMMIT_REVEAL_CHAIN_ID` | Chain id for commitment binding (default `42220` Celo). |
+| `COMMIT_REVEAL_RPC` | Optional RPC for the commit–reveal relayer (falls back to `CELO_RPC`). |
+
+Client salt store key format:
+
+`lhs:vote-commit:v1:{cohort}:{roundId}:{submissionId}:{voter}`
+
+Salts never leave the browser except on `POST /api/vote/reveal`. Commitment hashing lives in [`src/lib/commitRevealVote.js`](../src/lib/commitRevealVote.js) and matches `commitmentFor` on the contract.
+
+When the flag is on:
+
+- `POST /api/vote` returns `409 commit_reveal_required`.
+- `POST /api/vote/commit` stores a service-role `vote_commits` row and enqueues an onchain commit job.
+- During the commit phase, `/api/feed` seals HUMAN/SUS tallies and exposes commit counts only.
+- `POST /api/vote/reveal` verifies the salt against the stored commitment, writes the public `votes` row, and enqueues an onchain reveal job.
+- Round deadlines come from `rounds.commit_deadline` / `rounds.reveal_deadline` (migration `028_vote_commits.sql`), with `closes_at` as the commit-deadline fallback.
+
+### Activation checklist
+
+1. Apply migration `028_vote_commits.sql`.
+2. Compile and deploy `CommitRevealVoteRegistry` to the cohort’s canonical chain; keep the deployer key as contract owner (relayer).
+3. Set `COMMIT_REVEAL_REGISTRY_ADDRESS`, `COMMIT_REVEAL_CHAIN_ID`, and signing/RPC env for the relayer.
+4. Set `commit_deadline` / `reveal_deadline` on the open round (or rely on `closes_at` for commit end).
+5. Call `createRound` on the registry with matching Unix deadlines.
+6. Set `COMMIT_REVEAL_VOTING_ENABLED=true` and restart the API.
+7. Smoke: commit a ballot → feed shows sealed count → after deadline reveal → public tally appears.
+
+Do **not** enable this in production until salts + reveal UX have been exercised on a test cohort.
+
 ## Semaphore prototype status
 
-The repository also contains a feature-flagged Semaphore prototype. It provides a verified-cohort enrollment route, browser-held identity helper, group-root validation, and atomic nullifier storage. It is disabled by default and does not change the current vote endpoint. See [Semaphore spike](./SEMAPHORE_SPIKE.md) for the activation requirements and its remaining limitation: audit groups must be frozen before voting opens.
+The repository also contains a feature-flagged Semaphore prototype. It provides a verified-cohort enrollment route, browser-held identity helper, group-root validation, and atomic nullifier storage. It is disabled by default (`SEMAPHORE_AUDIT_ENABLED` must be `"true"`) and does not change the current vote endpoint. Migration `027_semaphore_audit.sql` is separate from commit–reveal and should only be applied for a deliberate Semaphore prototype cohort. See [Semaphore spike](./SEMAPHORE_SPIKE.md).
