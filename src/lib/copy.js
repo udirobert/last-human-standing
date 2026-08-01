@@ -139,24 +139,128 @@ export const JURY_UNLOCK = {
  * One-line mission mantra for the live home / MissionBoard.
  * Keeps the first viewport to a single job — not a rulebook.
  */
+/**
+ * Mid-day wait pressure for checked-in players (hold-the-room pass).
+ * minutesLeft null → calm default.
+ */
+export function holdRoomPressure(minutesLeft) {
+  if (minutesLeft == null) return "calm";
+  if (minutesLeft < 60) return "closing";
+  if (minutesLeft < 360) return "thinning";
+  return "calm";
+}
+
+/** Warm human body under the cold checked-in status chrome. */
+export function holdRoomCopy({
+  minutesLeft = null,
+  survived = false,
+  cap = 25,
+} = {}) {
+  const pressure = holdRoomPressure(minutesLeft);
+  if (survived) {
+    if (pressure === "closing") {
+      return {
+        shelf: "Final hour",
+        body: "Verdicts are landing. Stay in the audit — a flagged survivor frees a seat.",
+      };
+    }
+    if (pressure === "thinning") {
+      return {
+        shelf: "Hold the room",
+        body: "You made the provisional cut. The field is still being judged.",
+      };
+    }
+    return {
+      shelf: "Hold the room",
+      body: "You're in. Keep an eye on the audit while the window stays open.",
+    };
+  }
+  if (pressure === "closing") {
+    return {
+      shelf: "Final hour",
+      body: "At risk until close. Flagged survivors get replaced — your rank can still move.",
+    };
+  }
+  if (pressure === "thinning") {
+    return {
+      shelf: "Field is thinning",
+      body: `Cap is ${cap}. Audit the proofs — every SUS vote tightens the room.`,
+    };
+  }
+  return {
+    shelf: "Hold the room",
+    body: "Checked in. The crowd judges every photo. Spend the wait in the audit.",
+  };
+}
+
+/**
+ * Shared post-seal dialect for MissionBoard, Feed empty, Chat, spectator/jury.
+ * role: "checkedIn" | "spectator" | "jury"
+ */
+/**
+ * DayRecap CTA label after dismiss — teases tomorrow without a second overlay.
+ */
+export function dayRecapContinueLabel({
+  personalResult = null,
+  currentDay = null,
+  nextTheme = null,
+} = {}) {
+  if (personalResult === "eliminated") return "Continue to the audit →";
+  const day = Number(currentDay);
+  if (Number.isFinite(day) && day < 5) {
+    const themeBit = nextTheme ? ` · ${nextTheme}` : "";
+    return `Continue to Day ${day + 1}${themeBit} →`;
+  }
+  if (Number.isFinite(day)) return "Continue to the finale →";
+  return "Continue to today's mission →";
+}
+
+export function postSealCopy({
+  minutesLeft = null,
+  role = "checkedIn",
+  survived = false,
+  cap = 25,
+} = {}) {
+  if (role === "spectator") {
+    return {
+      shelf: "Watch the field",
+      body: "You're watching this cohort. Audit the proofs — accurate votes earn jury tickets for next time.",
+    };
+  }
+  if (role === "jury") {
+    return {
+      shelf: "Watch the field",
+      body: "You're out of the race — still in the room. Vote the living; the field still needs you.",
+    };
+  }
+  const pressure = holdRoomPressure(minutesLeft);
+  if (pressure === "calm" && !survived) {
+    return {
+      shelf: "Proof received",
+      body: "Sealed for the jury. Your photo is on trial — spend the wait in the audit.",
+    };
+  }
+  return holdRoomCopy({ minutesLeft, survived, cap });
+}
+
 export function missionMantra({
   theme,
   cap = 25,
   checkedIn = false,
   eliminated = false,
   survived = false,
+  minutesLeft = null,
 } = {}) {
   if (eliminated) {
     return { kicker: "Your job now", line: "Audit the living. Your votes decide who stays." };
   }
   if (checkedIn && survived) {
-    return { kicker: "Hold the line", line: "You made the provisional cut. The crowd still judges." };
+    const warm = holdRoomCopy({ minutesLeft, survived: true, cap });
+    return { kicker: warm.shelf, line: warm.body };
   }
   if (checkedIn) {
-    return {
-      kicker: "Checked in",
-      line: `Rank locked for now — flagged survivors get replaced. Cap is ${cap}.`,
-    };
+    const warm = holdRoomCopy({ minutesLeft, survived: false, cap });
+    return { kicker: warm.shelf, line: warm.body };
   }
   const place = theme ? String(theme) : "TODAY'S THEME";
   return {
@@ -410,7 +514,9 @@ export const MASCOT_LINES = {
   missionOpen: (cap, theme) => `Be one of the first ${cap}. ${theme}.`,
   missionPrelaunch: "Registered. The first theme drops when the cohort opens.",
   missionSpectator: "You're in the stands. Watch the audit and see how the game feels.",
-  missionCheckedIn: "Submitted. The crowd judges every photo.",
+  missionCheckedIn: "Submitted. Hold the room — audit while you wait.",
+  missionCheckedInThinning: "The field is thinning. Stay sharp in the audit.",
+  missionCheckedInClosing: "Final hour. Verdicts land soon — keep voting.",
   missionSurvived: "One day down. Don't get comfortable.",
   missionEliminated: "You're out. The audit needs you.",
   missionEnded: "One human took the pot. The next cohort is coming.",
@@ -447,7 +553,7 @@ export const MASCOT_LINES = {
 /**
  * Mascot personality for the live mission card.
  */
-export function getMissionMascot({ state, cap, theme } = {}) {
+export function getMissionMascot({ state, cap, theme, minutesLeft } = {}) {
   switch (state) {
     case "prelaunch":
       return { variant: "thinking", message: MASCOT_LINES.missionPrelaunch };
@@ -455,8 +561,16 @@ export function getMissionMascot({ state, cap, theme } = {}) {
       return { variant: "determined", message: MASCOT_LINES.missionOpen(cap, theme) };
     case "spectator":
       return { variant: "thinking", message: MASCOT_LINES.missionSpectator };
-    case "checkedIn":
+    case "checkedIn": {
+      const pressure = holdRoomPressure(minutesLeft);
+      if (pressure === "closing") {
+        return { variant: "worried", message: MASCOT_LINES.missionCheckedInClosing };
+      }
+      if (pressure === "thinning") {
+        return { variant: "thinking", message: MASCOT_LINES.missionCheckedInThinning };
+      }
       return { variant: "thinking", message: MASCOT_LINES.missionCheckedIn };
+    }
     case "survived":
       return { variant: "proud", message: MASCOT_LINES.missionSurvived };
     case "eliminated":

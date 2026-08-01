@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
@@ -14,6 +14,8 @@ import ThemeMotif from './ui/ThemeMotif.jsx';
 import ThemeFairness from './ThemeFairness.jsx';
 import GameMoment from './GameMoment.jsx';
 import MascotGuide from './ui/MascotGuide.jsx';
+import SealedReceipt from './ui/SealedReceipt.jsx';
+import OverlayPortal from './OverlayPortal.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import { shareMoment } from '../lib/shareMoment.js';
@@ -22,13 +24,17 @@ import { ritualFeel } from '../lib/ritualFeel.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
 import CheckInPreview from './CheckInPreview.jsx';
 import { hashPhotoFile } from '../lib/photoHash.js';
+import { saveCheckinPreview } from '../lib/checkinPreview.js';
 import { CUE_PRESS } from '../lib/cuelume.js';
+
+const SEAL_HOLD_MS = 1400;
 
 export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, phase, refresh: refreshRound } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
   const { unlockAchievement, checkAchievement, playSound, handleMascotClick, recordSurvival } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
+  const reduceMotion = useReducedMotion();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
   const [pos, setPos] = useState(null); // { lat, lng, accuracy }
@@ -42,6 +48,9 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [photoUploadFailed, setPhotoUploadFailed] = useState(false);
   const [infiltratorMode, setInfiltratorMode] = useState(false);
   const [ritualMode, setRitualMode] = useState(false);
+  /** Live seal bridge before GameMoment — { photoUrl } */
+  const [sealHold, setSealHold] = useState(null);
+  const sealTimerRef = useRef(null);
   // Day 1 is honest-only — establishes a baseline so infiltrator attempts
   // on Day 2+ are actually detectable. Also protects new players from
   // instant DQ on their first check-in.
@@ -170,6 +179,7 @@ export default function CheckIn({ onBack, onSubmit }) {
     // If offline, queue the check-in via the service worker
     if (!online) {
       setQueuedCheckin(true);
+      if (photoPreview) void saveCheckinPreview(photoPreview, { day: currentDay });
       ritualFeel('seal');
       setStep(2);
       setResult({ queued: true });
@@ -248,6 +258,31 @@ export default function CheckIn({ onBack, onSubmit }) {
       // signature is bonus
     }
 
+    const finishAfterSeal = (json) => {
+      if (json.survived) {
+        ritualFeel('survive');
+        recordSurvival?.(json.roundId ?? json.checkinId ?? currentDay);
+      } else {
+        ritualFeel('eliminate');
+      }
+
+      unlockAchievement?.('first_checkin');
+      if (json.survived) {
+        checkAchievement?.(currentDay >= 3, 'checkin_streak_3');
+        checkAchievement?.(currentDay >= 7, 'checkin_streak_7');
+      }
+
+      clearQueuedCheckin();
+      setSealHold(null);
+      setStep(2);
+      dispatchMascotEvent(null);
+      dispatchMascotEvent({
+        type: json.survived ? "achievement" : "vote_react",
+        variant: json.survived ? "celebrating" : "sad",
+        message: json.survived ? getCheckInMascot({ step: 2 }).message : null,
+      });
+    };
+
     // The actual survival call — GPS is optional metadata
     try {
       const body = {};
@@ -266,32 +301,16 @@ export default function CheckIn({ onBack, onSubmit }) {
       }
       setResult(json);
       refreshRound();
-      if (json.survived) {
-        ritualFeel('survive');
-        recordSurvival?.(json.roundId ?? json.checkinId ?? currentDay);
+      if (photoPreview) void saveCheckinPreview(photoPreview, { day: currentDay });
+      ritualFeel('seal');
+
+      if (reduceMotion) {
+        finishAfterSeal(json);
       } else {
-        ritualFeel('eliminate');
+        setSealHold({ photoUrl: photoPreview });
+        if (sealTimerRef.current) clearTimeout(sealTimerRef.current);
+        sealTimerRef.current = setTimeout(() => finishAfterSeal(json), SEAL_HOLD_MS);
       }
-
-      // Achievement unlocks
-      unlockAchievement?.('first_checkin');
-      if (json.survived) {
-        checkAchievement?.(currentDay >= 3, 'checkin_streak_3');
-        checkAchievement?.(currentDay >= 7, 'checkin_streak_7');
-      }
-
-      // Clear any previously-queued chip on successful live submit.
-      clearQueuedCheckin();
-      setStep(2);
-      // Clear the "submitting" durable override so the durable state
-      // (survived / awaiting_audit) can take over once round refreshes,
-      // then fire a transient reaction for the immediate verdict.
-      dispatchMascotEvent(null);
-      dispatchMascotEvent({
-        type: json.survived ? "achievement" : "vote_react",
-        variant: json.survived ? "celebrating" : "sad",
-        message: json.survived ? getCheckInMascot({ step: 2 }).message : null,
-      });
     } catch (e) {
       setSubmitError(e instanceof Error ? e.message : 'check-in failed');
       setStep(0);
@@ -299,12 +318,28 @@ export default function CheckIn({ onBack, onSubmit }) {
     }
   };
 
+  useEffect(() => () => {
+    if (sealTimerRef.current) clearTimeout(sealTimerRef.current);
+  }, []);
+
   return (
     <AppShell
       phase={phase === "live" ? "live" : phase === "ended" ? "ended" : "prelaunch"}
       flourishes={false}
     >
-      
+      <OverlayPortal>
+        <AnimatePresence>
+          {sealHold && (
+            <SealedReceipt
+              key="sealed-receipt"
+              photoUrl={sealHold.photoUrl}
+              themeEmoji={themeData.emoji}
+              day={currentDay}
+            />
+          )}
+        </AnimatePresence>
+      </OverlayPortal>
+
       {/* Infiltrator threat visual overlay */}
       <AnimatePresence>
         {infiltratorMode && (

@@ -45,7 +45,8 @@ function mulberry32(seed) {
   };
 }
 
-const MAX_DOTS = 50;
+// Cap painted dots for paint cost — 50 rAF-driven nodes janks mid-tier phones.
+const MAX_DOTS = 28;
 
 /**
  * Generate stable positions for up to MAX_DOTS dots.

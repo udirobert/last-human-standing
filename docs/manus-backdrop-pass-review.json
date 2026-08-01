@@ -1,0 +1,208 @@
+{
+  "scope": "Focused backdrop and ambient visual-asset pass only; no layout, component, brand, or runtime-integration changes proposed.",
+  "review_basis": "Live landing-page review plus the existing stack stated in the brief: radial room gradients, topographic texture, paper grain, color pools, population dots, ember ripples, and rotating corner motifs.",
+  "findings": [
+    {
+      "asset_id": "room_day_phase_wash",
+      "layer": "room",
+      "day_affinity": "1-5",
+      "severity_of_gap": "high",
+      "recommendation": "Add a barely perceptible day-state wash behind the existing radial room gradient. The room should progress from a soft dawn-ochre bias on Day 1 to a tighter ember-brown core by Day 3 and a cooler, quieter umber perimeter by Day 5. This creates a legible five-day arc without introducing a new scene.",
+      "implementation_note": "CSS-friendly: keep the current room gradient intact; add one absolute pseudo-element below content with a 0.08–0.14 opacity linear/radial wash controlled by a day data attribute. Do not animate the wash more than 1–2px over 18–24 seconds.",
+      "confidence": 0.96
+    },
+    {
+      "asset_id": "motif_day_pairing",
+      "layer": "motif",
+      "day_affinity": "1-5",
+      "severity_of_gap": "high",
+      "recommendation": "Pair one existing corner motif with one new, smaller peripheral flourish per day rather than adding more illustrations at once. Suggested cadence: Day 1 sunrise wash, Day 2 folded note, Day 3 steam curl, Day 4 wilting plant, Day 5 ember-seed cluster. The pair should remain outside the central content corridor.",
+      "implementation_note": "Component-friendly: expose a day-to-motif map returning at most two motif IDs and four placement anchors. Render in a pointer-events-none ambient layer with z-index below cards and controls.",
+      "confidence": 0.94
+    },
+    {
+      "asset_id": "steam_curl_overlay",
+      "layer": "motion",
+      "day_affinity": "all",
+      "severity_of_gap": "medium",
+      "recommendation": "Introduce one or two translucent steam curls above an existing coffee or bowl motif. This is the most economical human-warm motion because it reinforces an object already on the page instead of asking the user to parse a new animation.",
+      "implementation_note": "SVG/CSS-friendly: use two stroked paths at 0.18–0.30 opacity; translate 6–10px vertically over 5.5–7 seconds with ease-in-out. Maintain a static 0.20 opacity state when motion is reduced.",
+      "confidence": 0.93
+    },
+    {
+      "asset_id": "grain_frame_shift",
+      "layer": "grain",
+      "day_affinity": "all",
+      "severity_of_gap": "medium",
+      "recommendation": "Give the existing paper grain a microscopic frame shift rather than a conspicuous noise animation. It will remove digital stillness from large empty regions while preserving the page’s printed, tactile quality.",
+      "implementation_note": "CSS-friendly: background-position step changes of 1–2px every 5–8 seconds; grain opacity must remain at or below the current texture’s legibility threshold. Disable entirely under prefers-reduced-motion.",
+      "confidence": 0.91
+    },
+    {
+      "asset_id": "topo_day_contour_accent",
+      "layer": "topo",
+      "day_affinity": "3",
+      "severity_of_gap": "medium",
+      "recommendation": "On Day 3 only, reveal one faint, offset contour island near an outer corner. Midweek is the right point for a small spatial change because the player is familiar with the room, while the field is beginning to narrow.",
+      "implementation_note": "SVG-friendly: use one irregular contour group at 0.06–0.09 opacity, 1px warm-gray stroke, and no motion. Place it behind the current topology with a mask that avoids the primary headline and card grid.",
+      "confidence": 0.87
+    },
+    {
+      "asset_id": "population_dot_murmur",
+      "layer": "motion",
+      "day_affinity": "1-5",
+      "severity_of_gap": "medium",
+      "recommendation": "Let only a very small subset of existing population dots breathe once per long cycle, as if distant human presence is registering in the system. The effect should be sparse, not a particle field.",
+      "implementation_note": "CSS-friendly: select 3–5% of dots deterministically by seeded index; pulse scale from 1 to 1.18 and alpha by no more than 0.12 over 9–14 seconds. No positional motion and no randomization after first render.",
+      "confidence": 0.86
+    },
+    {
+      "asset_id": "ember_seeds_day_five",
+      "layer": "motif",
+      "day_affinity": "5",
+      "severity_of_gap": "medium",
+      "recommendation": "Add a three-to-five seed ember cluster at a far bottom corner on Day 5. It should read as low, persistent heat—not a celebratory confetti effect—supporting the final survivor tension.",
+      "implementation_note": "SVG-friendly: five irregular soft circles in existing ember yellow/orange/red tones, 0.18–0.35 opacity, optional shared 12-second opacity pulse. Keep the group under 36px at 390px viewport width.",
+      "confidence": 0.88
+    },
+    {
+      "asset_id": "prelaunch_horizon_pin",
+      "layer": "room",
+      "day_affinity": "prelaunch",
+      "severity_of_gap": "low",
+      "recommendation": "For the prelaunch/reservation state only, add a restrained horizon pin: a short, warm line with a tiny sun-disc glow at the upper edge. It quietly signals an approaching start without revising the hero.",
+      "implementation_note": "CSS/SVG-friendly: 48–64px group anchored at 6–8% from a top corner, 0.16 opacity, no animation. Remove it once Day 1 begins so the first-day sunrise wash can carry the transition.",
+      "confidence": 0.81
+    }
+  ],
+  "top_5_highest_leverage_backdrop_upgrades": [
+    {
+      "rank": 1,
+      "asset_id": "motif_day_pairing",
+      "why": "Creates the clearest daily variety while retaining the existing day-rotated motif pattern and requiring no component redesign.",
+      "shippable_delta": "One day-to-motif map plus four 64px-or-smaller SVG flourishes."
+    },
+    {
+      "rank": 2,
+      "asset_id": "room_day_phase_wash",
+      "why": "Changes the emotional temperature of each day without adding visual density or competing with type.",
+      "shippable_delta": "One CSS custom property set and one low-opacity room pseudo-element."
+    },
+    {
+      "rank": 3,
+      "asset_id": "steam_curl_overlay",
+      "why": "Adds motion where the user already expects warmth, with negligible layout and performance risk.",
+      "shippable_delta": "Two SVG paths and a single reduced-motion-safe keyframe."
+    },
+    {
+      "rank": 4,
+      "asset_id": "grain_frame_shift",
+      "why": "Removes stillness from open background space while preserving the paper/gouache surface.",
+      "shippable_delta": "A 2–3 keyframe background-position animation, disabled under reduced motion."
+    },
+    {
+      "rank": 5,
+      "asset_id": "topo_day_contour_accent",
+      "why": "Adds a single midweek discovery beat without changing cards, copy, or system modules.",
+      "shippable_delta": "One masked SVG contour group for Day 3 only."
+    }
+  ],
+  "motif_flourishes": [
+    {
+      "asset_id": "motif_sunrise_wash",
+      "day_affinity": "1",
+      "placement": "Top outer edge, biased away from countdown and headline centerline.",
+      "visual_spec": "A 10–14% viewport-height horizontal wash with a broken gouache edge: pale straw at the inner edge, desaturated apricot at the outer edge, then transparent. No literal landscape or horizon illustration.",
+      "source_file": "sunrise-wash.svg",
+      "implementation_note": "Render as a background image or inline SVG layer at 0.12–0.18 opacity; static by default."
+    },
+    {
+      "asset_id": "motif_folded_note",
+      "day_affinity": "2",
+      "placement": "Bottom-right corner, 18–28px beyond the content rail, slightly cropped by viewport edge.",
+      "visual_spec": "A warm ivory, imperfect quadrilateral with one folded triangle, three short charcoal-like scribble strokes, and a soft clay shadow. The marks must stay non-legible.",
+      "source_file": "folded-note.svg",
+      "implementation_note": "Render no larger than 42px on a 390px-wide view; static."
+    },
+    {
+      "asset_id": "motif_steam_curl",
+      "day_affinity": "3",
+      "placement": "Immediately above an already-present cup or bowl motif; never free-floating in the headline area.",
+      "visual_spec": "Two irregular tapering S-curves in chalky cream, each with a slightly offset duplicate stroke to mimic dry gouache buildup.",
+      "source_file": "steam-curl.svg",
+      "implementation_note": "Animate only the group’s vertical translate and opacity; individual paths should not wobble."
+    },
+    {
+      "asset_id": "motif_wilting_plant",
+      "day_affinity": "4",
+      "placement": "Lower-left outer edge, behind the illustration field and clear of the first interactive card.",
+      "visual_spec": "A compact clay pot, one bent olive stem, two bruised leaves, and one fallen leaf. Silhouette is heavier at the pot than the leaves to remain readable at 36–48px.",
+      "source_file": "wilting-plant.svg",
+      "implementation_note": "Render at 38–48px at 390px viewport width; static."
+    },
+    {
+      "asset_id": "motif_ember_seed_cluster",
+      "day_affinity": "5",
+      "placement": "Far lower-right edge or behind the lower stakes module, outside all tap targets.",
+      "visual_spec": "Three to five tiny irregular circles in muted ember orange, dull gold, and brick red, with uneven edges and no sparkle-star shapes.",
+      "source_file": "ember-seed-cluster.svg",
+      "implementation_note": "Use a single, low-amplitude opacity pulse only when reduced motion is not requested."
+    }
+  ],
+  "motion_budget": {
+    "principle": "Movement is peripheral evidence of life, not a second interface. No motion may compete with countdown digits, card labels, buttons, or survival-progress data.",
+    "allowed_motion": [
+      {
+        "element": "Steam curl",
+        "behavior": "Vertical drift plus fade",
+        "duration": "5.5–7 seconds",
+        "travel": "6–10px",
+        "max_opacity": 0.3,
+        "placement_rule": "Only directly above an existing warm-object motif."
+      },
+      {
+        "element": "Paper grain",
+        "behavior": "Stepped background-position shift",
+        "duration": "5–8 seconds per step",
+        "travel": "1–2px",
+        "max_opacity": 0.08,
+        "placement_rule": "Full room layer only; never a foreground filter over copy."
+      },
+      {
+        "element": "Population dots",
+        "behavior": "Sparse opacity/scale breath",
+        "duration": "9–14 seconds",
+        "travel": "0px",
+        "max_opacity": 0.12,
+        "placement_rule": "Animate 3–5% of dots, deterministically selected."
+      },
+      {
+        "element": "Existing ember ripples / day-five ember seeds",
+        "behavior": "Slow opacity pulse",
+        "duration": "10–14 seconds",
+        "travel": "0–1px",
+        "max_opacity": 0.35,
+        "placement_rule": "One cluster at a time; no new particle system."
+      }
+    ],
+    "must_remain_still": [
+      "All text, countdown digits, buttons, cards, chips, dot rows, progress bars, and monetary values.",
+      "Primary room gradients, topographic linework, corner object silhouettes, and all motif placement anchors.",
+      "Anything inside the central 64% of the mobile viewport width from hero through primary CTA."
+    ],
+    "prefers_reduced_motion": "Set all ambient animations to none, retain static artwork at its intended resting opacity, and keep no animation-related layout or opacity transition. Do not replace ambient motion with a more prominent static effect."
+  },
+  "what_not_to_change": [
+    "Do not redesign the warm smoky room, its radial pools, or the restrained near-black panels; the contrast between tactile warmth and hard system modules is already the product’s strongest visual premise.",
+    "Do not introduce glassmorphism, purple gradients, glossy 3D treatments, stock photography, cinematic scenes, or a new illustration system.",
+    "Do not alter the condensed display typography, CTA hierarchy, proof-card treatment, system bars, population-dot logic, or day-card interaction model.",
+    "Do not put motifs in the primary reading corridor, over the hero title, behind countdown numerals, or within tap-target hit areas.",
+    "Do not use more than two ambient motif groups at once on mobile, and do not make day variation dependent on animation for comprehension."
+  ],
+  "acceptance_checks": [
+    "At 390px-wide mobile viewport, the headline, countdown, proof-card labels, and CTA remain visibly cleaner than any ambient addition.",
+    "At rest, every new asset reads as a low-contrast peripheral cue rather than a new scene.",
+    "With reduced motion enabled, the page remains compositionally complete and has no perceptible animation.",
+    "No proposed asset introduces personal data, production secrets, or runtime dependencies."
+  ]
+}

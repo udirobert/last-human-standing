@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
-import { getDayRecapMascot } from "../lib/copy.js";
+import { getDayRecapMascot, dayRecapContinueLabel } from "../lib/copy.js";
+import { resolveTomorrow } from "../lib/tomorrow.js";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta } from "./ui/CraftCta.jsx";
@@ -82,6 +83,14 @@ export default function DayRecap() {
   const personalResult = youSurvived ? "survived" : youEliminated ? "eliminated" : null;
   const recapMascot = getDayRecapMascot({ personalResult });
   const trapRef = useFocusTrap(show, { onEscape: dismiss });
+  const tomorrow = resolveTomorrow(recapData?.day ?? currentDay, {
+    remaining: recapData?.remaining,
+  });
+  const continueLabel = dayRecapContinueLabel({
+    personalResult,
+    currentDay: recapData?.day ?? currentDay,
+    nextTheme: tomorrow?.theme ?? null,
+  });
 
   return (
     <OverlayPortal>
@@ -159,14 +168,14 @@ export default function DayRecap() {
               <span className="font-display text-2xl text-amber tabular-nums">{remaining}</span> humans remain
             </motion.p>
 
-            <HumanCta onClick={dismiss} className="mt-8">
-              {personalResult === "eliminated"
-                ? "Continue to the audit →"
-                : currentDay != null && Number(currentDay) < 5
-                  ? `Continue to Day ${Number(currentDay) + 1} →`
-                  : currentDay != null
-                    ? "Continue to the finale →"
-                    : "Continue to today's mission →"}
+            {tomorrow && personalResult !== "eliminated" && (
+              <p className="font-mono text-dim text-[10px] mt-4 tracking-wide">
+                Theme waiting downstairs · {tomorrow.emoji} {tomorrow.theme}
+              </p>
+            )}
+
+            <HumanCta onClick={dismiss} className="mt-6">
+              {continueLabel}
             </HumanCta>
           </motion.div>
 

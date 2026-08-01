@@ -146,7 +146,15 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
   const stepLabels = ["Welcome", "Rules", "Profile", "Reserve"];
 
   return (
-    <div className="onboarding-shell min-h-screen flex flex-col font-body overflow-hidden bg-transparent">
+    <div
+      className={`onboarding-shell flex flex-col font-body overflow-hidden bg-transparent ${
+        // Step 0 is a tall document-scrolling landing. Steps 1–3 need a
+        // fixed viewport height so StageShell's overflow-y-auto actually
+        // scrolls — min-h-screen + nested overflow-y-auto silently traps
+        // touch gestures on iOS (gesture dies on a non-overflowing child).
+        step === 0 ? "min-h-screen" : "h-[100svh] max-h-[100svh]"
+      }`}
+    >
       {/* Minimal progress bar — 4 segments, no labels. Hidden on step 0: the
           cinematic landing is the trailer before the step flow begins, and
           this cold system-chrome strip has no business poking above it. */}

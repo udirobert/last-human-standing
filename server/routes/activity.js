@@ -80,7 +80,19 @@ export default function activityRoutes({ supabaseAdmin, log }) {
       events.sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime());
       const top = events.slice(0, 30);
 
-      res.json({ ok: true, events: top });
+      // Optional sealed-today count for FieldPulse theater (survived check-ins).
+      let sealedToday = null;
+      const dayParam = req.query?.day != null ? Number(req.query.day) : null;
+      if (Number.isFinite(dayParam) && dayParam >= 1) {
+        const { count, error: countErr } = await supabaseAdmin
+          .from("checkins")
+          .select("id", { count: "exact", head: true })
+          .eq("day", dayParam)
+          .eq("survived", true);
+        if (!countErr) sealedToday = count ?? 0;
+      }
+
+      res.json({ ok: true, events: top, sealedToday });
     } catch (e) {
       res.status(500).json({ error: "activity_failed", message: e instanceof Error ? e.message : "unknown" });
     }

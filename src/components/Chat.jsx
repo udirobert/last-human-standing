@@ -6,7 +6,6 @@ import ScreenLoader from './ui/ScreenLoader.jsx';
 import NetworkPill from './ui/NetworkPill.jsx';
 import FAQModal from './FAQModal.jsx';
 import AppShell from './AppShell.jsx';
-import EmptyState from './EmptyState.jsx';
 import ChatPreview from './ChatPreview.jsx';
 import { CHAT_COPY } from '../lib/copy.js';
 import { CUE_PRESS } from '../lib/cuelume.js';
@@ -24,7 +23,8 @@ export default function Chat({ onBack }) {
   const bottomRef = useRef();
   const inputRef = useRef();
   const { sendWorldChat, user, isMiniApp, walletAuthed } = useWorld();
-  const { phase } = useRound();
+  const { phase, you } = useRound();
+  const checkedIn = Boolean(you?.checkedInToday);
   const [rosterCount, setRosterCount] = useState(0);
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState(null);
@@ -257,18 +257,8 @@ export default function Chat({ onBack }) {
           <ScreenLoader kind="chat" />
         )}
 
-        {/* Empty state — prelaunch shows educational preview, live shows simple empty */}
         {!chatLoading && messages.length === 0 && (
-          phase === "prelaunch" ? (
-            <ChatPreview />
-          ) : (
-            <EmptyState
-              motif="cat"
-              title="The field is quiet"
-              body="Survivors check in here between audits. Leave a note for the living — or watch until someone does."
-              className="py-8"
-            />
-          )
+          <ChatPreview isLive={phase === "live"} checkedIn={checkedIn} />
         )}
 
         <AnimatePresence initial={false}>

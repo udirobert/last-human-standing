@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { resolveActiveTheme } from "../data/game.js";
+import { ROUND_UNLOCKS } from "../lib/copy.js";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
+import { hasPendingRuleUnlock } from "../lib/ceremonyGate.js";
 
 function revealKey(day) {
   return `lhs_theme_reveal_${day}`;
@@ -19,6 +21,10 @@ export default function ThemeReveal() {
 
   useEffect(() => {
     if (phase !== "live" || !currentDay || !roundName) return undefined;
+
+    // RuleReveal already stages the theme — don't flash a second full-screen
+    // on top that auto-marks itself seen while the unlock is still pending.
+    if (hasPendingRuleUnlock(currentDay, ROUND_UNLOCKS)) return undefined;
 
     try {
       if (localStorage.getItem(revealKey(currentDay)) === "1") return undefined;

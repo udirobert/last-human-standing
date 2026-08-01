@@ -7,8 +7,9 @@ import AgentReveal from "./AgentReveal.jsx";
 import { useMascotEvent } from "../hooks/useMascotEvent.js";
 import EliminationReasonCard from "./EliminationReasonCard.jsx";
 import { resolveActiveTheme } from "../data/game";
-import { missionMantra, getMissionMascot, getEndgameMascot } from "../lib/copy.js";
+import { missionMantra, getMissionMascot, getEndgameMascot, postSealCopy } from "../lib/copy.js";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
+import { getDetectiveTitle } from "../lib/detective.js";
 import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
 import ThemeFairness from "./ThemeFairness.jsx";
@@ -23,6 +24,7 @@ import { HumanCta, GameCta } from "./ui/CraftCta.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import JuryOnboarding from "./JuryOnboarding.jsx";
 import SpectatorPanel from "./SpectatorPanel.jsx";
+import { TomorrowReturnStrip } from "./TomorrowPostcard.jsx";
 
 function formatWindow(iso) {
   if (!iso) return null;
@@ -300,7 +302,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   // to the local derivation only if the provider isn't ready yet.
   const missionMascot = mascotEvent
     ? { variant: mascotEvent.variant, message: mascotEvent.message }
-    : getMissionMascot({ state: missionState, cap, theme: themeLabel });
+    : getMissionMascot({ state: missionState, cap, theme: themeLabel, minutesLeft });
   const juryTickets = you?.juryTickets ?? 0;
 
   const mantra = missionMantra({
@@ -309,7 +311,15 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
     checkedIn,
     eliminated,
     survived: Boolean(survived),
+    minutesLeft,
   });
+  const waitWarm = postSealCopy({
+    minutesLeft,
+    role: "checkedIn",
+    survived: Boolean(survived),
+    cap,
+  });
+  const detectiveTitle = getDetectiveTitle(you?.votesResolved ?? 0, you?.voteAccuracy);
 
   return (
     <motion.div
@@ -418,16 +428,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
                   : "The crowd has spoken. You're on the jury now — your votes earn lottery tickets for the next cohort."}
               </p>
             </div>
-            {survived && Number(currentDay) < 5 && (
-              <div className="rounded-xl border border-neon/25 bg-neon/5 px-3 py-3 text-center">
-                <p className="font-mono text-neon text-[10px] uppercase tracking-[0.18em] mb-1">
-                  Tomorrow&apos;s return
-                </p>
-                <p className="font-body text-bone/75 text-xs leading-snug">
-                  Day {Number(currentDay) + 1} opens with a new theme. One photo. One chance.
-                </p>
-              </div>
-            )}
+            <TomorrowReturnStrip />
             <HumanCta onClick={onViewFeed}>
               {survived
                 ? Number(currentDay) < 5
@@ -438,14 +439,15 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           </div>
         ) : (
           <div className="space-y-3 mb-3">
+            {/* Cold system chrome — rank / risk */}
             <div className="bg-neon/10 border border-neon/30 rounded-xl p-3">
               <p className="font-display text-xl text-neon">
                 {survived ? `Surviving · Rank #${rank ?? "—"}` : `Checked in · Rank #${rank ?? "—"}`}
               </p>
               <p className="text-dim text-xs font-mono mt-1">
                 {survived
-                  ? "Hold your spot — the audit verdict lands when the window closes. Flagged players get replaced."
-                  : "At risk until day closes — if the audit disqualifies a survivor, you inherit their slot."}
+                  ? "Provisional cut. Flagged survivors get replaced when the window closes."
+                  : "At risk until close — a DQ above you frees a seat."}
               </p>
               {you?.checkinStreak >= 2 && (
                 <div className="mt-2 flex items-center gap-2">
@@ -461,6 +463,28 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
                 </div>
               )}
             </div>
+
+            {/* Warm linger — PersonalShelf above owns the artifacts; this holds the room */}
+            <div className="rounded-2xl border border-ember/25 bg-ash/40 px-3 py-3 text-center">
+              <div className="flex justify-center items-end gap-3 mb-2">
+                <ThemeMotif emoji={themeData.emoji} size={40} label={themeLabel} />
+                <DozingCat size={44} />
+              </div>
+              <p className="font-mono text-amber text-[10px] uppercase tracking-[0.18em] mb-1">
+                {waitWarm.shelf}
+              </p>
+              <p className="font-body text-bone/70 text-xs leading-snug max-w-xs mx-auto">
+                {waitWarm.body}
+              </p>
+              {(juryTickets > 0 || (you?.votesResolved ?? 0) > 0) && (
+                <p className="font-mono text-dim text-[10px] mt-2 tabular-nums">
+                  {detectiveTitle}
+                  {juryTickets > 0 ? ` · ${juryTickets} ticket${juryTickets !== 1 ? "s" : ""}` : ""}
+                </p>
+              )}
+              <MotifFrieze className="w-full mt-3 opacity-80" />
+            </div>
+
             <HumanCta onClick={onViewFeed}>
               Enter the audit →
             </HumanCta>

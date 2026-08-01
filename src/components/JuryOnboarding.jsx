@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { useDelight } from "./DelightProvider.jsx";
+import { postSealCopy } from "../lib/copy.js";
 
 /**
  * JuryOnboarding — appears for eliminated players to explain their new role.
@@ -12,6 +13,7 @@ export default function JuryOnboarding({ user, onViewFeed }) {
   const isJury = user?.isJury;
   const votesResolved = user?.votesResolved ?? 0;
   const voteAccuracy = user?.voteAccuracy;
+  const watch = postSealCopy({ role: "jury" });
 
   const progressToJury = Math.min(100, (votesResolved / 5) * 100);
 
@@ -73,6 +75,11 @@ export default function JuryOnboarding({ user, onViewFeed }) {
           </div>
         </div>
       )}
+
+      <div className="rounded-lg border border-ember/25 bg-ash/40 px-3 py-2.5 mb-3">
+        <p className="font-mono text-amber text-[10px] uppercase tracking-[0.16em] mb-1">{watch.shelf}</p>
+        <p className="font-body text-bone/75 text-xs leading-snug">{watch.body}</p>
+      </div>
 
       <div className="space-y-2">
         <div className="bg-ash/60 rounded-lg p-2 border border-ember/30">

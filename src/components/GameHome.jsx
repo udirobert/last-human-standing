@@ -29,6 +29,10 @@ import RuleReveal from './RuleReveal.jsx';
 import Mascot from './Mascot.jsx';
 import DayZeroBanner from './DayZeroBanner.jsx';
 import ThemeReveal from './ThemeReveal.jsx';
+import ReturnJobCard from './ReturnJobCard.jsx';
+import TomorrowPostcard from './TomorrowPostcard.jsx';
+import FieldPulse from './FieldPulse.jsx';
+import PersonalShelf from './PersonalShelf.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import ThemeMotif from './ui/ThemeMotif.jsx';
@@ -117,9 +121,31 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       <ThemeReveal />
 
       <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${SHELL_BOTTOM_PAD}`}>
+        {/* Personal return job — theme + one CTA before the rest of home */}
+        {(isPrelaunch || isLive) && isReserved && (
+          <StageSection index={0} className="relative z-10">
+            <ReturnJobCard onCheckIn={onCheckIn} onViewFeed={onViewFeed} />
+            {isLive && <TomorrowPostcard onViewFeed={onViewFeed} />}
+          </StageSection>
+        )}
+
         {(isLive || isEnded) && isReserved && tier !== 'verified' && (
           <StageSection index={0} className="relative z-10 px-5 mb-3">
             <TrustTierBanner onVerify={() => verifyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+          </StageSection>
+        )}
+
+        {/* Live field theater — one pulse for the whole Survive home */}
+        {isLive && (
+          <StageSection index={0} className="relative z-10 px-5 mb-3">
+            <FieldPulse />
+          </StageSection>
+        )}
+
+        {/* Warm personal artifacts — counterpoint to cold field / census */}
+        {(isLive || isEnded) && isReserved && (
+          <StageSection index={0} className="relative z-10">
+            <PersonalShelf onViewHistory={onViewHistory} className="mx-5 mb-3" />
           </StageSection>
         )}
 

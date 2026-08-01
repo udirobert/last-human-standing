@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { SURVIVAL_TIPS } from '../lib/copy.js';
+import Mascot from '../components/Mascot.jsx';
 
 // Easter egg triggers
 const EASTER_EGGS = {
@@ -22,28 +23,49 @@ export function useSurvivalTips() {
   return { currentTip, showRandomTip, dismissTip };
 }
 
-/** Toast layer ~45 — above BottomNav (40), below overlays (70) */
+/** Toast layer ~45 — above BottomNav (40), below overlays (70). Human whisper, not system alert. */
 export function TipToast({ tip, onDismiss }) {
   useEffect(() => {
+    if (!tip) return undefined;
     const timer = setTimeout(onDismiss, 5000);
     return () => clearTimeout(timer);
-  }, [onDismiss]);
+  }, [tip, onDismiss]);
+
+  if (!tip) return null;
 
   return (
     <div
       className="tip-toast fixed left-1/2 -translate-x-1/2 z-[45] animate-toast-up px-4"
       style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
+      role="status"
     >
-      <div className="bg-smoke/95 backdrop-blur-md border border-amber/30 rounded-2xl px-5 py-3 shadow-2xl max-w-sm">
-        <div className="text-[10px] text-amber font-mono tracking-[0.18em] uppercase mb-1">Survival tip</div>
-        <div className="text-bone text-sm font-body leading-snug">{tip}</div>
+      <div className="relative max-w-sm rounded-2xl border border-amber/35 bg-smoke/95 backdrop-blur-md px-4 py-3 shadow-2xl">
         <button
           type="button"
           onClick={onDismiss}
-          className="mt-2 font-mono text-[10px] text-dim underline decoration-dotted underline-offset-2"
+          aria-label="Dismiss whisper"
+          className="absolute right-2 top-2 w-7 h-7 rounded-full bg-ash/80 border border-ember/40 text-dim hover:text-bone font-mono text-sm leading-none"
         >
-          Dismiss
+          ×
         </button>
+        <div className="flex items-start gap-3 pr-5">
+          <div className="shrink-0 mt-0.5" aria-hidden="true">
+            <Mascot variant="thinking" size={36} trackCursor={false} />
+          </div>
+          <div className="min-w-0">
+            <p className="text-[10px] text-amber font-mono tracking-[0.18em] uppercase mb-1">
+              Whisper
+            </p>
+            <p className="text-bone/90 text-sm font-body leading-snug">{tip}</p>
+            <button
+              type="button"
+              onClick={onDismiss}
+              className="mt-2 font-mono text-[10px] text-amber underline decoration-dotted underline-offset-2"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

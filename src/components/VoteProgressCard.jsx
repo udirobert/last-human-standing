@@ -1,5 +1,6 @@
 import { usePolling } from "../hooks/usePolling.js";
 import { getVoteProgressMascot } from "../lib/copy.js";
+import { setFeedIntent } from "../lib/feedIntent.js";
 import MascotGuide from "./ui/MascotGuide.jsx";
 
 /**
@@ -20,6 +21,11 @@ export default function VoteProgressCard({ onViewFeed, className = "" }) {
   const goalMet = Boolean(data.goalMet);
   const needsVotes = data.needsVotes ?? 0;
   const mascot = getVoteProgressMascot({ goalMet, needsVotes, cast, goal });
+
+  const openFeed = () => {
+    if (needsVotes > 0) setFeedIntent({ filter: "pending" });
+    onViewFeed?.();
+  };
 
   return (
     <div className={`rounded-xl border p-3 mb-3 ${goalMet ? "bg-neon/10 border-neon/30" : "bg-amber/10 border-amber/40"} ${className}`}>
@@ -65,14 +71,14 @@ export default function VoteProgressCard({ onViewFeed, className = "" }) {
 
       <button
         type="button"
-        onClick={onViewFeed}
+        onClick={openFeed}
         className={`w-full py-2.5 rounded-lg font-mono text-xs tracking-wide active:scale-95 transition-transform ${
           goalMet
             ? "bg-ash border border-ember text-bone"
             : "bg-amber/20 border border-amber/50 text-amber"
         }`}
       >
-        {goalMet ? "KEEP AUDITING →" : "VOTE IN THE FEED →"}
+        {goalMet ? "KEEP AUDITING →" : needsVotes > 0 ? "FINISH THE AUDIT →" : "VOTE IN THE FEED →"}
       </button>
     </div>
   );

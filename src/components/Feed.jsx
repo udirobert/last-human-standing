@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { MOCK_SUBMISSIONS, resolveActiveTheme } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
@@ -15,8 +15,13 @@ import ThemeMotif from './ui/ThemeMotif.jsx';
 import { MascotAvatar } from './Mascot.jsx';
 import EmptyState from './EmptyState.jsx';
 import VotePreview from './VotePreview.jsx';
+import MotifFrieze from './ui/MotifFrieze.jsx';
 import { HumanCta } from './ui/CraftCta.jsx';
 import { ritualFeel } from '../lib/ritualFeel.js';
+import { postSealCopy } from '../lib/copy.js';
+import { getDetectiveTitle } from '../lib/detective.js';
+import { consumeFeedIntent } from '../lib/feedIntent.js';
+import { usePolling } from '../hooks/usePolling.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
@@ -151,17 +156,6 @@ function LiveTally({ real = 0, fake = 0, sealed = false, commitCount = 0 }) {
   );
 }
 
-// Detective title based on votes resolved + accuracy
-function getDetectiveTitle(resolved, accuracy) {
-  if (resolved < 5) return 'Rookie Juror';
-  const acc = accuracy ?? 0;
-  if (resolved >= 20 && acc >= 0.9) return 'Sherlock';
-  if (resolved >= 10 && acc >= 0.8) return 'Bloodhound';
-  if (resolved >= 10) return 'Seasoned Juror';
-  if (resolved >= 5) return 'Junior Detective';
-  return 'Rookie Juror';
-}
-
 // Dev convenience: in development, fall back to MOCK_SUBMISSIONS when
 // the user is NOT in the mini app. In production, always show real
 // data — browser visitors are real players.
@@ -172,12 +166,18 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
   const { round, verification, phase, you, currentDay, refresh, commitReveal, cohort } = useRound();
   const { unlockAchievement, checkAchievement } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
+  const reduceMotion = useReducedMotion();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
   const [voted, setVoted] = useState({});
   const [voteMeta, setVoteMeta] = useState({});
   const [voteFeedback, setVoteFeedback] = useState({}); // { id: { status, agree } }
+  /** Short warm confirm after HUMAN/SUS — { id, type: 'real'|'fake' } */
+  const [voteLinger, setVoteLinger] = useState(null);
   const [fired, setFired] = useState({});
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(() => {
+    const intent = consumeFeedIntent();
+    return intent?.filter === 'pending' ? 'pending' : 'all';
+  });
   const [expandedId, setExpandedId] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -185,6 +185,10 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
   const [loadError, setLoadError] = useState(null);
   const [feedCheckedAt, setFeedCheckedAt] = useState(null);
   const [commitError, setCommitError] = useState(null);
+  const { data: auditStatus } = usePolling(
+    phase === 'live' || phase === 'ended' ? '/api/audit/status' : null,
+    { intervalMs: 30_000, initial: null },
+  );
 
   const { canVote, voteBlockedReason } = useTrustTier();
   const activeTheme = resolveActiveTheme(round);
@@ -290,11 +294,23 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
     setRefreshing(false);
   };
 
+  const startVoteLinger = useCallback((id, type) => {
+    if (reduceMotion) {
+      setVoteLinger(null);
+      return;
+    }
+    setVoteLinger({ id, type });
+    window.setTimeout(() => {
+      setVoteLinger((cur) => (cur?.id === id ? null : cur));
+    }, 2500);
+  }, [reduceMotion]);
+
   const handleVote = async (id, type) => {
     if (!canVote) return;
     if (voted[id]) return;
     if (crEnabled && crPhase === "reveal") return;
     ritualFeel(type === 'real' ? 'voteHuman' : 'voteSus');
+    startVoteLinger(id, type);
     setCommitError(null);
 
     // Achievement + mascot reaction fire immediately for tactile feedback
@@ -432,6 +448,16 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
 
   const filtered = filter === 'all' ? submissions : submissions.filter((s) => s.status === filter);
 
+  const quorumFallback = verification?.voteQuorum ?? 25;
+  const belowQuorumFromFeed = submissions.filter((s) => {
+    if (s.status !== 'pending') return false;
+    const total = (s.votes?.real || 0) + (s.votes?.fake || 0);
+    const q = s.voteQuorum || quorumFallback;
+    return total < q;
+  }).length;
+  const needsQuorum = auditStatus?.needsVotes ?? belowQuorumFromFeed;
+  const unvotedCount = auditStatus?.unvotedCount;
+
   return (
     <AppShell phase={phase === 'live' ? 'live' : 'prelaunch'}>
 
@@ -451,6 +477,29 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
           <FAQModal />
         </div>
 
+        {needsQuorum > 0 && (
+          <button
+            type="button"
+            onClick={() => setFilter('pending')}
+            {...CUE_PRESS}
+            className={`w-full mb-2 rounded-xl border px-3 py-2 text-left active:scale-[0.99] transition-transform ${
+              filter === 'pending'
+                ? 'border-amber/50 bg-amber/15'
+                : 'border-ember/40 bg-smoke/60 hover:border-amber/40'
+            }`}
+          >
+            <p className="font-mono text-[10px] text-amber uppercase tracking-[0.16em]">
+              Unfinished business
+            </p>
+            <p className="font-display text-sm text-bone leading-snug mt-0.5 tabular-nums">
+              {needsQuorum} proof{needsQuorum !== 1 ? 's' : ''} still below quorum
+              {typeof unvotedCount === 'number' && unvotedCount > 0
+                ? ` · ${unvotedCount} you haven\u2019t voted`
+                : ''}
+            </p>
+          </button>
+        )}
+
         <div className="flex gap-2 mb-2 items-center overflow-x-auto">
           {['all', 'pending', 'verified', 'flagged'].map((key) => (
             <button
@@ -461,6 +510,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
               className={`px-3 py-1.5 rounded-full text-xs font-mono border shrink-0 active:scale-[0.97] transition-transform ${filter === key ? 'border-bone text-bone' : 'border-ember text-dim'}`}
             >
               {key === 'verified' ? 'HUMAN' : key === 'flagged' ? 'SUS' : key === 'pending' ? 'TRIAL' : 'ALL'}
+              {key === 'pending' && needsQuorum > 0 ? ` · ${needsQuorum}` : ''}
             </button>
           ))}
           <button type="button" onClick={handleRefresh} {...CUE_PRESS} className="ml-auto px-3 py-1.5 rounded-full text-xs font-mono border border-ember text-dim shrink-0 active:scale-[0.97] transition-transform">
@@ -538,36 +588,35 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
         )}
 
         {!loading && filtered.length === 0 && (
-          phase === "prelaunch" ? (
-            <VotePreview />
-          ) : (
-            <EmptyState
-              motif="theme"
-              themeEmoji={activeTheme.emoji}
-              title={
-                you?.checkedInToday
-                  ? `You're in · waiting on ${activeTheme.theme}`
-                  : `No proofs yet for ${activeTheme.theme}`
-              }
-              body={
-                you?.checkedInToday
-                  ? "Your check-in is sealed. Proofs land here as others arrive — start auditing the moment they do."
-                  : !canVote
-                    ? (voteBlockedReason || "Voting is locked until you reserve and sign in. You can still watch proofs arrive.")
-                    : onCheckIn && walletAuthed && entryPaid
-                      ? "Be the first proof of the day — then come back to audit the field."
-                      : "Submissions appear here the moment players check in."
-              }
-              action={
-                you?.checkedInToday ? null : !canVote && onReserve ? (
-                  <HumanCta onClick={onReserve}>Reserve to unlock voting →</HumanCta>
-                ) : onCheckIn && walletAuthed && entryPaid ? (
-                  <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>
-                ) : onReserve ? (
-                  <HumanCta onClick={onReserve}>Reserve your slot →</HumanCta>
-                ) : null
-              }
-            />
+          you?.checkedInToday ? (() => {
+            const seal = postSealCopy({
+              role: "checkedIn",
+              survived: Boolean(you?.survivedToday),
+            });
+            return (
+            <div className="space-y-4">
+              <EmptyState
+                motif="theme"
+                themeEmoji={activeTheme.emoji}
+                title={`${seal.shelf} · ${activeTheme.theme}`}
+                body={`${seal.body} Practice the audit below while proofs arrive.`}
+              />
+              {/* Teach parity with non-checked-in empty: learn the HUMAN/SUS loop while waiting. */}
+              <VotePreview />
+            </div>
+            );
+          })() : (
+            <div className="space-y-4">
+              {/* Teaching preview for empty live/prelaunch fields — avoids MotifFrieze voids. */}
+              <VotePreview />
+              {!canVote && onReserve ? (
+                <HumanCta onClick={onReserve}>Reserve to unlock voting →</HumanCta>
+              ) : onCheckIn && walletAuthed && entryPaid ? (
+                <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>
+              ) : onReserve ? (
+                <HumanCta onClick={onReserve}>Reserve your slot →</HumanCta>
+              ) : null}
+            </div>
           )
         )}
 
@@ -682,6 +731,30 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
                       Jury vote — counted ×{voteMeta[sub.id].juryWeight}
                     </p>
                   )}
+
+                  <AnimatePresence>
+                    {voteLinger?.id === sub.id && (
+                      <motion.div
+                        key={`linger-${sub.id}`}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.35 }}
+                        className="mt-3 rounded-2xl border border-amber/30 bg-ash/50 px-3 py-3 text-center"
+                        role="status"
+                      >
+                        <p className="font-mono text-amber text-[10px] uppercase tracking-[0.16em] mb-1">
+                          {voteLinger.type === "real" ? "Marked human" : "Marked sus"}
+                        </p>
+                        <p className="font-body text-bone/70 text-xs leading-snug">
+                          {voteLinger.type === "real"
+                            ? "A quiet yes. Keep reading the next proof."
+                            : "Flag planted. The tally still needs quorum."}
+                        </p>
+                        <MotifFrieze className="w-full mt-2 opacity-75" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   {voteFeedback[sub.id] && (
                     <motion.div

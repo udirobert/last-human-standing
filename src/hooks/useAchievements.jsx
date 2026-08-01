@@ -119,15 +119,24 @@ export function AchievementToast({ achievement, mascotName, onClose }) {
     <div
       className="fixed left-1/2 -translate-x-1/2 z-[45] animate-toast-up px-4"
       style={{ bottom: "calc(5.25rem + env(safe-area-inset-bottom, 0px))" }}
+      role="status"
     >
-      <div className="bg-smoke/95 backdrop-blur-md border border-amber/40 rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-4 max-w-sm">
+      <div className="relative bg-smoke/95 backdrop-blur-md border border-amber/40 rounded-2xl px-5 py-4 shadow-2xl flex items-center gap-4 max-w-sm">
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Dismiss achievement"
+          className="absolute right-2 top-2 w-7 h-7 rounded-full bg-ash/80 border border-ember/40 text-dim hover:text-bone font-mono text-sm leading-none"
+        >
+          ×
+        </button>
         <div className="relative w-14 h-14 shrink-0" aria-hidden="true">
           <Mascot variant="proud" size={54} trackCursor={false} />
           <span className="absolute -right-1 -top-1 w-6 h-6 rounded-full bg-ash border border-amber/50 flex items-center justify-center text-sm">
             {achievement.icon}
           </span>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 pr-5">
           <div className="font-mono text-[10px] text-amber tracking-[0.16em] uppercase">
             {mascotName || "Survivor"} found something
           </div>

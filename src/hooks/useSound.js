@@ -22,15 +22,13 @@ export function useSound() {
   const [ambient, setAmbient] = useState(null);
 
   useEffect(() => {
-    ensureCuelumeBound();
-  }, []);
-
-  useEffect(() => {
     setCuelumeEnabled(enabled);
   }, [enabled]);
 
   const play = useCallback((soundName) => {
     if (!enabled) return;
+    // Lazy-bind on first intentional play (post-gesture), not on mount.
+    ensureCuelumeBound();
     playCue(soundName);
   }, [enabled]);
 

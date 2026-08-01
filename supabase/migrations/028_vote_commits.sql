@@ -42,7 +42,10 @@ alter table public.vote_queue
   add column if not exists salt text;
 
 -- claim_vote_queue_batch must return the new columns for the relayer.
-create or replace function public.claim_vote_queue_batch(p_batch_size int)
+-- Postgres forbids CREATE OR REPLACE when OUT/RETURNS TABLE shape changes.
+drop function if exists public.claim_vote_queue_batch(int);
+
+create function public.claim_vote_queue_batch(p_batch_size int)
 returns table (
   id bigint,
   submission_id bigint,

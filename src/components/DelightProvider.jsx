@@ -39,21 +39,26 @@ export function DelightProvider({ children, showTipOnMount = false }) {
   // Sound — Cuelume under the hood (useSound → playCue)
   const { play, toggle, enabled: soundEnabled, startAmbient, stopAmbient } = useSound();
 
+  // Do NOT auto-bind Cuelume or start the ambient drone on mount.
+  // Chrome blocks AudioContext until a user gesture; auto-start was spamming
+  // console errors and waking audio worklets before anyone tapped. Bind +
+  // ambient kick off from the first real interaction instead.
   useEffect(() => {
-    ensureCuelumeBound();
-  }, []);
-
-  // Start ambient drone when sound is enabled, stop when disabled
-  useEffect(() => {
-    if (soundEnabled) {
-      // Small delay so it doesn't fight the initial UI sounds
-      const id = setTimeout(() => startAmbient(), 800);
-      return () => {
-        clearTimeout(id);
-        stopAmbient();
-      };
+    if (!soundEnabled) {
+      stopAmbient();
+      return undefined;
     }
-    stopAmbient();
+    const unlock = () => {
+      ensureCuelumeBound();
+      startAmbient();
+    };
+    window.addEventListener("pointerdown", unlock, { once: true, passive: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+      stopAmbient();
+    };
   }, [soundEnabled, startAmbient, stopAmbient]);
 
   // Achievements
@@ -69,12 +74,13 @@ export function DelightProvider({ children, showTipOnMount = false }) {
   // Survival tips
   const { currentTip, showRandomTip, dismissTip } = useSurvivalTips();
   
-  // Show initial tip if requested
+  // Show initial tip late enough that day-open ceremonies (RuleReveal /
+  // ThemeReveal) can finish first — otherwise the tip sits on MissionBoard
+  // copy and feels stuck.
   useEffect(() => {
-    if (showTipOnMount) {
-      const timer = setTimeout(showRandomTip, 3000);
-      return () => clearTimeout(timer);
-    }
+    if (!showTipOnMount) return undefined;
+    const timer = setTimeout(showRandomTip, 9000);
+    return () => clearTimeout(timer);
   }, [showTipOnMount, showRandomTip]);
 
   // Easter eggs

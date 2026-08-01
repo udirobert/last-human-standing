@@ -16,7 +16,21 @@ import { CUE_PRESS } from '../lib/cuelume.js';
 import { HumanCta } from './ui/CraftCta.jsx';
 import ThemeMotif from './ui/ThemeMotif.jsx';
 import MotifFrieze from './ui/MotifFrieze.jsx';
-import DozingCat from './ui/DozingCat.jsx';
+import { resolveActiveTheme } from '../data/game.js';
+
+function RankMark({ rank }) {
+  const n = Number(rank) || 0;
+  if (n >= 1 && n <= 3) {
+    return (
+      <span className={`font-display text-lg tabular-nums ${n === 1 ? 'text-amber' : 'text-bone'}`}>
+        {n}
+      </span>
+    );
+  }
+  return (
+    <span className="font-mono text-xs text-dim tabular-nums">{n || '—'}</span>
+  );
+}
 
 function shortAddr(addr) {
   if (!addr) return 'anon';
@@ -88,6 +102,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
   const tooLate = checkins.filter((c) => !c.survived);
   const isPrelaunch = phase === 'prelaunch';
   const isLive = phase === 'live';
+  const activeTheme = resolveActiveTheme(round);
 
   return (
     <AppShell phase={isLive ? 'live' : 'prelaunch'}>
@@ -381,6 +396,17 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
       {/* LIVE: today's check-ins */}
       {isLive && tab === 'today' && (
         <div className="px-5 space-y-2">
+          {survivors.length > 0 && (
+            <div className="flex items-center gap-3 mb-1 px-1">
+              <ThemeMotif emoji={activeTheme.emoji} size={40} label={activeTheme.theme} />
+              <div className="min-w-0">
+                <p className="font-mono text-amber text-[10px] uppercase tracking-[0.16em]">
+                  Today&apos;s field
+                </p>
+                <p className="font-display text-bone text-sm truncate">{activeTheme.theme}</p>
+              </div>
+            </div>
+          )}
           {loading && checkins.length === 0 && (
             <div className="py-6">
               <BubbleLoader size={56} seed={user?.username || user?.address} />
@@ -389,7 +415,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
           {!loading && survivors.length === 0 && (
             <div className="bg-smoke/80 border border-ember/40 rounded-2xl p-6 text-center backdrop-blur-sm">
               <div className="flex justify-center mb-3">
-                <ThemeMotif emoji="🌅" size={56} label="check-in" />
+                <ThemeMotif emoji={activeTheme.emoji || "🌅"} size={56} label="check-in" />
               </div>
               <p className="text-bone/70 text-sm font-body">No one has checked in yet.</p>
               <p className="text-bone text-xs font-body mt-1 mb-3">Be first.</p>
@@ -414,10 +440,8 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                   isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                 }`}
               >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg tabular-nums ${
-                  c.rank === 1 ? 'text-amber' : c.rank <= 3 ? 'text-bone' : 'text-dim'
-                }`}>
-                  {c.rank <= 3 ? ['🥇', '🥈', '🥉'][c.rank - 1] : c.rank}
+                <div className="w-8 h-8 rounded-full bg-ash border border-ember/40 flex items-center justify-center">
+                  <RankMark rank={c.rank} />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -499,10 +523,8 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                     isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
                   }`}
                 >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-display text-lg tabular-nums ${
-                    rank <= 3 ? 'text-amber' : 'text-dim'
-                  }`}>
-                    {rank <= 3 ? ['🥇', '🥈', '🥉'][rank - 1] : rank}
+                  <div className="w-8 h-8 rounded-full bg-ash border border-ember/40 flex items-center justify-center">
+                    <RankMark rank={rank} />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2">

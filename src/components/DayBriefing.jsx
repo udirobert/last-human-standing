@@ -5,13 +5,15 @@ import { ROUND_UNLOCKS } from "../lib/copy.js";
 import OverlayPortal from "./OverlayPortal.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
 import { GameCta } from "./ui/CraftCta.jsx";
-
-function briefingKey(day) {
-  return `lhs_day_briefing_${day}`;
-}
+import {
+  briefingStorageKey,
+  markBriefingSeen,
+} from "../lib/ceremonyGate.js";
 
 /**
- * One-screen Day N briefing before play — cap, window, and today's twist.
+ * Fallback day briefing when RuleReveal has no unlock entry.
+ * Days 1–5 use RuleReveal as the single ceremony — this stays for
+ * edge cases / future days without a ROUND_UNLOCKS card.
  */
 export default function DayBriefing({ onDismiss }) {
   const { isLive, currentDay, round } = useRound();
@@ -20,9 +22,18 @@ export default function DayBriefing({ onDismiss }) {
   const cap = round?.survivalCap ?? null;
 
   useEffect(() => {
-    if (!isLive || !currentDay || !unlock) return;
+    if (!isLive || !currentDay || !unlock) {
+      setOpen(false);
+      return;
+    }
+    // RuleReveal owns days with a ROUND_UNLOCKS card — never stack under it.
+    if (ROUND_UNLOCKS[currentDay]) {
+      markBriefingSeen(currentDay);
+      setOpen(false);
+      return;
+    }
     try {
-      if (localStorage.getItem(briefingKey(currentDay)) === "1") return;
+      if (localStorage.getItem(briefingStorageKey(currentDay)) === "1") return;
       setOpen(true);
     } catch {
       setOpen(true);
@@ -30,9 +41,7 @@ export default function DayBriefing({ onDismiss }) {
   }, [isLive, currentDay, unlock]);
 
   const dismiss = useCallback(() => {
-    if (currentDay != null) {
-      try { localStorage.setItem(briefingKey(currentDay), "1"); } catch { /* ignore */ }
-    }
+    markBriefingSeen(currentDay);
     setOpen(false);
     onDismiss?.();
   }, [currentDay, onDismiss]);
@@ -77,10 +86,10 @@ export default function DayBriefing({ onDismiss }) {
                   <p className="text-dim text-[9px] font-mono uppercase">Survival cap</p>
                   <p className="font-display text-2xl text-bone tabular-nums">{cap ?? "—"}</p>
                 </div>
-                <div className="bg-ash/60 rounded-xl p-3 border border-ember/30">
+                <div className="bg-ash/60 rounded-xl p-3 border border-ember/30 min-h-[4.5rem]">
                   <p className="text-dim text-[9px] font-mono uppercase">Consequence</p>
                   <p className="text-bone text-xs font-mono mt-1 leading-snug">
-                    Too slow, no check-in, or flagged in audit = out. Jury keeps playing.
+                    Miss check-in or get flagged = out. Jury keeps playing.
                   </p>
                 </div>
               </div>

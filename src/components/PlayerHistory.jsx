@@ -2,7 +2,6 @@ import { useWorld } from "../world/WorldProvider.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
 import { usePolling } from "../hooks/usePolling.js";
 import AppShell, { SHELL_BOTTOM_PAD } from "./AppShell.jsx";
-import EmptyState from "./EmptyState.jsx";
 import HistoryPreview from "./HistoryPreview.jsx";
 import { MascotAvatar } from "./Mascot.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
@@ -76,19 +75,7 @@ export default function PlayerHistory({ onBack }) {
           Today&apos;s check-ins
         </p>
         {myCheckins.length === 0 ? (
-          phase === "prelaunch" ? (
-            <HistoryPreview />
-          ) : (
-            <EmptyState
-              motif="coffee"
-              title="Nothing logged yet"
-              body={
-                phase === "live"
-                  ? "Your day is still open. Check in before the survival cap fills — then this shelf fills with your proof."
-                  : "When the round opens, race the theme before the survival cap fills. Your days will land here."
-              }
-            />
-          )
+          <HistoryPreview />
         ) : (
           <div className="space-y-3">
             {myCheckins.slice(0, 20).map((ck) => (

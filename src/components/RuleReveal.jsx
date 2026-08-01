@@ -5,33 +5,16 @@ import { resolveActiveTheme } from "../data/game";
 import { useRound } from "../world/RoundProvider.jsx";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 import ThemeFairness from "./ThemeFairness.jsx";
-import MascotGuide from "./ui/MascotGuide.jsx";
+import Mascot from "./Mascot.jsx";
 import { HumanCta, GhostLink } from "./ui/CraftCta.jsx";
 import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
 import OverlayPortal from "./OverlayPortal.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
-
-const SEEN_KEY = "lhs_round_unlocks_seen";
-
-function readSeen() {
-  try {
-    const raw = localStorage.getItem(SEEN_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? new Set(parsed) : new Set();
-  } catch {
-    return new Set();
-  }
-}
-
-function markSeen(id) {
-  try {
-    const next = readSeen();
-    next.add(id);
-    localStorage.setItem(SEEN_KEY, JSON.stringify([...next]));
-  } catch {
-    /* ignore quota / private mode */
-  }
-}
+import {
+  readUnlocksSeen,
+  markUnlockSeen,
+  markBriefingSeen,
+} from "../lib/ceremonyGate.js";
 
 /**
  * RuleReveal — day unlock overlay. Matches speed-run DayReveal craft:
@@ -61,7 +44,7 @@ export default function RuleReveal({ onAudit }) {
       setUnlock(null);
       return;
     }
-    if (readSeen().has(entry.id)) {
+    if (readUnlocksSeen().has(entry.id)) {
       setUnlock(null);
       return;
     }
@@ -79,10 +62,12 @@ export default function RuleReveal({ onAudit }) {
 
   const dismiss = useCallback(() => {
     if (!unlock) return;
-    markSeen(unlock.id);
+    markUnlockSeen(unlock.id);
+    // RuleReveal is the day ceremony — don't leave DayBriefing underneath.
+    markBriefingSeen(currentDay);
     setUnlock(null);
     setMascot(null);
-  }, [unlock]);
+  }, [unlock, currentDay]);
 
   const handleCta = useCallback(() => {
     const day = Number(currentDay);
@@ -130,17 +115,6 @@ export default function RuleReveal({ onAudit }) {
               <ThemeMotif emoji={theme.emoji} size={100} label={theme.theme} />
             </div>
 
-            {mascot?.message && (
-              <div className="mb-3 flex justify-center">
-                <MascotGuide
-                  variant={mascot.variant}
-                  size={56}
-                  message={mascot.message}
-                  position="top"
-                />
-              </div>
-            )}
-
             <h2
               id="rule-reveal-title"
               className="font-display text-bone leading-[0.9] mb-1"
@@ -164,6 +138,16 @@ export default function RuleReveal({ onAudit }) {
                 <p className="mt-3 font-mono text-dim text-[11px] tabular-nums">
                   Survival cap <span className="text-amber">{cap}</span>
                 </p>
+              )}
+              {mascot?.message && (
+                <div className="mt-4 pt-3 border-t border-ember/25 flex items-start gap-3">
+                  <div className="shrink-0" aria-hidden="true">
+                    <Mascot variant={mascot.variant || "idle"} size={40} trackCursor={false} />
+                  </div>
+                  <p className="font-body text-bone/70 text-xs leading-relaxed pt-1">
+                    {mascot.message}
+                  </p>
+                </div>
               )}
             </div>
 

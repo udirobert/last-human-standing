@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# relaunch-prep.sh — Jul 29 cohort 1 re-launch prep
+# relaunch-prep.sh — Aug 3 cohort 1 re-launch prep
 #
-# Applies Supabase migrations 023–024, updates production env vars, and
-# verifies /api/game/state returns prelaunch. Run from repo root.
+# Applies Supabase migration 029 (round bump + empty-cohort reset), updates
+# production env vars, and verifies /api/game/state returns prelaunch.
+# Run from repo root.
 #
 # Usage:
 #   bash scripts/relaunch-prep.sh              # migrations + verify only
@@ -16,9 +17,9 @@ REMOTE_BASE="/opt/last-human-standing"
 ENV_FILE="${REMOTE_BASE}/shared/.env"
 DOMAIN="${LHS_DOMAIN:-lasthumanstanding.thisyearnofear.com}"
 
-GAME_LAUNCH_AT="2026-07-29T18:00:00Z"
+GAME_LAUNCH_AT="2026-08-03T18:00:00Z"
 COHORT_SIZE="25"
-COHORT_2_LAUNCH_AT="2026-08-12T18:00:00Z"
+COHORT_2_LAUNCH_AT="2026-08-17T18:00:00Z"
 # Lower floor for 25-person beta — draw fires once 5 free entrants sign up.
 LOTTERY_MIN_CANDIDATES="5"
 
@@ -42,7 +43,7 @@ done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-info "Applying Supabase migrations (023 launch bump + 024 cohort reset)…"
+info "Applying Supabase migrations (029 Aug 3 launch bump + reset)…"
 if command -v supabase >/dev/null 2>&1; then
   supabase db push || fail "supabase db push failed — link project first: supabase link"
 else
@@ -90,7 +91,7 @@ RESERVED=$(echo "$STATE" | python3 -c "import json,sys; d=json.load(sys.stdin); 
 echo "  phase=${PHASE}  launchAt=${LAUNCH}  reservedCount=${RESERVED}"
 
 if [ "$PHASE" = "prelaunch" ] && [ "$LAUNCH" = "${GAME_LAUNCH_AT}" ]; then
-  info "Game state looks ready for Jul 29 pre-launch."
+  info "Game state looks ready for Aug 3 pre-launch."
 elif [ "$UPDATE_ENV" = false ] && [ "$PHASE" = "live" ]; then
   warn "Still in live phase — run with --update-env after migrations to bump GAME_LAUNCH_AT."
 else
