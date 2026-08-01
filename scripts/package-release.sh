@@ -108,6 +108,9 @@ ALLOW=(
   "server"
   "scripts"
   "contracts/VoteRegistry.json"
+  # Isomorphic crypto helpers imported by server/lib (not bundled by Vite).
+  "src/lib/commitRevealVote.js"
+  "src/lib/semaphore.js"
   "package.json"
   "package-lock.json"
   "ecosystem.config.cjs"
@@ -122,10 +125,12 @@ for item in "${ALLOW[@]}"; do
   fi
 done
 
-# Defensive: assert no secrets, no source, no build deps leaked into the stage.
+# Defensive: assert no secrets, no source tree, no build deps leaked into the stage.
+# Note: a tiny allowlisted subset of src/lib/* (isomorphic crypto) is intentional.
 for forbidden in \
   ".env" ".env.local" ".env.production.local" \
-  "src" "tests" "supabase" "docs" "node_modules" ".git" \
+  "tests" "supabase" "docs" "node_modules" ".git" \
+  "src/components" "src/hooks" "src/world" "src/speedrun" \
   "contracts/VoteRegistry.sol" "contracts/foundry.toml" "contracts/.voteregistry"; do
   if [ -e "$INNER/$forbidden" ]; then
     fail "SECURITY: $forbidden leaked into tarball stage — aborting"
@@ -146,6 +151,23 @@ fi
 # --- 4. ship + deploy --------------------------------------------------------
 info "scp tarball to $HOST"
 scp "$TARBALL" "$HOST:/tmp/${TARBALL_NAME}" || fail "scp failed"
+
+info "syncing shared production node_modules from release lockfile"
+ssh "$HOST" "set -e
+  SHARED=${REMOTE_BASE}/shared
+  cp /tmp/${TARBALL_NAME} /tmp/${TARBALL_NAME}.depscheck
+  # Extract package manifests from the staged tarball into shared, then install.
+  STAGE=\$(mktemp -d)
+  tar -xzf /tmp/${TARBALL_NAME} -C \"\$STAGE\"
+  INNER=\$(find \"\$STAGE\" -name package.json -path '*/lhs-release/*' | head -1)
+  [ -n \"\$INNER\" ] || { echo 'package.json missing in tarball'; exit 1; }
+  cp \"\$INNER\" \"\$SHARED/package.json\"
+  LOCK=\$(dirname \"\$INNER\")/package-lock.json
+  [ -f \"\$LOCK\" ] && cp \"\$LOCK\" \"\$SHARED/package-lock.json\"
+  cd \"\$SHARED\"
+  npm install --omit=dev --no-audit --no-fund
+  rm -rf \"\$STAGE\" /tmp/${TARBALL_NAME}.depscheck
+" || fail "shared dependency sync failed"
 
 info "invoking deploy.sh on the server"
 ssh "$HOST" "bash ${REMOTE_BASE}/current/scripts/deploy.sh /tmp/${TARBALL_NAME}" \
