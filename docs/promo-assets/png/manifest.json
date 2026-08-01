@@ -1,0 +1,114 @@
+{
+  "mapping": [
+    {
+      "id": "world_store_logo_icon",
+      "filename": "world_store_logo_icon_1024.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/EPKhesjMviCZAddh.png"
+    },
+    {
+      "id": "world_store_content_card",
+      "filename": "world_store_content_card_1035x720.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/NMQTaILYyfRLHwDb.png"
+    },
+    {
+      "id": "world_store_showcase_01",
+      "filename": "world_store_showcase_01_prove_you_are_human_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/GzrYrszakycgjUhN.png"
+    },
+    {
+      "id": "world_store_showcase_02",
+      "filename": "world_store_showcase_02_survive_the_audit_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/kEMAaNFSwpfkiKvD.png"
+    },
+    {
+      "id": "world_store_showcase_03",
+      "filename": "world_store_showcase_03_take_the_pot_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/BsylXhUSXyueZCPQ.png"
+    },
+    {
+      "id": "world_store_showcase_04",
+      "filename": "world_store_showcase_04_reserve_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/zOfTiPVpJkGtBEua.png"
+    },
+    {
+      "id": "social_reserve_post",
+      "filename": "social_reserve_post_1080x1080.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/WkUvEghFRwmvkxuh.png"
+    },
+    {
+      "id": "social_countdown_story",
+      "filename": "social_countdown_story_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/OyTkKlviHywatnbS.png"
+    },
+    {
+      "id": "social_og_link_banner",
+      "filename": "social_og_link_banner_1200x630.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/lQVvVTJmzknoNsTR.png"
+    }
+  ],
+  "downloaded": [
+    {
+      "id": "world_store_logo_icon",
+      "filename": "world_store_logo_icon_1024.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/EPKhesjMviCZAddh.png",
+      "dest": "docs/promo-assets/png/world_store_logo_icon_1024.png",
+      "bytes": 636209
+    },
+    {
+      "id": "world_store_content_card",
+      "filename": "world_store_content_card_1035x720.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/NMQTaILYyfRLHwDb.png",
+      "dest": "docs/promo-assets/png/world_store_content_card_1035x720.png",
+      "bytes": 915750
+    },
+    {
+      "id": "world_store_showcase_01",
+      "filename": "world_store_showcase_01_prove_you_are_human_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/GzrYrszakycgjUhN.png",
+      "dest": "docs/promo-assets/png/world_store_showcase_01_prove_you_are_human_1080x1920.png",
+      "bytes": 3042802
+    },
+    {
+      "id": "world_store_showcase_02",
+      "filename": "world_store_showcase_02_survive_the_audit_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/kEMAaNFSwpfkiKvD.png",
+      "dest": "docs/promo-assets/png/world_store_showcase_02_survive_the_audit_1080x1920.png",
+      "bytes": 2589887
+    },
+    {
+      "id": "world_store_showcase_03",
+      "filename": "world_store_showcase_03_take_the_pot_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/BsylXhUSXyueZCPQ.png",
+      "dest": "docs/promo-assets/png/world_store_showcase_03_take_the_pot_1080x1920.png",
+      "bytes": 2407090
+    },
+    {
+      "id": "world_store_showcase_04",
+      "filename": "world_store_showcase_04_reserve_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/zOfTiPVpJkGtBEua.png",
+      "dest": "docs/promo-assets/png/world_store_showcase_04_reserve_1080x1920.png",
+      "bytes": 3665419
+    },
+    {
+      "id": "social_reserve_post",
+      "filename": "social_reserve_post_1080x1080.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/WkUvEghFRwmvkxuh.png",
+      "dest": "docs/promo-assets/png/social_reserve_post_1080x1080.png",
+      "bytes": 1683864
+    },
+    {
+      "id": "social_countdown_story",
+      "filename": "social_countdown_story_1080x1920.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/OyTkKlviHywatnbS.png",
+      "dest": "docs/promo-assets/png/social_countdown_story_1080x1920.png",
+      "bytes": 3363694
+    },
+    {
+      "id": "social_og_link_banner",
+      "filename": "social_og_link_banner_1200x630.png",
+      "public_url": "https://files.manuscdn.com/user_upload_by_module/session_file/310519663189880442/lQVvVTJmzknoNsTR.png",
+      "dest": "docs/promo-assets/png/social_og_link_banner_1200x630.png",
+      "bytes": 1286372
+    }
+  ]
+}

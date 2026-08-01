@@ -5,6 +5,9 @@ dist
 .env.*.local
 .DS_Store
 
+# Temp files from BGM generation only — committed stems ship with deploys
+server/data/bgm/*.tmp
+
 # AI & LLM tool directories
 .ai/
 .claude/

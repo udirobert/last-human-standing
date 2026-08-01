@@ -87,3 +87,17 @@ Promote the direct URL + World App open link from Manus social creatives:
 `https://lasthumanstanding.thisyearnofear.com`
 
 Reserve seats now — Day 1 opens 3 Aug 2026 18:00 UTC.
+
+## Progress (2026-08-01)
+
+| Step | Status |
+| --- | --- |
+| Portal API key (`WORLD_ID_API_KEY` = team `api_…`) | Working |
+| App id | `app_748acaaab2c27a797788c3fdc4428c50` |
+| Live verified listing | Already **verified** (prior metadata) |
+| Draft metadata update | `meta_8100f988…` — skill-based copy, Reserve CTA, humans-only |
+| Draft images | **Manus creatives uploaded** (logo, content card, 3 showcases, meta tag) |
+| Local social pack | `docs/promo-assets/social/*.jpg` + full PNGs in `docs/promo-assets/png/` |
+| Submit draft for review | **Awaiting your OK** — say the word to call `submit_app_for_review` |
+
+Manus task: https://manus.im/app/9jBj7CQc4Lmxwq2F9VTCRv

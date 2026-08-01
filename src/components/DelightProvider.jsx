@@ -36,13 +36,19 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     setTimeout(() => setParticles([]), 3000);
   }, [confettiKey]);
 
-  // Sound — Cuelume under the hood (useSound → playCue)
-  const { play, toggle, enabled: soundEnabled, startAmbient, stopAmbient } = useSound();
+  // Sound — Cuelume SFX + ElevenLabs / drone BGM (useSound)
+  const {
+    play,
+    toggle,
+    enabled: soundEnabled,
+    stationTitle,
+    unlockAndStart,
+    syncPlaylist,
+    stopAmbient,
+  } = useSound();
 
-  // Do NOT auto-bind Cuelume or start the ambient drone on mount.
-  // Chrome blocks AudioContext until a user gesture; auto-start was spamming
-  // console errors and waking audio worklets before anyone tapped. Bind +
-  // ambient kick off from the first real interaction instead.
+  // Do NOT auto-bind audio on mount — browsers block until a gesture.
+  // First tap/key unlocks Cuelume + starts the soundtrack playlist.
   useEffect(() => {
     if (!soundEnabled) {
       stopAmbient();
@@ -50,16 +56,15 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     }
     const unlock = () => {
       ensureCuelumeBound();
-      startAmbient();
+      unlockAndStart();
     };
     window.addEventListener("pointerdown", unlock, { once: true, passive: true });
     window.addEventListener("keydown", unlock, { once: true });
     return () => {
       window.removeEventListener("pointerdown", unlock);
       window.removeEventListener("keydown", unlock);
-      stopAmbient();
     };
-  }, [soundEnabled, startAmbient, stopAmbient]);
+  }, [soundEnabled, unlockAndStart, stopAmbient]);
 
   // Achievements
   const { 
@@ -144,10 +149,13 @@ export function DelightProvider({ children, showTipOnMount = false }) {
     // Confetti
     celebrate,
     
-    // Sound (Cuelume-backed)
+    // Sound (Cuelume SFX + BGM playlist)
     playSound: play,
     toggleSound: toggle,
     soundEnabled,
+    stationTitle,
+    unlockAndStart,
+    syncPlaylist,
     
     // Achievements
     unlockAchievement: unlock,
@@ -233,28 +241,40 @@ export function useDelight() {
   return context;
 }
 
-// Sound toggle button component
-export function SoundToggle() {
-  const { toggleSound, soundEnabled } = useDelight();
-  
+// Sound toggle — always-on-hand control for BGM + SFX
+export function SoundToggle({ className = "" }) {
+  const { toggleSound, soundEnabled, stationTitle, unlockAndStart } = useDelight();
+
   return (
     <button
       type="button"
-      onClick={toggleSound}
+      onClick={() => {
+        if (soundEnabled) {
+          toggleSound();
+        } else {
+          toggleSound();
+          unlockAndStart?.();
+        }
+      }}
       {...CUE_TOGGLE}
-      className="p-2 rounded-lg bg-smoke/70 border border-ember/40 hover:border-amber/50 transition-colors"
-      title={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
-      aria-label={soundEnabled ? 'Mute sounds' : 'Enable sounds'}
+      className={`min-w-[2.75rem] h-11 px-3 rounded-full bg-smoke/90 backdrop-blur-sm border border-ember/50 text-bone font-mono text-sm flex items-center justify-center gap-1.5 shadow-[0_8px_24px_-12px_rgba(0,0,0,0.7)] hover:border-amber/60 active:scale-[0.97] transition-transform ${className}`}
+      title={soundEnabled ? `Mute music${stationTitle ? ` · ${stationTitle}` : ""}` : "Play music"}
+      aria-label={soundEnabled ? "Mute music" : "Play music"}
+      aria-pressed={soundEnabled}
     >
       <motion.span
-        key={soundEnabled ? 'on' : 'off'}
-        initial={{ scale: 1.4, opacity: 0 }}
+        key={soundEnabled ? "on" : "off"}
+        initial={{ scale: 1.3, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 20 }}
-        style={{ display: 'inline-block' }}
+        transition={{ type: "spring", stiffness: 400, damping: 20 }}
+        style={{ display: "inline-block" }}
+        aria-hidden
       >
-        {soundEnabled ? '🔊' : '🔇'}
+        {soundEnabled ? "♪" : "–"}
       </motion.span>
+      <span className="font-mono text-[10px] tracking-wider uppercase text-dim">
+        {soundEnabled ? "On" : "Off"}
+      </span>
     </button>
   );
 }

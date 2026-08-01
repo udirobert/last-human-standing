@@ -2,19 +2,33 @@ import { useState, useEffect, useCallback } from 'react';
 import OverlayPortal from '../components/OverlayPortal.jsx';
 import { useFocusTrap } from './useFocusTrap.js';
 
+/** Opinionated default guide — renameable, never a blank "Name me". */
+export const DEFAULT_MASCOT_NAME = "Ember";
+
 // Mascot name storage and personalization
 export function useMascotName() {
   const [name, setName] = useState(() => {
-    const current = localStorage.getItem('lhs_mascot_name');
-    const legacy = localStorage.getItem('mascot_name');
-    return current || legacy || '';
+    try {
+      const current = localStorage.getItem("lhs_mascot_name");
+      const legacy = localStorage.getItem("mascot_name");
+      const resolved = (current || legacy || "").trim();
+      if (resolved) return resolved;
+      localStorage.setItem("lhs_mascot_name", DEFAULT_MASCOT_NAME);
+      return DEFAULT_MASCOT_NAME;
+    } catch {
+      return DEFAULT_MASCOT_NAME;
+    }
   });
 
   const saveName = useCallback((newName) => {
-    const normalized = newName.trim().slice(0, 20);
+    const normalized = newName.trim().slice(0, 20) || DEFAULT_MASCOT_NAME;
     setName(normalized);
-    localStorage.setItem('lhs_mascot_name', normalized);
-    localStorage.removeItem('mascot_name');
+    try {
+      localStorage.setItem("lhs_mascot_name", normalized);
+      localStorage.removeItem("mascot_name");
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   return { name, saveName };
@@ -22,13 +36,11 @@ export function useMascotName() {
 
 // Mascot name input modal
 export function MascotNameModal({ onSave, onSkip }) {
-  const [inputName, setInputName] = useState('');
+  const [inputName, setInputName] = useState(DEFAULT_MASCOT_NAME);
   const trapRef = useFocusTrap(true, { onEscape: onSkip });
 
   const handleSave = () => {
-    if (inputName.trim()) {
-      onSave(inputName.trim());
-    }
+    onSave(inputName.trim() || DEFAULT_MASCOT_NAME);
   };
 
   return (
@@ -38,21 +50,23 @@ export function MascotNameModal({ onSave, onSkip }) {
         tabIndex={-1}
         role="dialog"
         aria-modal="true"
-        aria-label="Name your guide"
+        aria-label="Rename your guide"
         className="fixed inset-0 z-[70] bg-ash/90 backdrop-blur-md flex items-center justify-center p-4 outline-none"
       >
         <div className="bg-smoke border border-ember/40 rounded-2xl p-8 max-w-sm w-full animate-bounce-in">
           <div className="text-center mb-6">
             <div className="text-5xl mb-3">🤖</div>
-            <h2 className="font-display text-2xl text-bone mb-2 tracking-wide">Name Your Guide</h2>
-            <p className="text-dim font-mono text-xs">Give your survival companion a name</p>
+            <h2 className="font-display text-2xl text-bone mb-2 tracking-wide">Your Guide</h2>
+            <p className="text-dim font-mono text-xs">
+              Meet {DEFAULT_MASCOT_NAME} — rename them if you want.
+            </p>
           </div>
 
           <input
             type="text"
             value={inputName}
             onChange={(e) => setInputName(e.target.value.slice(0, 20))}
-            placeholder="Enter name..."
+            placeholder={DEFAULT_MASCOT_NAME}
             className="w-full px-4 py-3 bg-ash border border-ember/40 rounded-xl text-bone text-center text-lg mb-4 focus:outline-none focus:border-amber/60 transition-colors font-body"
             maxLength={20}
             autoFocus
@@ -61,16 +75,18 @@ export function MascotNameModal({ onSave, onSkip }) {
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={onSkip}
+              onClick={() => {
+                onSave(DEFAULT_MASCOT_NAME);
+                onSkip?.();
+              }}
               className="flex-1 px-4 py-3 bg-ash border border-ember/40 hover:border-amber/40 text-dim rounded-xl transition-colors font-mono text-sm"
             >
-              Skip
+              Keep {DEFAULT_MASCOT_NAME}
             </button>
             <button
               type="button"
               onClick={handleSave}
-              disabled={!inputName.trim()}
-              className="flex-1 px-4 py-3 bg-amber text-ash font-mono text-sm rounded-xl transition-colors disabled:opacity-50 active:scale-95"
+              className="flex-1 px-4 py-3 bg-amber text-ash font-mono text-sm rounded-xl transition-colors active:scale-95"
             >
               Save
             </button>

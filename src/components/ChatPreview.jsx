@@ -100,7 +100,7 @@ export default function ChatPreview({ isLive = false, checkedIn = false }) {
             {EXAMPLE_MESSAGES.map((msg, i) => (
               <motion.div
                 key={i}
-                initial={{ opacity: 0, y: 8 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{
                   duration: MOTION_DURATION.fast,

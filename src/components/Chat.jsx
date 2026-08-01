@@ -104,7 +104,11 @@ export default function Chat({ onBack }) {
   }, [isMiniApp]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Only auto-scroll when there are real messages. Scrolling an empty
+    // lobby (ChatPreview) jumps the teaching content out of view and
+    // reads as "messages loaded then vanished."
+    if (messages.length === 0) return;
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages]);
 
   const handleSend = async () => {
@@ -242,7 +246,7 @@ export default function Chat({ onBack }) {
 
       {/* Messages */}
       <NetworkPill error={chatError} onRetry={loadMessages} />
-      <div className="flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
+      <div className="relative z-10 flex-1 min-h-0 overflow-y-auto px-5 py-4 space-y-3">
         {/* Day divider */}
         <div className="flex items-center gap-3">
           <div className="flex-1 h-px bg-ember" />

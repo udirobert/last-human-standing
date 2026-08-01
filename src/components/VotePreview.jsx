@@ -60,10 +60,10 @@ function MockSubmissionCard() {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.smooth }}
-      className="bg-smoke border border-ember rounded-3xl overflow-hidden"
+      className="relative z-10 bg-smoke border border-ember rounded-3xl overflow-hidden"
     >
       {/* Photo placeholder with theme motif */}
       <div className="w-full aspect-[4/5] max-h-[50vh] flex items-center justify-center bg-ash/80 relative">

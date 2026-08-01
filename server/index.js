@@ -46,6 +46,14 @@ import {
 } from "./lib/commitReveal.js";
 import { Group } from "@semaphore-protocol/group";
 import { createSemaphoreAuditVerifier } from "./lib/semaphoreAudit.js";
+import {
+  composeStation,
+  getStation,
+  isTrackReady,
+  listAvailableStations,
+  pickStationForPhase,
+  trackPaths,
+} from "./lib/bgm.js";
 
 // ─── Sentry initialization (before anything else) ─────────────────────
 const SENTRY_DSN = process.env.SENTRY_DSN;
@@ -710,6 +718,44 @@ app.use("/api/push", pushRoutes({ requireAuth, supabaseAdmin, log }));
 app.get("/api/health", async (req, res) => {
   const dbHealth = await checkDatabaseHealth();
   res.json({ ok: true, time: new Date().toISOString(), supabase: dbHealth.ok, dbError: dbHealth.error || null });
+});
+
+// ─── Background music (ElevenLabs-composed stems, server-cached) ─────
+app.get("/api/music/playlist", (req, res) => {
+  const phase = typeof req.query.phase === "string" ? req.query.phase : "prelaunch";
+  const screen = typeof req.query.screen === "string" ? req.query.screen : "home";
+  const stations = listAvailableStations();
+  const preferredId = pickStationForPhase(phase, screen);
+  res.json({
+    ok: true,
+    preferredId,
+    stations,
+    configured: Boolean(process.env.ELEVENLABS_API_KEY),
+  });
+});
+
+app.get("/api/music/track/:id", async (req, res) => {
+  const station = getStation(req.params.id);
+  if (!station) return res.status(404).json({ error: "track_not_found" });
+
+  const { mp3 } = trackPaths(station.id);
+  try {
+    if (!isTrackReady(station.id)) {
+      const apiKey = process.env.ELEVENLABS_API_KEY;
+      if (!apiKey) return res.status(503).json({ error: "music_not_configured" });
+      // Lazy compose — slow path; prefer scripts/generate-bgm.mjs offline.
+      await composeStation(station, { apiKey });
+    }
+    res.setHeader("Content-Type", "audio/mpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.sendFile(mp3);
+  } catch (e) {
+    log("bgm_serve_failed", { id: station.id, message: e instanceof Error ? e.message : "unknown" });
+    return res.status(502).json({
+      error: "music_unavailable",
+      message: e instanceof Error ? e.message : "unknown_error",
+    });
+  }
 });
 
 app.post("/api/report-error", async (req, res) => {

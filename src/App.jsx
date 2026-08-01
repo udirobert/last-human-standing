@@ -5,6 +5,7 @@ import Onboarding from './components/Onboarding';
 import GameHome from './components/GameHome';
 import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
+import MusicDock from './components/MusicDock.jsx';
 import ScreenLoader from './components/ui/ScreenLoader.jsx';
 import AmbientBackdrop from './components/AmbientBackdrop.jsx';
 import DesktopBackdrop from './components/DesktopBackdrop.jsx';
@@ -88,7 +89,7 @@ const SCREENS = {
 
   // Wrapper to use delight hooks in App
   function AppWithDelight() {
-    const { playSound, celebrate } = useDelight();
+    const { playSound, celebrate, syncPlaylist } = useDelight();
     const { entryPaid } = useWorld();
     const { phase, you } = useRound();
     const [refreshNonce, setRefreshNonce] = useState(0);
@@ -100,6 +101,11 @@ const SCREENS = {
     });
     const [badges, setBadges] = useState({});
     const adminEnteredRef = useRef(false);
+
+    // Rotate soundtrack station with phase + active tab (FIFA-style variety).
+    useEffect(() => {
+      syncPlaylist?.({ phase: phase || "prelaunch", screen: navTab || "home" });
+    }, [phase, navTab, syncPlaylist]);
 
     // Reserved players belong in the lobby — not a duplicate onboarding countdown.
     useEffect(() => {
@@ -256,8 +262,9 @@ const SCREENS = {
         {screen === SCREENS.HOME && (
           <motion.div
             key="home"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            className="relative h-[100svh] max-h-[100svh]"
+            initial={{ y: 12 }}
+            animate={{ y: 0, opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
           >
@@ -288,11 +295,12 @@ const SCREENS = {
         )}
 
         {screen === SCREENS.FEED && (
-          <Suspense fallback={<ScreenLoader kind="list" />}>
+          <Suspense fallback={<div className="relative h-[100svh]"><ScreenLoader kind="list" /></div>}>
           <motion.div
             key="feed"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
+            className="relative h-[100svh] max-h-[100svh]"
+            initial={{ x: 16 }}
+            animate={{ x: 0, opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
@@ -306,11 +314,12 @@ const SCREENS = {
         )}
 
         {screen === SCREENS.CHAT && (
-          <Suspense fallback={<ScreenLoader kind="chat" />}>
+          <Suspense fallback={<div className="relative h-[100svh]"><ScreenLoader kind="chat" /></div>}>
           <motion.div
             key="chat"
-            initial={{ opacity: 0, x: 30 }}
-            animate={{ opacity: 1, x: 0 }}
+            className="relative h-[100svh] max-h-[100svh]"
+            initial={{ x: 16 }}
+            animate={{ x: 0, opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
           >
@@ -320,11 +329,12 @@ const SCREENS = {
         )}
 
       {screen === SCREENS.LEADERBOARD && (
-        <Suspense fallback={<ScreenLoader kind="list" />}>
+        <Suspense fallback={<div className="relative h-[100svh]"><ScreenLoader kind="list" /></div>}>
         <motion.div
           key="leaderboard"
-          initial={{ opacity: 0, x: 30 }}
-          animate={{ opacity: 1, x: 0 }}
+          className="relative h-[100svh] max-h-[100svh]"
+          initial={{ x: 16 }}
+          animate={{ x: 0, opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
         >
@@ -367,11 +377,14 @@ const SCREENS = {
       </AnimatePresence>
 
       {isInGame && (
-        <BottomNav
-          current={navTab === 'admin' || navTab === 'history' ? 'home' : navTab}
-          onChange={handleNavChange}
-          badges={badges}
-        />
+        <>
+          <MusicDock />
+          <BottomNav
+            current={navTab === 'admin' || navTab === 'history' ? 'home' : navTab}
+            onChange={handleNavChange}
+            badges={badges}
+          />
+        </>
       )}
     </div>
   );

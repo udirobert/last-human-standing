@@ -14,7 +14,8 @@
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
     "semaphore:spike": "node scripts/semaphore-spike.mjs",
-    "semaphore:audit-spike": "node scripts/semaphore-audit-spike.mjs"
+    "semaphore:audit-spike": "node scripts/semaphore-audit-spike.mjs",
+    "bgm:generate": "node --import dotenv/config scripts/generate-bgm.mjs"
   },
   "dependencies": {
     "@daytona/sdk": "^0.200.1",

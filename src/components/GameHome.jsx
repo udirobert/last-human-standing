@@ -34,8 +34,10 @@ import TomorrowPostcard from './TomorrowPostcard.jsx';
 import FieldPulse from './FieldPulse.jsx';
 import PersonalShelf from './PersonalShelf.jsx';
 import { useDelight } from './DelightProvider.jsx';
+import { HeaderSoundButton } from './MusicDock.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import ThemeMotif from './ui/ThemeMotif.jsx';
+import { DEFAULT_MASCOT_NAME } from '../hooks/usePersonalization.jsx';
 
 /**
  * GameHome — persistent Survive view.
@@ -71,29 +73,22 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       {isLive && <RuleReveal onAudit={onViewFeed} />}
       {isLive && <DayBriefing />}
 
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-        <RulesDrawer />
-        <FAQModal />
-      </div>
-
       <NetworkPill onRetry={onRefresh || refreshRound} error={usesDemoState} />
 
-      {/* Hero — brand first, one status line, quiet identity link */}
-      <div className="relative z-10 px-5 pt-10 pb-3">
-        <div className="flex items-center justify-between gap-3 mb-2">
-          <div className="flex items-center gap-2 min-w-0">
+      {/* Hero — brand first; chrome lives in-flow so Rules/? never cover anon */}
+      <div className="relative z-10 px-5 pt-4 pb-3">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`w-2 h-2 rounded-full animate-pulse shrink-0 ${isLive ? 'bg-neon' : 'bg-amber'}`} />
             <span className={`font-mono text-[10px] tracking-[0.18em] uppercase truncate ${isLive ? 'text-neon' : 'text-amber'}`}>
               {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : 'Ended'}
             </span>
           </div>
-          <button
-            type="button"
-            onClick={onViewHistory}
-            className="font-mono text-dim text-[11px] hover:text-bone transition-colors underline decoration-dotted underline-offset-2 shrink-0"
-          >
-            {user?.displayName ?? 'anon'}
-          </button>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <HeaderSoundButton />
+            <RulesDrawer />
+            <FAQModal />
+          </div>
         </div>
         <div className="flex items-end gap-3">
           <div className="min-w-0 flex-1">
@@ -105,15 +100,31 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
                   ? 'Check in. Vote. Stay human.'
                   : 'The cohort has closed. The record remains.'}
             </p>
+            <button
+              type="button"
+              onClick={onViewHistory}
+              className="mt-2 font-mono text-dim text-[11px] hover:text-bone transition-colors underline decoration-dotted underline-offset-2"
+            >
+              {user?.displayName ?? 'anon'}
+            </button>
           </div>
-          <Mascot
-            variant={mascotEvent?.variant || (isLive ? "determined" : isEnded ? "proud" : "thinking")}
-            size={56}
-            name={mascotName || "Name me"}
-            interactive
-            trackCursor={false}
-            onClick={(type) => mascotName ? handleMascotClick(type) : showNameModal()}
-          />
+          <div className="shrink-0 flex flex-col items-center">
+            <Mascot
+              variant={mascotEvent?.variant || (isLive ? "determined" : isEnded ? "proud" : "thinking")}
+              size={56}
+              name={mascotName || DEFAULT_MASCOT_NAME}
+              interactive
+              trackCursor={false}
+              onClick={handleMascotClick}
+            />
+            <button
+              type="button"
+              onClick={showNameModal}
+              className="mt-1 font-mono text-[9px] text-dim hover:text-amber transition-colors underline decoration-dotted underline-offset-2"
+            >
+              rename
+            </button>
+          </div>
         </div>
       </div>
 

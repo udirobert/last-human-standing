@@ -63,7 +63,11 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
   const [freeEntryBusy, setFreeEntryBusy] = useState(false);
   const [showPersonalize, setShowPersonalize] = useState(false);
   const [mascotName, setMascotName] = useState(() => {
-    try { return localStorage.getItem("lhs_mascot_name") || ""; } catch { return ""; }
+    try {
+      return localStorage.getItem("lhs_mascot_name") || "Ember";
+    } catch {
+      return "Ember";
+    }
   });
   const [profile, setProfile] = useState(() => {
     try { return JSON.parse(localStorage.getItem("lhs_profile") || "{}"); } catch { return {}; }
@@ -296,7 +300,7 @@ export default function Onboarding({ onEnter, onSpeedRun }) {
                     value={mascotName}
                     onChange={(e) => setMascotName(e.target.value)}
                     onBlur={() => mascotName && localStorage.setItem("lhs_mascot_name", mascotName)}
-                    placeholder="Your name (optional)"
+                    placeholder="Ember"
                     className="w-full mb-3 bg-smoke border border-ember rounded-xl px-4 py-3 text-bone font-mono text-sm"
                     maxLength={20}
                   />

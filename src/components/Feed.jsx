@@ -528,7 +528,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
         )}
       </div>
 
-      <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 space-y-5 ${SHELL_BOTTOM_PAD}`}>
+      <div className={`relative z-10 flex-1 min-h-0 overflow-y-auto overscroll-y-contain px-3 space-y-5 ${SHELL_BOTTOM_PAD}`}>
         {useMocks && !isMiniApp && (
           <p className="text-amber font-mono text-xs text-center py-2 border border-amber/30 rounded-xl bg-amber/5 mx-1">
             Dev preview — sample submissions. Live data appears in production builds.
@@ -620,8 +620,8 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
           )
         )}
 
-        <AnimatePresence>
-          {filtered.map((sub, idx) => {
+        <AnimatePresence initial={false}>
+          {filtered.map((sub) => {
             const totalVotes = (sub.votes?.real || 0) + (sub.votes?.fake || 0);
             const quorum = sub.voteQuorum || verification.voteQuorum;
             const progress = Math.min(100, Math.round((totalVotes / Math.max(1, quorum)) * 100));
@@ -632,10 +632,10 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
             return (
               <motion.article
                 key={sub.id}
-                initial={{ opacity: 0, y: 16 }}
+                initial={reduceMotion ? false : { opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -12 }}
-                className="bg-smoke border border-ember rounded-3xl overflow-hidden"
+                exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+                className="relative z-10 bg-smoke border border-ember rounded-3xl overflow-hidden"
               >
                 <button
                   type="button"
