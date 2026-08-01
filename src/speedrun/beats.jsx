@@ -27,7 +27,6 @@ import {
   ThemeMissionCard,
   OutcomeCeremony,
 } from "./beatUi.jsx";
-import { haptic } from "../lib/haptics.js";
 import { MOTION_SPRING } from "../lib/motion.js";
 
 export function IntroBeat({ onStart, onExit, soundEnabled, onToggleSound }) {
@@ -73,7 +72,7 @@ export function D1CheckInBeat() {
     reader.onload = () => {
       if (typeof reader.result === "string") {
         setPhoto(reader.result);
-        beatFeel("advance");
+        beatFeel("snap");
       }
     };
     reader.readAsDataURL(file);
@@ -143,6 +142,7 @@ export function D1CheckInBeat() {
 
 export function D1ClosingBeat() {
   const { photoPreview, submissions, nextBeat } = useSpeedRun();
+  const { beatFeel } = useSpeedRunFeel();
   const mySub = submissions.find((s) => s.isYou);
   const photo = photoPreview || mySub?.mediaUrl;
   const targetReal = mySub?.votes?.real ?? 0;
@@ -156,10 +156,10 @@ export function D1ClosingBeat() {
   useEffect(() => {
     const sealTimer = setTimeout(() => {
       setPhase("reveal");
-      haptic("light");
+      beatFeel("tally");
     }, 1600);
     return () => clearTimeout(sealTimer);
-  }, []);
+  }, [beatFeel]);
 
   useEffect(() => {
     if (phase !== "reveal") return undefined;
@@ -177,11 +177,11 @@ export function D1ClosingBeat() {
         setDisplayReal(targetReal);
         setDisplayFake(targetFake);
         setPhase("ready");
-        haptic("success");
+        beatFeel("advance");
       }
     }, interval);
     return () => clearInterval(timer);
-  }, [phase, targetReal, targetFake]);
+  }, [phase, targetReal, targetFake, beatFeel]);
 
   const ready = phase === "ready";
 
@@ -333,7 +333,6 @@ export function D1AuditBeat() {
 
   const onVote = (id, type) => {
     beatFeel(type === "real" ? "vote-human" : "vote-sus");
-    haptic(type === "real" ? "light" : "warning");
     castVote(id, type);
     setRevealTally(true);
     // Mascot reacts to the vote

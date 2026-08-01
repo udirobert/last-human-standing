@@ -264,8 +264,8 @@ export default function Chat({ onBack }) {
           ) : (
             <EmptyState
               motif="cat"
-              title="No messages yet"
-              body="Be the first to say something to the survivors."
+              title="The field is quiet"
+              body="Survivors check in here between audits. Leave a note for the living — or watch until someone does."
               className="py-8"
             />
           )

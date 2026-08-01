@@ -1,75 +1,52 @@
 import { useCallback } from "react";
 import { useDelight } from "../components/DelightProvider.jsx";
 import { playCue, CUE_PRESS, CUE_HOVER } from "../lib/cuelume.js";
+import { ritualFeel } from "../lib/ritualFeel.js";
 
 /**
- * Speed-run feel layer — uses the shared app Cuelume bind
- * (DelightProvider / useSound) + confetti on story peaks.
+ * Speed-run feel layer — shared ritual map (cue + haptic) + confetti peaks.
  */
 export function useSpeedRunFeel() {
-  const { playSound, celebrate, soundEnabled, toggleSound } = useDelight();
+  const { celebrate, soundEnabled, toggleSound, playSound } = useDelight();
 
   const cue = useCallback((name) => {
     if (!soundEnabled) return;
     playCue(name);
   }, [soundEnabled]);
 
-  /** Story beat moments — cuelume character + confetti when it matters. */
+  /** Story beat moments — sound + haptic from one choreography map. */
   const beatFeel = useCallback((kind) => {
-    switch (kind) {
-      case "advance":
-        cue("tick");
-        break;
-      case "reveal":
-        cue("bloom");
-        break;
-      case "checkin":
-        cue("success");
-        celebrate?.(12);
-        break;
-      case "vote-human":
-        cue("chime");
-        break;
-      case "vote-sus":
-        cue("press");
-        break;
-      case "cut":
-        cue("droplet");
-        break;
-      case "infiltrator-unlock":
-        cue("sparkle");
-        break;
-      case "fooled":
-        cue("sparkle");
-        celebrate?.(24);
-        break;
-      case "caught":
-        cue("droplet");
-        break;
-      case "honest":
-        cue("success");
-        break;
-      case "pressure":
-        cue("whisper");
-        break;
-      case "wildcard":
-        cue("bloom");
-        break;
-      case "revive":
-        cue("sparkle");
-        celebrate?.(20);
-        break;
-      case "finale":
-        cue("success");
-        celebrate?.(36);
-        break;
-      case "share":
-        cue("success");
-        break;
-      default:
-        cue("tick");
-    }
-  }, [cue, celebrate]);
+    const map = {
+      advance: "advance",
+      reveal: "reveal",
+      checkin: "submit",
+      snap: "snap",
+      seal: "seal",
+      tally: "tally",
+      "vote-human": "voteHuman",
+      "vote-sus": "voteSus",
+      survive: "survive",
+      eliminate: "eliminate",
+      cut: "cut",
+      "infiltrator-unlock": "infiltrator",
+      fooled: "fooled",
+      caught: "caught",
+      honest: "honest",
+      pressure: "pressure",
+      wildcard: "wildcard",
+      revive: "revive",
+      finale: "finale",
+      share: "share",
+    };
+    const ritual = map[kind] || "advance";
+    ritualFeel(ritual, { sound: soundEnabled });
+
+    if (kind === "checkin") celebrate?.(12);
+    if (kind === "fooled") celebrate?.(24);
+    if (kind === "revive") celebrate?.(20);
+    if (kind === "finale") celebrate?.(36);
+    if (kind === "survive") celebrate?.(16);
+  }, [soundEnabled, celebrate]);
 
   return { cue, beatFeel, soundEnabled, toggleSound, celebrate, playSound };
 }

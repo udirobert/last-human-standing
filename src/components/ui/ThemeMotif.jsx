@@ -180,6 +180,36 @@ const MOTIFS = {
       </g>
     </g>
   ),
+  // QUEUED / OFFLINE SIGNAL — warm concentric arcs (not a glyph antenna)
+  "📡": (uid) => (
+    <g filter={`url(#${uid}-brush)`}>
+      <circle cx="60" cy="72" r="7" fill={P.petal} />
+      <path
+        d="M42,58 C48,48 72,48 78,58"
+        fill="none"
+        stroke={P.sun}
+        strokeWidth="5"
+        strokeLinecap="round"
+        opacity="0.9"
+      />
+      <path
+        d="M32,46 C42,30 78,30 88,46"
+        fill="none"
+        stroke={P.petal}
+        strokeWidth="4.5"
+        strokeLinecap="round"
+        opacity="0.7"
+      />
+      <path
+        d="M24,34 C40,14 80,14 96,34"
+        fill="none"
+        stroke={P.cream}
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        opacity="0.45"
+      />
+    </g>
+  ),
 };
 
 export default function ThemeMotif({ emoji, size = 64, className = "", label }) {

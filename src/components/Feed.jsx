@@ -16,7 +16,7 @@ import { MascotAvatar } from './Mascot.jsx';
 import EmptyState from './EmptyState.jsx';
 import VotePreview from './VotePreview.jsx';
 import { HumanCta } from './ui/CraftCta.jsx';
-import { haptic } from '../lib/haptics.js';
+import { ritualFeel } from '../lib/ritualFeel.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
@@ -74,7 +74,7 @@ function VerdictHour({ round }) {
     <div className="mx-1 mb-4 p-4 rounded-2xl bg-gradient-to-r from-amber/20 via-ember/20 to-amber/20 border border-amber/50 animate-pulse">
       <div className="flex items-center justify-between">
         <div>
-          <p className="font-display text-lg text-amber">⚖️ Verdict Hour</p>
+          <p className="font-display text-lg text-amber">Verdict hour</p>
           <p className="font-mono text-xs text-bone/80">Final votes needed</p>
         </div>
         <div className="text-right">
@@ -90,7 +90,7 @@ function JuryStakes() {
   // Matches award_streak_bonuses / BETA_ROADMAP: +1 correct vote, +1 at 3-day, +3 at 5-day.
   return (
     <div className="mx-1 mb-4 p-3 rounded-2xl bg-smoke/60 border border-ember/30">
-      <p className="font-mono text-xs text-amber mb-2">🎫 Jury Rewards</p>
+      <p className="font-mono text-xs text-amber mb-2">Jury rewards</p>
       <div className="grid grid-cols-3 gap-2 text-center">
         <div>
           <p className="font-display text-lg text-neon">+1</p>
@@ -155,8 +155,8 @@ function LiveTally({ real = 0, fake = 0, sealed = false, commitCount = 0 }) {
 function getDetectiveTitle(resolved, accuracy) {
   if (resolved < 5) return 'Rookie Juror';
   const acc = accuracy ?? 0;
-  if (resolved >= 20 && acc >= 0.9) return 'Sherlock 🔍';
-  if (resolved >= 10 && acc >= 0.8) return 'Bloodhound 🐕';
+  if (resolved >= 20 && acc >= 0.9) return 'Sherlock';
+  if (resolved >= 10 && acc >= 0.8) return 'Bloodhound';
   if (resolved >= 10) return 'Seasoned Juror';
   if (resolved >= 5) return 'Junior Detective';
   return 'Rookie Juror';
@@ -294,7 +294,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
     if (!canVote) return;
     if (voted[id]) return;
     if (crEnabled && crPhase === "reveal") return;
-    haptic(type === 'real' ? 'light' : 'warning');
+    ritualFeel(type === 'real' ? 'voteHuman' : 'voteSus');
     setCommitError(null);
 
     // Achievement + mascot reaction fire immediately for tactile feedback
@@ -542,17 +542,24 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
             <VotePreview />
           ) : (
             <EmptyState
-              motif="coffee"
-              title={`No submissions yet for ${activeTheme.theme}`}
+              motif="theme"
+              themeEmoji={activeTheme.emoji}
+              title={
+                you?.checkedInToday
+                  ? `You're in · waiting on ${activeTheme.theme}`
+                  : `No proofs yet for ${activeTheme.theme}`
+              }
               body={
-                !canVote
-                  ? (voteBlockedReason || "Voting is locked until you reserve and sign in. You can still watch proofs arrive.")
-                  : onCheckIn && walletAuthed && entryPaid
-                    ? "Be the first proof of the day — then come back to audit the field."
-                    : "Submissions appear here the moment players check in."
+                you?.checkedInToday
+                  ? "Your check-in is sealed. Proofs land here as others arrive — start auditing the moment they do."
+                  : !canVote
+                    ? (voteBlockedReason || "Voting is locked until you reserve and sign in. You can still watch proofs arrive.")
+                    : onCheckIn && walletAuthed && entryPaid
+                      ? "Be the first proof of the day — then come back to audit the field."
+                      : "Submissions appear here the moment players check in."
               }
               action={
-                !canVote && onReserve ? (
+                you?.checkedInToday ? null : !canVote && onReserve ? (
                   <HumanCta onClick={onReserve}>Reserve to unlock voting →</HumanCta>
                 ) : onCheckIn && walletAuthed && entryPaid ? (
                   <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>

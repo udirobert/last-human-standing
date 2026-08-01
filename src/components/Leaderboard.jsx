@@ -290,7 +290,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                   }}
                   className="w-full py-2.5 rounded-xl bg-amber/10 border border-amber/40 font-mono text-amber text-sm tracking-wide active:scale-95 transition-transform"
                 >
-                  📣 Share your invite link
+                  Share your invite link →
                 </button>
               </div>
             );
@@ -475,9 +475,9 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
           </p>
           {detectiveBoard.length === 0 ? (
             <EmptyState
-              motif="cat"
+              motif="bloom"
               title="No detectives yet"
-              body="Vote on 5 submissions to earn your rank."
+              body="Enter the audit and vote on 5 proofs — accuracy here becomes your detective rank."
               className="py-6"
             />
           ) : (

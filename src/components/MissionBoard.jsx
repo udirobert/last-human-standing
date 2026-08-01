@@ -407,39 +407,63 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         </div>
       ) : checkedIn ? (
         round?.status === "closed" ? (
-          <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3 mb-3`}>
-            <p className={`font-display text-xl ${survived ? "text-neon" : "text-blood"}`}>
-              {survived ? "Verdict is in — you made the cut" : "Verdict is in — you're out"}
-            </p>
-            <p className="text-dim text-xs font-mono mt-1">
-              {survived
-                ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}. Next theme drops soon.`
-                : "The crowd has spoken. You're on the jury now — your votes count double and earn lottery tickets for the next cohort."}
-            </p>
-          </div>
-        ) : (
-          <div className="bg-neon/10 border border-neon/30 rounded-xl p-3 mb-3">
-            <p className="font-display text-xl text-neon">
-              {survived ? `Surviving · Rank #${rank ?? "—"}` : `Checked in · Rank #${rank ?? "—"}`}
-            </p>
-            <p className="text-dim text-xs font-mono mt-1">
-              {survived
-                ? "Hold your spot — the audit verdict lands when the window closes. Flagged players get replaced."
-                : "At risk until day closes — if the audit disqualifies a survivor, you inherit their slot."}
-            </p>
-            {you?.checkinStreak >= 2 && (
-              <div className="mt-2 flex items-center gap-2">
-                <StreakBloom streak={you.checkinStreak} size={28} />
-                <p className="text-amber text-[11px] font-body leading-snug">
-                  {you.checkinStreak}-day streak ·{" "}
-                  {you.checkinStreak >= 5
-                    ? "+3 jury ticket bonus at day close"
-                    : you.checkinStreak >= 3
-                      ? "+1 jury ticket bonus at day close"
-                      : "3-day streak earns +1 · 5-day earns +3"}
+          <div className="space-y-3 mb-3">
+            <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3`}>
+              <p className={`font-display text-xl ${survived ? "text-neon" : "text-blood"}`}>
+                {survived ? "Verdict is in — you made the cut" : "Verdict is in — you're out"}
+              </p>
+              <p className="text-dim text-xs font-mono mt-1">
+                {survived
+                  ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}.`
+                  : "The crowd has spoken. You're on the jury now — your votes earn lottery tickets for the next cohort."}
+              </p>
+            </div>
+            {survived && Number(currentDay) < 5 && (
+              <div className="rounded-xl border border-neon/25 bg-neon/5 px-3 py-3 text-center">
+                <p className="font-mono text-neon text-[10px] uppercase tracking-[0.18em] mb-1">
+                  Tomorrow&apos;s return
+                </p>
+                <p className="font-body text-bone/75 text-xs leading-snug">
+                  Day {Number(currentDay) + 1} opens with a new theme. One photo. One chance.
                 </p>
               </div>
             )}
+            <HumanCta onClick={onViewFeed}>
+              {survived
+                ? Number(currentDay) < 5
+                  ? `Hold for Day ${Number(currentDay) + 1} · watch the field →`
+                  : "Watch the field →"
+                : "Enter the audit as jury →"}
+            </HumanCta>
+          </div>
+        ) : (
+          <div className="space-y-3 mb-3">
+            <div className="bg-neon/10 border border-neon/30 rounded-xl p-3">
+              <p className="font-display text-xl text-neon">
+                {survived ? `Surviving · Rank #${rank ?? "—"}` : `Checked in · Rank #${rank ?? "—"}`}
+              </p>
+              <p className="text-dim text-xs font-mono mt-1">
+                {survived
+                  ? "Hold your spot — the audit verdict lands when the window closes. Flagged players get replaced."
+                  : "At risk until day closes — if the audit disqualifies a survivor, you inherit their slot."}
+              </p>
+              {you?.checkinStreak >= 2 && (
+                <div className="mt-2 flex items-center gap-2">
+                  <StreakBloom streak={you.checkinStreak} size={28} />
+                  <p className="text-amber text-[11px] font-body leading-snug">
+                    {you.checkinStreak}-day streak ·{" "}
+                    {you.checkinStreak >= 5
+                      ? "+3 jury ticket bonus at day close"
+                      : you.checkinStreak >= 3
+                        ? "+1 jury ticket bonus at day close"
+                        : "3-day streak earns +1 · 5-day earns +3"}
+                  </p>
+                </div>
+              )}
+            </div>
+            <HumanCta onClick={onViewFeed}>
+              Enter the audit →
+            </HumanCta>
           </div>
         )
       ) : isSpectator ? (
@@ -450,7 +474,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         </HumanCta>
       )}
 
-      {!isSpectator && (
+      {!isSpectator && !checkedIn && (
         <GameCta tone="ghost" onClick={onViewFeed} className="!text-sm">
           Open audit feed → vote HUMAN or SUS
         </GameCta>

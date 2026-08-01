@@ -132,12 +132,18 @@ function SpeedRunShell({ onReserve, onExit }) {
   const isFinale = beat === "finale";
   const phase = phaseForDay(demoDay, beat);
 
-  // Peak moments when entering key beats
+  // Peak moments when entering key beats — full 5-day choreography
   useEffect(() => {
     if (beat === "d1_reveal" || beat === "d2_reveal" || beat === "d3_reveal" || beat === "d4_reveal" || beat === "d5_reveal") {
       beatFeel("reveal");
+    } else if (beat === "d1_checkin") {
+      beatFeel("snap");
     } else if (beat === "d1_closing") {
-      beatFeel("pressure");
+      beatFeel("seal");
+    } else if (beat === "d1_audit" || beat === "d4_jury") {
+      beatFeel(beat === "d4_jury" ? "wildcard" : "pressure");
+    } else if (beat === "d2_outcome") {
+      beatFeel("survive");
     } else if (beat === "d1_cut" || beat === "d2_cut" || beat === "d3_cut") {
       beatFeel("cut");
     } else if (beat === "d4_revive") {
@@ -148,8 +154,6 @@ function SpeedRunShell({ onReserve, onExit }) {
       beatFeel("infiltrator-unlock");
     } else if (beat === "d3_pulse") {
       beatFeel("pressure");
-    } else if (beat === "d4_jury") {
-      beatFeel("wildcard");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once per beat id
   }, [beat]);

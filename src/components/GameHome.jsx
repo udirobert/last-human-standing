@@ -31,6 +31,7 @@ import DayZeroBanner from './DayZeroBanner.jsx';
 import ThemeReveal from './ThemeReveal.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
+import ThemeMotif from './ui/ThemeMotif.jsx';
 
 /**
  * GameHome — persistent Survive view.
@@ -131,7 +132,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         {hasQueuedCheckin && (
           <div className="relative z-10 px-5 mb-3">
             <div className="rounded-xl border border-amber/40 bg-amber/10 px-3 py-2 flex items-center gap-2">
-              <span className="text-amber text-sm">📡</span>
+              <ThemeMotif emoji="📡" size={28} label="queued" className="shrink-0" />
               <p className="text-amber font-mono text-xs flex-1">
                 Check-in queued. Will submit when you reconnect.
               </p>

@@ -82,7 +82,11 @@ export default function PlayerHistory({ onBack }) {
             <EmptyState
               motif="coffee"
               title="Nothing logged yet"
-              body="Race to the theme location before the survival cap fills."
+              body={
+                phase === "live"
+                  ? "Your day is still open. Check in before the survival cap fills — then this shelf fills with your proof."
+                  : "When the round opens, race the theme before the survival cap fills. Your days will land here."
+              }
             />
           )
         ) : (

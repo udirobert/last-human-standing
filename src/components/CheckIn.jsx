@@ -18,7 +18,7 @@ import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import { shareMoment } from '../lib/shareMoment.js';
 import { getCheckInMascot, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
-import { haptic } from '../lib/haptics.js';
+import { ritualFeel } from '../lib/ritualFeel.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
 import CheckInPreview from './CheckInPreview.jsx';
 import { hashPhotoFile } from '../lib/photoHash.js';
@@ -170,7 +170,7 @@ export default function CheckIn({ onBack, onSubmit }) {
     // If offline, queue the check-in via the service worker
     if (!online) {
       setQueuedCheckin(true);
-      haptic('warning');
+      ritualFeel('seal');
       setStep(2);
       setResult({ queued: true });
       try {
@@ -266,14 +266,11 @@ export default function CheckIn({ onBack, onSubmit }) {
       }
       setResult(json);
       refreshRound();
-      // Haptic feedback: survived = celebration pulse, eliminated = single thud
       if (json.survived) {
-        haptic('success');
-        playSound?.('victory');
+        ritualFeel('survive');
         recordSurvival?.(json.roundId ?? json.checkinId ?? currentDay);
       } else {
-        haptic('error');
-        playSound?.('error');
+        ritualFeel('eliminate');
       }
 
       // Achievement unlocks
@@ -517,20 +514,17 @@ export default function CheckIn({ onBack, onSubmit }) {
                             : 'bg-smoke border-ember text-dim'
                         }`}
                       >
-                        <p className="text-lg mb-0.5">🧍</p>
                         <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
                         <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
                       </CompactButton>
-                      {/* Infiltrator */}
                       <CompactButton
                         onClick={() => setInfiltratorMode(true)}
                         className={`py-3 px-2 rounded-xl border ${
                           infiltratorMode
-                            ? 'bg-purple-500/20 border-purple-400/60 text-purple-300'
+                            ? 'bg-blood/20 border-blood/60 text-blood'
                             : 'bg-smoke border-ember text-dim'
                         }`}
                       >
-                        <p className="text-lg mb-0.5">🎭</p>
                         <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
                         <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
                       </CompactButton>
@@ -539,7 +533,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                 ) : (
                   <div className="bg-smoke border border-neon/20 rounded-xl p-3 text-center">
                     <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-                      🧍 Day 1 · Honest check-in
+                      Day 1 · Honest check-in
                     </p>
                     <p className="text-dim text-[10px] font-mono leading-relaxed">
                       Infiltrator mode unlocks on Day 2. Today, just play it straight — establish your baseline.
@@ -549,46 +543,44 @@ export default function CheckIn({ onBack, onSubmit }) {
               </div>
 
               {infiltratorMode && (
-                <div className="bg-purple-500/10 border border-purple-400/30 rounded-xl p-3 mb-3 space-y-2">
-                  <p className="text-purple-300 text-xs font-mono leading-relaxed">
-                    🕶️ Submit a photo that could go either way. The crowd votes.
+                <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 mb-3 space-y-2">
+                  <p className="text-bone/80 text-xs font-mono leading-relaxed">
+                    Submit a photo that could go either way. The crowd votes.
                   </p>
                   <div className="space-y-1">
                     <p className="text-neon text-[11px] font-mono">
-                      ✅ Trusted → immunity + 1 jury ticket
+                      Trusted → immunity + 1 jury ticket
                     </p>
                     <p className="text-blood text-[11px] font-mono">
-                      ❌ Flagged → DQ'd, immunity burned
+                      Flagged → DQ&apos;d, immunity burned
                     </p>
                   </div>
 
-                  {/* Live success rate — turns a blind gamble into a calculated risk */}
                   {infiltratorStats?.successRate != null && (
-                    <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20 tabular-nums">
-                      📊 {infiltratorStats.successRate}% of infiltrators succeeded ({infiltratorStats.succeeded}/{infiltratorStats.total} attempts)
+                    <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-blood/20 tabular-nums">
+                      {infiltratorStats.successRate}% of infiltrators succeeded ({infiltratorStats.succeeded}/{infiltratorStats.total} attempts)
                     </p>
                   )}
 
-                  {/* Strategy examples — what "could go either way" means */}
-                  <div className="pt-1 border-t border-purple-400/20 space-y-1">
+                  <div className="pt-1 border-t border-blood/20 space-y-1">
                     <p className="text-dim text-[9px] font-mono uppercase tracking-widest mb-1">Strategy</p>
                     <p className="text-neon/70 text-[10px] font-mono leading-relaxed">
-                      ✓ A real café photo from a different angle — looks staged but is genuine
+                      A real café photo from a different angle — looks staged but is genuine
                     </p>
                     <p className="text-blood/70 text-[10px] font-mono leading-relaxed">
-                      ✗ An obvious stock photo — voters spot it instantly
+                      An obvious stock photo — voters spot it instantly
                     </p>
                   </div>
 
-                  <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-purple-400/20">
-                    💰 Voters who catch you get +2 tickets. Expect scrutiny.
+                  <p className="text-amber text-[10px] font-mono leading-relaxed pt-1 border-t border-blood/20">
+                    Voters who catch you get +2 tickets. Expect scrutiny.
                   </p>
                 </div>
               )}
 
               {!online && canSubmit && (
                 <div className="bg-amber/10 border border-amber/30 rounded-xl p-3 mb-3 flex items-center gap-2">
-                  <span className="text-amber text-lg">📡</span>
+                  <ThemeMotif emoji="📡" size={32} label="offline" className="shrink-0" />
                   <div className="flex-1">
                     <p className="text-amber text-xs font-mono">You are offline</p>
                     <p className="text-dim text-[10px] font-mono">Check-in will be queued and submitted when you reconnect.</p>
@@ -609,7 +601,7 @@ export default function CheckIn({ onBack, onSubmit }) {
               </p>
 
               {infiltratorMode && canSubmit ? (
-                <GameCta tone="purple" onClick={handleSubmit} className="animate-pulse-blood">
+                <GameCta tone="blood" onClick={handleSubmit} className="animate-pulse-blood">
                   Submit as infiltrator →
                 </GameCta>
               ) : (

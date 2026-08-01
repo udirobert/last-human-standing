@@ -2,17 +2,23 @@ import DozingCat from "./ui/DozingCat.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import CoffeeBrew from "./ui/CoffeeBrew.jsx";
 import StreakBloom from "./ui/StreakBloom.jsx";
+import ThemeMotif from "./ui/ThemeMotif.jsx";
 
 /**
  * Shared empty / dwell state — warm human motif + short copy.
  * Use at peak/dwell moments (ART_DIRECTION), not on every blank cell.
+ *
+ * motif: "cat" | "coffee" | "bloom" | "signal" | "theme"
+ * themeEmoji: required when motif === "theme"
  */
 export default function EmptyState({
   title,
   body,
   motif = "cat",
+  themeEmoji = "☕",
   action = null,
   className = "",
+  showFrieze = true,
 }) {
   return (
     <div className={`text-center py-10 px-4 ${className}`}>
@@ -21,6 +27,10 @@ export default function EmptyState({
           <CoffeeBrew size={72} />
         ) : motif === "bloom" ? (
           <StreakBloom size={72} streak={0} />
+        ) : motif === "signal" ? (
+          <ThemeMotif emoji="📡" size={72} label="waiting" />
+        ) : motif === "theme" ? (
+          <ThemeMotif emoji={themeEmoji} size={72} label={title || "today"} />
         ) : (
           <DozingCat size={64} />
         )}
@@ -36,7 +46,7 @@ export default function EmptyState({
         <div className="mb-5" />
       )}
       {action}
-      <MotifFrieze className="w-full mt-6 opacity-85" />
+      {showFrieze && <MotifFrieze className="w-full mt-6 opacity-85" />}
     </div>
   );
 }

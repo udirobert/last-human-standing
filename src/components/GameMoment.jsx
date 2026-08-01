@@ -10,7 +10,7 @@ import MascotGuide from "./ui/MascotGuide.jsx";
 import { useDelight } from "./DelightProvider.jsx";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import { formatEliminationReason } from "../lib/eliminationReason.js";
-import { haptic } from "../lib/haptics.js";
+import { ritualFeel } from "../lib/ritualFeel.js";
 import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
 import OverlayPortal from "./OverlayPortal.jsx";
 import { useFocusTrap } from "../hooks/useFocusTrap.js";
@@ -155,9 +155,8 @@ function MomentCardPreview({ kind, name, day, rank, cap, photoUrl }) {
 
 function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, photoUploadFailed, playerName, photoUrl, shareOpen }) {
   const { handleMascotClick } = useDelight();
-  // Haptic celebration
   useEffect(() => {
-    haptic("success");
+    ritualFeel("survive");
   }, []);
 
   // Yield the trap to ShareSheet while it's stacked on top
@@ -304,9 +303,8 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
 
 function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied, playerName, photoUrl, shareOpen }) {
   const { handleMascotClick } = useDelight();
-  // Haptic thud — heavy, single pulse
   useEffect(() => {
-    haptic("error");
+    ritualFeel("eliminate");
   }, []);
 
   // Yield the trap to ShareSheet while it's stacked on top

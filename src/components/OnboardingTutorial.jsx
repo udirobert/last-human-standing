@@ -1,37 +1,37 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import ThemeMotif from "./ui/ThemeMotif.jsx";
 
 /**
  * OnboardingTutorial — quick walkthrough for new players showing the game loop.
- * Shows 4 key steps: check-in, vote, survive, win.
- * Appears in prelaunch panel to educate users before launch.
+ * Painted motifs only — no chrome emoji glyphs (ART_DIRECTION).
  */
 
 const STEPS = [
   {
-    emoji: "📸",
+    emoji: "☕",
     title: "Daily check-in",
     description: "Each day, a new theme drops. Show your proof from anywhere on Earth.",
-    color: "from-amber to-amber/60"
+    accent: "border-amber/40 bg-amber/10",
   },
   {
-    emoji: "⚖️",
+    emoji: "🌅",
     title: "Community votes",
     description: "Review submissions. Vote HUMAN or SUS based on authenticity.",
-    color: "from-neon to-neon/60"
+    accent: "border-neon/40 bg-neon/10",
   },
   {
-    emoji: "🔥",
+    emoji: "🍜",
     title: "Survive the cut",
     description: "Top submissions advance. The field narrows each day. 50 → 1.",
-    color: "from-blood to-blood/60"
+    accent: "border-blood/40 bg-blood/10",
   },
   {
-    emoji: "🏆",
+    emoji: "🌳",
     title: "Last human wins",
     description: "Outlast everyone. Take the entire prize pool.",
-    color: "from-amber via-neon to-blood"
-  }
+    accent: "border-amber/40 bg-amber/10",
+  },
 ];
 
 export default function OnboardingTutorial() {
@@ -40,7 +40,7 @@ export default function OnboardingTutorial() {
 
   useEffect(() => {
     if (!isPlaying) return;
-    
+
     const timer = setInterval(() => {
       setCurrentStep((prev) => {
         const next = (prev + 1) % STEPS.length;
@@ -48,7 +48,7 @@ export default function OnboardingTutorial() {
         return next;
       });
     }, 2500);
-    
+
     return () => clearInterval(timer);
   }, [isPlaying]);
 
@@ -65,6 +65,7 @@ export default function OnboardingTutorial() {
         </p>
         {!isPlaying && (
           <button
+            type="button"
             onClick={startTutorial}
             className="font-mono text-[10px] text-amber hover:text-neon transition-colors"
           >
@@ -77,7 +78,7 @@ export default function OnboardingTutorial() {
         <AnimatePresence mode="wait">
           {STEPS.map((step, idx) => {
             if (idx !== currentStep) return null;
-            
+
             return (
               <motion.div
                 key={idx}
@@ -87,8 +88,8 @@ export default function OnboardingTutorial() {
                 transition={{ duration: 0.3 }}
                 className="space-y-3"
               >
-                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br ${step.color} shadow-lg`}>
-                  <span className="text-3xl">{step.emoji}</span>
+                <div className={`inline-flex items-center justify-center w-16 h-16 rounded-2xl border ${step.accent}`}>
+                  <ThemeMotif emoji={step.emoji} size={48} label={step.title} />
                 </div>
                 <div>
                   <p className="font-display text-bone text-base mb-1">
@@ -104,16 +105,19 @@ export default function OnboardingTutorial() {
         </AnimatePresence>
       </div>
 
-      {/* Progress dots */}
-      <div className="flex items-center justify-center gap-1.5 mt-4">
+      <div className="flex gap-1.5 mt-4 justify-center">
         {STEPS.map((_, idx) => (
-          <div
+          <button
             key={idx}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${
-              idx === currentStep
-                ? "bg-neon w-6"
-                : "bg-ember/40"
+            type="button"
+            onClick={() => {
+              setIsPlaying(false);
+              setCurrentStep(idx);
+            }}
+            className={`h-1.5 rounded-full transition-all ${
+              idx === currentStep ? "w-5 bg-amber" : "w-1.5 bg-bone/20"
             }`}
+            aria-label={`Step ${idx + 1}`}
           />
         ))}
       </div>
