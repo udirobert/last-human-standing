@@ -122,6 +122,22 @@ export function findTheme(labelOrId) {
   );
 }
 
+/**
+ * Single source of truth for the active round's theme label + motif.
+ * Prefer the API round name over placeType / calendar TODAY_THEME so home,
+ * check-in, audit, and reveal never drift from each other.
+ */
+export function resolveActiveTheme(round) {
+  const name = typeof round?.name === "string" ? round.name.trim() : "";
+  if (name) {
+    const meta = findTheme(name);
+    return { ...meta, theme: name.toUpperCase() };
+  }
+  const place = typeof round?.placeType === "string" ? round.placeType.trim() : "";
+  if (place) return findTheme(place);
+  return TODAY_THEME;
+}
+
 export const MOCK_SUBMISSIONS = [
   {
     id: 1,

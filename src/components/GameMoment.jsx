@@ -71,7 +71,7 @@ export default function GameMoment({
           </p>
         </div>
         <GameCta tone="ghost" onClick={onDismiss}>
-          Back to game
+          Back to today's mission →
         </GameCta>
       </motion.div>
     );
@@ -274,11 +274,11 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         transition={{ delay: 0.5 }}
         className="w-full max-w-sm mt-6 space-y-3 relative z-10"
       >
-        <HumanCta onClick={onShare}>
-          {shareCopied ? "Copied" : "Share your card →"}
+        <HumanCta onClick={onDismiss}>
+          {currentDay != null ? `Continue to Day ${currentDay} mission →` : "Continue to today's mission →"}
         </HumanCta>
-        <GhostLink onClick={onDismiss} className="w-full py-2">
-          Back to game
+        <GhostLink onClick={onShare} className="w-full py-2">
+          {shareCopied ? "Copied" : "Share your card"}
         </GhostLink>
       </motion.div>
     </motion.div>

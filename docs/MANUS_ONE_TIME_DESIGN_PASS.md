@@ -126,14 +126,21 @@ It must also return:
 5. **Theme-deck fairness copy** — DailyProofs copy clarifies the grid is the *possible* theme set; day assignment stays secret (matches product rules; does not hide the deck).
 6. **Glitch title accessibility** — Final title exposed via `aria-label`; scramble characters are `aria-hidden`; reduced-motion skips scramble.
 
-### Rejected or deferred
+### Rejected
 
 | Finding | Decision |
 | --- | --- |
 | Hide prelaunch theme names entirely | **Rejected.** Product rule hides day↔theme *mapping*, not the 10-theme vocabulary (`docs/README.md`, `LAUNCH_RUNBOOK.md`). |
-| Full round/cohort state reconciliation rewrite | **Deferred.** Needs broader game-state audit; not a one-pass UI patch. |
-| Spectator audit modal / empty-state / reward-copy alignment | **Deferred.** Outside the three landing journeys captured for this credit pass. |
-| Returning-player destination labels | **Deferred.** Same — follow-up after live-day flows are re-captured. |
+
+### Follow-up (implemented after the credit pass)
+
+| Finding | Change |
+| --- | --- |
+| Home vs audit theme drift | `resolveActiveTheme(round)` prefers API `round.name`; used by MissionBoard, CheckIn, Feed, ThemeReveal. |
+| Jury reward copy (+5) | Feed `JuryStakes` + MissionBoard streak line aligned to +1 / +1 / +3. |
+| Audit empty / voting locked | Contextual body + Reserve / Retry CTAs; VoteGateBanner reserve action; header shows live day+theme. |
+| Day briefing / overlay a11y | `useFocusTrap` sets `#root` inert; DayBriefing CTA is an explicit Day N destination. |
+| Returning-player Continue labels | SurvivalMoment, DayRecap, queued GameMoment use explicit destinations; share demoted. |
 
 ### Strengths to preserve (from Manus)
 

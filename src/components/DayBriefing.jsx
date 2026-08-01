@@ -85,8 +85,8 @@ export default function DayBriefing({ onDismiss }) {
                 </div>
               </div>
 
-              <GameCta tone="primary" onClick={dismiss}>
-                {unlock.cta}
+              <GameCta tone="neon" onClick={dismiss}>
+                {currentDay != null ? `Continue to Day ${currentDay} →` : unlock.cta}
               </GameCta>
             </motion.div>
           </motion.div>

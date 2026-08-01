@@ -6,7 +6,7 @@ import { useDelight } from "./DelightProvider.jsx";
 import AgentReveal from "./AgentReveal.jsx";
 import { useMascotEvent } from "../hooks/useMascotEvent.js";
 import EliminationReasonCard from "./EliminationReasonCard.jsx";
-import { TODAY_THEME, findTheme } from "../data/game";
+import { resolveActiveTheme } from "../data/game";
 import { missionMantra, getMissionMascot, getEndgameMascot } from "../lib/copy.js";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
 import Countdown from "./Countdown.jsx";
@@ -229,8 +229,8 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
 
   const isSpectator = isLive && !user?.paid && !user?.eliminated;
   const canAudit = isLive && Boolean(user?.paid);
-  const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
-  const themeData = findTheme(themeLabel) || TODAY_THEME;
+  const themeData = resolveActiveTheme(round);
+  const themeLabel = themeData.theme;
   const opens = formatWindow(round?.opensAt);
   const closes = formatWindow(round?.closesAt);
   const slotsLeft = round?.slotsRemaining ?? null;
@@ -431,7 +431,12 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
               <div className="mt-2 flex items-center gap-2">
                 <StreakBloom streak={you.checkinStreak} size={28} />
                 <p className="text-amber text-[11px] font-body leading-snug">
-                  {you.checkinStreak}-day streak · {you.checkinStreak >= 3 ? "+1 jury ticket bonus at day close" : "3-day streak earns a bonus ticket"}
+                  {you.checkinStreak}-day streak ·{" "}
+                  {you.checkinStreak >= 5
+                    ? "+3 jury ticket bonus at day close"
+                    : you.checkinStreak >= 3
+                      ? "+1 jury ticket bonus at day close"
+                      : "3-day streak earns +1 · 5-day earns +3"}
                 </p>
               </div>
             )}

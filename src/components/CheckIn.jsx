@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
-import { TODAY_THEME, findTheme } from '../data/game';
+import { resolveActiveTheme } from '../data/game';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import FAQModal from './FAQModal.jsx';
 import AppShell from './AppShell.jsx';
@@ -54,8 +54,8 @@ export default function CheckIn({ onBack, onSubmit }) {
   const watchRef = useRef(null);
   const sharedRef = useRef(false);
 
-  const theme = round?.placeType || round?.name || TODAY_THEME.theme;
-  const themeData = findTheme(theme) || TODAY_THEME;
+  const themeData = resolveActiveTheme(round);
+  const theme = themeData.theme;
 
   // GPS toggle — start/stop watching
   const toggleGps = () => {

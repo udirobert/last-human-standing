@@ -23,6 +23,12 @@ export function useFocusTrap(active, { onEscape } = {}) {
     const node = containerRef.current;
     if (!node) return undefined;
 
+    // Overlays portal to document.body — inert the app root so background
+    // chrome stays out of the tab order while the dialog is open.
+    const root = document.getElementById("root");
+    const prevInert = root?.inert;
+    if (root) root.inert = true;
+
     const focusables = () =>
       [...node.querySelectorAll(FOCUSABLE)].filter(
         (el) => el.offsetParent !== null || el === document.activeElement,
@@ -61,6 +67,7 @@ export function useFocusTrap(active, { onEscape } = {}) {
     return () => {
       cancelAnimationFrame(t);
       document.removeEventListener("keydown", onKeyDown);
+      if (root) root.inert = Boolean(prevInert);
       const prev = previousFocus.current;
       if (prev && typeof prev.focus === "function") {
         try {

@@ -299,6 +299,7 @@ const SCREENS = {
             <Feed
               onBack={() => handleNavChange('home')}
               onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
+              onReserve={() => { setScreen(SCREENS.ONBOARDING); setNavTab('home'); }}
             />
           </motion.div>
           </Suspense>

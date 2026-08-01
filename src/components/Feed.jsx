@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_SUBMISSIONS, TODAY_THEME, findTheme } from '../data/game';
+import { MOCK_SUBMISSIONS, resolveActiveTheme } from '../data/game';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useTrustTier } from '../hooks/useTrustTier.js';
@@ -43,10 +43,11 @@ function VerdictHour({ round }) {
   const [isVerdictHour, setIsVerdictHour] = useState(false);
 
   useEffect(() => {
-    if (!round?.closes_at) return;
+    const closesIso = round?.closesAt || round?.closes_at;
+    if (!closesIso) return;
 
     const checkTime = () => {
-      const closesAt = new Date(round.closes_at);
+      const closesAt = new Date(closesIso);
       const now = new Date();
       const hoursLeft = (closesAt - now) / (1000 * 60 * 60);
 
@@ -62,7 +63,7 @@ function VerdictHour({ round }) {
     checkTime();
     const interval = setInterval(checkTime, 60000); // check every minute
     return () => clearInterval(interval);
-  }, [round?.closes_at]);
+  }, [round?.closesAt, round?.closes_at]);
 
   if (!isVerdictHour) return null;
 
@@ -83,6 +84,7 @@ function VerdictHour({ round }) {
 }
 
 function JuryStakes() {
+  // Matches award_streak_bonuses / BETA_ROADMAP: +1 correct vote, +1 at 3-day, +3 at 5-day.
   return (
     <div className="mx-1 mb-4 p-3 rounded-2xl bg-smoke/60 border border-ember/30">
       <p className="font-mono text-xs text-amber mb-2">🎫 Jury Rewards</p>
@@ -92,11 +94,11 @@ function JuryStakes() {
           <p className="font-mono text-[10px] text-bone/60">per correct vote</p>
         </div>
         <div>
-          <p className="font-display text-lg text-amber">+3</p>
+          <p className="font-display text-lg text-amber">+1</p>
           <p className="font-mono text-[10px] text-bone/60">3-day streak</p>
         </div>
         <div>
-          <p className="font-display text-lg text-ember">+5</p>
+          <p className="font-display text-lg text-ember">+3</p>
           <p className="font-mono text-[10px] text-bone/60">5-day streak</p>
         </div>
       </div>
@@ -153,9 +155,9 @@ function getDetectiveTitle(resolved, accuracy) {
 // data — browser visitors are real players.
 const useMocks = import.meta.env.DEV;
 
-export default function Feed({ onBack, onCheckIn }) {
+export default function Feed({ onBack, onCheckIn, onReserve }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
-  const { round, verification, phase, you } = useRound();
+  const { round, verification, phase, you, currentDay, lastUpdatedAt, refresh } = useRound();
   const { unlockAchievement, checkAchievement } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
@@ -170,7 +172,8 @@ export default function Feed({ onBack, onCheckIn }) {
   const [challengeToast, setChallengeToast] = useState(null);
   const [loadError, setLoadError] = useState(null);
 
-  const { canVote } = useTrustTier();
+  const { canVote, voteBlockedReason } = useTrustTier();
+  const activeTheme = resolveActiveTheme(round);
 
   // Public read — spectators and eliminated players watch the same feed.
   // Only voting is gated (server-side + canVote), never watching.
@@ -339,7 +342,11 @@ export default function Feed({ onBack, onCheckIn }) {
           </button>
           <div className="flex-1 min-w-0">
             <GlitchTitle text="THE AUDIT" className="font-display text-3xl text-bone tracking-wide" />
-            <p className="font-mono text-dim text-[11px]">Live trial · HUMAN or SUS</p>
+            <p className="font-mono text-dim text-[11px]">
+              {phase === "live" && currentDay
+                ? `Day ${currentDay} · ${activeTheme.theme} · HUMAN or SUS`
+                : "Live trial · HUMAN or SUS"}
+            </p>
           </div>
           <FAQModal />
         </div>
@@ -378,18 +385,29 @@ export default function Feed({ onBack, onCheckIn }) {
           </p>
         )}
         {loadError && (
-          <p className="text-blood font-mono text-xs text-center py-2 border border-blood/30 rounded-xl bg-blood/5 mx-1">
-            {loadError.startsWith("challenge_failed")
-              ? "Couldn't send challenge via World Chat."
-              : "Live feed unavailable. Retrying in a few seconds…"}
-          </p>
+          <div className="mx-1 space-y-2">
+            <p className="text-blood font-mono text-xs text-center py-2 border border-blood/30 rounded-xl bg-blood/5">
+              {loadError.startsWith("challenge_failed")
+                ? "Couldn't send challenge via World Chat."
+                : "Live feed unavailable."}
+            </p>
+            {!loadError.startsWith("challenge_failed") && (
+              <HumanCta
+                onClick={() => { setLoading(true); loadFeed(); refresh?.(); }}
+                className="!py-3 !text-sm"
+              >
+                Retry feed →
+              </HumanCta>
+            )}
+          </div>
         )}
-        <VoteGateBanner />
+        <VoteGateBanner onReserve={onReserve} />
         <VerdictHour round={round} />
         <JuryStakes />
         {phase !== "prelaunch" && (
           <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
             Vote the proof, not the person. Don&apos;t redistribute photos off the app.
+            {lastUpdatedAt ? ` · checked ${new Date(lastUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
           </p>
         )}
         {loading && submissions.length === 0 && (
@@ -402,15 +420,21 @@ export default function Feed({ onBack, onCheckIn }) {
           ) : (
             <EmptyState
               motif="coffee"
-              title={`No submissions yet for ${TODAY_THEME.theme}`}
+              title={`No submissions yet for ${activeTheme.theme}`}
               body={
-                onCheckIn && walletAuthed && entryPaid
-                  ? null
-                  : "Submissions appear here the moment players check in."
+                !canVote
+                  ? (voteBlockedReason || "Voting is locked until you reserve and sign in. You can still watch proofs arrive.")
+                  : onCheckIn && walletAuthed && entryPaid
+                    ? "Be the first proof of the day — then come back to audit the field."
+                    : "Submissions appear here the moment players check in."
               }
               action={
-                onCheckIn && walletAuthed && entryPaid ? (
+                !canVote && onReserve ? (
+                  <HumanCta onClick={onReserve}>Reserve to unlock voting →</HumanCta>
+                ) : onCheckIn && walletAuthed && entryPaid ? (
                   <HumanCta onClick={onCheckIn}>Be the first to check in →</HumanCta>
+                ) : onReserve ? (
+                  <HumanCta onClick={onReserve}>Reserve your slot →</HumanCta>
                 ) : null
               }
             />
@@ -424,7 +448,7 @@ export default function Feed({ onBack, onCheckIn }) {
             const progress = Math.min(100, Math.round((totalVotes / Math.max(1, quorum)) * 100));
             const isExpanded = expandedId === sub.id;
             const myVote = voted[sub.id];
-            const themeEmoji = (findTheme(TODAY_THEME.theme) || TODAY_THEME).emoji;
+            const themeEmoji = activeTheme.emoji;
 
             return (
               <motion.article
@@ -447,7 +471,7 @@ export default function Feed({ onBack, onCheckIn }) {
                     />
                   ) : (
                     <div className="w-full aspect-[4/5] max-h-[70vh] flex items-center justify-center bg-ash/80">
-                      <ThemeMotif emoji={themeEmoji} size={96} label={TODAY_THEME.theme} />
+                      <ThemeMotif emoji={themeEmoji} size={96} label={activeTheme.theme} />
                     </div>
                   )}
                   <div className="absolute top-3 left-3 right-3 flex items-start justify-between gap-2">
