@@ -69,3 +69,14 @@ upload to the World Developer Portal for Mini App Store review.
 
 World Mini App Store rejects chance-based prize games. Market LHS as **skill /
 presence** (show up, photo, survive the crowd audit) — never as lottery/raffle.
+
+
+## Status
+
+| Field | Value |
+| --- | --- |
+| Status | **stopped / delivered** |
+| Credit usage | 377 |
+| Structured review | `docs/manus-promo-assets-pass-review.json` |
+| Local copy sheet | `docs/promo-assets/COPY.md` |
+| PNG download | Open task URL → download ZIP / `final_png/` (CDN is session-private) |

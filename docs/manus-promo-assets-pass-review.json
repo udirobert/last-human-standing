@@ -1,0 +1,114 @@
+{
+  "success": true,
+  "value": {
+    "assets": [
+      {
+        "dimensions": "1024x1024",
+        "filename": "final_png/world_store_logo_icon_1024.png",
+        "id": "world_store_logo_icon_1024",
+        "notes": "World App store app icon; non-white background; hero-level brand mark",
+        "purpose": "App icon / brand mark"
+      },
+      {
+        "dimensions": "1035x720",
+        "filename": "final_png/world_store_content_card_1035x720.png",
+        "id": "world_store_content_card_1035x720",
+        "notes": "World Store content card with bottom safe area preserved (lower 94px free of important detail)",
+        "purpose": "World Store content card"
+      },
+      {
+        "dimensions": "1080x1920",
+        "filename": "final_png/world_store_showcase_01_prove_you_are_human_1080x1920.png",
+        "id": "world_store_showcase_01_prove_you_are_human_1080x1920",
+        "notes": "Showcase 1: Prove you're human; warm gouache motif paired with cold system",
+        "purpose": "World Store showcase 1"
+      },
+      {
+        "dimensions": "1080x1920",
+        "filename": "final_png/world_store_showcase_02_survive_the_audit_1080x1920.png",
+        "id": "world_store_showcase_02_survive_the_audit_1080x1920",
+        "notes": "Showcase 2: Survive the audit; HUMAN/SUS verdicts with topographic context",
+        "purpose": "World Store showcase 2"
+      },
+      {
+        "dimensions": "1080x1920",
+        "filename": "final_png/world_store_showcase_03_take_the_pot_1080x1920.png",
+        "id": "world_store_showcase_03_take_the_pot_1080x1920",
+        "notes": "Showcase 3: Take the pot; single survivor state emphasized",
+        "purpose": "World Store showcase 3"
+      },
+      {
+        "dimensions": "1080x1920",
+        "filename": "final_png/world_store_showcase_04_reserve_1080x1920.png",
+        "id": "world_store_showcase_04_reserve_1080x1920",
+        "notes": "Showcase 4: Reserve your slot; Cohort 1 begins; single clear CTA",
+        "purpose": "World Store showcase 4"
+      },
+      {
+        "dimensions": "1080x1080",
+        "filename": "final_png/social_reserve_post_1080x1080.png",
+        "id": "social_reserve_post_1080x1080",
+        "notes": "Square social post to promote reserve CTA",
+        "purpose": "Social post (1080x1080)"
+      },
+      {
+        "dimensions": "1080x1920",
+        "filename": "final_png/social_countdown_story_1080x1920.png",
+        "id": "social_countdown_story_1080x1920",
+        "notes": "Vertical social story with countdown and reserve CTA",
+        "purpose": "Social story (1080x1920)"
+      },
+      {
+        "dimensions": "1200x630",
+        "filename": "final_png/social_og_link_banner_1200x630.png",
+        "id": "social_og_link_banner_1200x630",
+        "notes": "OG/banner for link previews; brand-forward composition",
+        "purpose": "OG/link-preview banner"
+      }
+    ],
+    "copy": {
+      "captions": [
+        "The rules are brutal, but the proof is simple: show up. Every day, a new real-world theme drops. Snap your proof, survive the crowd's audit, and watch the field narrow until only the last human standing takes the on-chain pot. Cohort 1 begins Monday 3 Aug 2026 at 18:00 UTC. Reserve your slot in World App: https://lasthumanstanding.thisyearnofear.com",
+        "AI can generate a picture, but it can't drink your morning coffee. Last Human Standing is the daily elimination game where your real life is the only way to survive. The crowd decides who stays and who gets cut. Are you ready for the audit? Reserve before Day 1: https://lasthumanstanding.thisyearnofear.com",
+        "The system is cold. The stakes are real. Lock in your ~1 WLD entry and join the first cohort of Last Human Standing. Prove your presence, outlast the field, and claim the prize pool. No bots allowed. Cohort 1 begins Monday 3 Aug 2026 at 18:00 UTC. Open in World App and reserve now: https://lasthumanstanding.thisyearnofear.com"
+      ],
+      "hooks": [
+        "Show up every day, survive the audit, and take the pot.",
+        "The ultimate proof of presence. Snap the theme, survive the audit, win the pool.",
+        "No bots. No luck. Just you, showing up. Reserve your slot for Cohort 1.",
+        "Cold system. Warm human. Can you survive the crowd audit?",
+        "The daily real-world elimination game. Prove you're human and outlast the field."
+      ],
+      "store_long": "Last Human Standing is a daily real-world elimination game built for verified humans. No bots, no random chance—just a brutal test of who shows up. The rules are simple:\n1. The Theme: Each day, a new real-world theme drops (e.g., \"AT A CAFÉ\" or \"A SUNRISE\").\n2. The Proof: Snap a photo matching the theme from anywhere on Earth.\n3. The Audit: The community votes HUMAN or SUS on your proof.\n4. The Elimination: The cap shrinks every day. Fail the audit or miss the window, and you're out.\n5. The Prize: The last human standing takes the entire on-chain prize pool.\n\nBuilt exclusively for World App, Last Human Standing uses World ID to ensure one human, one slot. Reserve your place in the next cohort, lock in your entry, and prove you're still here. One remains. Will it be you?",
+      "store_short": "A daily real-world elimination game. Prove you're human, survive the crowd audit, and win the pot."
+    },
+    "executive_summary": "Delivered a complete, brand-forward launch creative package for Last Human Standing, including 9 final PNG assets (icon, content card, 4 showcase phone creatives, 3 social assets), a structured copy sheet with hooks and captions, long/short World Store descriptions, and a full verified asset inventory. A deterministic export script was used to ensure exact PNG dimensions and safe-area compliance. All assets were assembled, validated against the art direction (cold system / warm human), and packaged into Last_Human_Standing_Launch_Creatives.zip alongside supporting files (creative_system.md, copy_deliverables.md, reference_review_notes.md, structured_output.json). The final package is ready for upload to the World Developer Portal and posting across social channels.",
+    "posting_plan": [
+      {
+        "asset_id": "world_store_showcase_01_prove_you_are_human_1080x1920",
+        "caption_index": 0,
+        "channel": "Instagram - Feed",
+        "when": "2026-08-03 18:00 UTC"
+      },
+      {
+        "asset_id": "world_store_showcase_02_survive_the_audit_1080x1920",
+        "caption_index": 1,
+        "channel": "Instagram - Feed",
+        "when": "2026-08-03 18:00 UTC"
+      },
+      {
+        "asset_id": "world_store_showcase_03_take_the_pot_1080x1920",
+        "caption_index": 2,
+        "channel": "Instagram - Feed",
+        "when": "2026-08-03 18:00 UTC"
+      },
+      {
+        "asset_id": "world_store_showcase_04_reserve_1080x1920",
+        "caption_index": 0,
+        "channel": "Instagram - Feed",
+        "when": "2026-08-03 18:00 UTC"
+      }
+    ],
+    "world_store_notes": "Reference review notes captured during development; assets honor the cold system / warm human contrast with tactile gouache motifs. The World Store content card adheres to the bottom safe area (no important detail within the lower 94px). The hero brand name Last Human Standing remains the focal point on key frames. All assets avoid purple AI-slop, generic glass dashboards, World App logos, and gambling/lottery language, aligning with the skill-based mechanic. The final asset set has been exported as exact PNGs at their target dimensions and packaged for deployment. For download access: ZIP bundle at file:///home/ubuntu/lhs_launch_assets/Last_Human_Standing_Launch_Creatives.zip; individual PNGs accessible under file:///home/ubuntu/lhs_launch_assets/final_png/; copy sheets and references are included in the archive."
+  }
+}
