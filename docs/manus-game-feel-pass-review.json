@@ -1,0 +1,205 @@
+{
+  "success": true,
+  "value": {
+    "executive_summary": "Pass 2 preserves the binding visual thesis — cold system, warm human — while tightening the core daily ritual around state integrity, explicit next-actions, and accessible ceremony. The strongest leverage is to convert transitions into short, deterministic ceremonies that preserve gouache hand-painting, motif frieze, and the game shell, while reducing clutter around decisions. Key opportunities include unifying round/cohort state across journeys, hiding prelaunch themes or rendering placeholders, clarifying primary actions and destinations, rendering essential content by default (motion as enhancement), and hardening the profile two‑step flow with a visible, sticky progression. The binding art direction and warm artefacts remain central; the changes focus on sequencing, feedback clarity, and accessibility to lift completion and daily return rates.",
+    "findings": [
+      {
+        "category": "ritual",
+        "confidence": 0.97,
+        "estimated_effort": "s",
+        "evidence": "From 07-advance-4.png: the survival peak shows Rank #7 and a prominent share card, yet there is no explicit tomorrow/daily return anchor visible; the next-day path is not clearly presented on this screen.",
+        "journey": "Returning player — survival result to next day",
+        "needs_user_test": true,
+        "rationale": "End-of-day ceremony lacks a concrete next-day anchor, weakening intention to return for Day 2.",
+        "recommendation": "Add an explicit Day 2 anchor card beneath the Rank card (e.g., “Day 2 opens at {time}” and a prominent action like “Continue to Day 2”) while keeping share as a secondary option.",
+        "screen": "07-advance-4.png",
+        "severity": "high",
+        "user_consequence": "Users may feel finished with the day and not primed to return."
+      },
+      {
+        "category": "ritual",
+        "confidence": 0.96,
+        "estimated_effort": "m",
+        "evidence": "05-speedrun-beat-1.png shows the check-in panel with a large capture area labeled ‘Snap your proof of presence’ and a dominant red CTA ‘Use a sample shot’, plus a small ‘Or snap your own’ link; beat 3 repeats with no clear progression state.",
+        "journey": "Journey 1 — Visitor; Journey 2 — Profile flow",
+        "needs_user_test": true,
+        "rationale": "Capture flow teaches a shortcut rather than the real gesture; repeated beats lack clear state change between beat 1 and beat 3.",
+        "recommendation": "Make the capture surface explicitly interactive with a visible pressed state and a secondary Preview/Lock/Retake flow; reposition the primary action so the real gesture (capture) is visually primary over the demo shortcut.",
+        "screen": "05-speedrun-beat-1.png; 05-speedrun-beat-3.png",
+        "severity": "high",
+        "user_consequence": "New users may learn a demo path instead of the actual capture gesture."
+      },
+      {
+        "category": "progressive_disclosure",
+        "confidence": 0.98,
+        "estimated_effort": "m",
+        "evidence": "06-speedrun-after-sample.png shows ‘The jury is voting. Your photo is on trial.’ while a voting closed indicator is present, and 07-advance-1.png reaffirms the same 8/2 verdict in the top card.",
+        "journey": "Journey 3 — Spectator/audit flow",
+        "needs_user_test": true,
+        "rationale": "Revealing the verdict before the audit removes suspense and harms social tension.",
+        "recommendation": "Use a sealed, neutral receipt during submission and reveal the Human/Sus counts only after the three peer votes are cast; delay the final verdict until audit-complete.",
+        "screen": "06-speedrun-after-sample.png; 07-advance-1.png",
+        "severity": "high",
+        "user_consequence": "Audit feels administrative rather than social; suspense is reduced."
+      },
+      {
+        "category": "progressive_disclosure",
+        "confidence": 0.94,
+        "estimated_effort": "s",
+        "evidence": "04-speedrun-day1.png presents Day 1 theme with a strong twist, then a long ‘What counts’ drawer and a five-object motif frieze; the cadence reads as high-load rather than staged ritual.",
+        "journey": "Journey 1 — Visitor; Journey 2 — Profile flow",
+        "needs_user_test": true,
+        "rationale": "The reveal compresses multiple mechanics into a single moment, risking cognitive overload.",
+        "recommendation": "Split the Day 1 reveal into two states (A: theme/title; B: twist/limits) with a non-autoplay transition, moving the heavier explanations into a dedicated step after the user taps. Keep the frieze as a dwell element but reduce its overlap with the core CTA.",
+        "screen": "04-speedrun-day1.png",
+        "severity": "high",
+        "user_consequence": "High cognitive load on first reveal may slow onboarding."
+      },
+      {
+        "category": "a11y",
+        "confidence": 0.99,
+        "estimated_effort": "s",
+        "evidence": "02-landing-full.png shows long black sections and a dense block labeled ‘HOW IT WORKS’ followed by a blank region before ‘SEE THE LOOP’; reduced-motion states show essential content becoming unreadable.",
+        "journey": "Journey 1 — Visitor; Journey 4 — Returning user",
+        "needs_user_test": true,
+        "rationale": "Essential headings and loop content should be visible by default to support accessibility and reduce reliance on motion.",
+        "recommendation": "Render essential headings and loop content by default; apply motion only as enhancement with a motion-ready flag; honor prefers-reduced-motion by showing a complete state without gating content behind animation.",
+        "screen": "02-landing-full.png; 03-speedrun-intro.png",
+        "severity": "high",
+        "user_consequence": "Static content may be unreadable for users with reduced motion or assistive tech limitations."
+      },
+      {
+        "category": "layering",
+        "confidence": 0.96,
+        "estimated_effort": "s",
+        "evidence": "Ambient population dots cross CTA zones (01-landing.png) and overlay the theme caption text (03-speedrun-intro.png); in 06-speedrun-after-sample.png, dots obscure percentage labels.",
+        "journey": "Journey 1 — Visitor; Journey 3 — Spectator/audit flow",
+        "needs_user_test": true,
+        "rationale": "Ambient layers intrude on precise controls, reducing clarity of decisions.",
+        "recommendation": "Add ambient masking to keep population dots out of CTA and verdict regions; enforce z-index order ambient < system < human artefact < CTA, and apply pointer-events: none to ambient layers.",
+        "screen": "01-landing.png; 03-speedrun-intro.png; 06-speedrun-after-sample.png",
+        "severity": "high",
+        "user_consequence": "Decision areas become visually noisy, decreasing precision and trust."
+      },
+      {
+        "category": "art_direction",
+        "confidence": 0.93,
+        "estimated_effort": "s",
+        "evidence": "GF-09 notes show warm gouache motifs scattered inconsistently (01-landing.png vs 02-landing-full.png vs 05-speedrun-beat-1.png); repeated bus motif appears as a UI glyph rather than a consistent artefact.",
+        "journey": "Cross-journey consistency",
+        "needs_user_test": true,
+        "rationale": "Motif consistency is essential to the game feel; glyphs and emoji-like tokens weaken the hand-painted language.",
+        "recommendation": "Adopt a single owned motif budget per beat (one painted artefact), remove redundant emoji/glyphs, and apply GouacheFilters consistently across warm artefacts.",
+        "screen": "01-landing.png; 02-landing-full.png; 05-speedrun-beat-1.png",
+        "severity": "medium",
+        "user_consequence": "Inconsistent warm artefacts dilute the tactile warmth of the world."
+      },
+      {
+        "category": "a11y",
+        "confidence": 0.83,
+        "estimated_effort": "s",
+        "evidence": "07-advance-1.png shows human/sus buttons with insufficient spacing and unclear focus state; decorative strings in accessibility tree leak into AT narration.",
+        "journey": "Journey 3 — Spectator/audit flow",
+        "needs_user_test": true,
+        "rationale": "Accessibility noise in the audit flow reduces clarity and trust for screen-reader users.",
+        "recommendation": "Hide decorative strings from AT; ensure proper ARIA labeling for modal and v-dialog interactions; provide a clear focus trap during modal open/close and restore focus to initiating control after close.",
+        "screen": "07-advance-1.png; 07-advance-3.png",
+        "severity": "medium",
+        "user_consequence": "Screen-reader users may receive cluttered, non-informative narration."
+      },
+      {
+        "category": "layering",
+        "confidence": 0.92,
+        "estimated_effort": "xs",
+        "evidence": "07-advance-4.png shows a warm proof card obscured by a dark overlay; the feast of accents (green, red, yellow) competes for attention.",
+        "journey": "Journey 4 — Returning player",
+        "needs_user_test": true,
+        "rationale": "Overly busy peak state reduces emphasis on the warm artefact and dilutes the player’s sense of ownership.",
+        "recommendation": " Lighten the overlay on the share card, maintain warm proof focus, and reserve color encodings for system status (green HUMAN, red SUS) while ensuring a single primary CTA remains dominant.",
+        "screen": "07-advance-4.png",
+        "severity": "medium",
+        "user_consequence": "Warm artefact dominance is weakened, reducing emotional impact of the peak."
+      },
+      {
+        "category": "art_direction",
+        "confidence": 0.95,
+        "estimated_effort": "s",
+        "evidence": "GF-11 notes suggest the share card’s warm artefact should be preserved; current overlay reduces legibility of the proof.",
+        "journey": "Journey 4 — Returning player",
+        "needs_user_test": true,
+        "rationale": "The shared artefact must be legible during the peak to maintain ritual significance.",
+        "recommendation": "Render the share card with a warm, legible proof foreground and a restrained trophy chrome; avoid heavy overlays on the image that diminishes warmth.",
+        "screen": "07-advance-4.png",
+        "severity": "medium",
+        "user_consequence": "Share card readability drops, weakening the sense of personal achievement."
+      }
+    ],
+    "interaction_layers_map": {
+      "ambient": "Ambient population field, topographic texture, and decorative motifs that enrich the world without competing with core actions.",
+      "cta": "Primary controls placed in the lower thumb zone; motion and state changes reinforce progression without clutter.",
+      "human": "Hand-painted artefacts and motifs (Proof scenes, Mascot, MotifFrieze, ThemeMotif) that carry warmth and personality.",
+      "system": "Cold, precise chrome for countdowns, votes, pot, and status lines; anchors the ritual to an accountable grid."
+    },
+    "mobile_ritual_test_script": [
+      "1) Load prelaunch on mobile (320×568, 375×812). Verify prelaunch theme wheel renders placeholders or a noninteractive group; confirm no direct access to individual theme names.",
+      "2) Verify the hero’s countdown state transitions when the beta opens (cohort size derived from a single source of truth).",
+      "3) On the Reserve flow, ensure single primary action (Reserve) is visually dominant and the speed-run option is clearly secondary.",
+      "4) In the profile step, ensure two answers reveal a clearly labeled next action and that the CTA becomes visible within the first viewport or via a sticky footer.",
+      "5) Open the spectator/audit path; ensure the audit header theme is consistent with the home state and the briefing modal closes in one step with proper focus restoration.",
+      "6) Test reduced-motion: all essential content should be visible with prefers-reduced-motion; verify Escape closes modals and focus returns to the invoking control.",
+      "7) Validate empty/locked audit states with a contextual action (Sign in or Retry) and a last-checked time.",
+      "8) For returning players, verify the next-action CTA is explicit (e.g., Continue to Day 2) and that sharing remains optional.",
+      "9) Run a cold start, warm start, and stale-storage test to confirm state reconciliation and correct first render.",
+      "10) Perform automated keyboard and touch regression tests across widths 320–430px with two-answer flows and profile progress."
+    ],
+    "strengths_to_preserve": [
+      "The binding art direction (cold system, warm human), gouache motifs, central game shell, hand-painted elements, and warm-ceremony cadence.",
+      "The practice entry and threshold feel that stage the ritual rather than present a tool.",
+      "The Day 1 theme and its motor/motif (bus, mug) that anchors the day’s warmth.",
+      "Audit voting readability in mobile (binary choice layout in thumb zone).",
+      "Motif frieze as dwell moments at threshold, waiting, and finale.",
+      "The survive/share peak structure that frames post-day outcomes."
+    ],
+    "top_five_changes": [
+      {
+        "expected_impact": "Bind authoritative round/cohort state across journeys; unify state source to a single authoritative object and render reconciliation states.",
+        "implementation_scope": "Front-end state model with a single source of truth; add reconciliation checks and a non-conflicting loading/retry UI across Home, Audit, Proof screens.",
+        "priority": 1,
+        "title": "Bind authoritative round/cohort state across journeys"
+      },
+      {
+        "expected_impact": "Hide prelaunch themes with placeholders until reveal to preserve the ritual mystery and prevent full disclosure.",
+        "implementation_scope": "UI path for prelaunch with placeholders or a noninteractive wheel; accessible semantics for hidden state.",
+        "priority": 2,
+        "title": "Conceal prelaunch themes with placeholders until reveal"
+      },
+      {
+        "expected_impact": "Clarify primary-action hierarchy and destinations to reduce mobile friction.",
+        "implementation_scope": "Relabel CTAs to explicit destinations; collapse competing primary actions; ensure downstream navigation is visible in first viewport or via sticky footer.",
+        "priority": 3,
+        "title": "Clarify action destinations and reduce competing primary paths"
+      },
+      {
+        "expected_impact": "Render essential content by default; move motion to enhancement only.",
+        "implementation_scope": "CSS/markup changes to remove initial opacity gating; add motion-ready class; honor reduced-motion across major screens.",
+        "priority": 4,
+        "title": "Make essential content visible by default (motion as enhancement)"
+      },
+      {
+        "expected_impact": "Harden profile progression with a sticky footer and explicit progression.",
+        "implementation_scope": "UI footer, visible progress indicator, and focus/scroll management; regression tests across mobile widths.",
+        "priority": 5,
+        "title": "Harden profile progression with sticky footer and destination labels"
+      }
+    ],
+    "unresolved_questions": [
+      "What is the authoritative beta cohort size and payout model for production (25 vs 50; automatic vs manual payout)?",
+      "Are prelaunch themes truly intended to be hidden in all states, or is the exposure a temporary artifact during a buggy prelaunch state?",
+      "Is the two-step day briefing modality intentional, or should it be collapsed into a single-step flow?",
+      "Should spectators be allowed to vote before slot reservation is paid, or is voting gatekeeper tied strictly to an active cohort?",
+      "What exact copy and data source should drive reward bonuses (the roadmap vs UI text), and how will this be validated in beta?",
+      "How should the accessibility tree handle decorative background strings to avoid exposing non-informative language to ATs?",
+      "Is the two-answer CTA behavior a regression or a deliberate product decision, and how should regression testing be structured to catch reoccurrence?"
+    ]
+  }
+}

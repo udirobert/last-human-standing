@@ -1,10 +1,11 @@
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import ThemeMotif from "../components/ui/ThemeMotif.jsx";
 import MotifFrieze from "../components/ui/MotifFrieze.jsx";
 import DozingCat from "../components/ui/DozingCat.jsx";
 import ThemeFairness from "../components/ThemeFairness.jsx";
 import { HumanCta, GameCta } from "../components/ui/CraftCta.jsx";
-import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
+import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
 
 export { HumanCta, GameCta };
 
@@ -39,7 +40,9 @@ function QuietFrieze({ className = "w-full mt-5 mb-6 opacity-85" }) {
  * Mirrors MissionBoard's "today's mission" composition.
  */
 export function DayReveal({ day, theme, unlock, onContinue, capFrom, capTo }) {
+  const [step, setStep] = useState("theme"); // theme | twist
   if (!unlock || !theme) return null;
+
   return (
     <Ceremony>
       <p
@@ -69,32 +72,59 @@ export function DayReveal({ day, theme, unlock, onContinue, capFrom, capTo }) {
         Today&apos;s theme
       </p>
 
-      <div className="w-full rounded-3xl border border-ember/30 bg-smoke/50 backdrop-blur-sm p-4 mb-5 text-left">
-        <p className="font-mono text-amber text-[10px] tracking-[0.18em] uppercase mb-1.5">
-          The twist
-        </p>
-        <p className="font-display text-2xl text-bone leading-snug mb-2">
-          {unlock.title}
-        </p>
-        <p className="font-body text-bone/75 text-sm leading-relaxed">
-          {unlock.body}
-        </p>
-        {capFrom != null && capTo != null && (
-          <p className="mt-3 font-mono text-dim text-[11px] tabular-nums">
-            Survival cap{" "}
-            <span className="text-bone">{capFrom}</span>
-            <span className="text-dim mx-1">→</span>
-            <span className="text-amber">{capTo}</span>
-          </p>
+      <AnimatePresence mode="wait">
+        {step === "theme" ? (
+          <motion.div
+            key="theme-dwell"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+            className="w-full"
+          >
+            <QuietFrieze className="w-full mb-6 opacity-85" />
+            <HumanCta onClick={() => setStep("twist")}>
+              Reveal the twist →
+            </HumanCta>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="twist"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
+            className="w-full"
+          >
+            <div className="w-full rounded-3xl border border-ember/30 bg-smoke/50 backdrop-blur-sm p-4 mb-5 text-left">
+              <p className="font-mono text-amber text-[10px] tracking-[0.18em] uppercase mb-1.5">
+                The twist
+              </p>
+              <p className="font-display text-2xl text-bone leading-snug mb-2">
+                {unlock.title}
+              </p>
+              <p className="font-body text-bone/75 text-sm leading-relaxed">
+                {unlock.body}
+              </p>
+              {capFrom != null && capTo != null && (
+                <p className="mt-3 font-mono text-dim text-[11px] tabular-nums">
+                  Survival cap{" "}
+                  <span className="text-bone">{capFrom}</span>
+                  <span className="text-dim mx-1">→</span>
+                  <span className="text-amber">{capTo}</span>
+                </p>
+              )}
+            </div>
+
+            <ThemeFairness theme={theme} className="mb-4 w-full" />
+            <QuietFrieze className="w-full mb-6 opacity-70" />
+
+            <HumanCta onClick={onContinue}>
+              {(unlock.cta || "I'm in").replace(/→\s*$/, "").trim()} →
+            </HumanCta>
+          </motion.div>
         )}
-      </div>
-
-      <ThemeFairness theme={theme} className="mb-4 w-full" />
-      <QuietFrieze className="w-full mb-6 opacity-85" />
-
-      <HumanCta onClick={onContinue}>
-        {(unlock.cta || "I'm in").replace(/→\s*$/, "").trim()} →
-      </HumanCta>
+      </AnimatePresence>
     </Ceremony>
   );
 }

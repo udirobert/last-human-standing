@@ -101,7 +101,7 @@ export function D1CheckInBeat() {
             {...CUE_PRESS}
             className="absolute top-3 right-3 bg-ash/80 backdrop-blur rounded-full px-3 py-1.5 text-bone text-xs font-mono"
           >
-            Replace
+            Retake
           </button>
         </div>
       ) : (
@@ -109,27 +109,33 @@ export function D1CheckInBeat() {
           type="button"
           onClick={() => fileRef.current?.click()}
           {...CUE_PRESS}
-          className="mb-4 w-full aspect-[4/5] max-h-[36vh] rounded-3xl border border-dashed border-amber/35 flex flex-col items-center justify-center gap-3 bg-smoke/40 active:scale-[0.99] transition-transform"
+          className="mb-4 w-full aspect-[4/5] max-h-[36vh] rounded-3xl border border-dashed border-amber/45 flex flex-col items-center justify-center gap-3 bg-smoke/40 active:scale-[0.98] transition-transform shadow-[inset_0_0_0_1px_rgba(244,184,74,0.12)]"
         >
           <ThemeMotif emoji={d.theme.emoji} size={72} label={d.theme.theme} />
-          <span className="font-body text-bone/80 text-sm">Snap your proof of presence</span>
-          <span className="font-mono text-dim text-[10px] uppercase tracking-wider">Camera or gallery</span>
+          <span className="font-body text-bone text-sm">Snap your proof of presence</span>
+          <span className="font-mono text-amber/80 text-[10px] uppercase tracking-wider">Tap to open camera</span>
         </button>
       )}
       <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
 
-      <GameCta onClick={submit} className="mb-2">
-        {photoPreview ? "Submit proof →" : "Use a sample shot →"}
-      </GameCta>
-      {!photoPreview && (
-        <button
-          type="button"
-          onClick={() => fileRef.current?.click()}
-          {...CUE_PRESS}
-          className="w-full py-3 rounded-xl text-dim font-mono text-xs underline decoration-dotted underline-offset-2"
-        >
-          Or snap your own
-        </button>
+      {photoPreview ? (
+        <GameCta onClick={submit} className="mb-2">
+          Lock in proof →
+        </GameCta>
+      ) : (
+        <>
+          <HumanCta onClick={() => fileRef.current?.click()} className="mb-2">
+            Snap your proof →
+          </HumanCta>
+          <button
+            type="button"
+            onClick={submit}
+            {...CUE_PRESS}
+            className="w-full py-3 rounded-xl text-dim font-mono text-xs underline decoration-dotted underline-offset-2"
+          >
+            Practice with a sample shot
+          </button>
+        </>
       )}
     </div>
   );
@@ -142,14 +148,23 @@ export function D1ClosingBeat() {
   const targetReal = mySub?.votes?.real ?? 0;
   const targetFake = mySub?.votes?.fake ?? 0;
 
+  // sealed → reveal → ready. Keep counts hidden until the seal lifts.
+  const [phase, setPhase] = useState("sealed"); // sealed | reveal | ready
   const [displayReal, setDisplayReal] = useState(0);
   const [displayFake, setDisplayFake] = useState(0);
-  const [canContinue, setCanContinue] = useState(false);
 
-  // Fast-forward the jury tally so the user sees votes roll in
   useEffect(() => {
-    const duration = 2200;
-    const steps = 30;
+    const sealTimer = setTimeout(() => {
+      setPhase("reveal");
+      haptic("light");
+    }, 1600);
+    return () => clearTimeout(sealTimer);
+  }, []);
+
+  useEffect(() => {
+    if (phase !== "reveal") return undefined;
+    const duration = 1400;
+    const steps = 20;
     const interval = duration / steps;
     let step = 0;
     const timer = setInterval(() => {
@@ -161,28 +176,30 @@ export function D1ClosingBeat() {
         clearInterval(timer);
         setDisplayReal(targetReal);
         setDisplayFake(targetFake);
-        setCanContinue(true);
+        setPhase("ready");
+        haptic("success");
       }
     }, interval);
     return () => clearInterval(timer);
-  }, [targetReal, targetFake]);
+  }, [phase, targetReal, targetFake]);
 
-  // Auto-advance once the tally finishes
-  useEffect(() => {
-    if (!canContinue) return;
-    const timer = setTimeout(() => nextBeat(), 1200);
-    return () => clearTimeout(timer);
-  }, [canContinue, nextBeat]);
+  const ready = phase === "ready";
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8 items-center justify-center">
       <div className="w-full max-w-sm text-center mb-5">
         <p className="font-mono text-amber text-xs uppercase tracking-[0.2em] mb-2">Day 1 · Submitted</p>
         <p className="font-display text-4xl text-bone leading-none mb-2">Proof received</p>
-        <p className="font-body text-bone/60 text-sm">The jury is voting. Your photo is on trial.</p>
+        <p className="font-body text-bone/60 text-sm">
+          {phase === "sealed"
+            ? "Sealed for the jury. Your photo is on trial."
+            : ready
+              ? "The jury has spoken. Now you judge others."
+              : "The seal lifts. Votes are landing."}
+        </p>
       </div>
 
-      <div className="w-full max-w-sm mb-5 rounded-3xl overflow-hidden border border-amber/30 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)] aspect-[4/5] max-h-[40vh] bg-ash">
+      <div className="w-full max-w-sm mb-5 rounded-3xl overflow-hidden border border-amber/30 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)] aspect-[4/5] max-h-[40vh] bg-ash relative">
         {photo ? (
           <img src={photo} alt="Your proof" className="w-full h-full object-cover" />
         ) : (
@@ -190,17 +207,27 @@ export function D1ClosingBeat() {
             <ThemeMotif emoji={dayMeta(1).theme.emoji} size={80} />
           </div>
         )}
+        {phase === "sealed" && (
+          <div className="absolute inset-0 bg-ash/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+            <p className="font-mono text-amber text-[10px] uppercase tracking-[0.22em]">Sealed receipt</p>
+            <p className="font-display text-2xl text-bone">Awaiting jury</p>
+          </div>
+        )}
       </div>
 
       <div className="w-full max-w-sm mb-6">
-        <LiveTally real={displayReal} fake={displayFake} />
+        {phase === "sealed" ? (
+          <SealedTally />
+        ) : (
+          <LiveTally real={displayReal} fake={displayFake} />
+        )}
         <p className="text-center font-mono text-dim text-[10px] mt-2 uppercase tracking-widest">
-          {canContinue ? "Voting closed — enter the audit" : "Jury votes rolling in..."}
+          {ready ? "Verdict in — enter the audit" : phase === "sealed" ? "Jury deliberating..." : "Votes landing..."}
         </p>
       </div>
 
-      <GameCta onClick={nextBeat} disabled={!canContinue} className="w-full max-w-sm">
-        {canContinue ? "Enter the audit →" : "Tallying votes..."}
+      <GameCta onClick={nextBeat} disabled={!ready} className="w-full max-w-sm">
+        {ready ? "Enter the audit →" : "Holding the seal..."}
       </GameCta>
     </div>
   );
@@ -242,6 +269,25 @@ export function D1RankBeat() {
       shareUrl={shareUrl}
       photoUrl={photoPreview}
     />
+  );
+}
+
+function SealedTally() {
+  return (
+    <div className="mt-3 rounded-2xl border border-ember/35 bg-smoke/50 px-4 py-4">
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-mono text-[10px] text-dim uppercase tracking-widest">Human</p>
+        <p className="font-mono text-[10px] text-dim uppercase tracking-widest">Sus</p>
+      </div>
+      <div className="flex h-3 rounded-full overflow-hidden border border-ember/40 bg-ash relative">
+        <motion.div
+          className="absolute inset-y-0 left-0 w-1/3 bg-amber/35"
+          animate={{ x: ["-40%", "220%"] }}
+          transition={{ duration: 1.4, repeat: Infinity, ease: "easeInOut" }}
+        />
+      </div>
+      <p className="text-center font-body text-bone/55 text-xs mt-3">Counts stay sealed until the jury finishes.</p>
+    </div>
   );
 }
 

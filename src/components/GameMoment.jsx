@@ -148,7 +148,7 @@ function MomentCardPreview({ kind, name, day, rank, cap, photoUrl }) {
       transition={{ delay: 0.35 }}
       src={src}
       alt="Shareable moment card"
-      className="w-full max-w-sm rounded-xl border border-ember/50 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.6)] relative z-10"
+      className="w-full max-w-sm rounded-xl border border-amber/40 shadow-[0_12px_40px_-12px_rgba(0,0,0,0.45)] relative z-10"
     />
   );
 }
@@ -162,6 +162,15 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
 
   // Yield the trap to ShareSheet while it's stacked on top
   const trapRef = useFocusTrap(!shareOpen, { onEscape: onDismiss });
+  const nextDay =
+    currentDay != null && Number(currentDay) >= 1 && Number(currentDay) < 5
+      ? Number(currentDay) + 1
+      : null;
+  const continueLabel = nextDay
+    ? `Continue to Day ${nextDay} →`
+    : currentDay != null
+      ? "Continue to the finale →"
+      : "Continue →";
 
   return (
     <motion.div
@@ -174,7 +183,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto overscroll-y-contain py-8 outline-none"
+      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-ash/88 backdrop-blur-sm px-5 overflow-y-auto overscroll-y-contain py-8 outline-none"
     >
       {/* Pulse rings behind the checkmark */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -267,16 +276,24 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         </motion.div>
       )}
 
-      {/* Actions */}
+      {/* Return ritual — next day is the primary exit; share stays optional */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}
         className="w-full max-w-sm mt-6 space-y-3 relative z-10"
       >
-        <HumanCta onClick={onDismiss}>
-          {currentDay != null ? `Continue to Day ${currentDay} mission →` : "Continue to today's mission →"}
-        </HumanCta>
+        {nextDay && (
+          <div className="rounded-2xl border border-neon/25 bg-neon/5 px-4 py-3 text-center">
+            <p className="font-mono text-neon text-[10px] uppercase tracking-[0.18em] mb-1">
+              Tomorrow&apos;s return
+            </p>
+            <p className="font-body text-bone/80 text-sm leading-snug">
+              Day {nextDay} opens with a new theme. One photo. One chance.
+            </p>
+          </div>
+        )}
+        <HumanCta onClick={onDismiss}>{continueLabel}</HumanCta>
         <GhostLink onClick={onShare} className="w-full py-2">
           {shareCopied ? "Copied" : "Share your card"}
         </GhostLink>

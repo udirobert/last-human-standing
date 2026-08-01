@@ -160,11 +160,13 @@ export default function DayRecap() {
             </motion.p>
 
             <HumanCta onClick={dismiss} className="mt-8">
-              {currentDay != null
-                ? `Continue to Day ${currentDay} →`
-                : personalResult === "eliminated"
-                  ? "Continue to the audit →"
-                  : "Continue to today's mission →"}
+              {personalResult === "eliminated"
+                ? "Continue to the audit →"
+                : currentDay != null && Number(currentDay) < 5
+                  ? `Continue to Day ${Number(currentDay) + 1} →`
+                  : currentDay != null
+                    ? "Continue to the finale →"
+                    : "Continue to today's mission →"}
             </HumanCta>
           </motion.div>
 

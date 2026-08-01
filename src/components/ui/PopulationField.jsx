@@ -142,6 +142,14 @@ export default function PopulationField({
       ref={dotsRef}
       aria-hidden="true"
       className="absolute inset-0 overflow-hidden pointer-events-none"
+      style={{
+        // Fade ambient dots out of the lower thumb/CTA band so primary
+        // actions and tally labels stay legible.
+        WebkitMaskImage:
+          "linear-gradient(to bottom, black 0%, black 58%, rgba(0,0,0,0.45) 75%, transparent 94%)",
+        maskImage:
+          "linear-gradient(to bottom, black 0%, black 58%, rgba(0,0,0,0.45) 75%, transparent 94%)",
+      }}
     >
       {positions.slice(0, totalCount).map((p, i) => {
         const isAlive = i < aliveCount;
