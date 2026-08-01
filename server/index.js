@@ -36,6 +36,8 @@ import {
 } from "./lib/validators.js";
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
 import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
+import { Group } from "@semaphore-protocol/group";
+import { createSemaphoreAuditVerifier } from "./lib/semaphoreAudit.js";
 
 // ─── Sentry initialization (before anything else) ─────────────────────
 const SENTRY_DSN = process.env.SENTRY_DSN;
@@ -88,6 +90,7 @@ const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 
 const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30);
 const VOTE_DAILY_GOAL = Number(process.env.VOTE_DAILY_GOAL || 5);
 const AUDIT_NUDGE_HOURS = Number(process.env.AUDIT_NUDGE_HOURS || 2);
+const SEMAPHORE_AUDIT_ENABLED = process.env.SEMAPHORE_AUDIT_ENABLED === "true";
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
 const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
@@ -1657,6 +1660,115 @@ app.get("/api/feed", async (req, res) => {
     return res.json({ ok: true, submissions: withVotes });
   } catch (e) {
     res.status(400).json({ error: "feed_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// ─── Semaphore anonymous-audit prototype ────────────────────────────────
+// Feature-flagged and deliberately separate from /api/vote. It establishes
+// verified-cohort enrollment and atomic anonymous-signal replay protection;
+// reveal/finalization will be wired only after the cohort UX is approved.
+app.post("/api/semaphore/enroll", requireAuth, async (req, res) => {
+  if (!SEMAPHORE_AUDIT_ENABLED) return res.status(404).json({ error: "semaphore_audit_disabled" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+
+  try {
+    const identityCommitment = ensureString(body.identityCommitment, { field: "identityCommitment", required: true, min: 1, max: 78 });
+    if (!/^\d+$/.test(identityCommitment)) return res.status(400).json({ error: "invalid_identity_commitment" });
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+
+    const user = await getUserRecord(req.user.address);
+    const humanVerified = Boolean(user?.world_id_verified) || Boolean(user?.humanity_nullifier);
+    if (!humanVerified) return res.status(403).json({ error: "humanity_verification_required" });
+    if (!user?.paid || user.cohort !== COHORT_CONFIG.cohort) return res.status(403).json({ error: "active_cohort_membership_required" });
+
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("semaphore_enrollments")
+      .select("identity_commitment")
+      .eq("cohort", COHORT_CONFIG.cohort)
+      .eq("address", req.user.address)
+      .maybeSingle();
+    if (existingError) return res.status(400).json({ error: "semaphore_enrollment_read_failed", message: existingError.message });
+    if (existing && existing.identity_commitment !== identityCommitment) {
+      return res.status(409).json({ error: "semaphore_identity_already_enrolled" });
+    }
+
+    const { error } = await supabaseAdmin.from("semaphore_enrollments").upsert(
+      { cohort: COHORT_CONFIG.cohort, address: req.user.address, identity_commitment: identityCommitment },
+      { onConflict: "cohort,address", ignoreDuplicates: true },
+    );
+    if (error) {
+      const duplicate = error.code === "23505";
+      return res.status(duplicate ? 409 : 400).json({ error: duplicate ? "semaphore_identity_already_enrolled" : "semaphore_enrollment_failed", message: error.message });
+    }
+    return res.json({ ok: true, cohort: COHORT_CONFIG.cohort });
+  } catch (error) {
+    sendValidationError(res, error);
+  }
+});
+
+app.get("/api/semaphore/group", requireAuth, async (req, res) => {
+  if (!SEMAPHORE_AUDIT_ENABLED) return res.status(404).json({ error: "semaphore_audit_disabled" });
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  const { data, error } = await supabaseAdmin
+    .from("semaphore_enrollments")
+    .select("identity_commitment")
+    .eq("cohort", COHORT_CONFIG.cohort)
+    .order("identity_commitment", { ascending: true });
+  if (error) return res.status(400).json({ error: "semaphore_group_read_failed", message: error.message });
+  const members = (data || []).map((row) => row.identity_commitment);
+  const group = new Group(members.map((member) => BigInt(member)));
+  return res.json({ ok: true, cohort: COHORT_CONFIG.cohort, members, root: group.root.toString() });
+});
+
+app.post("/api/semaphore/signal", requireAuth, async (req, res) => {
+  if (!SEMAPHORE_AUDIT_ENABLED) return res.status(404).json({ error: "semaphore_audit_disabled" });
+  const body = ensureObjectBody(req, res);
+  if (!body) return;
+
+  try {
+    const submissionId = ensureNumber(body.submissionId, { field: "submissionId", required: true, integer: true, min: 1 });
+    const roundId = ensureNumber(body.roundId, { field: "roundId", required: true, integer: true, min: 1 });
+    const commitment = ensureString(body.commitment, { field: "commitment", required: true, min: 1, max: 78 });
+    if (!/^\d+$/.test(commitment) || !body.proof || typeof body.proof !== "object") {
+      return res.status(400).json({ error: "invalid_semaphore_signal" });
+    }
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+
+    const { data: members, error: membersError } = await supabaseAdmin
+      .from("semaphore_enrollments")
+      .select("identity_commitment")
+      .eq("cohort", COHORT_CONFIG.cohort)
+      .order("identity_commitment", { ascending: true });
+    if (membersError) return res.status(400).json({ error: "semaphore_group_read_failed", message: membersError.message });
+    if ((members || []).length < 3) return res.status(409).json({ error: "semaphore_anonymity_set_too_small" });
+
+    const group = new Group((members || []).map((row) => BigInt(row.identity_commitment)));
+    const scopeLabel = `lhs:audit:cohort-${COHORT_CONFIG.cohort}:round-${roundId}:submission-${submissionId}`;
+    const verification = await createSemaphoreAuditVerifier().verifyCommitment({
+      proof: body.proof,
+      scopeLabel,
+      commitment,
+      groupRoot: group.root.toString(),
+    });
+    if (!verification.ok) return res.status(400).json({ error: "semaphore_signal_invalid", reason: verification.reason });
+
+    // The unique primary key in migration 027 makes this replay check atomic
+    // across API processes. No voter address is written with the nullifier.
+    const { error: insertError } = await supabaseAdmin.from("semaphore_audit_nullifiers").insert({
+      cohort: COHORT_CONFIG.cohort,
+      round_id: roundId,
+      submission_id: submissionId,
+      nullifier: verification.nullifier,
+      commitment,
+    });
+    if (insertError) {
+      if (insertError.code === "23505") return res.status(409).json({ error: "semaphore_nullifier_already_used" });
+      return res.status(400).json({ error: "semaphore_signal_store_failed", message: insertError.message });
+    }
+    return res.json({ ok: true, submissionId, roundId });
+  } catch (error) {
+    sendValidationError(res, error);
   }
 });
 

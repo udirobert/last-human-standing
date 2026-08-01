@@ -30,6 +30,7 @@ Photo + crowd voting is the primary trust layer. GPS is optional bonus credibili
 - **🃏 Shareable moment cards** — Canvas PNG cards for survive / jury / win; native share prefers the image; `/api/share/winner` for link unfurls.
 - **⚡ Speed-run demo** — `/?demo=1` (~8–10 min): full 5-day arc (decoy themes) → proof → audit → infiltrator → wildcard → finale → reserve. Same warm room + motifs + craft CTAs as the live path. No payment.
 - **🛡️ Pluggable Multi-Provider Proof of Humanity** — Extensible PoH architecture supporting World ID and Self Protocol (both live). Self is on Celo Sepolia staging with mock passports; flip `SELF_MOCK_PASSPORT=false` to verify real passports on Celo mainnet.
+- **🔒 Privacy v1 plan: commit–reveal audit voting** — new cohorts will hash-commit HUMAN/SUS choices during the audit window, then reveal after voting closes. This prevents live-vote anchoring without adding a third chain; see [Privacy architecture](./PRIVACY_ARCHITECTURE.md).
 - **Pre-launch waitlist + countdown** — wallet auth + 1 WLD entry locks your slot in the cohort
 - **Cohort lifecycle** — `phase: 'prelaunch' | 'live' | 'ended'`, exposed via `/api/game/state`
 - **Daily round model** — admin sets theme/place type, time window, survival cap, prompt (GPS coords optional for local events)
@@ -71,6 +72,7 @@ A reusable **proof-of-presence** layer: brand activations, IRL events, loyalty p
 - World Chain attestations for check-in receipts
 - GeoGuesser-style "Guess the city" bonus vote on submissions
 - Multi-city support with per-city cohorts
+- Roll out commit–reveal voting on the canonical chain for each new cohort (World Chain for World cohorts; Celo for Self/Celo cohorts)
 
 **Hidden Verification & Agent Participation (foundation live, activation flagged off):**
 

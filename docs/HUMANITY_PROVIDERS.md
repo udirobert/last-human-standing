@@ -91,3 +91,9 @@ Widening to Celo + Self is **wise** if you want:
 - Redundancy if one verifier is down or distrusted
 
 Keep **one slot per nullifier per cohort** regardless of provider — World nullifier and Self nullifier should not both reserve two slots for the same person (link via optional “upgrade path” if the same wallet verifies twice).
+
+## Cohort policy and privacy roadmap
+
+World ID and Self nullifiers are independent. A shared cohort that accepts either provider cannot prove a person has not joined once through World ID and once through Self with different wallets. Until cross-provider linking is designed with explicit user consent, run provider-specific cohorts or require both proofs for a high-assurance cohort; do not claim global one-human-one-slot for an either-provider cohort.
+
+For voting privacy, new cohorts will use commit–reveal ballots on their canonical chain. This hides HUMAN/SUS choices during the influential voting phase, then publicly verifies them during a timed reveal. The full decision and deployment plan is in [Privacy architecture](./PRIVACY_ARCHITECTURE.md).

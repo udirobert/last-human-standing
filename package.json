@@ -12,13 +12,18 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "semaphore:spike": "node scripts/semaphore-spike.mjs",
+    "semaphore:audit-spike": "node scripts/semaphore-audit-spike.mjs"
   },
   "dependencies": {
     "@daytona/sdk": "^0.200.1",
     "@farcaster/miniapp-sdk": "^0.3.0",
     "@selfxyz/core": "^1.2.0-beta.1",
     "@selfxyz/qrcode": "^1.0.24",
+    "@semaphore-protocol/group": "^4.14.3",
+    "@semaphore-protocol/identity": "^4.14.3",
+    "@semaphore-protocol/proof": "^4.14.3",
     "@sentry/node": "^10.68.0",
     "@sentry/react": "^10.68.0",
     "@supabase/supabase-js": "^2.49.1",
