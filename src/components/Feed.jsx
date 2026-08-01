@@ -157,7 +157,7 @@ const useMocks = import.meta.env.DEV;
 
 export default function Feed({ onBack, onCheckIn, onReserve }) {
   const { walletAuthed, entryPaid, sendWorldChat, isMiniApp } = useWorld();
-  const { round, verification, phase, you, currentDay, lastUpdatedAt, refresh } = useRound();
+  const { round, verification, phase, you, currentDay, refresh } = useRound();
   const { unlockAchievement, checkAchievement } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
   const [submissions, setSubmissions] = useState(useMocks && !isMiniApp ? MOCK_SUBMISSIONS : []);
@@ -171,6 +171,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
   const [loading, setLoading] = useState(true);
   const [challengeToast, setChallengeToast] = useState(null);
   const [loadError, setLoadError] = useState(null);
+  const [feedCheckedAt, setFeedCheckedAt] = useState(null);
 
   const { canVote, voteBlockedReason } = useTrustTier();
   const activeTheme = resolveActiveTheme(round);
@@ -205,6 +206,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
           })),
         );
       }
+      setFeedCheckedAt(Date.now());
     } catch (error) {
       void error;
       setLoadError("feed_network");
@@ -407,7 +409,9 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
         {phase !== "prelaunch" && (
           <p className="mx-1 px-3 py-2 rounded-xl border border-ember/30 bg-smoke/50 font-mono text-[10px] text-dim leading-relaxed text-center">
             Vote the proof, not the person. Don&apos;t redistribute photos off the app.
-            {lastUpdatedAt ? ` · checked ${new Date(lastUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}
+            {feedCheckedAt
+              ? ` · feed checked ${new Date(feedCheckedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+              : ""}
           </p>
         )}
         {loading && submissions.length === 0 && (

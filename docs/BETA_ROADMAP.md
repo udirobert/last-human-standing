@@ -11,7 +11,7 @@
 - [x] Set `VITE_CELO_PRIZE_POOL_ADDRESS` in production `.env`
 - [ ] Set `COHORT_SIZE=25` in production `.env` — run `bash scripts/relaunch-prep.sh --update-env`
 - [ ] Set `GAME_LAUNCH_AT` to beta start date — **2026-07-29T18:00:00Z**
-- [x] Set `DAILY_SURVIVAL_CAP` — now automatic via `survival_cap_for_day()` (25→12→6→3→1)
+- [x] Set `DAILY_SURVIVAL_CAP` — now automatic via `survival_cap_for_day()` (40→20→8→3→1)
 - [x] Verify Supabase project is running and schema is applied
 - [x] Verify storage bucket (`checkins`) exists
 - [x] Set `ADMIN_TOKEN` to a strong random value
@@ -49,9 +49,9 @@
 1. **T-3 days**: Set `GAME_LAUNCH_AT` (`2026-07-29T18:00:00Z`), apply migrations 023–024, run `relaunch-prep.sh --update-env`
 2. **T-1 day**: Seed the prize pool with cUSD/WLD, run reset SQL, smoke-test
 3. **T-0**: Share beta URL with 25 testers (Celo community + WLD team)
-4. **Day 1 opens**: Auto-scheduler opens the round at `opens_at`; cap = 25
+4. **Day 1 opens**: Auto-scheduler opens the round at `opens_at`; cap = 40 (soft first cut)
 5. **Day 1 closes**: `advance_rounds()` calls `close_day()` — verdicts, DQ-and-replace, streak bonuses, eliminations
-6. **Day 2–3**: Cap decays to 12, then 6. Themes escalate (Park, Friend)
+6. **Day 2–3**: Cap decays to 20, then 8. Themes escalate (Park, Friend)
 7. **Day 4**: Cap = 3. After close, wildcard revival triggers — jury votes one player back
 8. **Day 5**: Cap = 1. Last survivor wins. Automatic payout via `ariaBroadcastPayoutTx()`
 9. **Post-game**: Winner ceremony with payout status + Celoscan link. Share result.

@@ -4,6 +4,10 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { resolveActiveTheme } from "../data/game.js";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 
+function revealKey(day) {
+  return `lhs_theme_reveal_${day}`;
+}
+
 export default function ThemeReveal() {
   const { phase, currentDay, round } = useRound();
   const [showReveal, setShowReveal] = useState(false);
@@ -15,7 +19,19 @@ export default function ThemeReveal() {
 
   useEffect(() => {
     if (phase !== "live" || !currentDay || !roundName) return undefined;
-    const theme = resolveActiveTheme({ name: roundName, placeType: round?.placeType, prompt: roundPrompt, survivalCap: roundCap });
+
+    try {
+      if (localStorage.getItem(revealKey(currentDay)) === "1") return undefined;
+    } catch {
+      /* private browsing — still show once this mount */
+    }
+
+    const theme = resolveActiveTheme({
+      name: roundName,
+      placeType: round?.placeType,
+      prompt: roundPrompt,
+      survivalCap: roundCap,
+    });
     setRevealed({
       day: currentDay,
       theme: theme.theme,
@@ -24,6 +40,11 @@ export default function ThemeReveal() {
       cap: roundCap ?? null,
     });
     setShowReveal(true);
+    try {
+      localStorage.setItem(revealKey(currentDay), "1");
+    } catch {
+      /* ignore */
+    }
     const timer = setTimeout(() => setShowReveal(false), 3000);
     return () => clearTimeout(timer);
   }, [phase, currentDay, roundName, roundPrompt, roundCap, round?.placeType]);

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ROUND_UNLOCKS, getRuleMascot } from "../lib/copy.js";
-import { TODAY_THEME, findTheme } from "../data/game";
+import { resolveActiveTheme } from "../data/game";
 import { useRound } from "../world/RoundProvider.jsx";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 import ThemeFairness from "./ThemeFairness.jsx";
@@ -43,8 +43,7 @@ export default function RuleReveal({ onAudit }) {
   const [body, setBody] = useState("");
   const [mascot, setMascot] = useState(null);
 
-  const themeLabel = round?.placeType || round?.name || TODAY_THEME.theme;
-  const theme = findTheme(themeLabel) || TODAY_THEME;
+  const theme = resolveActiveTheme(round);
   const cap = round?.survivalCap ?? null;
 
   useEffect(() => {
