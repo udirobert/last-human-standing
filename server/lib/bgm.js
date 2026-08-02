@@ -33,7 +33,7 @@ export const BGM_STATIONS = [
   {
     id: "audit-pulse",
     title: "Audit Pulse",
-    phases: ["live", "audit"],
+    phases: ["prelaunch", "live", "audit"],
     prompt:
       "Instrumental only, no vocals. Investigative electronic groove for a jury voting screen. Dry breakbeat at 108 bpm, detective-noir Rhodes stabs, filtered bass, curious not aggressive. Clean mix, seamless loop energy.",
     musicLengthMs: 28_000,

@@ -27,6 +27,9 @@ export function useSound() {
   const ambientRef = useRef(null);
   const audioRef = useRef(null);
   const stationIdRef = useRef(null);
+  const stationHistoryRef = useRef([]);
+  const playlistCycleRef = useRef(null);
+  const playlistContextRef = useRef({ phase: "prelaunch", screen: "home" });
   const unlockedRef = useRef(false);
 
   useEffect(() => {
@@ -117,8 +120,11 @@ export function useSound() {
 
       if (!audioRef.current) {
         audioRef.current = new Audio();
-        audioRef.current.loop = true;
+        audioRef.current.loop = false;
         audioRef.current.preload = "auto";
+        audioRef.current.onended = () => {
+          playlistCycleRef.current?.({ ...playlistContextRef.current, force: true });
+        };
       }
       const audio = audioRef.current;
       audio.volume = BGM_VOL;
@@ -142,6 +148,7 @@ export function useSound() {
     async ({ phase = "prelaunch", screen = "home", force = false } = {}) => {
       if (!unlockedRef.current) return;
       if (!force && !enabled) return;
+      playlistContextRef.current = { phase, screen };
       try {
         const resp = await fetch(
           `/api/music/playlist?phase=${encodeURIComponent(phase)}&screen=${encodeURIComponent(screen)}`,
@@ -151,10 +158,23 @@ export function useSound() {
           return;
         }
         const data = await resp.json();
-        const preferred =
-          data.stations?.find((s) => s.id === data.preferredId && s.ready) ||
-          data.stations?.find((s) => s.ready);
+        const ready = (data.stations || []).filter((station) => station.ready);
+        const phaseStations = ready.filter((station) =>
+          Array.isArray(station.phases) && station.phases.includes(phase),
+        );
+        const screenStations = (screen === "feed" || screen === "audit")
+          ? phaseStations.filter((station) => station.id === "audit-pulse")
+          : phaseStations;
+        const candidates = screenStations.length ? screenStations : (phaseStations.length ? phaseStations : ready);
+        const recent = stationHistoryRef.current;
+        const fresh = candidates.filter((station) => !recent.includes(station.id));
+        const withoutCurrent = (fresh.length ? fresh : candidates).filter(
+          (station) => station.id !== stationIdRef.current,
+        );
+        const pool = withoutCurrent.length ? withoutCurrent : candidates;
+        const preferred = pool.find((station) => station.id === data.preferredId) || pool[0];
         if (preferred?.url) {
+          stationHistoryRef.current = [...stationHistoryRef.current.slice(-3), preferred.id];
           await playStation(preferred.id, preferred.title, { force });
         } else {
           startDrone();
@@ -165,6 +185,13 @@ export function useSound() {
     },
     [enabled, playStation, startDrone],
   );
+
+  useEffect(() => {
+    playlistCycleRef.current = syncPlaylist;
+    return () => {
+      playlistCycleRef.current = null;
+    };
+  }, [syncPlaylist]);
 
   const unlockAndStart = useCallback(
     (ctx = {}) => {
