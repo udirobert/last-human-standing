@@ -106,3 +106,19 @@ Ambition upgrade: the pilot ships WITH operator-run, prize-ineligible agents.
   relayer queue — investigate before launch day.
 - Remaining: curated photo pools must land in
   `shared/exhibition-photos/day<N>/<username>.jpg` before each day opens.
+
+## Addendum 2 — relayer fix + day-1 exhibition photos (12:26–12:32 UTC)
+
+- Migration **034** applied to prod: `claim_vote_queue_batch` aliased/qualified
+  (the OUT-param `id` shadowed `vote_queue.id` → "column reference id is
+  ambiguous" on every relayer tick). Confirmed silent in prod logs after
+  12:25:27 (interval ~15s). Pre-existing bug, now closed.
+- Day-1 exhibition photos generated via fal.ai (per-persona models/styles),
+  QA'd with Florence-2 + Moondream captions (all on-theme, no broken
+  generations; blot.exe-1 has a malformed two-handled cup — chosen as the
+  intended easy catch; final visual eyeball still recommended pre-launch).
+  Shipped to `shared/exhibition-photos/day1/` (winners + candidate pool).
+- New tooling: `scripts/generate-exhibition-photos.mjs` (--day N, --username,
+  --count). `exhibition/photos/` is gitignored; only the script + configs land
+  in the repo.
+- Runner env verified: `LHS_PHOTOS_DIR=/opt/last-human-standing/shared/exhibition-photos` (pm2 env id 92).
