@@ -40,6 +40,18 @@ const PAPER_GRAIN =
 
 const MYSTERY_EMOJIS = ["❓", "🔮", "✨", "🎯", "🎲", "🌟"];
 
+/** Viewport width, for scaling the ambient paintings between phone and monitor. */
+function useViewportWidth() {
+  const [w, setW] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
+  useEffect(() => {
+    const onResize = () => setW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return w;
+}
+const clampPx = (lo, v, hi) => Math.min(hi, Math.max(lo, Math.round(v)));
+
 function HeroCountdown({ targetIso }) {
   const [t, setT] = useState(() => diff(targetIso));
   const [cycleIndex, setCycleIndex] = useState(0);
@@ -134,6 +146,7 @@ function HeroCountdown({ targetIso }) {
 }
 
 export default function LandingHero({ targetIso, reservedCount = 0, cohortSize = 50, onReserve, onDetails, onSpeedRun }) {
+  const vw = useViewportWidth();
   // Tiered urgency — shifts with cohort fill so the scarcity copy feels real
   // instead of shouting "filling fast" at 2/50.
   let statusLine;
@@ -185,9 +198,10 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
       />
 
       {/* ambient world — bounded + clipped so it can never expand the page.
-          Opacity raised from ~0.12-0.16 (near-invisible ghosts) to 0.32 so
-          this actually reads as a living, warm world rather than vanishing
-          into the backdrop. */}
+          Desktop testers could barely see the previous pass (~90px at ~0.3
+          opacity against the dark gradient + edge vignette). Sizes scale with
+          viewport (phone keeps the old footprint) and opacity is raised so
+          the painted world actually reads on a monitor. */}
       <div aria-hidden="true" className="absolute inset-0 z-[1] overflow-hidden pointer-events-none">
         {/* A visible ripple, contained strictly to this same box — can never
             escape the hero or bleed into cards further down the page.
@@ -195,20 +209,20 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
             centering it behind the title (the obvious first instinct) hid
             most of it behind that same opaque text. */}
         <EmberField cy={78} />
-        <div className="absolute left-[3%] top-[15%]" style={{ opacity: 0.32 }}>
-          <ThemeMotif emoji="🌳" size={92} />
+        <div className="absolute left-[3%] top-[15%]" style={{ opacity: 0.55 }}>
+          <ThemeMotif emoji="🌳" size={clampPx(88, vw * 0.09, 128)} />
         </div>
-        <div className="absolute right-[5%] bottom-[11%]" style={{ opacity: 0.32 }}>
-          <DozingCat size={90} />
+        <div className="absolute right-[5%] bottom-[11%]" style={{ opacity: 0.55 }}>
+          <DozingCat size={clampPx(90, vw * 0.086, 124)} />
         </div>
-        <div className="hidden sm:block absolute right-[6%] top-[13%]" style={{ opacity: 0.3 }}>
-          <CoffeeBrew size={78} />
+        <div className="hidden sm:block absolute right-[6%] top-[13%]" style={{ opacity: 0.5 }}>
+          <CoffeeBrew size={clampPx(78, vw * 0.075, 108)} />
         </div>
-        <div className="hidden sm:block absolute left-[7%] bottom-[14%]" style={{ opacity: 0.3 }}>
-          <ThemeMotif emoji="🍜" size={74} />
+        <div className="hidden sm:block absolute left-[7%] bottom-[14%]" style={{ opacity: 0.5 }}>
+          <ThemeMotif emoji="🍜" size={clampPx(74, vw * 0.07, 100)} />
         </div>
-        <div className="hidden md:block absolute left-1/2 top-[7%] -translate-x-1/2" style={{ opacity: 0.28 }}>
-          <ThemeMotif emoji="🌅" size={80} />
+        <div className="hidden md:block absolute left-1/2 top-[7%] -translate-x-1/2" style={{ opacity: 0.45 }}>
+          <ThemeMotif emoji="🌅" size={clampPx(80, vw * 0.075, 108)} />
         </div>
       </div>
 
@@ -227,7 +241,7 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
         <div style={{ margin: "clamp(14px,2vw,22px) 0 clamp(6px,1vw,10px)" }}>
           <HeroCountdown targetIso={targetIso} />
         </div>
-        <p className="font-mono text-dim uppercase" style={{ fontSize: "clamp(9px,1.1vw,11px)", letterSpacing: "0.2em" }}>
+        <p className="font-mono text-bone/70 uppercase" style={{ fontSize: "clamp(9px,1.1vw,11px)", letterSpacing: "0.2em" }}>
           Cohort 1 begins
         </p>
 

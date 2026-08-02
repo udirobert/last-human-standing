@@ -124,8 +124,10 @@ body.landing-mode .tip-toast {
     z-index: 0;
     pointer-events: none;
     background:
-      /* vignette: darker at the very edges to frame the viewport */
-      radial-gradient(120% 100% at 50% 50%, transparent 50%, rgba(10, 7, 4, 0.5) 100%),
+      /* vignette: only the very edge darkens (45%→70% clear zone, 0.5→0.3
+         max) — the previous rim crushed exactly the gutter zones where the
+         painted motifs live */
+      radial-gradient(115% 100% at 50% 50%, transparent 68%, rgba(10, 7, 4, 0.3) 100%),
       /* warm halo behind the column */
       radial-gradient(50% 60% at 50% 40%, rgba(255, 184, 0, 0.12), transparent 72%);
   }
@@ -152,7 +154,7 @@ body.landing-mode .tip-toast {
     font-family: 'Bebas Neue', cursive;
     font-size: 11px;
     letter-spacing: 0.5em;
-    color: rgba(231, 221, 198, 0.12);
+    color: rgba(231, 221, 198, 0.2);
     white-space: nowrap;
     padding-left: 24px;
     user-select: none;
@@ -170,7 +172,7 @@ body.landing-mode .tip-toast {
     font-family: 'DM Mono', monospace;
     font-size: 10px;
     letter-spacing: 0.3em;
-    color: rgba(231, 221, 198, 0.10);
+    color: rgba(231, 221, 198, 0.16);
     white-space: nowrap;
     padding-right: 24px;
     user-select: none;

@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useEffect, useState } from "react";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useStats } from "../hooks/useStats.js";
 import TopographicTexture from "./ui/TopographicTexture.jsx";
@@ -24,22 +25,38 @@ import ThemeMotif from "./ui/ThemeMotif.jsx";
  *
  * Plus CSS-positioned watermarks (left: brand, right: cohort status).
  *
- * Hidden during landing mode (full-bleed onboarding has its own backdrop).
  * Hidden on mobile (min-[480px]:block; watermarks ≥768px).
+ * Renders on the landing too: the hero paints its own opaque gradient over
+ * the first viewport, so this layer enriches everything BELOW the hero
+ * instead of doubling it.
  */
 
 const TOPO_SEEDS = { prelaunch: 17, live: 42, ended: 89 };
 
+/** Current viewport width, for scaling gutter art with the window. */
+function useViewportWidth() {
+  const [w, setW] = useState(() => (typeof window !== "undefined" ? window.innerWidth : 1280));
+  useEffect(() => {
+    const onResize = () => setW(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return w;
+}
+
+const clamp = (lo, v, hi) => Math.min(hi, Math.max(lo, Math.round(v)));
+
 export default function DesktopBackdrop({ phase = "prelaunch" }) {
   const { reservedCount, cohortSize, isEnded, winner, currentDay } = useRound();
   const { stats } = useStats();
+  const vw = useViewportWidth();
 
-  // Don't render during landing mode — the landing is full-bleed with its
-  // own AmbientBackdrop, and #root becomes transparent/full-width, so the
-  // DesktopBackdrop would double up with the in-page backdrop.
-  const isLandingMode = typeof document !== "undefined" &&
-    document.body.classList.contains("landing-mode");
-
+  // Gutter art must read on a 1440–2560px canvas, not just a laptop: scale
+  // with viewport width between floors tuned to stay tasteful.
+  const catSize = clamp(130, vw * 0.105, 210);
+  const brewSize = clamp(110, vw * 0.09, 180);
+  const motifSize = clamp(95, vw * 0.075, 150);
+  const roseSize = clamp(85, vw * 0.07, 130);
   const activePlayers = stats?.players?.active ?? null;
   const totalPlayers = stats?.players?.total ?? reservedCount ?? 0;
   const populationCount =
@@ -52,8 +69,6 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
   const populationWinner = isEnded && Boolean(winner);
   const topoSeed = TOPO_SEEDS[phase] ?? TOPO_SEEDS.prelaunch;
 
-  if (isLandingMode) return null;
-
   const watermarkRight =
     phase === "prelaunch"
       ? `${reservedCount ?? 0} / ${cohortSize ?? 50} reserved`
@@ -61,8 +76,10 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
         ? "game ended"
         : `${activePlayers ?? totalPlayers ?? 0} alive · day ${currentDay ?? "—"}`;
 
-  // Motif opacity — slightly higher in ended phase (less content competing)
-  const motifOpacity = phase === "ended" ? 0.32 : 0.28;
+  // Motif opacity — the gouache paintings are meant to be SEEN: previous
+  // values (0.28) disappeared against the dark gradient once the edge
+  // vignette multiplied on top. Ended phase can go a touch brighter still.
+  const motifOpacity = phase === "ended" ? 0.6 : 0.52;
 
   return createPortal(
     <>
@@ -104,7 +121,7 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
           className="hidden min-[480px]:block absolute left-[3%] bottom-[8%]"
           style={{ opacity: motifOpacity }}
         >
-          <DozingCat size={140} />
+          <DozingCat size={catSize} />
         </div>
 
         {/* CoffeeBrew — top-right gutter, steaming */}
@@ -112,7 +129,7 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
           className="hidden min-[480px]:block absolute right-[4%] top-[10%]"
           style={{ opacity: motifOpacity }}
         >
-          <CoffeeBrew size={120} />
+          <CoffeeBrew size={brewSize} />
         </div>
 
         {/* Tree — left gutter, mid-height (hidden on narrower desktops) */}
@@ -120,7 +137,7 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
           className="hidden min-[640px]:block absolute left-[2%] top-[35%]"
           style={{ opacity: motifOpacity * 0.85 }}
         >
-          <ThemeMotif emoji="🌳" size={100} label="a park" />
+          <ThemeMotif emoji="🌳" size={motifSize} label="a park" />
         </div>
 
         {/* Ramen — right gutter, lower (hidden on narrower desktops) */}
@@ -128,7 +145,7 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
           className="hidden min-[640px]:block absolute right-[3%] bottom-[20%]"
           style={{ opacity: motifOpacity * 0.8 }}
         >
-          <ThemeMotif emoji="🍜" size={90} label="a warm meal" />
+          <ThemeMotif emoji="🍜" size={clamp(85, vw * 0.068, 140)} label="a warm meal" />
         </div>
 
         {/* Sunrise — left gutter, upper (only on wide screens) */}
@@ -136,15 +153,15 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
           className="hidden min-[768px]:block absolute left-[5%] top-[5%]"
           style={{ opacity: motifOpacity * 0.75 }}
         >
-          <ThemeMotif emoji="🌅" size={80} label="sunrise" />
+          <ThemeMotif emoji="🌅" size={clamp(75, vw * 0.06, 120)} label="sunrise" />
         </div>
 
         {/* Compass rose — bottom-right gutter, gently wobbling */}
         <div
           className="hidden min-[480px]:block absolute right-[5%] bottom-[5%]"
-          style={{ opacity: 0.22 }}
+          style={{ opacity: 0.38 }}
         >
-          <CompassRose size={90} />
+          <CompassRose size={roseSize} />
         </div>
       </div>
 
