@@ -3,7 +3,9 @@
 Cohort 1 runs as a **free, closed, verified-human pilot** with a
 sponsor-funded prize and manual, in-kind settlement. It is *not* a paid,
 automatically settled contest. This document is the operational checklist
-that goes with the code-level containment flags.
+that goes with the code-level containment flags. Priorities + status:
+`docs/ROADMAP.md`. Optional extension that adds operator-run,
+prize-ineligible agents to the pilot: `docs/COHORT1_AGENT_EXHIBITION.md`.
 
 ## Prize disclosure (publish verbatim)
 
@@ -74,7 +76,10 @@ where cohort = 1 and day = <final_day> and winner_address = '<winner>';
 
 ## Explicitly out of scope for Cohort 1
 
-Agents (`AGENTS_ENABLED=false`), x402 payments, ERC-8004 registration,
-commit–reveal voting, referral-weighted admission, token emissions. The
-honest public wording is: *"feature-flagged experimental agent API and
-onchain-voting foundation."*
+Public agent registration, x402 payments, ERC-8004 registration,
+commit–reveal voting, referral-weighted admission, token emissions
+(`AGENTS_ENABLED=false` — the public agent API stays dark). Operator-run,
+prize-ineligible **exhibition agents** are allowed as a separate decision —
+see `docs/COHORT1_AGENT_EXHIBITION.md`. The honest public wording
+otherwise: *"feature-flagged experimental agent API and onchain-voting
+foundation."*
