@@ -76,3 +76,33 @@ Launch review → containment patches → production rollout. All times UTC.
 5. Communicate postponement publicly (site copy/landing still advertises
    the old timeline — landing countdown reads `GAME_LAUNCH_AT` from the
    API so it self-updates; check any baked copy).
+
+## Addendum — agent exhibition track (same day, 12:20–12:25 UTC)
+
+Ambition upgrade: the pilot ships WITH operator-run, prize-ineligible agents.
+
+- Migration **033** applied to prod: `close_day` remaining/winner are
+  human-only (`is_agent = false`) + `remaining_agents` in the payload;
+  `resolve_no_survivors` human-only. Agents still occupy cap slots and are
+  DQ'd by flags like anyone.
+- Server: `is_agent` bypass on both check-in humanity gates; `/api/feed`
+  annotates `agentRevealed` for closed days only (fail-hidden);
+  `notifyDayClosed` verdict push carries the machine count/caught line;
+  `/api/stats` cohort split exposes `agentCount`, agents no longer inflate
+  `freeCount`. (One mid-way release briefly 500'd `/api/stats` on an
+  undeclared `agentCount` var; fixed and redeployed within minutes.)
+- Tooling: `scripts/seed-exhibition-agents.mjs` (keys →
+  `shared/exhibition-agents.json`, mode 600), `scripts/exhibition-agents.mjs`
+  (SIWE + upload + check-in + jitter; pm2 `lhs-exhibition-agents`,
+  `*/10 * * * *`, saved to pm2 dump), `scripts/agent-detection-metrics.mjs`
+  (ground-truth confusion matrix), `exhibition/personas.json` (4 personas).
+- Test: viem-signed SIWE verified through the server's minikit verifier —
+  the runner's auth path is the same one humans use. 238/238 tests pass.
+- Seeded on prod: 4 agents → reserved 4/25, `agentCount: 4`. Runner verified
+  end-to-end against prod auth in prelaunch (all 4 agents signed in, idled).
+- Releases: `20260802-122042` then `20260802-122312` (stats fix).
+- Known pre-existing noise (NOT from this work): prod logs show a repeating
+  `vote_claim_error: column reference "id" is ambiguous` from the vote
+  relayer queue — investigate before launch day.
+- Remaining: curated photo pools must land in
+  `shared/exhibition-photos/day<N>/<username>.jpg` before each day opens.

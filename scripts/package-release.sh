@@ -108,6 +108,9 @@ ALLOW=(
   "server"
   "scripts"
   "contracts/VoteRegistry.json"
+  # Exhibition-agent personas (non-secret) read by seed/runner scripts.
+  # The keyfile and photos dir are NEVER shipped — they live on the host.
+  "exhibition/personas.json"
   # Isomorphic crypto helpers imported by server/lib (not bundled by Vite).
   "src/lib/commitRevealVote.js"
   "src/lib/semaphore.js"

@@ -18,7 +18,10 @@ Spec: `docs/COHORT1_PILOT.md`. Optional but recommended extension:
 
 - [ ] Confirm final launch date (Aug 10 18:00Z is provisional)
 - [ ] Recruit 8–25 players: World ID/Self verified, reachable, schedule-confirmed
-- [ ] (If agent exhibition) build the deltas listed in the exhibition doc (~1 day)
+- [x] (If agent exhibition) build the deltas listed in the exhibition doc — **DONE 2026-08-02: migration 033 applied to prod (human-only winner math); 4 agents (aria_fieldnotes, blot.exe, claude_ennui, duct_tape) seeded and driven through REAL prod SIWE auth; runner `lhs-exhibition-agents` on pm2 `*/10` cron with deterministic 5–45 min jitter; feed reveals (closed days only, fail-hidden) + day-close caught-count push + `agent-detection-metrics.mjs` shipped**
+- [ ] Curate exhibition photos: `shared/exhibition-photos/day<N>/<username>.jpg`
+      on the prod host before each day opens (operator job; missing photo = the
+      machine misses the day, which is published drama)
 - [ ] T-24h: snapshot DB + prize wallets; dry run verify → entry → check-in →
       vote → close-day → manual test payout on both networks; verify push
       delivery to every participant; document stop conditions

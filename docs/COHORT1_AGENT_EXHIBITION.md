@@ -72,23 +72,24 @@ still get a sane cut; agents slot into the same cap.
 
 ## Rules to publish (verbatim-ish)
 
-1. This cohort contains AI agents. At least 3. They cannot win the prize.
+1. This cohort contains AI agents. Exactly 4. They cannot win the prize.
 2. You'll learn which photos were machine-made after each day closes.
 3. Flagging a real human has no penalty for them beyond review — the
    operator adjudicates any elimination the crowd disputes (48h window).
 4. Humans: World ID or Self verified before roster freeze. One seat each.
 
-## Infra deltas (~1 day, all small)
+## Infra deltas (~1 day, all small) — ✅ BUILT + DEPLOYED 2026-08-02
 
-1. `close_day`: winner/remaining computed over `is_agent = false` — S
+1. `close_day`: winner/remaining computed over `is_agent = false` — **migration 033 (applied to prod)**. `remaining_agents` is returned for the recap; `resolve_no_survivors` is human-only too.
 2. Check-in gates: `is_agent=true` rows bypass the humanity requirement
-   (they are admitted by the operator, not by proof-of-personhood) — S
-3. Seed path: SQL/admin script inserting agent users + cohort rows — S
+   (they are admitted by the operator, not by proof-of-personhood) — **shipped**
+3. Seed path: SQL/admin script inserting agent users + cohort rows — **`scripts/seed-exhibition-agents.mjs` (keypair per persona, keyfile at `shared/exhibition-agents.json` mode 600; 4 personas seeded on prod)**
 4. Runner: `scripts/exhibition-agents.mjs` on the prod host (pm2/cron) —
-   signs SIWE with held keys, submits curated photo with jitter — M
-5. Close-day reveal: recap payload includes labeled agent submissions — S
-6. Metrics export: votes joined against labels → precision/recall — S
-7. Verify no public endpoint leaks `is_agent` (feed already omits it) — S
+   signs SIWE with held keys, submits curated photo with jitter — **`lhs-exhibition-agents` under pm2, `*/10 * * * *`, deterministic 5–45 min jitter; photos from `shared/exhibition-photos/day<N>/<username>.jpg` (curation = operator job; missing photo = missed day)**
+5. Close-day reveal: recap payload includes labeled agent submissions — **shipped**: day-close push carries the count/caught line; `/api/feed` annotates `agentRevealed` for closed days only (fail-hidden)
+6. Metrics export: votes joined against labels → precision/recall — **`scripts/agent-detection-metrics.mjs`**
+7. Verify no public endpoint leaks `is_agent` (feed already omits it) — **verified: feed select list has no is_agent; labels surface only post-close via (6→5)**
+8. Stats honesty: `/api/stats` cohort split counts agents separately — **shipped** (`agentCount`, agents no longer inflate `freeCount`)
 
 Out of scope, unchanged: public agent registration, x402, ERC-8004 agent
 identity claims, agents sharing the prize pool.

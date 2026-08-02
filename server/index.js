@@ -505,9 +505,36 @@ async function notifyDayClosed(r) {
   }
 
   // Everyone gets the verdict summary — the shared reveal moment.
+  // Agent exhibition: include how many machines played today and how many
+  // the crowd caught (docs/COHORT1_AGENT_EXHIBITION.md). Individual labels
+  // are revealed per-submission in the feed for closed days.
+  let agentRevealLine = "";
+  try {
+    const { data: daySubs } = await supabaseAdmin
+      .from("submissions")
+      .select("address,status")
+      .eq("day", day);
+    const subAddrs = [...new Set((daySubs || []).map((s) => String(s.address).toLowerCase()))];
+    if (subAddrs.length > 0) {
+      const { data: agentRows } = await supabaseAdmin
+        .from("users")
+        .select("address")
+        .eq("is_agent", true)
+        .or(subAddrs.map((a) => `address.ilike.${a}`).join(","));
+      const agentSet = new Set((agentRows || []).map((row) => row.address.toLowerCase()));
+      const agentSubs = (daySubs || []).filter((s) => agentSet.has(String(s.address).toLowerCase()));
+      const caught = agentSubs.filter((s) => s.status === "flagged").length;
+      if (agentSubs.length > 0) {
+        agentRevealLine = ` ${agentSubs.length} of today's photos were machine-made — the crowd caught ${caught}. See which in the feed.`;
+      }
+    }
+  } catch (e) {
+    log("agent_reveal_error", { day, error: String(e) });
+  }
+
   broadcastPush(supabaseAdmin, {
     title: `Day ${day} verdict is in`,
-    body: `${r.survivors ?? 0} survived · ${r.flagged ?? 0} flagged · ${(r.dq || []).length} disqualified. ${r.remaining ?? "?"} humans remain.`,
+    body: `${r.survivors ?? 0} survived · ${r.flagged ?? 0} flagged · ${(r.dq || []).length} disqualified. ${r.remaining ?? "?"} humans remain.${agentRevealLine}`,
     data: { type: "verdict", day },
   }).catch(() => {});
 
@@ -1426,17 +1453,20 @@ app.get("/api/stats", async (req, res) => {
     let activePlayers = 0;
     let paidCount = 0;
     let freeCount = 0;
+    let agentCount = 0;
     if (supabaseAdmin) {
-      const [total, active, paid, free] = await Promise.all([
+      const [total, active, paid, free, agents] = await Promise.all([
         supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true),
         supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("eliminated", false),
-        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid"),
-        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free"),
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid").eq("is_agent", false),
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free").eq("is_agent", false),
+        supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("is_agent", true),
       ]);
       totalPlayers = total.count ?? 0;
       activePlayers = active.count ?? 0;
       paidCount = paid.count ?? 0;
       freeCount = free.count ?? 0;
+      agentCount = agents.count ?? 0;
     }
 
     res.json({
@@ -1464,6 +1494,7 @@ app.get("/api/stats", async (req, res) => {
         freeSlotsMax: COHORT_CONFIG.freeSlots,
         paidCount,
         freeCount,
+        agentCount,
       },
       players: { total: totalPlayers, active: activePlayers },
     });
@@ -1553,6 +1584,21 @@ async function getDynamicVoteQuorum() {
  * to `normal`. Exposed so the behaviour is testable without a database.
  * @param {{roster?:number, normal?:number, ratio?:number, min?:number}} opts
  */
+/**
+ * Agent exhibition (docs/COHORT1_AGENT_EXHIBITION.md): annotate submissions
+ * with machine labels ONLY after their day has closed. Returns a new array.
+ * agentRevealed is true/false for closed days and null while the day is
+ * still live or unknown, so open-day labels can never leak.
+ */
+export function annotateAgentReveals(submissions, agentAddresses, currentDay) {
+  const agents = new Set([...(agentAddresses || [])].map((a) => String(a).toLowerCase()));
+  return submissions.map((s) => {
+    const closed = currentDay != null && Number.isFinite(Number(s.day)) && Number(s.day) < currentDay;
+    const isAgent = agents.has(String(s.address || "").toLowerCase());
+    return { ...s, agentRevealed: closed ? isAgent : null };
+  });
+}
+
 export function scaledQuorumForRoster({ roster, normal = VOTE_QUORUM, ratio = VOTE_QUORUM_RATIO, min = VOTE_QUORUM_MIN } = {}) {
   const active = Math.max(0, Number(roster) || 0);
   if (active === 0) return normal;
@@ -1720,13 +1766,15 @@ app.post("/api/checkin",
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
 
     // Pilot: only admitted, verified humans from the frozen roster may
-    // submit proofs. This is what makes "last verified human" enforceable.
+    // submit proofs. Exhibition agents (operator-run, is_agent=true) are
+    // admitted by the operator, not by proof-of-personhood — they bypass
+    // the humanity check but still need an admitted cohort seat.
     if (REQUIRE_HUMANITY_FOR_PLAY) {
       const rec = await getUserRecord(req.user.address);
       if (!rec?.paid || (rec?.cohort ?? 1) !== COHORT_CONFIG.cohort) {
         return res.status(403).json({ error: "not_in_cohort" });
       }
-      if (!isHumanityVerified(rec)) {
+      if (!rec.is_agent && !isHumanityVerified(rec)) {
         return res.status(403).json({ error: "humanity_verification_required" });
       }
     }
@@ -1876,6 +1924,26 @@ app.get("/api/feed", async (req, res) => {
       mediaUrl: null,
       voteQuorum: s.vote_quorum ?? VOTE_QUORUM,
     }));
+
+    // Agent exhibition: machine labels are hidden while a day is open and
+    // revealed once it closes (docs/COHORT1_AGENT_EXHIBITION.md).
+    // agentRevealed is null for humans and for anything still live.
+    try {
+      const subAddrs = [...new Set(subs.map((s) => s.address?.toLowerCase()).filter(Boolean))];
+      let agentAddrSet = new Set();
+      if (subAddrs.length > 0) {
+        const { data: agentRows } = await supabaseAdmin
+          .from("users")
+          .select("address")
+          .eq("is_agent", true)
+          .or(subAddrs.map((a) => `address.ilike.${a}`).join(","));
+        agentAddrSet = new Set((agentRows || []).map((row) => row.address.toLowerCase()));
+      }
+      const annotated = annotateAgentReveals(withVotes, agentAddrSet, currentDay);
+      withVotes.forEach((item, i) => { item.agentRevealed = annotated[i].agentRevealed; });
+    } catch {
+      for (const item of withVotes) item.agentRevealed = null; // fail hidden, never leaked
+    }
     for (const item of withVotes) {
       if (!item.media_path) continue;
       if (!SUPABASE_BUCKET_PRIVATE) {
@@ -3145,11 +3213,12 @@ app.post(
 
       // Pilot containment: only the frozen current-cohort roster may play.
       // Lottery rollovers keep paid=true but move to the next cohort — they
-      // must not check in to the open one.
+      // must not check in to the open one. Exhibition agents skip the
+      // humanity check (see /api/checkin for rationale).
       if ((userRec?.cohort ?? 1) !== COHORT_CONFIG.cohort) {
         return res.status(403).json({ error: "not_in_current_cohort", cohort: userRec?.cohort ?? null });
       }
-      if (REQUIRE_HUMANITY_FOR_PLAY && !isHumanityVerified(userRec)) {
+      if (REQUIRE_HUMANITY_FOR_PLAY && !userRec?.is_agent && !isHumanityVerified(userRec)) {
         return res.status(403).json({ error: "humanity_verification_required" });
       }
 
