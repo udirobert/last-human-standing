@@ -215,6 +215,27 @@ describe("server hardening", () => {
     expect([401, 404]).toContain(res.status);
   });
 
+  it("GET /api/jury-board returns ok with an empty board without Supabase", async () => {
+    const res = await request(app).get("/api/jury-board");
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(Array.isArray(res.body.board)).toBe(true);
+    expect(res.body.board).toEqual([]);
+  });
+
+  it("GET /api/jury-board accepts the influence sort param", async () => {
+    const res = await request(app).get("/api/jury-board?sort=influence");
+    expect(res.status).toBe(200);
+    expect(res.body.ok).toBe(true);
+    expect(res.body.sort).toBe("influence");
+  });
+
+  it("GET /api/jury-board falls back to accuracy for unknown sorts", async () => {
+    const res = await request(app).get("/api/jury-board?sort=banana");
+    expect(res.status).toBe(200);
+    expect(res.body.sort).toBe("accuracy");
+  });
+
   it("GET /api/audit/status returns audit funnel fields without Supabase", async () => {
     const res = await request(app).get("/api/audit/status");
     expect(res.status).toBe(200);

@@ -50,7 +50,7 @@ export default function SpectatorChip({
           onClick={onReserve}
           className="mt-1 w-full py-2 rounded-xl bg-blood/20 border border-blood/40 text-bone font-mono text-xs active:scale-95 transition-transform"
         >
-          Reserve a guaranteed slot →
+          Claim a seat in the next cohort →
         </button>
       )}
     </div>

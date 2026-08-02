@@ -1,6 +1,7 @@
-import { useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
+import { track } from '../lib/track.js';
 import { useStats } from '../hooks/useStats.js';
 import { useTrustTier } from '../hooks/useTrustTier.js';
 import TrustBadge from './TrustBadge.jsx';
@@ -51,6 +52,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
     cohortSize, reservedCount, cohortFull,
     cohort: cohortSplit,
     usesDemoState, refresh: refreshRound,
+    pilot,
   } = useRound();
   const { stats } = useStats();
   const { tier } = useTrustTier();
@@ -66,6 +68,23 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
   const isLive = phase === 'live';
   const isEnded = phase === 'ended';
   const isReserved = Boolean(entryPaid || user?.paid);
+  const revivalEnabled = Boolean(pilot?.revivalEnabled);
+
+  // Funnel: returned_next_day — a returning visit on a later day than the
+  // player last saw. Drives the "weak return motivation" measurement.
+  useEffect(() => {
+    if (!isLive || currentDay == null) return;
+    try {
+      const last = localStorage.getItem('lhs_last_seen_day');
+      const day = Number(currentDay);
+      if (last != null && Number.isFinite(Number(last)) && Number(last) >= 1 && day > Number(last)) {
+        track('returned_next_day', { day });
+      }
+      localStorage.setItem('lhs_last_seen_day', String(day));
+    } catch {
+      /* ignore */
+    }
+  }, [isLive, currentDay]);
 
   return (
     <AppShell phase={phase}>
@@ -80,7 +99,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         <div className="flex items-center gap-2 mb-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`w-2 h-2 rounded-full animate-pulse shrink-0 ${isLive ? 'bg-neon' : 'bg-amber'}`} />
-            <span className={`font-mono text-[10px] tracking-[0.18em] uppercase truncate ${isLive ? 'text-neon' : 'text-amber'}`}>
+            <span className={`font-mono text-[11px] tracking-[0.18em] uppercase truncate ${isLive ? 'text-neon' : 'text-amber'}`}>
               {isPrelaunch ? 'Pre-launch' : isLive ? `Live · Day ${currentDay ?? '—'}` : 'Ended'}
             </span>
           </div>
@@ -132,37 +151,73 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
       <ThemeReveal />
 
       <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain ${SHELL_BOTTOM_PAD}`}>
-        {/* Personal return job — theme + one CTA before the rest of home */}
+        {/* 0. Personal return job — theme + one CTA on first paint of the day.
+            Once dismissed, MissionBoard owns the mission surface below. */}
         {(isPrelaunch || isLive) && isReserved && (
           <StageSection index={0} className="relative z-10">
             <ReturnJobCard onCheckIn={onCheckIn} onViewFeed={onViewFeed} />
-            {isLive && <TomorrowPostcard onViewFeed={onViewFeed} />}
           </StageSection>
         )}
 
-        {(isLive || isEnded) && isReserved && tier !== 'verified' && (
-          <StageSection index={0} className="relative z-10 px-5 mb-3">
-            <TrustTierBanner onVerify={() => verifyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+        {/* 1. THE mission surface — day/seats/closing time, today's mission +
+            camera CTA, proof→audit→verdict, provisional rank + danger state.
+            Lives at the top of home so the daily action is never buried
+            (design review finding 2). */}
+        {(isLive || isEnded) && (
+          <StageSection index={1} className="relative z-10">
+            <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
           </StageSection>
         )}
 
-        {/* Live field theater — one pulse for the whole Survive home */}
+        {isLive && isReserved && (
+          <StageSection index={2} className="relative z-10">
+            <TomorrowPostcard onViewFeed={onViewFeed} />
+          </StageSection>
+        )}
+
+        {/* 3. Cold census — survivors / cohort, supporting the seats story. */}
+        {(isLive || isEnded) && (
+          <StageSection index={3} className="relative z-10">
+            <div className="px-5 grid grid-cols-2 gap-3 mb-3">
+              <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+                <p className="text-bone/70 text-xs font-mono uppercase tracking-widest mb-1">Survivors</p>
+                {activePlayers === null ? (
+                  <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
+                ) : (
+                  <p className="font-display text-2xl text-bone leading-none tabular-nums">
+                    {activePlayers}
+                  </p>
+                )}
+                <p className="text-xs font-mono text-bone/70 mt-1 tabular-nums">{eliminated} eliminated</p>
+              </div>
+              <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
+                <p className="text-bone/70 text-xs font-mono uppercase tracking-widest mb-1">Cohort 1</p>
+                {totalPlayers === 0 && activePlayers === null ? (
+                  <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
+                ) : (
+                  <p className="font-display text-2xl text-bone leading-none tabular-nums">
+                    {totalPlayers}<span className="text-dim text-sm"> / 50</span>
+                  </p>
+                )}
+                <p className="text-xs font-mono text-bone/70 mt-1 tabular-nums">
+                  {cohortSplit?.paidCount ?? 0} paid · {cohortSplit?.freeCount ?? 0} free
+                </p>
+              </div>
+            </div>
+          </StageSection>
+        )}
+
+        {/* 4. Live field theater — one pulse for the whole Survive home */}
         {isLive && (
-          <StageSection index={0} className="relative z-10 px-5 mb-3">
+          <StageSection index={4} className="relative z-10 px-5 mb-3">
             <FieldPulse />
           </StageSection>
         )}
 
-        {/* Warm personal artifacts — counterpoint to cold field / census */}
+        {/* 5. Warm personal artifacts — counterpoint to cold field / census */}
         {(isLive || isEnded) && isReserved && (
-          <StageSection index={0} className="relative z-10">
+          <StageSection index={5} className="relative z-10">
             <PersonalShelf onViewHistory={onViewHistory} className="mx-5 mb-3" />
-          </StageSection>
-        )}
-
-        {(isLive || isEnded) && (
-          <StageSection index={0} className="relative z-10">
-            <MissionBoard onCheckIn={onCheckIn} onViewFeed={onViewFeed} user={user} />
           </StageSection>
         )}
 
@@ -185,56 +240,34 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         )}
 
         {(isLive || isEnded) && (
-          <StageSection index={1} className="relative z-10">
-            <div className="px-5 grid grid-cols-2 gap-3 mb-3">
-              <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
-                <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Survivors</p>
-                {activePlayers === null ? (
-                  <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
-                ) : (
-                  <p className="font-display text-2xl text-bone leading-none tabular-nums">
-                    {activePlayers}
-                  </p>
-                )}
-                <p className="text-[10px] font-mono text-dim mt-1 tabular-nums">{eliminated} eliminated</p>
-              </div>
-              <div className="bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm">
-                <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-1">Cohort 1</p>
-                {totalPlayers === 0 && activePlayers === null ? (
-                  <div className="h-7 w-14 rounded bg-ember/40 animate-shimmer mt-1" />
-                ) : (
-                  <p className="font-display text-2xl text-bone leading-none tabular-nums">
-                    {totalPlayers}<span className="text-dim text-sm"> / 50</span>
-                  </p>
-                )}
-                <p className="text-[10px] font-mono text-dim mt-1 tabular-nums">
-                  {cohortSplit?.paidCount ?? 0} paid · {cohortSplit?.freeCount ?? 0} free
-                </p>
-              </div>
-            </div>
-          </StageSection>
-        )}
-
-        {(isLive || isEnded) && (
-          <StageSection index={2} className="relative z-10">
+          <StageSection index={5} className="relative z-10">
             <ActivityFeed />
           </StageSection>
         )}
 
         {(isLive || isEnded) && (
-          <StageSection index={3} className="relative z-10">
+          <StageSection index={6} className="relative z-10">
             <ArsenalCard />
           </StageSection>
         )}
 
         {(isLive || isEnded) && (
-          <StageSection index={4} className="relative z-10 px-5 mb-4">
+          <StageSection index={7} className="relative z-10 px-5 mb-4">
             <PrizePots prizePool={stats?.prizePool} />
           </StageSection>
         )}
 
+        {/* 5. Verification detail — trust tier + verify opt-in live below the
+            fold, next to the badges, not between the mission and the field
+            (design review finding 2). */}
+        {(isLive || isEnded) && isReserved && tier !== 'verified' && (
+          <StageSection index={8} className="relative z-10 px-5 mb-3">
+            <TrustTierBanner onVerify={() => verifyRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+          </StageSection>
+        )}
+
         {isPrelaunch && (
-          <StageSection index={0} className="relative z-10">
+          <StageSection index={1} className="relative z-10">
             <PrelaunchPanel
               launchAt={launchAt}
               phase={phase}
@@ -256,7 +289,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
         )}
 
         {/* Below-fold chrome — badges & secondary status */}
-        <StageSection index={isPrelaunch ? 2 : 5} className="relative z-10 px-5 mb-4">
+        <StageSection index={isPrelaunch ? 2 : 9} className="relative z-10 px-5 mb-4">
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <TrustBadge />
             <WhatsPublicChip />
@@ -295,7 +328,8 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
           </StageSection>
         )}
 
-        {isLive && <WildcardPanel />}
+        {/* Wildcard revival — only mounted when the server enables it (pilot off) */}
+        {isLive && revivalEnabled && <WildcardPanel />}
 
         {isLive && (
           <div className="relative z-10 px-5 mb-3">

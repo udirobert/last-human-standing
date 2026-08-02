@@ -29,9 +29,9 @@ export default function SpectatorPanel({ onViewFeed }) {
           </div>
 
           <div className="bg-neon/10 border border-neon/30 rounded-xl p-3">
-            <p className="font-mono text-neon text-xs uppercase tracking-widest mb-1">Earn jury tickets</p>
+            <p className="font-mono text-neon text-xs uppercase tracking-widest mb-1">Build your influence</p>
             <p className="text-bone text-sm font-body leading-relaxed">
-              Vote accurately to earn jury tickets. These weight your lottery draw for the next cohort — get in early, vote well, and you&apos;re more likely to be selected.
+              Vote accurately to build your detective rank and jury weight. Your pilot record will inform future access rules.
             </p>
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function SpectatorPanel({ onViewFeed }) {
           Want to play in the next cohort?
         </p>
         <p className="text-bone text-sm font-body">
-          Jury tickets give you priority in the lottery. Vote well today to improve your odds.
+          Accurate votes build your standing. Future cohort access rules will be announced separately.
         </p>
       </div>
     </div>

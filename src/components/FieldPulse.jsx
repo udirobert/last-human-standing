@@ -16,7 +16,7 @@ function StatusMark({ type }) {
   const mark = MARKS[type] || { label: "·", tone: "text-dim border-ember/30 bg-ash/40" };
   return (
     <span
-      className={`shrink-0 inline-flex items-center justify-center min-w-[2rem] h-5 px-1 rounded-md border font-mono text-[9px] tracking-wider ${mark.tone}`}
+      className={`shrink-0 inline-flex items-center justify-center min-w-[2rem] h-5 px-1 rounded-md border font-mono text-[10px] tracking-wider ${mark.tone}`}
       aria-hidden="true"
     >
       {mark.label}
@@ -111,12 +111,12 @@ export default function FieldPulse({ maxLines = 2, className = "" }) {
       aria-live="polite"
     >
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <p className="font-mono text-amber/90 text-[9px] uppercase tracking-[0.16em] flex items-center gap-1.5">
+        <p className="font-mono text-amber text-xs uppercase tracking-[0.16em] flex items-center gap-1.5">
           <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber animate-pulse pointer-events-none" aria-hidden="true" />
           Field pulse
         </p>
         {sealedLabel && (
-          <p className="font-mono text-dim text-[9px] tabular-nums shrink-0">{sealedLabel}</p>
+          <p className="font-mono text-bone/70 text-xs tabular-nums shrink-0">{sealedLabel}</p>
         )}
       </div>
 

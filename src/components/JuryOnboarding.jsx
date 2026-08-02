@@ -38,7 +38,7 @@ export default function JuryOnboarding({ user, onViewFeed }) {
           </p>
           <p className="text-bone text-sm font-body leading-snug">
             {isJury
-              ? "Your votes count double and earn lottery tickets for the next cohort."
+              ? "Your votes count double. Accuracy is your influence — build your detective rank for the next cohort."
               : `Vote on ${5 - votesResolved} more submission${5 - votesResolved !== 1 ? "s" : ""} with ≥80% accuracy to become a juror.`}
           </p>
         </div>
@@ -86,9 +86,8 @@ export default function JuryOnboarding({ user, onViewFeed }) {
           <p className="text-dim text-[10px] font-mono uppercase mb-1">How it works</p>
           <ul className="text-bone text-xs font-body leading-relaxed space-y-1">
             <li>• Vote on submissions in the audit feed</li>
-            <li>• Correct votes earn +1 jury ticket</li>
-            <li>• Catching an infiltrator earns +2 tickets</li>
-            <li>• Tickets weight your lottery draw for the next cohort</li>
+            <li>• Correct votes raise your accuracy toward ×2 weight</li>
+            <li>• Accuracy + detective rank build your pilot record</li>
           </ul>
         </div>
 

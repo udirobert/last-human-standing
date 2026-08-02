@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
+import { usePolling } from "../hooks/usePolling.js";
+import { track } from "../lib/track.js";
 import { useDelight } from "./DelightProvider.jsx";
 import AgentReveal from "./AgentReveal.jsx";
 import { useMascotEvent } from "../hooks/useMascotEvent.js";
@@ -24,6 +26,7 @@ import { HumanCta, GameCta } from "./ui/CraftCta.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import JuryOnboarding from "./JuryOnboarding.jsx";
 import SpectatorPanel from "./SpectatorPanel.jsx";
+import PushOptIn from "./PushOptIn.jsx";
 import { TomorrowReturnStrip } from "./TomorrowPostcard.jsx";
 
 function formatWindow(iso) {
@@ -243,6 +246,38 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const rank = you?.rankToday;
   const eliminated = Boolean(you?.isEliminated);
 
+  // A verdict is only real once the server closes the round. Submission
+  // responses are provisional and must not inflate the retention funnel.
+  const verdictTrackedRef = useRef(null);
+  useEffect(() => {
+    if (round?.status !== "closed" || !checkedIn) return;
+    const key = `${currentDay}:${eliminated ? "out" : "in"}`;
+    if (verdictTrackedRef.current === key) return;
+    verdictTrackedRef.current = key;
+    track("verdict_seen", { day: currentDay, value: eliminated ? "eliminated" : "survived" });
+  }, [round?.status, checkedIn, currentDay, eliminated]);
+
+  // Audit progress — drives the Judge→Return CTA progression
+  // (design review finding 5): after check-in the home CTA becomes
+  // "Judge N proofs", and after the quota it becomes the verdict time.
+  const { data: auditData } = usePolling("/api/audit/status", {
+    intervalMs: 30_000,
+    initial: null,
+  });
+  const votesCast = auditData?.votesCastToday ?? 0;
+  const auditGoal = auditData?.dailyGoal ?? 5;
+  const auditGoalMet = Boolean(auditData?.goalMet);
+  const votesRemaining = Math.max(0, auditGoal - votesCast);
+
+  // Funnel: votes_completed — fired once per day when the audit quota lands.
+  const votesTrackedRef = useRef(null);
+  useEffect(() => {
+    if (!auditGoalMet || !checkedIn) return;
+    if (votesTrackedRef.current === currentDay) return;
+    votesTrackedRef.current = currentDay;
+    track("votes_completed", { day: currentDay });
+  }, [auditGoalMet, checkedIn, currentDay]);
+
   const prelaunchMascot = { variant: mascotEvent?.variant || "thinking", message: mascotEvent?.message };
 
   if (phase === "prelaunch") {
@@ -354,7 +389,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
       </div>
 
       <div className="mb-4">
-        <p className="font-mono text-amber text-[10px] tracking-[0.18em] uppercase mb-1">
+        <p className="font-mono text-amber text-xs tracking-[0.18em] uppercase mb-1">
           {mantra.kicker}
         </p>
         <p className="font-display text-xl text-bone leading-snug tracking-wide">
@@ -386,19 +421,19 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-ash rounded-xl p-3 border border-ember">
-          <p className="text-dim text-[10px] font-mono uppercase">Check-in window</p>
+          <p className="text-bone/70 text-xs font-mono uppercase">Check-in window</p>
           <p className="text-bone font-mono text-sm mt-1">
             {opens && closes ? `${opens} – ${closes}` : "Set by admin"}
           </p>
           {round?.closesAt && (
-            <p className={closingSoon ? 'text-amber font-mono text-sm font-semibold mt-1 animate-pulse' : 'text-amber text-[10px] font-mono mt-1'}>
+            <p className={closingSoon ? 'text-amber font-mono text-sm font-semibold mt-1 animate-pulse' : 'text-amber text-xs font-mono mt-1'}>
               {closingSoon ? 'Closes ' : 'Closes '}
               <Countdown targetIso={round.closesAt} className="inline font-mono" />
             </p>
           )}
         </div>
         <div className="bg-ash rounded-xl p-3 border border-ember">
-          <p className="text-dim text-[10px] font-mono uppercase">Spots left</p>
+          <p className="text-bone/70 text-xs font-mono uppercase">Spots left</p>
           <p className="text-bone font-display text-2xl mt-0.5 tabular-nums">
             {slotsLeft != null ? slotsLeft : "—"}
             <span className="text-dim text-sm font-mono"> / {cap}</span>
@@ -414,19 +449,18 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             <EliminationReasonCard reason={you.eliminationReason} />
           )}
           <JuryOnboarding user={you} onViewFeed={onViewFeed} />
-        </div>
-      ) : checkedIn ? (
+        </div>          ) : checkedIn ? (
         round?.status === "closed" ? (
           <div className="space-y-3 mb-3">
             <div className={`${survived ? "bg-neon/10 border-neon/30" : "bg-blood/10 border-blood/30"} border rounded-xl p-3`}>
               <p className={`font-display text-xl ${survived ? "text-neon" : "text-blood"}`}>
                 {survived ? "Verdict is in — you made the cut" : "Verdict is in — you're out"}
               </p>
-              <p className="text-dim text-xs font-mono mt-1">
-                {survived
-                  ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}.`
-                  : "The crowd has spoken. You're on the jury now — your votes earn lottery tickets for the next cohort."}
-              </p>
+            <p className="text-dim text-xs font-mono mt-1">
+              {survived
+                ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}.`
+                : "The crowd has spoken. You're on the jury now — your votes decide who survives, and count double once you hit 80% accuracy on 5+ votes."}
+            </p>
             </div>
             <TomorrowReturnStrip />
             <HumanCta onClick={onViewFeed}>
@@ -439,6 +473,31 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           </div>
         ) : (
           <div className="space-y-3 mb-3">
+            {/* Prove → Judge → Return — the three daily commitments, kept
+                persistent and visible as an escalating ritual (design review
+                finding 5). */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "Prove", done: checkedIn, active: !checkedIn, sub: checkedIn ? "✓ sealed" : "today" },
+                { label: "Judge", done: auditGoalMet, active: checkedIn && !auditGoalMet, sub: auditGoalMet ? "✓ done" : `${votesCast}/${auditGoal}` },
+                { label: "Return", done: false, active: checkedIn && auditGoalMet, sub: closes ? `at ${closes}` : "verdict" },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className={`rounded-lg border px-2 py-1.5 text-center ${
+                    s.done ? "bg-neon/10 border-neon/40" : s.active ? "bg-amber/10 border-amber/40" : "bg-ash/50 border-ember/30"
+                  }`}
+                >
+                  <p className={`font-mono text-[11px] uppercase tracking-widest ${s.done ? "text-neon" : s.active ? "text-amber" : "text-dim"}`}>
+                    {s.label}
+                  </p>
+                  <p className={`font-mono text-[11px] mt-0.5 tabular-nums ${s.done ? "text-neon/80" : s.active ? "text-bone/80" : "text-dim"}`}>
+                    {s.sub}
+                  </p>
+                </div>
+              ))}
+            </div>
+
             {/* Cold system chrome — rank / risk */}
             <div className="bg-neon/10 border border-neon/30 rounded-xl p-3">
               <p className="font-display text-xl text-neon">
@@ -470,14 +529,14 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
                 <ThemeMotif emoji={themeData.emoji} size={40} label={themeLabel} />
                 <DozingCat size={44} />
               </div>
-              <p className="font-mono text-amber text-[10px] uppercase tracking-[0.18em] mb-1">
-                {waitWarm.shelf}
-              </p>
+          <p className="font-mono text-amber text-xs uppercase tracking-[0.18em] mb-1">
+            {waitWarm.shelf}
+          </p>
               <p className="font-body text-bone/70 text-xs leading-snug max-w-xs mx-auto">
                 {waitWarm.body}
               </p>
               {(juryTickets > 0 || (you?.votesResolved ?? 0) > 0) && (
-                <p className="font-mono text-dim text-[10px] mt-2 tabular-nums">
+                <p className="font-mono text-bone/70 text-[11px] mt-2 tabular-nums">
                   {detectiveTitle}
                   {juryTickets > 0 ? ` · ${juryTickets} ticket${juryTickets !== 1 ? "s" : ""}` : ""}
                 </p>
@@ -485,9 +544,38 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
               <MotifFrieze className="w-full mt-3 opacity-80" />
             </div>
 
-            <HumanCta onClick={onViewFeed}>
-              Enter the audit →
-            </HumanCta>
+            {/* After check-in the CTA becomes the audit quota; after the
+                quota it becomes the verdict time + notify me (finding 5). */}
+            {auditGoalMet ? (
+              <div className="space-y-2">
+                <div className="rounded-2xl border border-neon/30 bg-neon/10 px-4 py-3 text-center">
+                  <p className="font-mono text-neon text-xs uppercase tracking-[0.18em] mb-1">Verdict</p>
+                  <p className="font-display text-xl text-bone">
+                    {closes ? `Verdict at ${closes}` : "Verdict at day close"}
+                  </p>
+                  {round?.closesAt && (
+                    <Countdown targetIso={round.closesAt} className="font-mono text-amber text-sm mt-1" />
+                  )}
+                </div>
+                <HumanCta onClick={onViewFeed}>
+                  Watch the verdict →
+                </HumanCta>
+                <details className="rounded-xl border border-ember/30 bg-ash/40 px-3 py-2">
+                  <summary className="cursor-pointer font-mono text-dim text-xs text-center list-none">
+                    🔔 Notify me at the verdict
+                  </summary>
+                  <div className="mt-2">
+                    <PushOptIn />
+                  </div>
+                </details>
+              </div>
+            ) : (
+              <HumanCta onClick={onViewFeed} className="animate-pulse-blood">
+                {votesRemaining > 0
+                  ? `Judge ${votesRemaining} proof${votesRemaining !== 1 ? "s" : ""} →`
+                  : "Judge today's proofs →"}
+              </HumanCta>
+            )}
           </div>
         )
       ) : isSpectator ? (

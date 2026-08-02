@@ -1,5 +1,12 @@
 import { canvasToPngBlob, renderMomentCard } from "./momentCard.js";
 import { MiniKit } from "@worldcoin/minikit-js";
+import { track } from "./track.js";
+
+/** Report a successful share to the funnel; then return the status. */
+const finished = (status) => {
+  if (status === "shared" || status === "copied") track("shared");
+  return status;
+};
 
 /**
  * Share a mythic moment card.
@@ -49,7 +56,7 @@ export async function shareMoment(kind, opts) {
         text: opts.text,
         embeds: [opts.url],
       });
-      return "shared";
+      return finished("shared");
     }
 
     // World App native share sheet — can attach the PNG and opens system UI
@@ -62,7 +69,7 @@ export async function shareMoment(kind, opts) {
           ...(file ? { files: [file] } : {}),
         };
         await MiniKit.share(shareInput);
-        return "shared";
+        return finished("shared");
       } catch (e) {
         if (e?.name === "AbortError") return "dismissed";
         // Fall through to browser-native share
@@ -76,21 +83,21 @@ export async function shareMoment(kind, opts) {
         url: opts.url,
         title: "Last Human Standing",
       });
-      return "shared";
+      return finished("shared");
     }
 
     if (navigator.share) {
       await navigator.share({ text: opts.text, url: opts.url, title: "Last Human Standing" });
-      return "shared";
+      return finished("shared");
     }
 
     await navigator.clipboard.writeText(`${opts.text}\n${opts.url}`);
-    return "copied";
+    return finished("copied");
   } catch (err) {
     if (err?.name === "AbortError") return "dismissed";
     try {
       await navigator.clipboard.writeText(`${opts.text}\n${opts.url}`);
-      return "copied";
+      return finished("copied");
     } catch {
       return "failed";
     }

@@ -41,8 +41,8 @@ export default function Cohort2Handoff({ youWon = false }) {
           {youWon ? "Defend the title." : "The next hunt is coming."}
         </p>
         <p className="text-dim font-mono text-xs leading-relaxed mb-3">
-          Your jury tickets and detective rank carry forward into the free lottery.
-          Stay close — when cohort 2 opens, you&apos;re already in the story.
+          Your jury tickets and detective rank build a durable record.
+          Cohort 2 admission rules will be announced separately.
         </p>
 
         {hasLaunch ? (
@@ -62,7 +62,7 @@ export default function Cohort2Handoff({ youWon = false }) {
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div className="bg-ash/60 rounded-xl p-3 text-center border border-ember/30">
               <p className="font-display text-2xl text-amber tabular-nums">{tickets}</p>
-              <p className="font-mono text-[9px] text-dim uppercase">Lottery tickets</p>
+              <p className="font-mono text-[9px] text-dim uppercase">Jury tickets</p>
             </div>
             <div className="bg-ash/60 rounded-xl p-3 text-center border border-ember/30">
               <p className="font-display text-2xl text-bone tabular-nums">

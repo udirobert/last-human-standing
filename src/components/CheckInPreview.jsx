@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
-import { TODAY_THEME, findTheme, DAILY_THEMES } from "../data/game";
+import { TODAY_THEME, findTheme, DAILY_THEMES, COHORT_SCHEDULE } from "../data/game";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
+import { survivalRule } from "../lib/copy.js";
 
 /**
  * CheckInPreview — prelaunch educational briefing for the Check-in screen.
@@ -31,7 +32,7 @@ const STEPS = [
   {
     icon: "⏱️",
     title: "Beat the cap",
-    body: "The first 25 check-ins provisionally survive. After that, the survival cap shrinks each day. Speed matters as much as honesty.",
+    body: `${survivalRule(25)} After that, the cap shrinks every day.`,
   },
   {
     icon: "⚖️",
@@ -158,18 +159,12 @@ export default function CheckInPreview() {
           The survival cap shrinks every day
         </p>
         <div className="flex items-center justify-between gap-1">
-          {[
-            { day: 1, cap: 50 },
-            { day: 2, cap: 40 },
-            { day: 3, cap: 20 },
-            { day: 4, cap: 8 },
-            { day: 5, cap: 3 },
-          ].map((d, i) => (
+          {COHORT_SCHEDULE.map((d) => (
             <div key={d.day} className="flex flex-col items-center gap-1">
               <span className="font-mono text-[9px] text-dim">Day {d.day}</span>
               <div
                 className="w-8 rounded-full bg-amber/20 border border-amber/40 flex items-end justify-center"
-                style={{ height: `${d.cap * 0.7}px` }}
+                style={{ height: `${Math.max(8, d.cap * 0.8)}px` }}
               >
                 <span className="font-display text-[10px] text-amber tabular-nums pb-1">{d.cap}</span>
               </div>
@@ -177,7 +172,7 @@ export default function CheckInPreview() {
           ))}
         </div>
         <p className="text-dim text-[10px] font-mono mt-3 text-center leading-relaxed">
-          Day 1: first 50 survive. Day 5: only 3 remain. The last verified human takes everything.
+          Day 1: first 25 valid proofs survive. Day 5: one human remains. The last verified human takes the prize.
         </p>
       </motion.div>
 
@@ -193,7 +188,7 @@ export default function CheckInPreview() {
         </p>
         <p className="text-dim text-xs leading-relaxed">
           Check in early. Check in honest. The audit decides who stays —
-          but you have to be in the first 25 to even have a chance.
+          but you have to be among the first 25 valid proofs to even have a chance.
         </p>
       </motion.div>
     </div>

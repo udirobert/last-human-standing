@@ -21,7 +21,7 @@ import {
  * theme motif hero, twist in a secondary card, amber HumanCta.
  */
 export default function RuleReveal({ onAudit }) {
-  const { phase, currentDay, you, round } = useRound();
+  const { phase, currentDay, you, round, pilot } = useRound();
   const [unlock, setUnlock] = useState(null);
   const [body, setBody] = useState("");
   const [mascot, setMascot] = useState(null);
@@ -36,6 +36,17 @@ export default function RuleReveal({ onAudit }) {
     }
     const day = Number(currentDay);
     if (!Number.isFinite(day) || day < 1) {
+      setUnlock(null);
+      return;
+    }
+    // Pilot posture: infiltrator (Day 2) and wildcard revival (Day 4) are
+    // disabled, so their "unlock" reveals must never play (design review
+    // finding 1 — the UI must not promise mechanics the server rejects).
+    if (day === 2 && !pilot?.infiltratorEnabled) {
+      setUnlock(null);
+      return;
+    }
+    if (day === 4 && !pilot?.revivalEnabled) {
       setUnlock(null);
       return;
     }
@@ -58,7 +69,7 @@ export default function RuleReveal({ onAudit }) {
     setBody(copy);
     setUnlock(entry);
     setMascot(getRuleMascot({ day, eliminated }));
-  }, [phase, currentDay, you?.isEliminated]);
+  }, [phase, currentDay, you?.isEliminated, pilot?.infiltratorEnabled, pilot?.revivalEnabled]);
 
   const dismiss = useCallback(() => {
     if (!unlock) return;

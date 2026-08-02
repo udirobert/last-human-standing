@@ -270,9 +270,9 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
             margin: "clamp(16px,2vw,22px) auto 0",
           }}
         >
-          50 humans. 5 days. Each day, prove you're still here — from{" "}
-          <b className="text-amber font-semibold">anywhere on Earth</b>. The crowd votes people out. The field
-          narrows. One human takes the pot.
+          {cohortSize} humans. 5 days. Each day, prove you're still here — from{" "}
+          <b className="text-amber font-semibold">anywhere on Earth</b>. Be among the first valid proofs; a SUS
+          verdict disqualifies you and promotes the next player. One human takes the prize.
         </p>
 
         <MotifFrieze className="w-full" style={{ marginTop: "clamp(22px,3vw,34px)" }} />
@@ -292,7 +292,7 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
             className="font-body font-semibold text-[#1a1206] bg-amber rounded-2xl px-7 py-4 active:scale-[0.97] transition-transform w-full"
             style={{ fontSize: "clamp(15px,1.6vw,17px)", boxShadow: "0 10px 30px -8px rgba(255,184,0,0.5)" }}
           >
-            Reserve your slot →
+            Claim your seat →
           </button>
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2.5 w-full">
             <button

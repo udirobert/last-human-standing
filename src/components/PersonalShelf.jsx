@@ -35,14 +35,14 @@ export default function PersonalShelf({ className = "", onViewHistory }) {
       className={`rounded-2xl border border-ember/30 bg-ash/50 px-3 py-3 ${className}`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="font-mono text-[10px] text-amber uppercase tracking-[0.18em]">
+        <p className="font-mono text-xs text-amber uppercase tracking-[0.18em]">
           Your shelf
         </p>
         {onViewHistory && (
           <button
             type="button"
             onClick={onViewHistory}
-            className="font-mono text-[10px] text-dim hover:text-bone underline decoration-dotted underline-offset-2"
+            className="font-mono text-[11px] text-dim hover:text-bone underline decoration-dotted underline-offset-2"
           >
             History
           </button>
@@ -68,19 +68,19 @@ export default function PersonalShelf({ className = "", onViewHistory }) {
                 {streak}
               </p>
             </div>
-            <p className="text-dim text-[8px] font-mono uppercase mt-1">Streak</p>
+            <p className="text-bone/60 text-[10px] font-mono uppercase mt-1">Streak</p>
           </div>
           <div className="text-center">
             <p className="font-display text-xl text-amber leading-none tabular-nums">
               {tickets}
             </p>
-            <p className="text-dim text-[8px] font-mono uppercase mt-1">Tickets</p>
+            <p className="text-bone/60 text-[10px] font-mono uppercase mt-1">Tickets</p>
           </div>
           <div className="text-center min-w-0">
             <p className="font-display text-sm text-bone leading-tight truncate" title={title}>
               {title}
             </p>
-            <p className="text-dim text-[8px] font-mono uppercase mt-1 tabular-nums">
+            <p className="text-bone/60 text-[10px] font-mono uppercase mt-1 tabular-nums">
               {accLabel ?? (resolved > 0 ? `${resolved} votes` : "Detective")}
             </p>
           </div>

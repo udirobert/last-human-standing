@@ -6,7 +6,7 @@ import { HumanCta } from "../ui/CraftCta.jsx";
 
 /**
  * Pre-reserve reachability wizard — wallet + notifications + contact.
- * Required before free lottery entry. Paid entry skips this (push still encouraged in lobby).
+ * Required before free seat claim. Paid entry skips this (push still encouraged in lobby).
  */
 export default function ReachabilitySetup({
   walletAuthed,
@@ -19,6 +19,8 @@ export default function ReachabilitySetup({
   onEligible,
   onFreeEntry,
   freeEntryBusy,
+  humanityRequired = false,
+  humanityVerified = false,
 }) {
   const [email, setEmail] = useState("");
   const [telegramHandle, setTelegramHandle] = useState("");
@@ -99,13 +101,14 @@ export default function ReachabilitySetup({
 
   const missing = state?.missing ?? ["wallet", "notifications", "contact"];
   const eligible = Boolean(state?.eligible);
+  const claimBlocked = humanityRequired && !humanityVerified;
 
   return (
     <div className="space-y-3">
       <div className="bg-smoke/80 border border-neon/30 rounded-3xl p-5">
         <p className="font-display text-xl text-neon mb-1">Before you&apos;re in</p>
         <p className="text-bone/70 text-sm font-body leading-relaxed mb-4">
-          Free lottery slots need a wallet, live round alerts, and a way to reach you
+          Free seats need a wallet, live round alerts, and a way to reach you
           (email or Telegram). World App and Farcaster players get alerts in-app when enabled.
         </p>
 
@@ -186,14 +189,20 @@ export default function ReachabilitySetup({
 
         {error && <p className="text-blood text-xs font-mono mt-3">{error}</p>}
 
-        {eligible && onFreeEntry && (
+        {eligible && claimBlocked && (
+          <p className="text-amber text-[10px] font-mono mt-3 text-center">
+            Verify your humanity above to unlock the free seat claim.
+          </p>
+        )}
+
+        {eligible && onFreeEntry && !claimBlocked && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-4">
             <HumanCta
               onClick={onFreeEntry}
               disabled={freeEntryBusy}
               className="w-full !bg-neon !text-ash"
             >
-              {freeEntryBusy ? "Reserving…" : "Claim free lottery slot →"}
+              {freeEntryBusy ? "Claiming…" : "Claim my free seat →"}
             </HumanCta>
           </motion.div>
         )}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useStats } from '../hooks/useStats.js';
@@ -63,7 +63,7 @@ const ELIM_SCHEDULE = [
 export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) {
   const [tab, setTab] = useState('today');
   const [peekPlayer, setPeekPlayer] = useState(null);
-  const { phase, launchAt, currentDay, round, reservedCount, cohortSize, cohortFull } = useRound();
+  const { phase, launchAt, currentDay, round, reservedCount, cohortSize, cohortFull, you } = useRound();
   const { stats } = useStats();
   const { user } = useWorld();
   const myAddr = user?.address?.toLowerCase() ?? null;
@@ -96,6 +96,26 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
     transform: (json) => json.board ?? [],
     initial: [],
   });
+  // Jury bench (design review finding 5): eliminated players compete on
+  // verdict accuracy and influence (tickets). URL change refetches.
+  const [jurySort, setJurySort] = useState('accuracy');
+  const { data: juryBoard } = usePolling(`/api/jury-board?sort=${jurySort}`, {
+    intervalMs: 30_000,
+    transform: (json) => json.board ?? [],
+    initial: [],
+  });
+  // Eliminated players land on the jury bench — their continuing objective.
+  // Only overrides the default tab, never a manual choice.
+  const tabTouchedRef = useRef(false);
+  useEffect(() => {
+    if (phase === 'live' && you?.isEliminated && !tabTouchedRef.current && tab === 'today') {
+      setTab('jurors');
+    }
+  }, [phase, you?.isEliminated, tab]);
+  const selectTab = (id) => {
+    tabTouchedRef.current = true;
+    setTab(id);
+  };
   const loading = ckLoading;
 
   const survivors = checkins.filter((c) => c.survived);
@@ -154,7 +174,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             </span>
             <span className="font-display text-2xl text-amber/60 mb-1">WLD</span>
           </div>
-          <p className="text-dim text-xs font-mono">On-chain · grows with each entry fee</p>
+          <p className="text-dim text-xs font-mono">Sponsor-funded · on-chain</p>
 
           <div className="mt-3 grid grid-cols-3 gap-2">
             <div className="text-center">
@@ -191,12 +211,13 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             : [
                 { id: 'today', label: 'Today' },
                 { id: 'late', label: 'Too late' },
+                { id: 'jurors', label: 'Jurors' },
                 { id: 'detectives', label: 'Detectives' },
               ]
           ).map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => selectTab(t.id)}
               className={`flex-1 py-2.5 rounded-xl font-mono text-xs uppercase tracking-wider transition-[background-color,color,border-color] ${
                 tab === t.id ? 'bg-blood text-bone' : 'bg-smoke text-dim border border-ember'
               }`}
@@ -544,6 +565,92 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               );
             })
           )}
+        </div>
+      )}
+
+      {/* LIVE: jury bench — eliminated players ranked by accuracy & influence */}
+      {isLive && tab === 'jurors' && (
+        <div className="px-5 space-y-2">
+          <div className="flex items-center justify-between gap-3 mb-1">
+            <p className="text-dim text-xs font-mono uppercase tracking-wider">
+              The jury bench
+            </p>
+            <div className="flex gap-1">
+              {[
+                { id: 'accuracy', label: 'Accuracy' },
+                { id: 'influence', label: 'Influence' },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setJurySort(s.id)}
+                  aria-pressed={jurySort === s.id}
+                  className={`px-2.5 py-1 rounded-lg font-mono text-xs uppercase tracking-wider border transition-[background-color,color,border-color] ${
+                    jurySort === s.id
+                      ? 'bg-neon/20 text-neon border-neon/40'
+                      : 'bg-smoke text-dim border-ember'
+                  }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {juryBoard.length === 0 ? (
+            <EmptyState
+              motif="cat"
+              title="The bench is empty"
+              body="Eliminated players appear here once they've voted on 5+ proofs. Accurate verdicts earn ×2 weight and jury tickets for the pilot record."
+              className="py-6"
+            />
+          ) : (
+            juryBoard.map((j, i) => {
+              const isYou = myAddr && j.address?.toLowerCase() === myAddr;
+              return (
+                <motion.div
+                  key={j.address}
+                  initial={{ opacity: 0, x: -16 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className={`flex items-center gap-3 rounded-2xl p-4 ${
+                    isYou ? 'bg-blood/10 border border-blood/40' : 'bg-smoke border border-ember'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-ash border border-ember/40 flex items-center justify-center">
+                    <RankMark rank={i + 1} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <MascotAvatar status={j.isJury ? 'alive' : 'pending'} size={20} />
+                      <span className={`font-mono text-sm truncate ${isYou ? 'text-blood' : 'text-bone'}`}>
+                        {j.username || shortAddr(j.address)}
+                      </span>
+                      {isYou && <span className="font-mono text-blood text-xs">(you)</span>}
+                      {j.isJury && (
+                        <span className="rounded-md bg-neon/15 border border-neon/40 px-1.5 py-0.5 font-mono text-[10px] text-neon whitespace-nowrap">
+                          ×2 ⚖️
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-dim text-xs font-mono mt-0.5">
+                      Out day {j.eliminatedAtDay ?? '—'} · {j.correct}/{j.total} verdicts right
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="font-display text-xl text-neon tabular-nums">{j.accuracy}%</p>
+                    <p className="text-amber font-mono text-xs tabular-nums">{j.juryTickets} ⚖️</p>
+                  </div>
+                </motion.div>
+              );
+            })
+          )}
+
+          <div className="bg-ash/40 border border-ember/30 rounded-xl px-3 py-2.5 mt-3">
+            <p className="font-mono text-amber text-xs uppercase tracking-widest mb-1">How the bench works</p>
+            <p className="text-bone/75 text-xs font-body leading-snug">
+              5+ resolved votes and 80% accuracy — your verdicts count ×2. Every correct vote earns a ticket; Cohort 1 admission rules stay operator-controlled.
+            </p>
+          </div>
         </div>
       )}
 

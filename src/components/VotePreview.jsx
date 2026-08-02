@@ -34,7 +34,7 @@ const STEPS = [
   {
     icon: "🔥",
     title: "The verdict decides survival",
-    body: "Once quorum is reached, the majority rules. Flagged players are eliminated. Get it wrong and a bot walks.",
+    body: "Once quorum is reached, the majority rules. Flagged players are disqualified — the next player takes their slot.",
   },
 ];
 
@@ -269,7 +269,7 @@ export default function VotePreview() {
         </p>
         <RankLadder />
         <p className="text-dim text-[10px] font-mono mt-2 px-1 leading-relaxed">
-          Hit 80% accuracy on 5+ votes → jury weight ×2 + lottery tickets.
+          Hit 80% accuracy on 5+ votes → your votes count ×2.
         </p>
       </div>
 
@@ -289,11 +289,11 @@ export default function VotePreview() {
         className="bg-blood/5 border border-blood/30 rounded-2xl p-4 text-center"
       >
         <p className="font-display text-sm text-bone leading-snug mb-1">
-          Vote wrong, and a bot walks.
+          Vote wrong, and a real human loses their slot.
         </p>
         <p className="text-dim text-xs leading-relaxed">
-          Vote right, and a human stays alive. The audit is the only thing
-          standing between the infiltrators and the prize pool.
+          Vote right, and a human stays alive. The audit is what keeps the
+          prize human-only.
         </p>
       </motion.div>
     </div>

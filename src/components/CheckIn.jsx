@@ -3,7 +3,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
-import { resolveActiveTheme } from '../data/game';
+import { resolveActiveTheme, COHORT_SCHEDULE } from '../data/game';
+import { track } from '../lib/track.js';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
 import FAQModal from './FAQModal.jsx';
 import AppShell from './AppShell.jsx';
@@ -30,7 +31,7 @@ import { CUE_PRESS } from '../lib/cuelume.js';
 const SEAL_HOLD_MS = 1400;
 
 export default function CheckIn({ onBack, onSubmit }) {
-  const { round, currentDay, phase, refresh: refreshRound } = useRound();
+  const { round, currentDay, phase, refresh: refreshRound, pilot } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
   const { unlockAchievement, checkAchievement, playSound, handleMascotClick, recordSurvival } = useDelight();
   const { dispatchMascotEvent } = useMascotEvent();
@@ -51,17 +52,17 @@ export default function CheckIn({ onBack, onSubmit }) {
   /** Live seal bridge before GameMoment — { photoUrl } */
   const [sealHold, setSealHold] = useState(null);
   const sealTimerRef = useRef(null);
-  // Day 1 is honest-only — establishes a baseline so infiltrator attempts
-  // on Day 2+ are actually detectable. Also protects new players from
-  // instant DQ on their first check-in.
-  const infiltratorUnlocked = (currentDay ?? 1) >= 2;
+  // Infiltrator mode is disabled for the Cohort 1 pilot (server flag
+  // INFILTRATOR_ENABLED=false). When disabled, there is no path choice at
+  // all — honest check-in is the only mode.
+  const infiltratorEnabled = Boolean(pilot?.infiltratorEnabled);
+  const infiltratorUnlocked = infiltratorEnabled && (currentDay ?? 1) >= 2;
   const checkInMascot = getCheckInMascot({ step, photoPreview, gpsEnabled });
   const [queuedCheckin, setQueuedCheckin] = useState(false);
   const { online, queueCheckin } = useOnlineStatus();
   const { markQueuedCheckin, clearQueuedCheckin } = useWorld();
   const fileRef = useRef();
   const watchRef = useRef(null);
-  const sharedRef = useRef(false);
 
   const themeData = resolveActiveTheme(round);
   const theme = themeData.theme;
@@ -93,15 +94,22 @@ export default function CheckIn({ onBack, onSubmit }) {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
 
-  // Fetch infiltrator success rate for the path choice
+  // Funnel: checkin_opened.
   useEffect(() => {
+    track("checkin_opened", { day: currentDay });
+  }, [currentDay]);
+
+  // Fetch infiltrator success rate for the path choice (only meaningful
+  // when infiltrator mode is enabled).
+  useEffect(() => {
+    if (!infiltratorEnabled) return;
     let cancelled = false;
     fetch("/api/infiltrator-stats", { credentials: "include" })
       .then(r => r.json())
       .then(data => { if (!cancelled) setInfiltratorStats(data); })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, []);
+  }, [infiltratorEnabled]);
 
   // One share path for every surface: Farcaster gets composeCast, World App
   // and mobile browsers get the native share sheet, desktop gets clipboard.
@@ -113,12 +121,19 @@ export default function CheckIn({ onBack, onSubmit }) {
     const displayName = user?.username
       ? `@${user.username}`
       : (user?.displayName || user?.address?.slice(0, 8) || 'anon');
+    const day = Number(currentDay) || 0;
+    // Dynamic next-cap from the real schedule — the social challenge hook:
+    // "I survived Day 2 at #7/12. Tomorrow only six remain."
+    const nextDay = COHORT_SCHEDULE.find((d) => d.day === day + 1);
+    const nextCapLine = nextDay
+      ? `Tomorrow only ${nextDay.cap} remain.`
+      : "The finale is tomorrow.";
     const strip = survived
-      ? `Day ${currentDay} · Rank #${rank}/${cap} · SURVIVED`
-      : `Survived ${currentDay ?? "?"} day${Number(currentDay) !== 1 ? "s" : ""} in Last Human Standing. The jury needs me now.`;
+      ? `Day ${currentDay} · I survived at #${rank}/${cap}.`
+      : `Out on Day ${currentDay} after ${rank !== '?' ? `rank #${rank}/${cap}` : 'a brutal cut'}.`;
     const text = survived
-      ? `${strip}\nLast Human Standing — one verified human takes the pot. Can you outlast me?`
-      : `${strip}\nI'm out. But my votes count double now. Next cohort, I go all the way.`;
+      ? `${strip} ${nextCapLine} Think you can outlast me?`
+      : `${strip} I'm on the jury now — my votes decide who stays. Can you outlast the room?`;
     const url = result?.checkinId
       ? `${window.location.origin}/api/share/checkin/${result.checkinId}`
       : window.location.origin;
@@ -143,15 +158,8 @@ export default function CheckIn({ onBack, onSubmit }) {
     }
   };
 
-  // Auto-share on Farcaster after a successful check-in. Delayed 4s so
-  // the composer doesn't pop over the user's "Back to game" tap.
-  useEffect(() => {
-    if (!isFarcaster || step !== 2 || !result?.survived || sharedRef.current) return;
-    sharedRef.current = true;
-    const timer = setTimeout(() => { shareResult(true); }, 4000);
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFarcaster, step, result, currentDay]);
+  // Sharing is explicit only — no auto-open share composer (design review
+  // finding 6). Players tap "Share your card" when they choose to.
 
   const canSubmit = photoFile != null; // photo is the primary proof
 
@@ -169,6 +177,7 @@ export default function CheckIn({ onBack, onSubmit }) {
     }
     setPhotoFile(f);
     setPhotoPreview(URL.createObjectURL(f));
+    track("photo_added");
     // Ritual completes when photo lands — brief hold so morph is visible
     setTimeout(() => setRitualMode(false), 600);
   };
@@ -259,6 +268,7 @@ export default function CheckIn({ onBack, onSubmit }) {
     }
 
     const finishAfterSeal = (json) => {
+      track("submitted", { day: currentDay });
       if (json.survived) {
         ritualFeel('survive');
         recordSurvival?.(json.roundId ?? json.checkinId ?? currentDay);
@@ -530,52 +540,54 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
               )}
 
-              {/* CHOOSE YOUR PATH — infiltrator mode is now a first-class
-                  choice, not a buried toggle. Two cards side by side.
-                  Day 1 is honest-only to establish a baseline. */}
-              <div className="mb-3">
-                {infiltratorUnlocked ? (
-                  <>
-                    <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-2 text-center">
-                      Choose your path
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      {/* Honest */}
-                      <CompactButton
-                        onClick={() => setInfiltratorMode(false)}
-                        className={`py-3 px-2 rounded-xl border ${
-                          !infiltratorMode
-                            ? 'bg-neon/10 border-neon/50 text-neon'
-                            : 'bg-smoke border-ember text-dim'
-                        }`}
-                      >
-                        <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
-                        <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
-                      </CompactButton>
-                      <CompactButton
-                        onClick={() => setInfiltratorMode(true)}
-                        className={`py-3 px-2 rounded-xl border ${
-                          infiltratorMode
-                            ? 'bg-blood/20 border-blood/60 text-blood'
-                            : 'bg-smoke border-ember text-dim'
-                        }`}
-                      >
-                        <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
-                        <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
-                      </CompactButton>
+              {/* CHOOSE YOUR PATH — only exists when infiltrator mode is
+                  enabled. In the pilot (INFILTRATOR_ENABLED=false) there is
+                  no path choice at all: honest check-in is the only mode. */}
+              {infiltratorEnabled && (
+                <div className="mb-3">
+                  {infiltratorUnlocked ? (
+                    <>
+                      <p className="text-dim text-[10px] font-mono uppercase tracking-widest mb-2 text-center">
+                        Choose your path
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {/* Honest */}
+                        <CompactButton
+                          onClick={() => setInfiltratorMode(false)}
+                          className={`py-3 px-2 rounded-xl border ${
+                            !infiltratorMode
+                              ? 'bg-neon/10 border-neon/50 text-neon'
+                              : 'bg-smoke border-ember text-dim'
+                          }`}
+                        >
+                          <p className="font-mono text-xs font-bold tracking-wide">HONEST</p>
+                          <p className="text-[9px] font-mono mt-0.5 opacity-70">Play it straight</p>
+                        </CompactButton>
+                        <CompactButton
+                          onClick={() => setInfiltratorMode(true)}
+                          className={`py-3 px-2 rounded-xl border ${
+                            infiltratorMode
+                              ? 'bg-blood/20 border-blood/60 text-blood'
+                              : 'bg-smoke border-ember text-dim'
+                          }`}
+                        >
+                          <p className="font-mono text-xs font-bold tracking-wide">INFILTRATOR</p>
+                          <p className="text-[9px] font-mono mt-0.5 opacity-70">Risk it all</p>
+                        </CompactButton>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="bg-smoke border border-neon/20 rounded-xl p-3 text-center">
+                      <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
+                        Day 1 · Honest check-in
+                      </p>
+                      <p className="text-dim text-[10px] font-mono leading-relaxed">
+                        Infiltrator mode unlocks on Day 2. Today, just play it straight — establish your baseline.
+                      </p>
                     </div>
-                  </>
-                ) : (
-                  <div className="bg-smoke border border-neon/20 rounded-xl p-3 text-center">
-                    <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-1">
-                      Day 1 · Honest check-in
-                    </p>
-                    <p className="text-dim text-[10px] font-mono leading-relaxed">
-                      Infiltrator mode unlocks on Day 2. Today, just play it straight — establish your baseline.
-                    </p>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
               {infiltratorMode && (
                 <div className="bg-blood/10 border border-blood/30 rounded-xl p-3 mb-3 space-y-2">

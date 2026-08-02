@@ -16,6 +16,7 @@ import { ariaBroadcastPayoutTx, ariaSuggestNextRound } from "./lib/ariaAgent.js"
 import { agentSeatSummary, isValidAgentTier } from "./lib/agents.js";
 import { getEliminationReason } from "./lib/eliminationReason.js";
 import { checkPhotoDuplicate, normalizePhotoHash } from "./lib/photoDedup.js";
+import { buildJuryBoard } from "./lib/juryBoard.js";
 import helmet from "helmet";
 import cors from "cors";
 import pushRoutes from "./routes/push.js";
@@ -170,6 +171,7 @@ const SILENT_VERIFICATION = process.env.SILENT_VERIFICATION === "true";
 // Enable only once settlement is idempotent, receipt-verified, and
 // escrow-grade. Read at request time in the payment routes.
 const PAID_ENTRY_ENABLED = process.env.PAID_ENTRY_ENABLED === "true";
+const FREE_ENTRY_MODE = process.env.FREE_ENTRY_MODE === "true";
 // Automatic hot-EOA payout is disabled; Cohort 1 settles manually, in-kind
 // (WLD on World Chain + cUSD on Celo) after the published appeal window.
 const AUTO_PAYOUT_ENABLED = process.env.AUTO_PAYOUT_ENABLED === "true";
@@ -498,8 +500,8 @@ async function notifyDayClosed(r) {
     sendPushToAddress(supabaseAdmin, u.address, {
       title: wasDq ? "Disqualified by the crowd 🚫" : "Eliminated 💀",
       body: wasDq
-        ? `The audit flagged your Day ${day} photo. You're out — but the jury needs you: accurate votes count double and earn lottery tickets for the next cohort.`
-        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double and earn lottery tickets for the next cohort.${nearMissBody}`,
+        ? `The audit flagged your Day ${day} photo. You're out — but the jury needs you: accurate votes count double.`
+        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double.${nearMissBody}`,
       data: { type: "eliminated", day, near_miss: Boolean(nearMissBody) },
     }).catch(() => {});
   }
@@ -538,9 +540,9 @@ async function notifyDayClosed(r) {
     data: { type: "verdict", day },
   }).catch(() => {});
 
-  // Day 1 → Day 2 transition: infiltrator mode unlocks. This is a reveal
-  // moment — the temptation to cheat emerges after you've played honestly.
-  if (day === 1 && !r.winner) {
+  // Day 1 → Day 2 transition: infiltrator mode unlocks — only when the
+  // mechanic is actually enabled (off for the Cohort 1 pilot).
+  if (INFILTRATOR_ENABLED && day === 1 && !r.winner) {
     broadcastPush(supabaseAdmin, {
       title: `🎭 Infiltrator mode unlocked`,
       body: `Day 2: Submit a photo that could go either way. Trick the crowd → immunity + jury tickets. Get caught → you're out.`,
@@ -881,18 +883,46 @@ app.post(
     if (!body) return;
     const path = ensureString(body.path, { field: "path", maxLength: 200 }) ?? null;
     const referrer = ensureString(body.referrer, { field: "referrer", maxLength: 500 }) ?? null;
+    // Pilot funnel events ride the same rate-limited track endpoint so the
+    // client has one tiny, anonymous measurement pipe. `event` is an enum-ish
+    // name (landing_view, reserve_click, verification_started, wallet_connected,
+    // humanity_verified,
+    // checkin_opened, photo_added, submitted, votes_completed, verdict_seen,
+    // shared, returned_next_day); when present we write a funnel_events row
+    // instead of a page view.
+    const event = ensureString(body.event, { field: "event", maxLength: 40 }) ?? null;
+    const allowedEvents = new Set([
+      "landing_view", "reserve_click", "verification_started", "wallet_connected",
+      "humanity_verified", "checkin_opened", "photo_added", "submitted",
+      "votes_completed", "verdict_seen", "shared", "returned_next_day",
+    ]);
+    if (event && !allowedEvents.has(event)) return res.status(400).json({ error: "invalid_event" });
+    const day = body.day != null ? ensureNumber(body.day, { field: "day" }) : null;
+    const value = ensureString(body.value, { field: "value", maxLength: 200 }) ?? null;
     const sessionId = req.cookies?.[SESSION_COOKIE] ?? null;
     const ua = (req.headers["user-agent"] || "").slice(0, 300);
     const ipHash = crypto.createHash("sha256").update(req.ip || "").digest("hex").slice(0, 32);
     if (supabaseAdmin) {
       try {
-        await supabaseAdmin.from("cohort_page_views").insert({
-          path,
-          referrer,
-          session_id: sessionId,
-          ip_hash: ipHash,
-          user_agent: ua,
-        });
+        if (event) {
+          await supabaseAdmin.from("funnel_events").insert({
+            event,
+            day,
+            value,
+            path,
+            session_id: sessionId,
+            ip_hash: ipHash,
+            user_agent: ua,
+          });
+        } else {
+          await supabaseAdmin.from("cohort_page_views").insert({
+            path,
+            referrer,
+            session_id: sessionId,
+            ip_hash: ipHash,
+            user_agent: ua,
+          });
+        }
       } catch (e) {
         log?.("track_error", { error: e instanceof Error ? e.message : String(e) });
       }
@@ -2561,6 +2591,9 @@ app.get("/api/voter-stats/:address", async (req, res) => {
 
 // Detective leaderboard — ranked by vote accuracy (min 5 resolved votes).
 // Drives jury engagement by making voting competitive.
+// NOTE: this board intentionally does NOT filter exhibition agents (unlike
+// /api/jury-board) — it ranks all voters, agents included. If that ever
+// changes, keep both boards' public posture in sync.
 app.get("/api/detective-board", async (req, res) => {
   try {
     if (!supabaseAdmin) return res.json({ ok: true, board: [] });
@@ -2622,6 +2655,52 @@ app.get("/api/detective-board", async (req, res) => {
     res.json({ ok: true, board: top20 });
   } catch (e) {
     res.status(400).json({ error: "detective_board_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Jury leaderboard — eliminated players ranked by verdict accuracy and
+// influence (jury tickets). Gives the eliminated a continuing objective
+// (design review finding 5): accuracy toward ×2 vote weight, tickets that
+// carry into the next cohort.
+app.get("/api/jury-board", async (req, res) => {
+  try {
+    const sort = req.query.sort === "influence" ? "influence" : "accuracy";
+    if (!supabaseAdmin) return res.json({ ok: true, board: [], sort });
+
+    const { data: allVotes } = await supabaseAdmin
+      .from("votes")
+      .select("voter_address,submission_id,vote");
+
+    if (!allVotes?.length) return res.json({ ok: true, board: [], sort });
+
+    // Resolved statuses decide which votes count and whether they were right.
+    const submissionIds = [...new Set(allVotes.map((v) => v.submission_id))];
+    const { data: subs } = await supabaseAdmin
+      .from("submissions")
+      .select("id,status")
+      .in("id", submissionIds);
+
+    // Only voters matter here — narrow the user join to them.
+    const voterAddresses = [...new Set(allVotes.map((v) => v.voter_address))];
+    const { data: users } = await supabaseAdmin
+      .from("users")
+      .select("address,username,jury_tickets,eliminated,eliminated_at_day,is_agent")
+      .in("address", voterAddresses);
+
+    // Pass the live env-derived constants so the board can never drift from
+    // the jury status computed in /api/game/state and the vote endpoints.
+    const board = buildJuryBoard({
+      votes: allVotes,
+      submissions: subs || [],
+      users: users || [],
+      sort,
+      minResolved: JURY_MIN_RESOLVED,
+      minAccuracyPct: Math.round(JURY_MIN_ACCURACY * 100),
+      weight: JURY_WEIGHT,
+    });
+    res.json({ ok: true, board, sort });
+  } catch (e) {
+    res.status(400).json({ error: "jury_board_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 
@@ -3090,6 +3169,19 @@ app.get("/api/game/state", async (req, res) => {
         slotsRemaining: agentSeats.slotsRemaining,
       },
       silentVerification: SILENT_VERIFICATION,
+      // Pilot posture — server-authoritative feature flags so the client UI
+      // can never drift from the runtime containment posture
+      // (docs/COHORT1_PILOT.md). The pilot defaults: free, verified-human,
+      // manually settled, with paid entry, lottery, infiltrator mode, and
+      // revival disabled.
+      pilot: {
+        freeEntryMode: FREE_ENTRY_MODE,
+        paidEntryEnabled: PAID_ENTRY_ENABLED,
+        lotteryEnabled: LOTTERY_ENABLED,
+        infiltratorEnabled: INFILTRATOR_ENABLED,
+        revivalEnabled: REVIVAL_ENABLED,
+        requireHumanityForPlay: REQUIRE_HUMANITY_FOR_PLAY,
+      },
       currentDay,
       round: round
         ? {

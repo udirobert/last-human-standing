@@ -514,6 +514,7 @@ export function WorldProvider({ children }) {
       markBrowserPaid,
       markQueuedCheckin,
       clearQueuedCheckin,
+      refreshAuth: syncAuth,
       resetProgress,
       setWorldIdVerified: (val) => setWorldIdVerified(Boolean(val)),
     }),
@@ -540,6 +541,7 @@ export function WorldProvider({ children }) {
       markBrowserPaid,
       markQueuedCheckin,
       clearQueuedCheckin,
+      syncAuth,
       resetProgress,
     ],
   );

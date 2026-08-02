@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 /**
@@ -15,60 +15,32 @@ import { AnimatePresence, motion } from "framer-motion";
  * and a growth indicator (delta since last poll).
  */
 export default function PrizePots({ prizePool, className = "" }) {
-  // Track growth — hooks must run before any early return
-  const prevTotalRef = useRef(null);
-  const [growth, setGrowth] = useState(null);
-
-  // Compute total from prizePool (safe if null)
+  // Compute totals from prizePool (safe if null). Token amounts only — no
+  // synthetic USD conversion (docs/COHORT1_PILOT.md: "No conversion to a
+  // synthetic USD total is performed").
   const wld = prizePool?.wld ?? {
     address: prizePool?.address,
     balance: prizePool?.balanceWld,
     explorerUrl: prizePool?.explorerUrl,
   };
   const celo = prizePool?.celo;
-  const wldUsd = (wld?.balance ?? 0) * 1.2;
-  const celoUsd = celo?.cusd ?? 0;
-  const totalUsd = wldUsd + celoUsd;
-
-  useEffect(() => {
-    if (prevTotalRef.current != null && totalUsd > prevTotalRef.current) {
-      setGrowth(totalUsd - prevTotalRef.current);
-      const t = setTimeout(() => setGrowth(null), 3000);
-      return () => clearTimeout(t);
-    }
-    prevTotalRef.current = totalUsd;
-  }, [totalUsd]);
+  const hasWld = Number(wld?.balance) > 0;
+  const hasCusd = Number(celo?.cusd) > 0;
 
   if (!prizePool) return null;
 
   return (
     <div className={className}>
-      {/* Total pot header */}
+      {/* Prize header — real token amounts, on-chain */}
       <div className="flex items-baseline justify-between mb-2 px-1">
-        <p className="text-dim text-[10px] font-mono uppercase tracking-widest">Total Pot</p>
-        <div className="flex items-baseline gap-2">
-          <motion.p
-            key={totalUsd.toFixed(2)}
-            initial={{ scale: 1.1, color: "#00FF94" }}
-            animate={{ scale: 1, color: "#F0EDE8" }}
-            transition={{ duration: 0.4 }}
-            className="font-display text-xl text-bone tabular-nums"
-          >
-            ${totalUsd.toLocaleString(undefined, { maximumFractionDigits: 0 })}
-          </motion.p>
-          <AnimatePresence>
-            {growth != null && (
-              <motion.span
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                className="text-neon text-[10px] font-mono tabular-nums"
-              >
-                +${growth.toFixed(2)}
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </div>
+        <p className="text-bone/70 text-[11px] font-mono uppercase tracking-widest">Sponsor prize</p>
+        {(hasWld || hasCusd) && (
+          <p className="font-mono text-sm text-bone tabular-nums">
+            {hasWld ? `${wld.balance} WLD` : ""}
+            {hasWld && hasCusd ? " + " : ""}
+            {hasCusd ? `${celo.cusd} cUSD` : ""}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-2">

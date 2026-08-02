@@ -21,10 +21,10 @@ export default function SharePanel({ referralCode, referralCount = 0, className 
   const shareUrl = typeof window !== "undefined" && referralCode
     ? `${window.location.origin}?ref=${referralCode}`
     : "";
+  // One consistent voice — no emoji-spam, real stakes, attributable invite
+  // (design review finding 6). The hook is the field reduction, not a party.
   const shareText = encodeURIComponent(
-    referralCount > 0
-      ? `I just secured my spot in Last Human Standing! 🚀 Join me: ${shareUrl}`
-      : `I just reserved my spot in Last Human Standing — the last human standing game! 🚀 Join: ${shareUrl}`,
+    `I'm in Cohort 1 of Last Human Standing — a free 5-day survival game for verified humans. One last human takes the prize. Take my invite: ${shareUrl}`,
   );
 
   const handleCopy = async () => {
@@ -65,7 +65,7 @@ export default function SharePanel({ referralCode, referralCount = 0, className 
           𝕏 Post
         </a>
         <a
-          href={`https://warpcast.com/frame-compose?text=${encodeURIComponent(`I just secured my spot in Last Human Standing! 🚀 ${shareUrl}`)}`}
+          href={`https://warpcast.com/frame-compose?text=${encodeURIComponent(`I'm in Cohort 1 of Last Human Standing — one last human takes the prize. Take my invite: ${shareUrl}`)}`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex-1 py-2.5 rounded-xl bg-[#8B5CF6]/20 text-[#A78BFA] text-sm font-display hover:bg-[#8B5CF6]/30 transition-colors text-center"

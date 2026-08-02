@@ -10,7 +10,7 @@ const SelfVerify = lazy(() => import("../SelfVerify.jsx"));
  * Humanity verify — wallet + pay happen first; this lives in the lobby.
  * Browser players see it expanded by default (defaultOpen).
  */
-export default function VerifyOptIn({ defaultOpen = false }) {
+export default function VerifyOptIn({ defaultOpen = false, required = false }) {
   const [open, setOpen] = useState(defaultOpen);
   const { tier } = useTrustTier();
   const { isFarcaster, isWorldApp } = useWorld();
@@ -19,11 +19,17 @@ export default function VerifyOptIn({ defaultOpen = false }) {
 
   const worldEnabled = import.meta.env.VITE_ENABLE_IDKIT === "true";
   const selfEnabled = import.meta.env.VITE_ENABLE_SELF === "true";
-  if (!worldEnabled && !selfEnabled) return null;
+  if (!worldEnabled && !selfEnabled) {
+    return required ? (
+      <div className="rounded-2xl border border-blood/40 bg-blood/5 p-4 text-blood text-xs font-mono">
+        Humanity verification is not configured for this pilot. Please contact the operator.
+      </div>
+    ) : null;
+  }
 
   const isBrowser = !isWorldApp;
   const headline = isBrowser
-    ? "Verify your humanity (recommended)"
+    ? `Verify your humanity (${required ? "required" : "recommended"})`
     : "Verify your humanity (optional)";
 
   return (
@@ -39,7 +45,9 @@ export default function VerifyOptIn({ defaultOpen = false }) {
           </p>
           <p className="text-dim text-[11px] font-mono leading-relaxed">
             {isBrowser
-              ? "Browser accounts stay provisional until verified — required for voting when PoH gate is on."
+              ? required
+                ? "Verify before claiming your seat. This pilot admits verified humans only."
+                : "Browser accounts stay provisional until verified — required for voting when PoH gate is on."
               : "×2 jury voting power · priority for cohort 2 · ~30 seconds"}
           </p>
         </div>

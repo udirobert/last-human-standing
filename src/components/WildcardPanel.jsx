@@ -17,7 +17,7 @@ import MascotGuide from "./ui/MascotGuide.jsx";
  *   - /api/cohort/roster for the list of eliminated players
  */
 export default function WildcardPanel() {
-  const { currentDay, you } = useRound();
+  const { currentDay, you, pilot } = useRound();
   const { user } = useWorld();
   const [candidates, setCandidates] = useState([]);
   const [tally, setTally] = useState({});
@@ -30,9 +30,13 @@ export default function WildcardPanel() {
   const isJury = Boolean(you?.isEliminated);
   const isWildcardDay = Number(currentDay) === 4;
 
+  // Revival is disabled for the Cohort 1 pilot (REVIVAL_ENABLED=false) —
+  // never render or fetch a revival mechanic the server will not settle.
+  // Kept inside the guard (not an early return) to respect hooks order.
+
   // Load eliminated players + current tally
   useEffect(() => {
-    if (!isJury || !isWildcardDay) return;
+    if (!isJury || !isWildcardDay || !pilot?.revivalEnabled) return;
     let cancelled = false;
 
     async function load() {
@@ -58,7 +62,7 @@ export default function WildcardPanel() {
     load();
     const id = setInterval(load, 15000);
     return () => { cancelled = true; clearInterval(id); };
-  }, [isJury, isWildcardDay, myAddr]);
+  }, [isJury, isWildcardDay, myAddr, pilot?.revivalEnabled]);
 
   const handleVote = async (candidateAddress) => {
     if (submitting || voted) return;
@@ -87,7 +91,7 @@ export default function WildcardPanel() {
     }
   };
 
-  if (!isJury || !isWildcardDay || candidates.length === 0) return null;
+  if (!pilot?.revivalEnabled || !isJury || !isWildcardDay || candidates.length === 0) return null;
 
   const sorted = [...candidates].sort((a, b) => {
     const va = tally[a.address?.toLowerCase()] || 0;

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { COHORT_SCHEDULE, resolveActiveTheme, findTheme } from "../data/game.js";
+import { survivalRule } from "../lib/copy.js";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 import { HumanCta, GhostLink } from "./ui/CraftCta.jsx";
 import Countdown from "./Countdown.jsx";
@@ -59,7 +60,7 @@ function resolveJob({ phase, launchAt, currentDay, round, you }) {
     return {
       eyebrow: "Today's job",
       title: `Day ${currentDay ?? "—"} · ${theme.theme}`,
-      body: `${cap} seats. Snap your proof. Be human.`,
+      body: survivalRule(cap),
       emoji: theme.emoji,
       themeLabel: theme.theme,
       countdownIso: round?.closesAt || null,
@@ -139,18 +140,18 @@ export default function ReturnJobCard({ onCheckIn, onViewFeed }) {
               <div className="flex justify-center mb-3">
                 <ThemeMotif emoji={job.emoji} size={72} label={job.themeLabel} />
               </div>
-              <p className="font-mono text-amber text-[10px] uppercase tracking-[0.2em] mb-1">
+              <p className="font-mono text-amber text-xs uppercase tracking-[0.2em] mb-1">
                 {job.eyebrow}
               </p>
               <p className="font-display text-2xl text-bone leading-tight mb-2">{job.title}</p>
-              <p className="font-body text-bone/70 text-sm leading-snug max-w-xs mx-auto mb-3">
+              <p className="font-body text-bone/80 text-sm leading-snug max-w-xs mx-auto mb-3">
                 {job.body}
               </p>
 
               {job.countdownIso && (
                 <div className="mb-4">
                   {job.countdownLabel && (
-                    <p className="font-mono text-dim text-[9px] uppercase tracking-widest mb-1">
+                    <p className="font-mono text-bone/70 text-xs uppercase tracking-widest mb-1">
                       {job.countdownLabel}
                     </p>
                   )}

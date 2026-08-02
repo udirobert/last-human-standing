@@ -61,9 +61,9 @@ export default function VoteProgressCard({ onViewFeed, className = "" }) {
         />
       </div>
 
-      <p className="text-dim text-[10px] font-mono leading-relaxed mb-2">
+      <p className="text-bone/70 text-[11px] font-mono leading-relaxed mb-2">
         {goalMet
-          ? "Verdicts land at day close — keep voting to earn jury tickets."
+          ? "Verdicts land at day close — keep voting to protect your accuracy."
           : needsVotes > 0
             ? `${needsVotes} photo${needsVotes !== 1 ? "s" : ""} still below the vote quorum. The audit only works if humans vote.`
             : "Open the feed and vote HUMAN or SUS on today's submissions."}

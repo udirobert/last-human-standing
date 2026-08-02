@@ -18,6 +18,23 @@ export const COHORT = {
   freeSlots: 25,
 };
 
+/**
+ * THE canonical survival sentence (design review, finding 3).
+ *
+ * Survival is a hybrid: the fastest N valid check-ins provisionally survive,
+ * and a SUS verdict disqualifies you — promoting the next player. One literal
+ * sentence everywhere so the model can never read differently depending on
+ * which screen you land on. Use `survivalRule(cap)` where there is room for
+ * the full sentence; `survivalRuleShort(cap)` for one-line spots.
+ */
+export function survivalRule(cap) {
+  return `Be among the first ${cap} valid proofs. A SUS verdict disqualifies you and promotes the next player.`;
+}
+
+export function survivalRuleShort(cap) {
+  return `Be among the first ${cap} valid proofs.`;
+}
+
 export const ENTRY = {
   paid: {
     cardLabel: "Guaranteed",
@@ -30,20 +47,21 @@ export const ENTRY = {
   },
   free: {
     cardLabel: "Free",
-    title: "FREE LOTTERY",
-    blurb: "Drawn at launch. No payment.",
-    cta: "JOIN FREE →",
+    title: "FREE SEAT",
+    blurb: "First come, first seated. No payment.",
+    cta: "CLAIM MY SEAT →",
   },
   fallback: {
     cardLabel: "Reserve",
     title: "RESERVE A SLOT",
-    blurb: "Pay the entry fee. One entry, one slot.",
+    blurb: "One entry, one slot.",
   },
 };
 
 export const ENTRY_HEADING = {
-  freeMode: "CHOOSE YOUR PATH",
-  freeModeSub: "Pay to guarantee, or try the free lottery.",
+  // Pilot posture: free, verified-human, first come first seated.
+  freeMode: "CLAIM YOUR SEAT",
+  freeModeSub: "Free pilot for verified humans. First come, first seated.",
   paidMode: "RESERVE A SLOT",
   paidModeSub: "50 humans. One pot. Last one standing.",
   alreadyPaid: "YOU'RE IN",
@@ -58,8 +76,8 @@ export const ENTRY_HEADING = {
 export const RULES = [
   {
     n: "01",
-    title: "RESERVE",
-    body: "Pay 1 WLD (World Chain) or 5 cUSD (Celo) to lock your slot — or enter free. 50 humans max. Your fee goes straight to the pot.",
+    title: "CLAIM YOUR SEAT",
+    body: "Free, verified-human entry. First come, first seated — the roster closes before Day 1.",
     icon: "🎟",
   },
   {
@@ -71,7 +89,7 @@ export const RULES = [
   {
     n: "03",
     title: "PROVE IT",
-    body: "Snap a photo. The crowd votes HUMAN or SUS. Fake it and you're out — a slower, more convincing human takes your slot.",
+    body: "Snap a photo. The crowd votes HUMAN or SUS. A SUS verdict disqualifies you — the next player takes your slot.",
     icon: "📸",
   },
   {
@@ -92,7 +110,7 @@ export const ROUND_UNLOCKS = {
     id: "day1_race",
     eyebrow: "Day 1 · The race",
     title: "BE FAST. BE REAL.",
-    body: "The fastest check-ins provisionally survive — but the crowd still judges every photo. Get flagged, and someone slower takes your slot.",
+    body: survivalRule(25),
     cta: "I'M IN →",
   },
   2: {
@@ -131,7 +149,7 @@ export const JURY_UNLOCK = {
   id: "jury_identity",
   eyebrow: "You're out — but not done",
   title: "YOU'RE THE JURY NOW",
-  body: "Your votes decide who survives. Hit 80% accuracy on 5+ votes and yours count ×2 — plus lottery tickets for the next cohort.",
+  body: "Your votes decide who survives. Hit 80% accuracy on 5+ votes and your votes count ×2. Accuracy is your influence now.",
   cta: "OPEN THE AUDIT →",
 };
 
@@ -224,7 +242,7 @@ export function postSealCopy({
   if (role === "spectator") {
     return {
       shelf: "Watch the field",
-      body: "You're watching this cohort. Audit the proofs — accurate votes earn jury tickets for next time.",
+      body: "You're watching this cohort. Audit the proofs — accurate votes build your jury record.",
     };
   }
   if (role === "jury") {
@@ -265,7 +283,7 @@ export function missionMantra({
   const place = theme ? String(theme) : "TODAY'S THEME";
   return {
     kicker: "Your only job today",
-    line: `Be one of the first ${cap}. ${place}.`,
+    line: `${survivalRuleShort(cap)} ${place}.`,
   };
 }
 
@@ -294,7 +312,7 @@ export const DAILY_LOOP = [
   {
     num: "03",
     title: "Speed and trust",
-    body: "The fastest check-ins provisionally survive — but the crowd still judges every photo. Get flagged as fake, and a slower, more convincing survivor takes your slot.",
+    body: "Be among the first N valid proofs. A SUS verdict disqualifies you and promotes the next player — so a fast photo only counts if it reads as real.",
   },
   {
     num: "04",
@@ -305,20 +323,24 @@ export const DAILY_LOOP = [
 
 export const FAQS = [
   {
-    q: "Do I need crypto?",
-    a: "No — enter the free lottery. Paying 1 WLD guarantees your slot and grows the pot.",
+    q: "What does it cost to play?",
+    a: "Nothing. This cohort is a free, closed pilot for verified humans. First come, first seated until the roster closes.",
   },
   {
-    q: "Where does my fee go?",
-    a: "100% into the on-chain prize pot. The last human takes it all.",
+    q: "What's the prize?",
+    a: "A sponsor prize: 5 WLD on World Chain plus 35 cUSD on Celo. Funds stay operator-custodied during the pilot and the winner receives both after the 48-hour appeal window. Both transaction hashes are published in the recap.",
+  },
+  {
+    q: "How do I survive a day?",
+    a: "Be among the first N valid proofs. A SUS verdict disqualifies you and promotes the next player. The cap shrinks every day: 25 → 12 → 6 → 3 → 1.",
   },
   {
     q: "What if I miss a day?",
-    a: "You're out. But you join the jury — your votes count double. And on Day 4, the jury can revive one eliminated player back into the game.",
+    a: "You're out of the race — but you become a juror. Your votes decide who survives, and they count double once you hit 80% accuracy on 5+ votes.",
   },
   {
     q: "Can I come back after being eliminated?",
-    a: "Yes! The Day 4 wildcard revival lets the jury vote one player back in. Keep voting accurately to stay visible — the jury favors players with high detective rank and long streaks.",
+    a: "Not into this cohort — but you stay in the room as a juror. Vote accurately and build your detective rank for the pilot record.",
   },
   {
     q: "Any country?",
@@ -405,7 +427,7 @@ export function getPersonalizedPaywall({ strategy, theme, rhythm } = {}) {
 
   const strategyHook = {
     honest: "Your honest proofs could take you all the way.",
-    cunning: "Your bluff game could fool them all — if you're careful.",
+    cunning: "You'll play it close. Careful reads win rooms.",
     undecided: "You'll find your style fast. The first theme drops Day 1.",
   }[strategy] || "50 humans. One pot. Last one standing.";
 
@@ -423,13 +445,13 @@ export function getPersonalizedPaywall({ strategy, theme, rhythm } = {}) {
 }
 
 /**
- * Social proof quotes for the paywall.
+ * Social proof quotes for the claim screen.
+ *
+ * Intentionally empty in the pilot: hard-coded Day 2 / Day 4 testimonials
+ * read as fabricated when no cohort has played yet (design review finding 4).
+ * Populate from real, clearly-labelled pilot quotes only after Day 1.
  */
-export const PAYWALL_QUOTES = [
-  { text: "Got flagged on Day 2 for a fake gym selfie. The crowd is brutal.", user: "@marina_sol", day: "Day 2 player" },
-  { text: "Made it to Day 4 just by being honest and fast. The pot is real.", user: "@luna_waves", day: "Day 4 survivor" },
-  { text: "The jury system is genius. My votes count double now.", user: "@ghost_protocol", day: "Eliminated, still playing" },
-];
+export const PAYWALL_QUOTES = [];
 
 /** Utility-screen voice: the same fiction, without cinematic drama. */
 export const CHAT_COPY = {
@@ -454,9 +476,7 @@ export const SURVIVAL_TIPS = [
   "Vote the proof, not the person.",
   "A flagged survivor gets replaced by the next convincing human.",
   "The cap shrinks every day. Tomorrow is less forgiving.",
-  "Eliminated players become the jury. Their accuracy still matters.",
-  "Infiltrators get immunity if the crowd believes the bluff.",
-  "The Day 4 jury can bring one eliminated player back.",
+  "Eliminated players become the jury. Their votes still count double.",
   "A clear background beats a clever caption.",
   "Check in early. The audit can still change the cut.",
 ];
@@ -504,14 +524,14 @@ export const MASCOT_LINES = {
   // Survival moment
   survived: "One day down. Don't get comfortable.",
   // Elimination — near miss
-  eliminatedNear: "So close. The jury can bring you back.",
+  eliminatedNear: "So close. The jury still needs you.",
   // Elimination — clear
   eliminated: "You're out. The crowd voted. Now you vote back.",
   // Finale
   finale: "Last human standing. The pot is yours. You earned this.",
 
   // Live-game mission card
-  missionOpen: (cap, theme) => `Be one of the first ${cap}. ${theme}.`,
+  missionOpen: (cap, theme) => `${survivalRuleShort(cap)} ${theme}.`,
   missionPrelaunch: "Registered. The first theme drops when the cohort opens.",
   missionSpectator: "You're in the stands. Watch the audit and see how the game feels.",
   missionCheckedIn: "Submitted. Hold the room — audit while you wait.",
@@ -529,11 +549,11 @@ export const MASCOT_LINES = {
 
   // Audit / vote progress
   voteProgressStart: (cast, goal) => `The audit needs you. ${cast} / ${goal} votes today.`,
-  voteProgressDone: "Audit duty done. Keep voting for jury tickets.",
+  voteProgressDone: "Audit duty done. Accuracy is your influence.",
   voteProgressNeeds: (n) => `${n} photo${n !== 1 ? "s" : ""} below quorum. The audit needs you.`,
 
   // Rule reveal per day
-  ruleUnlock1: (cap) => `Be fast. Be real. The first ${cap} check-ins provisionally survive.`,
+  ruleUnlock1: (cap) => survivalRule(cap),
   ruleUnlock2: "Infiltrators can bluff. Caught = out. Fooled = immunity.",
   ruleUnlock3: "The cap shrinks again. Speed matters more.",
   ruleUnlock4: "The jury can vote one eliminated player back in. Keep auditing.",
@@ -707,7 +727,7 @@ export function getProfiledMascotLines() {
 
   // Personalized eliminated — references their strategy
   const eliminated = strategy === "cunning"
-    ? "You're out. The bluff didn't hold. Now you vote back."
+    ? "You're out. Played it close, didn't hold. Now you vote back."
     : strategy === "honest"
       ? "You're out. Honest doesn't always mean safe. Now you vote back."
       : MASCOT_LINES.eliminated;

@@ -11,10 +11,11 @@ import { entranceMotion } from "../../lib/motion.js";
  * and `cohortSize` so the funnel matches the authoritative game state.
  */
 
-/** Mirrors server survivalCapForDay — clipped to the live cohort size. */
+/** Mirrors server survivalCapForDay (25 → 12 → 6 → 3 → 1) — clipped to the
+ * live cohort size. */
 function funnelFor(cohortSize) {
   const n = Math.max(1, Number(cohortSize) || 50);
-  const dayCaps = [40, 20, 8, 3, 1];
+  const dayCaps = [25, 12, 6, 3, 1];
   const rows = [{ label: `${n} reserve their slot`, count: n }];
   let prev = n;
   dayCaps.forEach((cap, i) => {
@@ -31,15 +32,17 @@ function funnelFor(cohortSize) {
   return rows;
 }
 
-function potTotal(prizePool) {
+/** Real token amounts only — no synthetic USD conversion (COHORT1_PILOT.md). */
+function potTotals(prizePool) {
   if (!prizePool) return null;
   const wld = prizePool.wld ?? { balance: prizePool.balanceWld };
-  const total = (wld?.balance ?? 0) * 1.2 + (prizePool.celo?.cusd ?? 0);
-  return total > 0 ? total : null;
+  const wldBal = Number(wld?.balance) > 0 ? wld.balance : null;
+  const cusdBal = Number(prizePool.celo?.cusd) > 0 ? prizePool.celo.cusd : null;
+  return wldBal != null || cusdBal != null ? { wld: wldBal, cusd: cusdBal } : null;
 }
 
 export default function ShrinkingPot({ prizePool, cohortSize = 50 }) {
-  const total = potTotal(prizePool);
+  const totals = potTotals(prizePool);
   const funnel = funnelFor(cohortSize);
   const reduce = useReducedMotion();
   const entrance = entranceMotion(reduce, "y");
@@ -100,17 +103,19 @@ export default function ShrinkingPot({ prizePool, cohortSize = 50 }) {
         className="mt-4 text-center rounded-2xl bg-smoke/50 border border-ember/40 p-5"
       >
         <p className="font-mono text-dim uppercase text-[10px] tracking-[0.2em]">Winner takes</p>
-        {total != null ? (
-          <p className="font-display text-bone tabular-nums mt-1" style={{ fontSize: "clamp(34px,7vw,56px)", lineHeight: 1 }}>
-            ${total.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+        {totals != null ? (
+          <p className="font-display text-bone tabular-nums mt-1" style={{ fontSize: "clamp(22px,4.6vw,38px)", lineHeight: 1 }}>
+            {totals.wld != null ? `${totals.wld} WLD` : ""}
+            {totals.wld != null && totals.cusd != null ? " + " : ""}
+            {totals.cusd != null ? `${totals.cusd} cUSD` : ""}
           </p>
         ) : (
           <p className="font-display text-bone mt-1" style={{ fontSize: "clamp(28px,6vw,48px)", lineHeight: 1 }}>
-            the entire pot
+            the prize
           </p>
         )}
         <p className="font-mono text-dim text-[11px] mt-1.5">
-          {total != null ? "and growing — real money, on-chain" : "one human, winner-takes-all"}
+          {totals != null ? "operator-custodied, paid on-chain" : "one human, winner-takes-all"}
         </p>
       </motion.div>
     </section>

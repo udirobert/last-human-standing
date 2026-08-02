@@ -505,15 +505,10 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
             You&apos;re the jury now
           </p>
           <p className="text-bone font-body text-xs leading-relaxed mb-2">
-            Your votes decide who survives. Get 80% accuracy on 5+ votes and your
-            votes count <span className="text-amber">×2</span> — plus
-            lottery tickets for next cohort.
+            Your votes decide who survives. Hit 80% accuracy on 5+ votes and your
+            votes count <span className="text-amber">×2</span> — accuracy
+            is your influence now.
           </p>
-          {Number(currentDay) < 4 && (
-            <p className="text-purple-300 font-body text-[11px] leading-relaxed mb-3 pt-2 border-t border-amber/20">
-              Not over yet: on Day 4, the jury can revive one eliminated player. Keep voting to stay visible.
-            </p>
-          )}
           <HumanCta onClick={onDismiss} className="!py-3">
             Open the audit feed →
           </HumanCta>

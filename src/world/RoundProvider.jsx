@@ -31,6 +31,18 @@ const DEFAULT_AGENTS = {
   slotsRemaining: { humans: 50, agents: 0 },
 };
 
+// Server-authoritative pilot posture (docs/COHORT1_PILOT.md). Defaults are
+// the pilot's: free, verified-human, with paid entry / lottery / infiltrator /
+// revival all disabled. The server overrides these via /api/game/state.pilot.
+const DEFAULT_PILOT = {
+  freeEntryMode: true,
+  paidEntryEnabled: false,
+  lotteryEnabled: false,
+  infiltratorEnabled: false,
+  revivalEnabled: false,
+  requireHumanityForPlay: true,
+};
+
 const DEFAULT_STATE = {
   phase: "prelaunch",
   launchAt: null,
@@ -41,6 +53,7 @@ const DEFAULT_STATE = {
   cohort: { size: 50, paidSlots: 25, freeSlots: 25, paidCount: 0, freeCount: 0 },
   agents: DEFAULT_AGENTS,
   silentVerification: false,
+  pilot: DEFAULT_PILOT,
   currentDay: null,
   round: null,
   you: DEFAULT_YOU,
@@ -97,6 +110,7 @@ export function RoundProvider({ children }) {
           cohort: data.cohort ?? { size: 50, paidSlots: 25, freeSlots: 25, paidCount: 0, freeCount: 0 },
           agents: { ...DEFAULT_AGENTS, ...(data.agents ?? {}) },
           silentVerification: Boolean(data.silentVerification),
+          pilot: { ...DEFAULT_PILOT, ...(data.pilot ?? {}) },
           currentDay: data.currentDay ?? null,
           round: data.round ?? null,
           you: { ...DEFAULT_YOU, ...(data.you ?? {}) },

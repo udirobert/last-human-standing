@@ -35,6 +35,7 @@ export default function PrelaunchPanel({
   variant = "home",
 }) {
   const round = useRound();
+  const { pilot } = round;
   // Fallback to round.cohort for clients that haven't refreshed yet.
   const split = cohort ?? round.cohort ?? {
     size: COHORT.size,
@@ -107,9 +108,15 @@ export default function PrelaunchPanel({
 
       {isReserved && <GetReadyCard />}
 
-      <CountdownCard launchAt={launchAt} split={split} />
+      <CountdownCard
+        launchAt={launchAt}
+        split={split}
+        paidEnabled={Boolean(pilot?.paidEntryEnabled)}
+      />
 
-      <LotteryStatus launchAt={launchAt} />
+      {/* Lottery mechanics are disabled in the pilot — free entry admits
+          directly, so no draw chip may appear (design review finding 1). */}
+      {pilot?.lotteryEnabled ? <LotteryStatus launchAt={launchAt} /> : null}
 
       <PrizePots prizePool={prizePool} />
 
@@ -144,7 +151,7 @@ export default function PrelaunchPanel({
 function GetReadyCard() {
   const day1 = COHORT_SCHEDULE[0];
   const day3 = COHORT_SCHEDULE[2];
-  const { you, reservedCount } = useRound();
+  const { you, reservedCount, cohortSize } = useRound();
 
   // Cycle through mystery emojis to keep users guessing
   const [day1Emoji, setDay1Emoji] = useState(() => {
@@ -189,8 +196,8 @@ function GetReadyCard() {
             <p className="font-display text-bone text-sm leading-tight">
               Day 1: ???
             </p>
-            <p className="text-dim text-[10px] font-mono mt-0.5">
-              {day1.dayLabel} · 50 → {day1.cap} survivors
+            <p className="text-bone/60 text-[11px] font-mono mt-0.5">
+              {day1.dayLabel} · first-come cap {day1.cap}
             </p>
           </div>
         </div>
@@ -200,8 +207,8 @@ function GetReadyCard() {
             <p className="font-display text-bone text-sm leading-tight">
               Day 3: ???
             </p>
-            <p className="text-dim text-[10px] font-mono mt-0.5">
-              {day3.dayLabel} · line up a real human
+            <p className="text-bone/60 text-[11px] font-mono mt-0.5">
+              {day3.dayLabel} · cap {day3.cap} — line up a real human
             </p>
           </div>
         </div>
@@ -209,14 +216,14 @@ function GetReadyCard() {
       
       {/* Social proof: cohort status */}
       <div className="mt-4 pt-3 border-t border-ember/30">
-        <div className="flex items-center justify-between text-[10px] font-mono">
-          <span className="text-dim">Cohort</span>
-          <span className="text-bone">{reservedCount}/50 reserved</span>
+        <div className="flex items-center justify-between text-[11px] font-mono">
+          <span className="text-bone/70">Cohort</span>
+          <span className="text-bone tabular-nums">{reservedCount}/{cohortSize} reserved</span>
         </div>
         <div className="mt-2 h-1.5 bg-smoke/40 rounded-full overflow-hidden">
           <div 
             className="h-full bg-gradient-to-r from-amber to-neon transition-all duration-500"
-            style={{ width: `${Math.min(100, (reservedCount / 50) * 100)}%` }}
+            style={{ width: `${Math.min(100, (reservedCount / (cohortSize || 1)) * 100)}%` }}
           />
         </div>
         {friendsInCohort && (
@@ -280,7 +287,7 @@ function LotteryStatus({ launchAt }) {
   );
 }
 
-function CountdownCard({ launchAt, split }) {
+function CountdownCard({ launchAt, split, paidEnabled = false }) {
   // T-minus rotating copy — cycles through schedule-themed hints every 5s
   // so the countdown feels concrete instead of abstract.
   const tMinusLines = useMemo(() => [
@@ -324,14 +331,16 @@ function CountdownCard({ launchAt, split }) {
       </p>
 
       <div className="mt-5 space-y-3 relative">
+        {paidEnabled && (
+          <CohortProgress
+            label="Paid · guaranteed"
+            count={split.paidCount}
+            total={split.paidSlots}
+            tone="amber"
+          />
+        )}
         <CohortProgress
-          label="Paid · guaranteed"
-          count={split.paidCount}
-          total={split.paidSlots}
-          tone="amber"
-        />
-        <CohortProgress
-          label="Free · lottery"
+          label="Free · first-come"
           count={split.freeCount}
           total={split.freeSlots}
           tone="neon"

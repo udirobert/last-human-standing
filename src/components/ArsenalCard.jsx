@@ -48,7 +48,7 @@ export default function ArsenalCard() {
       className="mx-5 mb-3 bg-smoke/70 border border-ember/40 rounded-2xl p-3 backdrop-blur-sm"
     >
       <div className="flex items-center justify-between mb-2">
-        <p className="font-mono text-[10px] text-dim uppercase tracking-widest">Your arsenal</p>
+        <p className="font-mono text-[11px] text-bone/70 uppercase tracking-widest">Your arsenal</p>
         <div className="flex items-center gap-2">
           {isJury && (
             <span className="font-mono text-[9px] text-amber bg-amber/10 px-2 py-0.5 rounded-full border border-amber/30 tracking-wider uppercase">
@@ -68,12 +68,12 @@ export default function ArsenalCard() {
             }`}>
               {s.value}
             </p>
-            <p className="text-dim text-[8px] font-mono uppercase mt-1 leading-tight">{s.label}</p>
+            <p className="text-bone/60 text-[10px] font-mono uppercase mt-1 leading-tight">{s.label}</p>
           </div>
         ))}
       </div>
       {daysInvested > 0 && (
-        <p className="text-dim/70 text-[9px] font-mono mt-2 text-center border-t border-ember/20 pt-2 tabular-nums">
+        <p className="text-bone/60 text-[10px] font-mono mt-2 text-center border-t border-ember/20 pt-2 tabular-nums">
           {daysInvested} day{daysInvested !== 1 ? "s" : ""} invested — don&apos;t lose your progress
         </p>
       )}

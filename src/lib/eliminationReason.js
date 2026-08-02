@@ -35,7 +35,7 @@ const COPY = {
   unknown: {
     title: "Eliminated",
     body: (r) => `Day ${r.day} closed. You're on the jury now.`,
-    hint: "Your votes still shape who survives — accuracy earns lottery tickets.",
+    hint: "Your votes still shape who survives — accuracy earns ×2 weight.",
   },
 };
 

@@ -11,6 +11,7 @@ import AmbientBackdrop from './components/AmbientBackdrop.jsx';
 import DesktopBackdrop from './components/DesktopBackdrop.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
 import { MascotEventProvider } from './components/MascotEventProvider.jsx';
+import { isConfirming } from './lib/postReserve.js';
 import { useScreenState } from './hooks/useScreenState.js';
 import { useWorld } from './world/WorldProvider.jsx';
 import { useRound } from './world/RoundProvider.jsx';
@@ -108,10 +109,13 @@ const SCREENS = {
     }, [phase, navTab, syncPlaylist]);
 
     // Reserved players belong in the lobby — not a duplicate onboarding countdown.
+    // Exceptions: a fresh claimer on the confirmation step (countdown + reminders
+    // + invite) is held there until they choose to enter the lobby.
     useEffect(() => {
       const reserved = Boolean(entryPaid || you?.isPaid);
       if (!reserved || screen !== SCREENS.ONBOARDING) return;
       if (phase !== 'prelaunch' && phase !== 'live') return;
+      if (isConfirming()) return;
       playSound('victory');
       celebrate(30);
       setScreen(SCREENS.HOME);
