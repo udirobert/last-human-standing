@@ -293,6 +293,7 @@ async function autoAdvanceRounds() {
           .from("users")
           .select("address", { count: "exact", head: true })
           .eq("paid", true)
+          .eq("cohort", COHORT_CONFIG.cohort)
           .eq("is_agent", false)
           .eq("eliminated", false)
           .or("world_id_verified.eq.true,humanity_nullifier.not.is.null");
@@ -2858,7 +2859,11 @@ async function getUserRecord(address) {
 
 async function reservedCount() {
   if (!supabaseAdmin) return 0;
-  const { count } = await supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true);
+  const { count } = await supabaseAdmin
+    .from("users")
+    .select("address", { count: "exact", head: true })
+    .eq("paid", true)
+    .eq("cohort", COHORT_CONFIG.cohort);
   return count ?? 0;
 }
 
@@ -2868,6 +2873,7 @@ async function humanReservedCount() {
     .from("users")
     .select("address", { count: "exact", head: true })
     .eq("paid", true)
+    .eq("cohort", COHORT_CONFIG.cohort)
     .eq("is_agent", false);
   return count ?? 0;
 }
@@ -2878,6 +2884,7 @@ async function agentReservedCount() {
     .from("users")
     .select("address", { count: "exact", head: true })
     .eq("paid", true)
+    .eq("cohort", COHORT_CONFIG.cohort)
     .eq("is_agent", true);
   return count ?? 0;
 }
@@ -2903,7 +2910,8 @@ async function getEndgameBreakdown() {
   const { data, error } = await supabaseAdmin
     .from("users")
     .select("is_agent, verified_human, eliminated")
-    .eq("paid", true);
+    .eq("paid", true)
+    .eq("cohort", COHORT_CONFIG.cohort);
   if (error || !data) return null;
 
   const survivors = data.filter((u) => !u.eliminated);
@@ -2924,9 +2932,9 @@ async function getEndgameBreakdown() {
 async function cohortSplitCount() {
   if (!supabaseAdmin) return { paidCount: 0, freeCount: 0, agentCount: 0 };
   const [paid, free, agents] = await Promise.all([
-    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "paid").eq("is_agent", false),
-    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("entry_kind", "free").eq("is_agent", false),
-    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("is_agent", true),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("cohort", COHORT_CONFIG.cohort).eq("entry_kind", "paid").eq("is_agent", false),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("cohort", COHORT_CONFIG.cohort).eq("entry_kind", "free").eq("is_agent", false),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("cohort", COHORT_CONFIG.cohort).eq("is_agent", true),
   ]);
   return {
     paidCount: paid.count ?? 0,
@@ -2974,7 +2982,8 @@ async function getLastDayClose() {
     .from("users")
     .select("address", { count: "exact", head: true })
     .eq("paid", true)
-    .eq("eliminated", false);
+    .eq("eliminated", false)
+    .eq("cohort", COHORT_CONFIG.cohort);
 
   const value = {
     day: round.day,
@@ -2993,7 +3002,10 @@ async function getEndgame() {
   if (Date.now() - endgameCache.fetchedAt < 30_000) return endgameCache.value;
 
   const [active, closed] = await Promise.all([
-    supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("paid", true).eq("eliminated", false),
+    supabaseAdmin.from("users").select("address", { count: "exact", head: true })
+      .eq("paid", true).eq("cohort", COHORT_CONFIG.cohort).eq("is_agent", false)
+      .or("world_id_verified.eq.true,humanity_nullifier.not.is.null")
+      .eq("eliminated", false),
     supabaseAdmin.from("rounds").select("day", { count: "exact", head: true }).eq("status", "closed"),
   ]);
   let value = null;
@@ -3005,6 +3017,9 @@ async function getEndgame() {
         .from("users")
         .select("address,username")
         .eq("paid", true)
+        .eq("cohort", COHORT_CONFIG.cohort)
+        .eq("is_agent", false)
+        .or("world_id_verified.eq.true,humanity_nullifier.not.is.null")
         .eq("eliminated", false)
         .limit(1)
         .maybeSingle();
@@ -3412,6 +3427,7 @@ app.get("/api/cohort/roster", async (req, res) => {
       .from("users")
       .select("address, username, reserved_at, eliminated, eliminated_at_day, referral_code, referral_count, referred_by, entry_kind, entry_token, cohort, is_agent, agent_tier, verified_human")
       .eq("paid", true)
+      .eq("cohort", COHORT_CONFIG.cohort)
       .order("reserved_at", { ascending: false })
       .limit(200);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });

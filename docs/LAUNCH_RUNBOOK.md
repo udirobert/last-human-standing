@@ -1,4 +1,15 @@
-# Launch runbook — 2026-07-29 18:00 UTC
+# Launch runbook — Cohort 1 pilot
+
+> **Current operating plan (2026-08-02):** Cohort 1 is a free, closed,
+> verified-human pilot with manual in-kind settlement. The current provisional
+> launch is **2026-08-10 18:00 UTC**, subject to the roster and dry-run gates.
+> Paid entry, lottery admission, automatic payout, infiltrator mode, and
+> revival are disabled. Use [`PILOT_INVITATION_READINESS.md`](./PILOT_INVITATION_READINESS.md)
+> as the authoritative pre-invite checklist.
+
+The historical timeline and older paid/lottery procedures below are retained
+for incident context. They do **not** describe the current Cohort 1 launch
+contract.
 
 This is the step-by-step for going live. The launch is the
 moment the `phase: "prelaunch"` flag flips to `phase: "live"`

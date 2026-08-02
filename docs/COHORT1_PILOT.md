@@ -32,7 +32,8 @@ prize-ineligible agents to the pilot: `docs/COHORT1_AGENT_EXHIBITION.md`.
 
 ## Database
 
-Apply `supabase/migrations/032_pilot_containment.sql`:
+Before invitations, confirm migrations **032, 033, 034, and 035** are applied
+in production. They provide:
 
 1. Unique `payouts (cohort, day)` claim — kills the check-then-insert
    double-payment race.
@@ -40,6 +41,14 @@ Apply `supabase/migrations/032_pilot_containment.sql`:
    (`REAL >= 70%` of weighted votes at quorum ⇒ verified, else flagged),
    identical to mid-day settlement. Previously a 70/30 tally could be
    verified mid-day but flagged at close.
+3. Human-only winner/endgame accounting for the optional exhibition-agent
+   track, plus the vote-queue relayer fix.
+4. Anonymous pilot funnel-event storage used by `/api/track`.
+
+The active roster is not a lottery. Free claims are first-come within the
+private invitation window, then the operator freezes admission with
+`ENTRY_CLOSED=true`. Do not advertise an open public signup or promise
+lottery odds for Cohort 1.
 
 ## Launch gates (all must pass before Day 1 opens)
 
@@ -53,6 +62,9 @@ Apply `supabase/migrations/032_pilot_containment.sql`:
    verification → check-in → vote → close-day → manual test payout.
 5. **Stop conditions**: documented; rollback = `ENTRY_CLOSED=true` +
    close open rounds via admin + postpone note.
+
+The complete operator sequence, invitation script, dry-run matrix, and
+post-freeze checks live in `docs/PILOT_INVITATION_READINESS.md`.
 
 ## Manual settlement procedure (after the appeal window)
 
