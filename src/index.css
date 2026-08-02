@@ -392,6 +392,47 @@ body.landing-mode .tip-toast {
 }
 .cat-breathe { animation: cat-breathe 4s ease-in-out infinite; transform-origin: 70px 84px; }
 
+/* DozingCat — the tail-tip sway. Much slower than breathing: a sleeper's tail. */
+@keyframes cat-tail {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50%      { transform: rotate(2deg); }
+}
+.cat-tail { animation: cat-tail 6.5s ease-in-out infinite; transform-origin: 110px 72px; }
+
+/* ThemeMotif — quiet life for the painted artefacts (see ThemeMotif.jsx).
+   Everything is a micromovement: 1–2.5px / ~1.5deg / slow. When in doubt,
+   slower. */
+@keyframes motif-idle {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.012); }
+}
+.motif-idle { animation: motif-idle 9s ease-in-out infinite; transform-origin: center center; }
+
+/* tree crown — a soft sway around the trunk base */
+@keyframes motif-sway {
+  0%, 100% { transform: rotate(-1.4deg); }
+  50%      { transform: rotate(1.4deg); }
+}
+.motif-sway { animation: motif-sway 7s ease-in-out infinite; transform-origin: 60px 84px; }
+
+/* sunrise rays — a slow pulse, like first light strengthening */
+@keyframes motif-rays {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.95; }
+}
+.motif-rays { animation: motif-rays 5.5s ease-in-out infinite; }
+
+/* sunrise disc — the gentlest possible rising bob */
+@keyframes motif-bob {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-2.5px); }
+}
+.motif-bob { animation: motif-bob 6s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .motif-idle, .motif-sway, .motif-rays, .motif-bob, .cat-tail { animation: none; }
+}
+
 /* CompassRose — a gentle needle wobble, like a compass at rest */
 @keyframes compass-wobble {
   0%, 100% { transform: rotate(-2deg); }

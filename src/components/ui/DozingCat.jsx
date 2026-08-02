@@ -36,8 +36,10 @@ export default function DozingCat({ size = 120, className = "", title = "a sleep
       <ellipse cx="72" cy="92" rx="52" ry="7" fill="#000" opacity="0.4" filter={`url(#${uid}-shadow)`} />
 
       <g className="cat-breathe" filter={`url(#${uid}-brush)`}>
-        {/* tail curling around the front */}
-        <path d="M116,66 C126,84 104,96 74,90" fill="none" stroke={P.catShade} strokeWidth="13" strokeLinecap="round" />
+        {/* tail curling around the front — sways softly in sleep (.cat-tail) */}
+        <g className="cat-tail">
+          <path d="M116,66 C126,84 104,96 74,90" fill="none" stroke={P.catShade} strokeWidth="13" strokeLinecap="round" />
+        </g>
         {/* body */}
         <path d={bodyPath} fill={P.catBody} />
         <path

@@ -26,10 +26,13 @@ const MOTIFS = {
       <clipPath id={`${uid}-c`}><circle cx="60" cy="48" r="34" /></clipPath>
       <g filter={`url(#${uid}-brush)`}>
         <rect x="54" y="66" width="12" height="34" rx="3" fill={P.crema} />
-        <circle cx="60" cy="46" r="30" fill={P.leaf} />
-        <circle cx="40" cy="56" r="20" fill={P.leaf} />
-        <circle cx="82" cy="56" r="19" fill={P.leaf} />
-        <circle cx="70" cy="40" r="16" fill={P.leafShade} opacity="0.45" />
+        {/* crown sways gently around the trunk base (.motif-sway) */}
+        <g className="motif-sway">
+          <circle cx="60" cy="46" r="30" fill={P.leaf} />
+          <circle cx="40" cy="56" r="20" fill={P.leaf} />
+          <circle cx="82" cy="56" r="19" fill={P.leaf} />
+          <circle cx="70" cy="40" r="16" fill={P.leafShade} opacity="0.45" />
+        </g>
         <g clipPath={`url(#${uid}-c)`}>
           <rect x="20" y="12" width="80" height="72" filter={`url(#${uid}-grain)`} opacity="0.5" />
         </g>
@@ -50,9 +53,9 @@ const MOTIFS = {
   "🤝": (uid) => (
     <g filter={`url(#${uid}-brush)`}>
       <g fill="none" stroke={P.foam} strokeWidth="3" strokeLinecap="round" opacity="0.5">
-        <path d="M44,46 C40,40 48,38 45,32" />
-        <path d="M77,50 C73,44 81,42 78,36" />
-      </g>
+          <path className="steam-b" d="M44,46 C40,40 48,38 45,32" />
+          <path className="steam-c" d="M77,50 C73,44 81,42 78,36" />
+        </g>
       <g>
         <path d="M30,52 L58,52 L55,86 C55,90 33,90 33,86 Z" fill={P.cream} />
         <ellipse cx="44" cy="52" rx="14" ry="3.6" fill={P.espresso} />
@@ -70,17 +73,21 @@ const MOTIFS = {
     <>
       <clipPath id={`${uid}-c`}><circle cx="60" cy="58" r="26" /></clipPath>
       <g filter={`url(#${uid}-brush)`}>
-        <g stroke={P.sun} strokeWidth="4" strokeLinecap="round" opacity="0.85">
+        {/* rays pulse like strengthening first light (.motif-rays) */}
+        <g className="motif-rays" stroke={P.sun} strokeWidth="4" strokeLinecap="round" opacity="0.85">
           <path d="M60,22 L60,12" />
           <path d="M36,30 L30,22" />
           <path d="M84,30 L90,22" />
           <path d="M22,50 L12,48" />
           <path d="M98,50 L108,48" />
         </g>
-        <circle cx="60" cy="58" r="26" fill={P.petal} />
-        <circle cx="60" cy="58" r="26" fill={P.sun} opacity="0.35" />
-        <g clipPath={`url(#${uid}-c)`}>
-          <rect x="34" y="32" width="52" height="52" filter={`url(#${uid}-grain)`} opacity="0.4" />
+        {/* the disc itself does the gentlest possible rising bob (.motif-bob) */}
+        <g className="motif-bob">
+          <circle cx="60" cy="58" r="26" fill={P.petal} />
+          <circle cx="60" cy="58" r="26" fill={P.sun} opacity="0.35" />
+          <g clipPath={`url(#${uid}-c)`}>
+            <rect x="34" y="32" width="52" height="52" filter={`url(#${uid}-grain)`} opacity="0.4" />
+          </g>
         </g>
         <rect x="8" y="72" width="104" height="34" fill={P.terracotta} />
         <path d="M8,72 L112,72" stroke={P.terracottaShade} strokeWidth="2" />
@@ -109,9 +116,10 @@ const MOTIFS = {
     <>
       <clipPath id={`${uid}-c`}><path d="M30,63 C32,86 88,86 90,63 Z" /></clipPath>
       <g filter={`url(#${uid}-brush)`}>
+        {/* steam rises off the bowl — same wisps as the coffee (.steam-a/b) */}
         <g fill="none" stroke={P.foam} strokeWidth="3.5" strokeLinecap="round" opacity="0.55">
-          <path d="M50,54 C46,44 54,40 51,32" />
-          <path d="M64,54 C68,44 60,40 63,32" />
+          <path className="steam-a" d="M50,54 C46,44 54,40 51,32" />
+          <path className="steam-b" d="M64,54 C68,44 60,40 63,32" />
         </g>
         <path d="M30,63 C32,86 88,86 90,63 Z" fill={P.cream} />
         <ellipse cx="60" cy="63" rx="30" ry="7" fill={P.rim} />
@@ -229,7 +237,7 @@ export default function ThemeMotif({ emoji, size = 64, className = "", label }) 
   }
 
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" className={className} role="img" aria-label={label}>
+    <svg width={size} height={size} viewBox="0 0 120 120" className={`motif-idle ${className}`} role="img" aria-label={label}>
       <defs>
         <GouacheFilters id={uid} />
       </defs>
