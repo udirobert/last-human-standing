@@ -192,9 +192,9 @@ function NameHarness({ saveValue }) {
 describe("useMascotName migration", () => {
   beforeEach(() => localStorage.clear());
 
-  it("returns empty string when no keys exist", () => {
+  it("defaults to the guide name when no keys exist", () => {
     render(<NameHarness />);
-    expect(screen.getByTestId("name").textContent).toBe("");
+    expect(screen.getByTestId("name").textContent).toBe("Ember");
   });
 
   it("reads from legacy mascot_name key when lhs_mascot_name is absent", () => {
