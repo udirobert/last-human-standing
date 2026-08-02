@@ -658,19 +658,20 @@ create policy "checkins_service_delete" on storage.objects
 
 -- =============== Cap decay: survival cap shrinks daily ===============
 -- Returns the survival cap for a given day number.
--- Day 1: 40, Day 2: 20, Day 3: 8, Day 4: 3, Day 5+: 1
+-- Day 1: 25, Day 2: 12, Day 3: 6, Day 4: 3, Day 5+: 1
+-- Mirrors migration 029's explicit per-round caps for the Aug 3 cohort.
 -- Admin can still override per-round by setting survival_cap manually
 -- before the round opens; advance_rounds only sets it if it's still
--- the default (40).
+-- the default (25).
 create or replace function public.survival_cap_for_day(p_day int)
 returns int
 language sql
 immutable
 as $$
   select case
-    when p_day <= 1 then 40
-    when p_day = 2 then 20
-    when p_day = 3 then 8
+    when p_day <= 1 then 25
+    when p_day = 2 then 12
+    when p_day = 3 then 6
     when p_day = 4 then 3
     else 1
   end;
@@ -694,6 +695,9 @@ declare
   opens_ms bigint;
   closes_ms bigint;
   close_result jsonb;
+  active_cnt int;
+  arc_cap int;
+  arc_row record;
 begin
   perform pg_advisory_xact_lock(42424201);
 
@@ -707,9 +711,33 @@ begin
       if round_row.status = 'scheduled' then
         opens_ms := trunc(Extract(epoch from round_row.opens_at)) * 1000;
         if now_ms >= opens_ms then
-          -- Set the decayed cap if the admin hasn't overridden it
-          -- (default is 40; if it's still 40, apply the decay schedule).
-          if round_row.survival_cap = 40 then
+          -- Adaptive day-1 cut: when day 1 opens at the default cap (25),
+          -- size the whole arc to the actual active roster so even a small
+          -- cohort still produces an elimination. Custom caps are respected.
+          if round_row.day = 1 and round_row.survival_cap = 25 then
+            select count(*) into active_cnt
+              from public.users
+              where paid = true and eliminated = false;
+            arc_cap := greatest(1, least(25, ceil(coalesce(active_cnt, 0) * 0.6)));
+            -- Re-derive the full arc (floor-halving) across all scheduled
+            -- future rounds. A full 50-person cohort yields 25 → 12 → 6 → 3 → 1.
+            for arc_row in
+              select day
+              from public.rounds
+              where status = 'scheduled' and day >= round_row.day
+              order by day asc
+            loop
+              update public.rounds
+                set survival_cap = arc_cap, updated_at = now_iso
+                where day = arc_row.day and status = 'scheduled';
+              arc_cap := greatest(1, floor(arc_cap / 2));
+            end loop;
+            update public.rounds
+              set status = 'open', updated_at = now_iso
+              where day = round_row.day and status = 'scheduled';
+          -- Non-day-1 or admin-customized round: apply decay only if the cap
+          -- is still the default (25); otherwise respect the admin's cap.
+          elsif round_row.survival_cap = 25 then
             update public.rounds
               set status = 'open',
                   survival_cap = public.survival_cap_for_day(round_row.day),

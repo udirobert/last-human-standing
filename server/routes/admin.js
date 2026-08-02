@@ -248,20 +248,40 @@ export default function adminRoutes(deps) {
 
   router.post("/admin/retry-payout", requireAuth, requireAdmin, async (req, res) => {
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    // Cohort 1 pilot: settlement is manual (two in-kind transfers after the
+    // appeal window). Automatic hot-EOA payout — including retries — only
+    // runs when explicitly enabled.
+    if (process.env.AUTO_PAYOUT_ENABLED !== "true") {
+      return res.status(403).json({
+        error: "auto_payout_disabled",
+        message: "Cohort 1 settles manually — see docs/COHORT1_PILOT.md. Re-enable only with escrow-grade settlement.",
+      });
+    }
     const body = ensureObjectBody(req, res);
     if (!body) return;
     try {
       const winnerAddress = ensureString(body.winnerAddress, { field: "winnerAddress", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/ });
-      const amountUsd = typeof body.amountUsd === "number" ? body.amountUsd : 0;
-      const token = ensureString(body.token, { field: "token", maxLength: 16 }) || "cUSD";
+
+      // The recorded payout row is the source of truth: an admin retry may
+      // NOT mint an arbitrary winner, token, or amount.
+      const { data: failedRow } = await supabaseAdmin
+        .from("payouts")
+        .select("id,winner_address,amount_usd,token")
+        .eq("winner_address", winnerAddress)
+        .eq("status", "failed")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!failedRow) return res.status(404).json({ error: "no_failed_payout" });
+      const amountUsd = Number(failedRow.amount_usd) || 0;
+      const token = failedRow.token || "cUSD";
 
       const result = await ariaBroadcastPayoutTx({ winnerAddress, amountUsd, token });
       if (result.ok) {
         await supabaseAdmin.from("payouts")
           .update({ status: "submitted", tx_hash: result.txHash, explorer_url: result.explorerUrl, error: null })
-          .eq("winner_address", winnerAddress)
-          .eq("status", "failed");
-        log("admin_retry_payout_success", { winnerAddress, txHash: result.txHash });
+          .eq("id", failedRow.id);
+        log("admin_retry_payout_success", { winnerAddress, txHash: result.txHash, payoutId: failedRow.id });
         return res.json({ ok: true, ...result });
       }
       return res.json({ ok: false, error: result.reason });

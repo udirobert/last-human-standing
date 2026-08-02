@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import {
   getAgentDid,
   getAgentHandle,
@@ -67,7 +67,7 @@ describe("ARIA payout transaction", () => {
       amountUsd: 4200,
       token: "cUSD",
     });
-    expect(tx.to).toBe("0x765DE816845861e75A25fCA122bb6898E8B2a1cF");
+    expect(tx.to).toBe("0x765DE816845861e75A25fCA122bb6898B8B1282a"); // official mainnet cUSD
     expect(tx.chain).toBe("celo");
     expect(tx.token).toBe("cUSD");
     expect(tx.data).toMatch(/^0xa9059cbb/);
@@ -124,7 +124,20 @@ describe("ARIA x402 payment protocol", () => {
 });
 
 describe("ARIA agent registration", () => {
+  const ORIGINAL_KEY = process.env.ARIA_AGENT_KEY;
+
+  afterEach(() => {
+    // Restore the ambient ARIA_AGENT_KEY (may be set by the local .env).
+    if (ORIGINAL_KEY) process.env.ARIA_AGENT_KEY = ORIGINAL_KEY;
+    else delete process.env.ARIA_AGENT_KEY;
+  });
+
   it("returns unconfigured when no agent key is set", async () => {
+    delete process.env.ARIA_AGENT_KEY;
+    vi.resetModules();
+    // Re-import fresh so the module-scope AGENT_SIGNING_KEY is read without a key.
+    const fresh = await import("../server/lib/ariaAgent.js");
+    const { ariaRegisterAgent } = fresh;
     const result = await ariaRegisterAgent();
     expect(result.ok).toBe(false);
     expect(result.reason).toBe("no_agent_key_configured");

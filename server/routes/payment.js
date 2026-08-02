@@ -11,11 +11,30 @@ const CELO_ALFAJORES_RPC = process.env.CELO_ALFAJORES_RPC || "https://alfajores-
 
 /**
  * Celo token contract addresses (mainnet).
+ * cUSD: official StableToken per https://docs.celo.org/tooling/contracts/token-contracts
+ * (a stale address ending in ...2a1cF has no bytecode on mainnet and
+ * silently broke verification/payouts; the live balance reader uses ...1282a).
  */
 const CELO_TOKENS = {
-  cUSD: "0x765DE816845861e75A25fCA122bb6898E8B2a1cF",
+  cUSD: "0x765DE816845861e75A25fCA122bb6898B8B1282a",
   USDC: "0xcebA9300f2b948710d2653dD7B07f33A8B32118C",
 };
+
+/** Resolve a user-supplied symbol to the canonical CELO_TOKENS key. */
+function canonicalCeloToken(symbol) {
+  const s = String(symbol || "cUSD");
+  return Object.keys(CELO_TOKENS).find((k) => k.toLowerCase() === s.toLowerCase()) || null;
+}
+
+/** Paid entry stays disabled for the Cohort 1 free pilot. */
+function paidEntryDisabled(res) {
+  if (process.env.PAID_ENTRY_ENABLED === "true") return false;
+  res.status(503).json({
+    error: "paid_entry_disabled",
+    message: "Cohort 1 is a free, closed, verified-human pilot. Paid entry is disabled until settlement is escrow-grade.",
+  });
+  return true;
+}
 
 /**
  * Verify an ERC-20 transfer on Celo (cUSD or USDC).
@@ -162,6 +181,7 @@ export default function paymentRoutes({
 
   // ---------- POST /api/pay/confirm (World App) ----------
   router.post("/pay/confirm", requireAuth, async (req, res) => {
+    if (paidEntryDisabled(res)) return;
     const body = ensureObjectBody(req, res);
     if (!body) return;
     const { payload } = body;
@@ -198,7 +218,7 @@ export default function paymentRoutes({
       log("pay_confirm_success", { address: req.user.address, platform: "world" });
       res.json({ ok: true, paid: true, details: json });
     } catch (e) {
-      if (e?.code === "human_slots_full" || e?.code === "cohort_full") {
+      if (e?.code === "human_slots_full" || e?.code === "cohort_full" || e?.code === "entry_closed") {
         return res.status(409).json({ error: e.code });
       }
       log("pay_confirm_error", { address: req.user.address, message: e instanceof Error ? e.message : "unknown" });
@@ -210,6 +230,7 @@ export default function paymentRoutes({
   router.post("/pay/browser-confirm",
     rateLimit({ keyFn: (req) => `browserpay:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
     async (req, res) => {
+    if (paidEntryDisabled(res)) return;
     const body = ensureObjectBody(req, res);
     if (!body) return;
 
@@ -243,7 +264,7 @@ export default function paymentRoutes({
 
       res.json({ ok: true, paid: true, address, txHash });
     } catch (error) {
-      if (error?.code === "human_slots_full" || error?.code === "cohort_full") {
+      if (error?.code === "human_slots_full" || error?.code === "cohort_full" || error?.code === "entry_closed") {
         return res.status(409).json({ error: error.code });
       }
       sendValidationError(res, error);
@@ -280,6 +301,20 @@ export default function paymentRoutes({
       });
     }
 
+    // Pilot: the roster is verified-human only. Free entry still requires a
+    // completed World ID or Self proof BEFORE admission.
+    if (process.env.REQUIRE_HUMANITY_FOR_PLAY !== "false") {
+      const { data: humanRec } = await supabaseAdmin
+        .from("users")
+        .select("world_id_verified, humanity_nullifier")
+        .ilike("address", address)
+        .maybeSingle();
+      const verified = Boolean(humanRec?.world_id_verified) || Boolean(humanRec?.humanity_nullifier);
+      if (!verified) {
+        return res.status(403).json({ error: "humanity_verification_required" });
+      }
+    }
+
     try {
       await upsertPaidUser(address, { platform: reach.user?.platform || "free_entry", entryKind: "free" });
       await supabaseAdmin
@@ -287,7 +322,7 @@ export default function paymentRoutes({
         .update({ reachability_completed_at: new Date().toISOString() })
         .eq("address", address.toLowerCase());
     } catch (e) {
-      if (e?.code === "human_slots_full" || e?.code === "cohort_full") {
+      if (e?.code === "human_slots_full" || e?.code === "cohort_full" || e?.code === "entry_closed") {
         return res.status(409).json({ error: e.code });
       }
       throw e;
@@ -300,6 +335,7 @@ export default function paymentRoutes({
   router.post("/pay/browser-celo-confirm",
     rateLimit({ keyFn: (req) => `celopay:${req.ip}`, limit: 10, windowMs: 60_000, storage: rateLimitStorage }),
     async (req, res) => {
+    if (paidEntryDisabled(res)) return;
     const body = ensureObjectBody(req, res);
     if (!body) return;
 
@@ -314,7 +350,14 @@ export default function paymentRoutes({
       const txHash = ensureString(body.txHash, {
         field: "txHash", required: true, maxLength: 80, pattern: /^0x[a-fA-F0-9]{64}$/,
       });
-      const token = (ensureString(body.token, { field: "token", maxLength: 16 }) || "cUSD").toUpperCase();
+      // Canonical symbol resolution: the token map is keyed "cUSD"/"USDC".
+      // Previously the input was uppercased, so "cUSD" became "CUSD" and
+      // failed verification as unsupported_token_CUSD.
+      const tokenInput = ensureString(body.token, { field: "token", maxLength: 16 }) || "cUSD";
+      const token = canonicalCeloToken(tokenInput);
+      if (!token) {
+        return res.status(400).json({ error: "unsupported_token", token: tokenInput });
+      }
       const referredBy = ensureString(body.referredBy, {
         field: "referredBy", required: false, maxLength: 64, pattern: /^LHS-[a-z0-9]+-[a-f0-9]+$/i,
       });
@@ -339,7 +382,7 @@ export default function paymentRoutes({
 
       res.json({ ok: true, paid: true, address, txHash, token, chain: "celo" });
     } catch (error) {
-      if (error?.code === "human_slots_full" || error?.code === "cohort_full") {
+      if (error?.code === "human_slots_full" || error?.code === "cohort_full" || error?.code === "entry_closed") {
         return res.status(409).json({ error: error.code });
       }
       sendValidationError(res, error);

@@ -9,6 +9,8 @@
  * Requirements:
  *   - DAYTONA_API_KEY env var
  *   - Game server running with ADMIN_TOKEN set
+ *   - ENABLE_TEST_ROUTES=true on the target server (registers /api/test/session;
+ *     OFF by default in production since the pilot containment patch)
  *   - AGENTS_ENABLED=true for agent tests
  *   - GAME_LAUNCH_AT set to a past timestamp (so phase = "live")
  *   - A round created with a short open/close window
@@ -344,6 +346,22 @@ async function main() {
   const health = await (await fetch(`${API_BASE}/api/health`)).json();
   if (!health.ok) throw new Error("Server not healthy");
   console.log(`  Server: OK, Supabase: ${health.supabase ? "OK" : "DOWN"}`);
+
+  // 0b. The test-session bypass only exists when the target server runs
+  // with ENABLE_TEST_ROUTES=true. Fail fast with a clear message instead
+  // of cryptic 404s from every sandbox.
+  const probe = await fetch(`${API_BASE}/api/test/session`, {
+    method: "POST",
+    headers: { "x-admin-token": ADMIN_TOKEN, "content-type": "application/json" },
+    body: JSON.stringify({ address: "0x0000000000000000000000000000000000000001" }),
+  });
+  if (probe.status === 404) {
+    throw new Error(
+      "/api/test/session is not registered on " + API_BASE +
+      " — restart the target server with ENABLE_TEST_ROUTES=true (never set this in production).",
+    );
+  }
+  console.log(`  Test-session route: OK (${probe.status})`);
 
   // 1. Create a short test round (opens now, closes in 5 minutes)
   const now = Date.now();

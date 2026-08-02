@@ -249,3 +249,52 @@ describe("server hardening", () => {
     expect(res.body.ok).toBe(true);
   });
 });
+
+describe("cohort-1 pilot containment", () => {
+  it("POST /api/pay/browser-confirm returns 503 when paid entry is disabled", async () => {
+    const prev = process.env.PAID_ENTRY_ENABLED;
+    delete process.env.PAID_ENTRY_ENABLED; // default: pilot disables paid entry
+    try {
+      const res = await request(app)
+        .post("/api/pay/browser-confirm")
+        .send({
+          address: "0x1234567890abcdef1234567890ABCDEF12345678",
+          txHash: VALID_TX_HASH,
+        });
+      expect(res.status).toBe(503);
+      expect(res.body.error).toBe("paid_entry_disabled");
+    } finally {
+      process.env.PAID_ENTRY_ENABLED = prev ?? "true";
+    }
+  });
+
+  it("POST /api/pay/browser-celo-confirm returns 503 when paid entry is disabled", async () => {
+    const prev = process.env.PAID_ENTRY_ENABLED;
+    delete process.env.PAID_ENTRY_ENABLED;
+    try {
+      const res = await request(app)
+        .post("/api/pay/browser-celo-confirm")
+        .send({
+          address: "0x1234567890abcdef1234567890ABCDEF12345678",
+          txHash: VALID_TX_HASH,
+          token: "cUSD",
+        });
+      expect(res.status).toBe(503);
+      expect(res.body.error).toBe("paid_entry_disabled");
+    } finally {
+      process.env.PAID_ENTRY_ENABLED = prev ?? "true";
+    }
+  });
+
+  it("does not register /api/test/session unless ENABLE_TEST_ROUTES=true (route-leak regression)", async () => {
+    // Poll game state repeatedly — this used to append a new Express route
+    // to the stack on every request.
+    for (let i = 0; i < 3; i += 1) await request(app).get("/api/game/state");
+    const routes = (app._router?.stack || []).filter(
+      (layer) => layer.route?.path === "/api/test/session",
+    );
+    expect(routes.length).toBe(0);
+    const res = await request(app).post("/api/test/session").send({ address: VALID_ADDRESS });
+    expect(res.status).toBe(404);
+  });
+});

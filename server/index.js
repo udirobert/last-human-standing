@@ -102,6 +102,10 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,h
 const ROUND_JOIN_QUORUM = Number(process.env.ROUND_JOIN_QUORUM || 200);
 const VOTE_QUORUM = Number(process.env.VOTE_QUORUM || 8);
 const VOTE_QUORUM_LOW = Number(process.env.VOTE_QUORUM_LOW || 5);
+// Scale vote quorum with the active roster so small cohorts can still reach
+// verdicts: effective = clamp(ceil(roster * ratio), min, VOTE_QUORUM).
+const VOTE_QUORUM_RATIO = Number(process.env.VOTE_QUORUM_RATIO || 0.3);
+const VOTE_QUORUM_MIN = Number(process.env.VOTE_QUORUM_MIN || 3);
 const VOTE_ACTIVITY_WINDOW_MIN = Number(process.env.VOTE_ACTIVITY_WINDOW_MIN || 60);
 const VOTE_ACTIVITY_THRESHOLD = Number(process.env.VOTE_ACTIVITY_THRESHOLD || 30);
 const VOTE_DAILY_GOAL = Number(process.env.VOTE_DAILY_GOAL || 5);
@@ -109,7 +113,18 @@ const AUDIT_NUDGE_HOURS = Number(process.env.AUDIT_NUDGE_HOURS || 2);
 const SEMAPHORE_AUDIT_ENABLED = process.env.SEMAPHORE_AUDIT_ENABLED === "true";
 const REAL_PCT_TO_VERIFY = Number(process.env.REAL_PCT_TO_VERIFY || 0.7);
 const FAKE_PCT_TO_FLAG = Number(process.env.FAKE_PCT_TO_FLAG || 0.3);
-const REQUIRE_WORLD_ID_FOR_VOTING = process.env.REQUIRE_WORLD_ID_FOR_VOTING === "true";
+// Read at request time so tests and ops can toggle without a restart.
+// Default ON: voting determines lethal verdicts, so it requires a verified
+// human who is an admitted member of the active cohort. Set
+// REQUIRE_WORLD_ID_FOR_VOTING=false only for demos.
+function worldIdRequiredForVoting() {
+  return process.env.REQUIRE_WORLD_ID_FOR_VOTING !== "false";
+}
+
+/** True when the user row carries a World ID or Self humanity proof. */
+function isHumanityVerified(userRec) {
+  return Boolean(userRec?.world_id_verified) || Boolean(userRec?.humanity_nullifier);
+}
 
 function extractWorldIdNullifier(result) {
   // World ID 3.0 uses nullifier_hash, while IDKit 4.0 returns one proof
@@ -142,7 +157,7 @@ const LOTTERY_MAX_DELAY_HOURS = Number(process.env.LOTTERY_MAX_DELAY_HOURS || 6)
 const GAME_LAUNCH_AT = process.env.GAME_LAUNCH_AT || null;
 const COHORT_2_LAUNCH_AT = process.env.COHORT_2_LAUNCH_AT || null;
 const COHORT_SIZE = Number(process.env.COHORT_SIZE || 50);
-const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 40);
+const DAILY_SURVIVAL_CAP = Number(process.env.DAILY_SURVIVAL_CAP || 25);
 // Competing AI agents (Turing-test arena). Off by default — flip when ready.
 const AGENTS_ENABLED = process.env.AGENTS_ENABLED === "true";
 const MAX_AGENT_RATIO = Number(process.env.MAX_AGENT_RATIO || 0.25);
@@ -150,14 +165,40 @@ const MIN_AGENT_COUNT = Number(process.env.MIN_AGENT_COUNT || 5);
 // Hide World ID / Self badges in gameplay UI; still verify in the background.
 const SILENT_VERIFICATION = process.env.SILENT_VERIFICATION === "true";
 
+// --- Cohort 1 pilot containment (see docs/COHORT1_PILOT.md) ---------------
+// Paid entry is disabled for the free, closed, verified-human pilot.
+// Enable only once settlement is idempotent, receipt-verified, and
+// escrow-grade. Read at request time in the payment routes.
+const PAID_ENTRY_ENABLED = process.env.PAID_ENTRY_ENABLED === "true";
+// Automatic hot-EOA payout is disabled; Cohort 1 settles manually, in-kind
+// (WLD on World Chain + cUSD on Celo) after the published appeal window.
+const AUTO_PAYOUT_ENABLED = process.env.AUTO_PAYOUT_ENABLED === "true";
+// The referral-weighted lottery is not an admission boundary (free entry
+// consumes capacity, so every free candidate necessarily wins). Disabled
+// for the pilot — the admitted roster is operator-frozen instead.
+const LOTTERY_ENABLED = process.env.LOTTERY_ENABLED === "true";
+// Minimum verified roster required before Day 1 may auto-open. Below this,
+// the scheduler holds (postponement) rather than starting a tiny game whose
+// adaptive Day-1 cut would collapse to a single player.
+const MIN_LAUNCH_PARTICIPANTS = Number(process.env.MIN_LAUNCH_PARTICIPANTS || 8);
+// Verified-human requirement for entering and playing (check-in). The prize
+// can only ever go to a verified human. Default ON for the pilot.
+const REQUIRE_HUMANITY_FOR_PLAY = process.env.REQUIRE_HUMANITY_FOR_PLAY !== "false";
+// Infiltrator immunity and the Day-4 jury wildcard revival are disabled for
+// the pilot — verdict integrity before exotic mechanics.
+const INFILTRATOR_ENABLED = process.env.INFILTRATOR_ENABLED === "true";
+const REVIVAL_ENABLED = process.env.REVIVAL_ENABLED === "true";
+
 // Cap decay schedule: Day 1: 40, Day 2: 20, Day 3: 8, Day 4: 3, Day 5+: 1.
 // Mirrors the SQL function survival_cap_for_day() — used when the round
 // row doesn't have an explicit override (admin can set a custom cap
 // per-round and it will be respected).
 function survivalCapForDay(day) {
-  if (day <= 1) return 40;
-  if (day === 2) return 20;
-  if (day === 3) return 8;
+  // Matches migration 029's explicit per-round caps (25 → 12 → 6 → 3 → 1)
+  // and the public marketing arc "50 humans, first 25 survive Day 1".
+  if (day <= 1) return 25;
+  if (day === 2) return 12;
+  if (day === 3) return 6;
   if (day === 4) return 3;
   return 1;
 }
@@ -235,6 +276,34 @@ async function autoAdvanceRounds() {
   if (!supabaseAdmin) return;
 
   try {
+    // Launch gate: never auto-open Day 1 below the minimum verified roster.
+    // The game postpones instead of silently starting a one-player
+    // tournament (the adaptive Day-1 cut floors at 1). Admin manual
+    // triggers bypass this gate deliberately — operator intent wins.
+    if (MIN_LAUNCH_PARTICIPANTS > 0) {
+      const { data: dueRounds } = await supabaseAdmin
+        .from("rounds")
+        .select("day")
+        .eq("status", "scheduled")
+        .lte("opens_at", new Date().toISOString());
+      if ((dueRounds || []).some((r) => r.day === 1)) {
+        const { count: admittedVerified } = await supabaseAdmin
+          .from("users")
+          .select("address", { count: "exact", head: true })
+          .eq("paid", true)
+          .eq("is_agent", false)
+          .eq("eliminated", false)
+          .or("world_id_verified.eq.true,humanity_nullifier.not.is.null");
+        if ((admittedVerified ?? 0) < MIN_LAUNCH_PARTICIPANTS) {
+          log("launch_held", {
+            admittedVerified: admittedVerified ?? 0,
+            minParticipants: MIN_LAUNCH_PARTICIPANTS,
+          });
+          return;
+        }
+      }
+    }
+
     const { data, error } = await supabaseAdmin.rpc("advance_rounds");
     if (error) {
       log("round_scheduler_error", { source: "rpc", error: error.message });
@@ -318,7 +387,9 @@ async function autoAdvanceRounds() {
 
       // Wildcard revival: on Day 4, the jury votes one eliminated player
       // back into the game. Triggered automatically after close_day.
-      if (r.day === 4 && supabaseAdmin && !r.winner) {
+      // Wildcard revival is disabled for the Cohort 1 pilot
+      // (REVIVAL_ENABLED=false): verdict integrity before exotic mechanics.
+      if (REVIVAL_ENABLED && r.day === 4 && supabaseAdmin && !r.winner) {
         try {
           const { data: reviveResult, error: reviveError } = await supabaseAdmin.rpc("revive_player", { p_day: r.day });
           if (reviveError) {
@@ -1444,18 +1515,48 @@ async function getDynamicVoteQuorum() {
 
   if (!supabaseAdmin) return { effective, reason };
 
+  // Scale quorum to the active voter pool so a small cohort can still reach
+  // verdicts. Capped at the configured normal quorum, floored at
+  // VOTE_QUORUM_MIN so a single-vote verdict can never fire.
+  const { count: roster, error: rosterErr } = await supabaseAdmin
+    .from("users")
+    .select("address", { count: "exact", head: true })
+    .eq("paid", true)
+    .eq("eliminated", false);
+  if (!rosterErr && typeof roster === "number" && roster > 0) {
+    const scaledQuorum = scaledQuorumForRoster({ roster });
+    if (scaledQuorum < effective) {
+      effective = scaledQuorum;
+      reason = `cohort_scaled_${effective}`;
+    }
+  }
+
+  // Low-activity fallback: drop the threshold further when the room is quiet
+  // so verdicts don't stall in the final hours. min() keeps the floor at the
+  // roster-scaled value even if VOTE_QUORUM_LOW is higher than it.
   const windowStart = new Date(Date.now() - VOTE_ACTIVITY_WINDOW_MIN * 60_000).toISOString();
   const { count, error } = await supabaseAdmin
     .from("votes")
     .select("id", { count: "exact", head: true })
     .gte("created_at", windowStart);
-
   if (!error && typeof count === "number" && count < VOTE_ACTIVITY_THRESHOLD) {
-    effective = VOTE_QUORUM_LOW;
-    reason = `low_activity_${count}_votes_in_${VOTE_ACTIVITY_WINDOW_MIN}m`;
+    effective = Math.min(effective, VOTE_QUORUM_LOW);
+    reason += `;low_activity_${count}_votes_in_${VOTE_ACTIVITY_WINDOW_MIN}m`;
   }
 
   return { effective, reason };
+}
+
+/**
+ * Pure quorum-scaling math (mirrors getDynamicVoteQuorum's roster scaling).
+ * Result is floored at `min` and capped at `normal`; a zero roster falls back
+ * to `normal`. Exposed so the behaviour is testable without a database.
+ * @param {{roster?:number, normal?:number, ratio?:number, min?:number}} opts
+ */
+export function scaledQuorumForRoster({ roster, normal = VOTE_QUORUM, ratio = VOTE_QUORUM_RATIO, min = VOTE_QUORUM_MIN } = {}) {
+  const active = Math.max(0, Number(roster) || 0);
+  if (active === 0) return normal;
+  return Math.min(normal, Math.max(min, Math.ceil(active * ratio)));
 }
 
 app.get("/api/round-status", async (req, res) => {
@@ -1495,6 +1596,13 @@ async function upsertPaidUser(address, { referredBy = null, platform = null, ent
 
   const existing = await getUserRecord(address);
   if (!existing?.paid) {
+    // Roster freeze: once the roster is closed (ENTRY_CLOSED=true), no new
+    // participant may be admitted. Existing entrants still update normally.
+    if (process.env.ENTRY_CLOSED === "true") {
+      const err = new Error("entry_closed");
+      err.code = "entry_closed";
+      throw err;
+    }
     // Humans cannot take reserved agent seats when agents are enabled.
     const seats = await getAgentSeatState({ forPublic: true });
     if (seats.enabled && seats.humansFull) {
@@ -1603,12 +1711,25 @@ app.post("/api/checkin",
 
     // Day 1 is honest-only — establishes a baseline so infiltrator attempts
     // on Day 2+ are detectable. Server-side guard prevents client bypass.
-    const effectiveInfiltrator = day >= 2 ? isInfiltrator : false;
+    // Infiltrator mode is disabled entirely for the Cohort 1 pilot.
+    const effectiveInfiltrator = INFILTRATOR_ENABLED && day >= 2 ? isInfiltrator : false;
 
     const ok = await verifyMessage({ address, message, signature });
     if (!ok) return res.status(401).json({ error: "invalid_signature" });
 
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+
+    // Pilot: only admitted, verified humans from the frozen roster may
+    // submit proofs. This is what makes "last verified human" enforceable.
+    if (REQUIRE_HUMANITY_FOR_PLAY) {
+      const rec = await getUserRecord(req.user.address);
+      if (!rec?.paid || (rec?.cohort ?? 1) !== COHORT_CONFIG.cohort) {
+        return res.status(403).json({ error: "not_in_cohort" });
+      }
+      if (!isHumanityVerified(rec)) {
+        return res.status(403).json({ error: "humanity_verification_required" });
+      }
+    }
 
     const { effective: dynamicVoteQuorum } = await getDynamicVoteQuorum();
 
@@ -1998,18 +2119,36 @@ app.post(
       const submissionId = ensureNumber(body.submissionId, { field: "submissionId", required: true, integer: true, min: 1 });
       const vote = ensureEnum(body.vote, { field: "vote", required: true, values: ["real", "fake"] });
 
-      if (REQUIRE_WORLD_ID_FOR_VOTING) {
-        const addr = req.user.address.toLowerCase();
-        let verified = false;
+      if (worldIdRequiredForVoting()) {
+        let voterRec = null;
         if (supabaseAdmin) {
           const { data } = await supabaseAdmin
             .from("users")
-            .select("world_id_verified, humanity_nullifier")
+            .select("world_id_verified, humanity_nullifier, paid, cohort")
             .eq("address", req.user.address)
             .single();
-          verified = Boolean(data?.world_id_verified) || Boolean(data?.humanity_nullifier);
+          voterRec = data;
         }
-        if (!verified) return res.status(403).json({ error: "humanity_verification_required" });
+        if (!isHumanityVerified(voterRec)) return res.status(403).json({ error: "humanity_verification_required" });
+        // Only admitted members of the active cohort may cast verdict votes.
+        // Authentication alone is not enough — unlimited wallet sessions
+        // must not decide lethal verdicts.
+        if (!voterRec?.paid || (voterRec?.cohort ?? 1) !== COHORT_CONFIG.cohort) {
+          return res.status(403).json({ error: "not_in_cohort" });
+        }
+      }
+
+      // Self-votes are never allowed: a player may not audit their own proof.
+      if (supabaseAdmin) {
+        const { data: targetSub } = await supabaseAdmin
+          .from("submissions")
+          .select("address")
+          .eq("id", submissionId)
+          .maybeSingle();
+        if (!targetSub) return res.status(404).json({ error: "submission_not_found" });
+        if (targetSub.address?.toLowerCase() === req.user.address.toLowerCase()) {
+          return res.status(403).json({ error: "self_vote_not_allowed" });
+        }
       }
 
       if (supabaseAdmin) {
@@ -2151,10 +2290,12 @@ app.post(
       const cr = buildCommitRevealState(round);
       if (cr.phase !== "commit") return res.status(409).json({ error: "commit_phase_closed", phase: cr.phase });
 
-      if (REQUIRE_WORLD_ID_FOR_VOTING) {
+      if (worldIdRequiredForVoting()) {
         const user = await getUserRecord(req.user.address);
-        const verified = Boolean(user?.world_id_verified) || Boolean(user?.humanity_nullifier);
-        if (!verified) return res.status(403).json({ error: "humanity_verification_required" });
+        if (!isHumanityVerified(user)) return res.status(403).json({ error: "humanity_verification_required" });
+        if (!user?.paid || (user?.cohort ?? 1) !== COHORT_CONFIG.cohort) {
+          return res.status(403).json({ error: "not_in_cohort" });
+        }
       }
 
       const voter = req.user.address;
@@ -2728,6 +2869,31 @@ async function getEndgame() {
   return value;
 }
 
+// Test-only session bypass: creates a session for any address
+// without SIWE wallet signing. Requires ADMIN_TOKEN. Used by the
+// Daytona E2E test harness to simulate multiple players.
+//
+// Registered ONCE at startup, and only when ENABLE_TEST_ROUTES=true.
+// It previously lived inside GET /api/game/state, which appended a new
+// Express route to the stack on every poll — an unbounded memory/load
+// leak in production.
+if (process.env.ENABLE_TEST_ROUTES === "true") {
+  app.post("/api/test/session", requireAdmin, async (req, res) => {
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+    try {
+      const address = ensureString(body.address, {
+        field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
+      });
+      const sessionId = await createSessionRecord(address);
+      setSessionCookie(res, sessionId);
+      res.json({ ok: true, address, sessionId });
+    } catch (error) {
+      sendValidationError(res, error);
+    }
+  });
+}
+
 app.get("/api/game/state", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
@@ -2886,25 +3052,6 @@ app.get("/api/game/state", async (req, res) => {
       defaults: { survivalCap: DAILY_SURVIVAL_CAP, radiusM: CHECKIN_RADIUS_M },
     });
 
-    // Test-only session bypass: creates a session for any address
-    // without SIWE wallet signing. Requires ADMIN_TOKEN. Used by
-    // the Daytona E2E test harness to simulate multiple players.
-    // Never available without admin auth.
-    app.post("/api/test/session", requireAdmin, async (req, res) => {
-      const body = ensureObjectBody(req, res);
-      if (!body) return;
-      try {
-        const address = ensureString(body.address, {
-          field: "address", required: true, maxLength: 64, pattern: /^0x[a-fA-F0-9]{40}$/,
-        });
-        const sessionId = await createSessionRecord(address);
-        setSessionCookie(res, sessionId);
-        res.json({ ok: true, address, sessionId });
-      } catch (error) {
-        sendValidationError(res, error);
-      }
-    });
-
     // Lazy lottery draw — the first /api/game/state call after
     // GAME_LAUNCH_AT triggers the deterministic draw. Idempotent:
     // subsequent calls (and concurrent calls) return the stored
@@ -2915,7 +3062,7 @@ app.get("/api/game/state", async (req, res) => {
     // LOTTERY_MAX_DELAY_HOURS have passed since T-0. This
     // prevents the empty-launch failure mode where the lottery
     // runs on zero entrants at the exact T-0 timestamp.
-    if (phase === "live" && supabaseAdmin) {
+    if (LOTTERY_ENABLED && phase === "live" && supabaseAdmin) {
       try {
         const stored = await getStoredLotteryResult(COHORT_CONFIG.cohort);
         if (!stored) {
@@ -2995,6 +3142,16 @@ app.post(
       const userRec = await getUserRecord(req.user.address);
       if (!userRec?.paid) return res.status(403).json({ error: "not_reserved" });
       if (userRec?.eliminated) return res.status(403).json({ error: "already_eliminated", day: userRec.eliminated_at_day });
+
+      // Pilot containment: only the frozen current-cohort roster may play.
+      // Lottery rollovers keep paid=true but move to the next cohort — they
+      // must not check in to the open one.
+      if ((userRec?.cohort ?? 1) !== COHORT_CONFIG.cohort) {
+        return res.status(403).json({ error: "not_in_current_cohort", cohort: userRec?.cohort ?? null });
+      }
+      if (REQUIRE_HUMANITY_FOR_PLAY && !isHumanityVerified(userRec)) {
+        return res.status(403).json({ error: "humanity_verification_required" });
+      }
 
       const existing = await userCheckinForDay(day, req.user.address);
       if (existing) {
@@ -3242,6 +3399,9 @@ async function computeFreeLotterySlots(cohort) {
 
 async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
   if (!supabaseAdmin) return null;
+  if (!LOTTERY_ENABLED) {
+    throw new Error("lottery_disabled: the weighted lottery is off for the Cohort 1 pilot");
+  }
   if (!GAME_LAUNCH_AT) {
     throw new Error("GAME_LAUNCH_AT not set; cannot seed lottery");
   }
@@ -3399,6 +3559,12 @@ app.get("/api/lottery/status", async (req, res) => {
 
 app.post("/api/lottery/draw", requireAdmin, async (req, res) => {
   try {
+    if (!LOTTERY_ENABLED) {
+      return res.status(503).json({
+        error: "lottery_disabled",
+        message: "The weighted lottery is off for the Cohort 1 pilot; the admitted roster is operator-frozen.",
+      });
+    }
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
     const cohort = Number(req.body?.cohort) || COHORT_CONFIG.cohort;
     const existing = await getStoredLotteryResult(cohort);
@@ -3431,56 +3597,93 @@ app.get("/api/checkins/today", async (req, res) => {
   }
 });
 
-// Extracted winner payout logic — shared between autoAdvanceRounds and admin close-day
+// Extracted winner payout logic — shared between autoAdvanceRounds and admin close-day.
+//
+// Cohort 1 pilot: AUTO_PAYOUT_ENABLED defaults to false. Winners are
+// RECORDED here and settled manually, in-kind, after the published appeal
+// window (WLD on World Chain + cUSD on Celo — two separate transfers).
+// Automatic hot-EOA settlement only runs when explicitly enabled.
 async function handleWinnerPayout(day, winnerAddr) {
   if (!supabaseAdmin) return;
   try {
     await supabaseAdmin.rpc("record_winner", { p_day: day, p_winner_address: winnerAddr });
     log("winner_recorded", { day, winner: winnerAddr });
 
-    // Prevent double-payout
+    // Prevent double-payout. There is exactly one claim per (cohort, day):
+    // migration 032 backs this with a unique index, so concurrent winner
+    // resolution cannot mint two payout rows.
     const { data: existingPayout } = await supabaseAdmin
       .from("payouts")
       .select("id,status")
-      .eq("winner_address", winnerAddr)
+      .eq("cohort", COHORT_CONFIG.cohort)
+      .eq("day", day)
       .in("status", ["pending", "submitted", "confirmed"])
       .limit(1)
       .maybeSingle();
 
     if (existingPayout) {
-      log("payout_skipped", { winner: winnerAddr, reason: "already_pending_or_paid" });
+      log("payout_skipped", { winner: winnerAddr, day, reason: "already_pending_or_paid" });
       return;
     }
 
-    // Get prize pool balance
+    // Snapshot BOTH prize pools for the record. fetchCeloPot() returns
+    // { cusd, address, explorerUrl } — the previous code read
+    // pot.totalUsd ?? pot.usd, which is always undefined, so automatic
+    // payout recorded a zero-balance failure instead of paying.
     const celoPrizePoolAddress = process.env.VITE_CELO_PRIZE_POOL_ADDRESS;
-    let amountUsd = 0;
+    let amountCusd = 0;
+    let celoPot = null;
     if (celoPrizePoolAddress) {
       try {
-        const pot = await fetchCeloPot(celoPrizePoolAddress);
-        amountUsd = pot?.totalUsd ?? pot?.usd ?? 0;
+        celoPot = await fetchCeloPot(celoPrizePoolAddress);
+        amountCusd = Number(celoPot?.cusd ?? 0) || 0;
       } catch (e) {
         log("payout_balance_error", { error: String(e) });
       }
     }
+    const amountWld = Number(balanceCache?.value ?? 0) || 0;
 
-    // Record pending payout
-    const { data: payoutRow } = await supabaseAdmin
+    // Record a pending payout for the cUSD leg. The WLD leg on World Chain
+    // is settled separately (see docs/COHORT1_PILOT.md).
+    const { data: payoutRow, error: insertErr } = await supabaseAdmin
       .from("payouts")
-      .insert({ winner_address: winnerAddr, amount_usd: amountUsd, token: "cUSD", status: "pending", cohort: 1, day })
+      .insert({ winner_address: winnerAddr, amount_usd: amountCusd, token: "cUSD", status: "pending", cohort: COHORT_CONFIG.cohort, day })
       .select("id")
       .single();
+    if (insertErr) {
+      if (insertErr.code === "23505") {
+        log("payout_skipped", { winner: winnerAddr, day, reason: "duplicate_cohort_day_claim" });
+      } else {
+        log("payout_record_error", { day, error: insertErr.message });
+      }
+      return;
+    }
     const payoutId = payoutRow?.id;
 
-    if (amountUsd > 0) {
-      log("payout_attempt", { winner: winnerAddr, amountUsd, payoutId });
-      const result = await ariaBroadcastPayoutTx({ winnerAddress: winnerAddr, amountUsd, token: "cUSD" });
+    if (!AUTO_PAYOUT_ENABLED) {
+      // Manual settlement path (pilot default): record + notify, and leave
+      // the actual transfers to the operator after the appeal window.
+      log("payout_manual_settlement_required", {
+        winner: winnerAddr, day, payoutId, amountCusd, amountWld,
+        celoPool: celoPot?.address ?? null,
+      });
+      sendPushToAddress(supabaseAdmin, winnerAddr, {
+        title: "🏆 You won!",
+        body: "You're the Last Human Standing. Your prize (WLD + cUSD) settles after the appeal window — watch the recap for the transaction hashes.",
+        data: { type: "payout", day },
+      }).catch(() => {});
+      return;
+    }
+
+    if (amountCusd > 0) {
+      log("payout_attempt", { winner: winnerAddr, amountCusd, payoutId });
+      const result = await ariaBroadcastPayoutTx({ winnerAddress: winnerAddr, amountUsd: amountCusd, token: "cUSD" });
       if (result.ok) {
         await supabaseAdmin.from("payouts").update({ status: "submitted", tx_hash: result.txHash, explorer_url: result.explorerUrl }).eq("id", payoutId);
-        log("payout_success", { winner: winnerAddr, txHash: result.txHash, amountUsd });
+        log("payout_success", { winner: winnerAddr, txHash: result.txHash, amountCusd });
         sendPushToAddress(supabaseAdmin, winnerAddr, {
-          title: "🏆 You won!", body: `Prize of ${amountUsd} cUSD sent. Tx: ${result.explorerUrl}`,
-          data: { type: "payout", txHash: result.txHash, amountUsd },
+          title: "🏆 You won!", body: `Prize of ${amountCusd} cUSD sent. Tx: ${result.explorerUrl}`,
+          data: { type: "payout", txHash: result.txHash, amountUsd: amountCusd },
         }).catch(() => {});
       } else {
         await supabaseAdmin.from("payouts").update({ status: "failed", error: result.reason }).eq("id", payoutId);
