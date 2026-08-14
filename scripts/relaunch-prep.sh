@@ -45,9 +45,9 @@ cd "$ROOT"
 
 info "Applying Supabase migrations (029 Aug 3 launch bump + reset)…"
 if command -v supabase >/dev/null 2>&1; then
-  supabase db push || fail "supabase db push failed — link project first: supabase link"
+  supabase db push --linked || fail "supabase db push failed — verify the linked project with supabase migration list --linked"
 else
-  warn "supabase CLI not found; run migrations manually in the SQL editor"
+  fail "supabase CLI not found; install it and link the project before applying migrations"
 fi
 
 if [ "$UPDATE_ENV" = true ]; then

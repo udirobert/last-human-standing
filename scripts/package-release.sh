@@ -44,6 +44,7 @@ TIMESTAMP="${1:-$(date -u +%Y%m%d-%H%M%S)}"
 TARBALL_NAME="lhs-${TIMESTAMP}.tar.gz"
 TARBALL="${LOCAL_ROOT}/${TARBALL_NAME}"
 PROD_ENV="${LOCAL_ROOT}/.env.production.local"
+BUILD_STARTED=0
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
 info()  { echo -e "${GREEN}[release]${NC} $*"; }
@@ -52,6 +53,10 @@ fail()  { echo -e "${RED}[release]${NC} $*"; exit 1; }
 
 # --- cleanup: never leave the prod env file on disk -------------------------
 cleanup() {
+  if [ "$BUILD_STARTED" -eq 1 ] && [ -d "$LOCAL_ROOT/dist" ]; then
+    rm -rf "$LOCAL_ROOT/dist"
+    info "removed generated build directory $LOCAL_ROOT/dist"
+  fi
   if [ -f "$PROD_ENV" ]; then
     rm -f "$PROD_ENV"
     info "removed $PROD_ENV"
@@ -86,6 +91,7 @@ fi
 # --- 2. build locally --------------------------------------------------------
 info "building client with production VITE_ vars (npm run build)"
 cd "$LOCAL_ROOT"
+BUILD_STARTED=1
 npm run build || fail "build failed"
 [ -d "$LOCAL_ROOT/dist" ] || fail "build produced no dist/"
 
@@ -172,9 +178,14 @@ ssh "$HOST" "set -e
   rm -rf \"\$STAGE\" /tmp/${TARBALL_NAME}.depscheck
 " || fail "shared dependency sync failed"
 
-info "invoking deploy.sh on the server"
-ssh "$HOST" "bash ${REMOTE_BASE}/current/scripts/deploy.sh /tmp/${TARBALL_NAME}" \
+info "invoking the release-specific deploy.sh on the server"
+# Upload and invoke the script from this release. Calling the copy under
+# `current` would defer newly added deploy guardrails until the next release.
+DEPLOY_SCRIPT="/tmp/lhs-deploy-${TIMESTAMP}.sh"
+scp "$LOCAL_ROOT/scripts/deploy.sh" "$HOST:${DEPLOY_SCRIPT}" || fail "failed to upload deploy script"
+ssh "$HOST" "chmod 700 ${DEPLOY_SCRIPT} && bash ${DEPLOY_SCRIPT} /tmp/${TARBALL_NAME}" \
   || fail "deploy.sh failed on the server"
+ssh "$HOST" "rm -f ${DEPLOY_SCRIPT}" || warn "could not remove remote deploy script"
 
 # Clean up the remote tarball.
 ssh "$HOST" "rm -f /tmp/${TARBALL_NAME}" || warn "could not remove remote tarball"
