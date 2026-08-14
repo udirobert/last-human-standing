@@ -1,17 +1,33 @@
+import { timingSafeEqual } from "crypto";
 import { Router } from "express";
 import { loadReachability } from "../lib/reachability.js";
 import { sendTelegramMessage } from "../lib/telegramNotify.js";
 
+function secretsMatch(expected, provided) {
+  if (typeof provided !== "string") return false;
+  const expectedBuffer = Buffer.from(expected);
+  const providedBuffer = Buffer.from(provided);
+  return expectedBuffer.length === providedBuffer.length && timingSafeEqual(expectedBuffer, providedBuffer);
+}
+
 /**
  * Telegram bot webhook — links wallet addresses via /start link_<token>.
- * Set TELEGRAM_WEBHOOK_SECRET and pass ?secret= in the webhook URL.
+ * Set TELEGRAM_WEBHOOK_SECRET and configure it as the Telegram webhook
+ * `secret_token`; Telegram supplies it in the X-Telegram-Bot-Api-Secret-Token header.
  */
 export default function telegramRoutes({ supabaseAdmin, log }) {
   const router = Router();
 
   router.post("/telegram/webhook", async (req, res) => {
     const expected = process.env.TELEGRAM_WEBHOOK_SECRET;
-    if (expected && req.query.secret !== expected) {
+    if (!expected) {
+      return res.status(503).json({ error: "telegram_webhook_not_configured" });
+    }
+
+    // Telegram supports a dedicated secret-token header. Retain the query
+    // parameter only for existing webhook URLs during migration.
+    const provided = req.get("x-telegram-bot-api-secret-token") || req.query.secret;
+    if (!secretsMatch(expected, provided)) {
       return res.status(403).json({ error: "forbidden" });
     }
 

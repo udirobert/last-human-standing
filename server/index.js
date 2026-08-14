@@ -90,7 +90,10 @@ const PORT = Number(process.env.PORT || 8787);
 const IS_PROD = process.env.NODE_ENV === "production";
 const supabaseAdmin = getSupabaseAdmin();
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
-const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE === "true";
+// Private-by-default: explicitly opt out only for a dedicated, intentionally
+// public bucket. Check-in uploads contain participant media.
+const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE !== "false";
+const ALLOWED_CHECKIN_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const SESSION_COOKIE = "lhs_session";
 const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 7;
 const NONCE_TTL_MS = 1000 * 60 * 30;
@@ -816,9 +819,10 @@ app.use(cors({
 // Push notification routes
 app.use("/api/push", pushRoutes({ requireAuth, supabaseAdmin, log }));
 
-app.get("/api/health", async (req, res) => {
+app.get("/api/health", async (_req, res) => {
   const dbHealth = await checkDatabaseHealth();
-  res.json({ ok: true, time: new Date().toISOString(), supabase: dbHealth.ok, dbError: dbHealth.error || null });
+  // Do not disclose database/provider errors to unauthenticated callers.
+  res.json({ ok: true, time: new Date().toISOString(), supabase: dbHealth.ok });
 });
 
 // ─── Background music (ElevenLabs-composed stems, server-cached) ─────
@@ -1726,35 +1730,49 @@ async function upsertPaidUser(address, { referredBy = null, platform = null, ent
   }).catch(() => {});
 }
 
-app.post("/api/upload-url", requireAuth, async (req, res) => {
-  if (!supabaseAdmin) {
-    return res.status(501).json({ error: "supabase_not_configured", message: "Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable uploads." });
-  }
+app.post(
+  "/api/upload-url",
+  requireAuth,
+  rateLimit({ keyFn: (req) => `upload:${req.user?.address || req.ip}`, limit: 10, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    if (!supabaseAdmin) {
+      return res.status(501).json({ error: "supabase_not_configured", message: "Set SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY to enable uploads." });
+    }
 
-  const body = ensureObjectBody(req, res);
-  if (!body) return;
-  const fileName = ensureString(body.fileName, { field: "fileName", required: true, maxLength: 120 });
-  const contentType = ensureString(body.contentType, { field: "contentType", required: false, maxLength: 120 }) || "application/octet-stream";
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
 
-  const safeName = String(fileName).replaceAll(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
-  const path = `${req.user.address}/${Date.now()}_${safeName}`;
+    try {
+      const fileName = ensureString(body.fileName, { field: "fileName", required: true, maxLength: 120 });
+      const contentType = ensureEnum(body.contentType, {
+        field: "contentType",
+        required: true,
+        values: ALLOWED_CHECKIN_MIME_TYPES,
+      });
+      const safeName = String(fileName).replaceAll(/[^a-zA-Z0-9._-]/g, "_").slice(0, 80);
+      const path = `${req.user.address}/${Date.now()}_${safeName}`;
 
-  try {
-    const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUploadUrl(path, 60);
-    if (error) return res.status(400).json({ error: "signed_upload_failed", message: error.message });
-    res.json({ ok: true, bucket: SUPABASE_BUCKET, path, token: data.token, signedUrl: data.signedUrl, contentType });
-  } catch (e) {
-    res.status(400).json({ error: "signed_upload_exception", message: e instanceof Error ? e.message : "unknown_error" });
-  }
-});
+      const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUploadUrl(path, 60);
+      if (error) return res.status(400).json({ error: "signed_upload_failed", message: error.message });
+      return res.json({ ok: true, bucket: SUPABASE_BUCKET, path, token: data.token, signedUrl: data.signedUrl, contentType });
+    } catch (error) {
+      return sendValidationError(res, error);
+    }
+  },
+);
 
 app.post("/api/media-url", requireAuth, async (req, res) => {
   if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
   const body = ensureObjectBody(req, res);
   if (!body) return;
-  const path = ensureString(body.path, { field: "path", required: true, maxLength: 255 });
 
   try {
+    const path = ensureString(body.path, { field: "path", required: true, maxLength: 255 });
+    const [owner, ...segments] = path.split("/");
+    if (!owner || segments.length === 0 || owner.toLowerCase() !== req.user.address.toLowerCase()) {
+      return res.status(403).json({ error: "media_not_owned" });
+    }
+
     if (!SUPABASE_BUCKET_PRIVATE) {
       const publicUrl = supabaseAdmin.storage.from(SUPABASE_BUCKET).getPublicUrl(path).data.publicUrl;
       return res.json({ ok: true, url: publicUrl, kind: "public" });
@@ -1762,8 +1780,8 @@ app.post("/api/media-url", requireAuth, async (req, res) => {
     const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(path, 60 * 5);
     if (error) return res.status(400).json({ error: "signed_url_failed", message: error.message });
     return res.json({ ok: true, url: data.signedUrl, kind: "signed" });
-  } catch (e) {
-    return res.status(400).json({ error: "media_url_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  } catch (error) {
+    return sendValidationError(res, error);
   }
 });
 
@@ -3513,6 +3531,12 @@ function validateEnv() {
   if (IS_PROD && !process.env.ALLOWED_ORIGINS) {
     warnings.push("ALLOWED_ORIGINS: CORS will reject all browser requests");
   }
+  if (IS_PROD && !process.env.PUBLIC_BASE_URL) {
+    warnings.push("PUBLIC_BASE_URL: share and embed URLs require a fixed trusted origin");
+  }
+  if (IS_PROD && process.env.TELEGRAM_BOT_TOKEN && !process.env.TELEGRAM_WEBHOOK_SECRET) {
+    warnings.push("TELEGRAM_WEBHOOK_SECRET: Telegram webhook requests will be rejected");
+  }
   if (IS_PROD && !process.env.GAME_LAUNCH_AT) {
     warnings.push("GAME_LAUNCH_AT: game will never enter live phase");
   }
@@ -3661,10 +3685,10 @@ async function drawAndStoreLottery({ cohort, drawnBy = "lazy" }) {
 }
 
 // =============== Debug endpoints (admin only) ===============
-// Returns raw RPC results for the Celo pool address so we can
-// see why the UI shows "—". Gated by ADMIN_TOKEN or a valid
-// session cookie, since it exposes the prize-pool balances.
-app.get("/api/debug/celo-balances", requireAuth, async (req, res) => {
+// Returns raw RPC results for the Celo pool address for operator diagnostics.
+// Restricted to a configured administrator because it exposes upstream RPC
+// responses and arbitrary-address lookup behavior.
+app.get("/api/debug/celo-balances", requireAuth, requireAdmin, async (req, res) => {
   try {
     const address = String(req.query.address || "");
     if (!address) return res.status(400).json({ error: "address_required" });
@@ -3954,7 +3978,7 @@ app.use("/api", telegramRoutes({ supabaseAdmin, log }));
 app.use("/api", referralRoutes({ supabaseAdmin }));
 app.use("/api", ariaRoutes({ requireAuth, requireAdmin, log }));
 app.use("/api", activityRoutes({ supabaseAdmin, log }));
-app.use("/", farcasterRoutes({ supabaseAdmin, log }));
+app.use("/", farcasterRoutes({ supabaseAdmin, log, COHORT_CONFIG }));
 app.use("/api", shareRoutes({ supabaseAdmin, log }));
 app.use("/api", agentRoutes({
   requireAuth, supabaseAdmin, log, rateLimitStorage,

@@ -17,7 +17,7 @@ export default function activityRoutes({ supabaseAdmin, log }) {
           .limit(20),
         supabaseAdmin
           .from("votes")
-          .select("id,submission_id,voter_address,vote,created_at")
+          .select("id,submission_id,vote,created_at")
           .order("created_at", { ascending: false })
           .limit(20),
         supabaseAdmin
@@ -48,17 +48,13 @@ export default function activityRoutes({ supabaseAdmin, log }) {
       for (const v of votesRes.data || []) {
         const { data: sub } = await supabaseAdmin
           .from("submissions")
-          .select("address,username,day")
+          .select("day")
           .eq("id", v.submission_id)
           .maybeSingle();
         events.push({
           type: "vote",
           id: `vt-${v.id}`,
-          address: v.voter_address,
-          submissionId: v.submission_id,
-          vote: v.vote,
-          targetAddress: sub?.address,
-          targetUsername: sub?.username,
+          username: "A juror",
           day: sub?.day,
           text: `Voted ${v.vote === "real" ? "HUMAN" : "SUS"} on Day ${sub?.day || "—"}`,
           ts: v.created_at,

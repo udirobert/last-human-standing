@@ -2,7 +2,8 @@ import { Router } from "express";
 import { getPublicOrigin } from "../lib/publicOrigin.js";
 
 const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
-const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE === "true";
+// Submission photos are private at rest; this route creates the share URL.
+const SUPABASE_BUCKET_PRIVATE = process.env.SUPABASE_BUCKET_PRIVATE !== "false";
 
 // Brand palette — mirrors tailwind.config.js so the share artifact looks
 // like the app, not a third-party card.

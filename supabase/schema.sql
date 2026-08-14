@@ -570,8 +570,11 @@ create index if not exists idx_submission_flags_submission on public.submission_
 create index if not exists idx_submission_flags_reason on public.submission_flags(reason);
 create index if not exists idx_submission_flags_created on public.submission_flags(created_at desc);
 
--- RLS deferred (server uses service role). Enable + lock down before public launch.
 -- =============== Row Level Security ===============
+-- Browser clients never access application tables directly. The Express API
+-- uses the service-role client and returns deliberately shaped public data.
+-- This prevents raw PII, exact GPS, signatures, and internal game state from
+-- being exposed through PostgREST.
 alter table public.users enable row level security;
 alter table public.rounds enable row level security;
 alter table public.checkins enable row level security;
@@ -585,55 +588,35 @@ alter table public.pay_references enable row level security;
 alter table public.rate_limits enable row level security;
 alter table public.submission_flags enable row level security;
 
--- Service role (server backend) bypasses all RLS — no policy needed for writes.
--- Anon key: read-only, read-your-own for most tables.
+revoke all privileges on table
+  public.users,
+  public.rounds,
+  public.checkins,
+  public.submissions,
+  public.votes,
+  public.chat_messages,
+  public.waitlist,
+  public.game_sessions,
+  public.siwe_nonces,
+  public.pay_references,
+  public.rate_limits,
+  public.submission_flags
+from anon, authenticated;
 
--- users: anyone can read; server writes only
+-- Remove legacy whole-row public-read policies. RLS policies are row-level,
+-- so `using (true)` exposes every column rather than a safe public subset.
 drop policy if exists "users_public_read" on public.users;
-create policy "users_public_read" on public.users for select using (true);
-
--- rounds: anyone can read; server writes only
 drop policy if exists "rounds_public_read" on public.rounds;
-create policy "rounds_public_read" on public.rounds for select using (true);
-
--- checkins: anyone can read the public leaderboard columns; server writes only
 drop policy if exists "checkins_public_read" on public.checkins;
-create policy "checkins_public_read" on public.checkins for select
-  using (true);
-
--- submissions: anyone can read; server writes only
 drop policy if exists "submissions_public_read" on public.submissions;
-create policy "submissions_public_read" on public.submissions for select using (true);
-
--- votes: anyone can read vote counts; server writes only
 drop policy if exists "votes_public_read" on public.votes;
-create policy "votes_public_read" on public.votes for select using (true);
-
--- chat_messages: anyone can read; server writes only
 drop policy if exists "chat_messages_public_read" on public.chat_messages;
-create policy "chat_messages_public_read" on public.chat_messages for select using (true);
-
--- waitlist: read-only; server writes
 drop policy if exists "waitlist_public_read" on public.waitlist;
-create policy "waitlist_public_read" on public.waitlist for select using (true);
-
--- game_sessions / siwe_nonces / pay_references / rate_limits: no read for anon; server only
-drop policy if exists "sessions_server_only" on public.game_sessions;
-create policy "sessions_server_only" on public.game_sessions for all using (false) with check (false);
-drop policy if exists "nonces_server_only" on public.siwe_nonces;
-create policy "nonces_server_only" on public.siwe_nonces for all using (false) with check (false);
-drop policy if exists "pay_refs_server_only" on public.pay_references;
-create policy "pay_refs_server_only" on public.pay_references for all using (false) with check (false);
-drop policy if exists "rate_limits_server_only" on public.rate_limits;
-create policy "rate_limits_server_only" on public.rate_limits for all using (false) with check (false);
-
--- submission_flags: admin read + server write only
-drop policy if exists "flags_server_only" on public.submission_flags;
-create policy "flags_server_only" on public.submission_flags for all using (false) with check (false);
 
 -- =============== Storage bucket policies ===============
--- Create the checkins bucket if it doesn't exist (idempotent).
--- The server uses signed URLs for uploads; the bucket itself can be private.
+-- Check-in media is stored privately. The server issues short-lived signed
+-- upload/read URLs after it authorizes the caller; no bucket-wide anon policy
+-- is needed for either flow.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
   values ('checkins', 'checkins', false, 10485760, array['image/jpeg','image/png','image/webp'])
 on conflict (id) do update set
@@ -641,20 +624,9 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- Only the service role (server backend) can upload.
 drop policy if exists "checkins_service_upload" on storage.objects;
-create policy "checkins_service_upload" on storage.objects
-  for insert with check (bucket_id = 'checkins');
-
--- Public (or signed-URL holders) can read back their own photos.
 drop policy if exists "checkins_public_read" on storage.objects;
-create policy "checkins_public_read" on storage.objects
-  for select using (bucket_id = 'checkins');
-
--- Server can delete (for cleanup).
 drop policy if exists "checkins_service_delete" on storage.objects;
-create policy "checkins_service_delete" on storage.objects
-  for delete using (bucket_id = 'checkins');
 
 -- =============== Cap decay: survival cap shrinks daily ===============
 -- Returns the survival cap for a given day number.
@@ -798,3 +770,6 @@ create index if not exists cohort_participations_address_idx
 create index if not exists cohort_participations_active_idx
   on public.cohort_participations(cohort)
   where eliminated = false;
+
+alter table public.cohort_participations enable row level security;
+revoke all privileges on table public.cohort_participations from anon, authenticated;

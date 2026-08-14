@@ -20,7 +20,7 @@ export default function referralRoutes({ supabaseAdmin }) {
             .limit(50),
           supabaseAdmin
             .from("waitlist")
-            .select("email, referral_code, referral_count")
+            .select("referral_count")
             .gt("referral_count", 0)
             .order("referral_count", { ascending: false })
             .limit(50),
@@ -33,8 +33,7 @@ export default function referralRoutes({ supabaseAdmin }) {
             source: "user",
           })),
           ...(wl || []).map((w) => ({
-            name: w.email?.split("@")[0] || "anon",
-            referralCode: w.referral_code,
+            name: "Waitlist member",
             count: w.referral_count,
             source: "waitlist",
           })),

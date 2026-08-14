@@ -5,10 +5,39 @@ function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
-export default function farcasterRoutes({ supabaseAdmin, log }) {
+function isEligibleVoter(user, cohort) {
+  return Boolean(
+    user?.paid &&
+    user?.cohort === cohort &&
+    (user?.world_id_verified || user?.humanity_nullifier),
+  );
+}
+
+export default function farcasterRoutes({ supabaseAdmin, log, COHORT_CONFIG }) {
   const router = Router();
 
   const NEYNAR_API_KEY = process.env.NEYNAR_API_KEY;
+  const activeCohort = COHORT_CONFIG?.cohort ?? 1;
+
+  async function loadEligibleVoter(address) {
+    if (!supabaseAdmin || !/^0x[a-fA-F0-9]{40}$/.test(address || "")) return null;
+    const { data } = await supabaseAdmin
+      .from("users")
+      .select("address,paid,cohort,world_id_verified,humanity_nullifier")
+      .ilike("address", address)
+      .maybeSingle();
+    return isEligibleVoter(data, activeCohort) ? data : null;
+  }
+
+  async function castVerifiedFarcasterVote({ submissionId, voterAddress, vote }) {
+    const { data, error } = await supabaseAdmin.rpc("cast_vote", {
+      p_submission_id: submissionId,
+      p_voter_address: voterAddress,
+      p_vote: vote,
+      p_weight: 1,
+    });
+    return { data, error };
+  }
 
   router.get("/.well-known/farcaster-actions.json", (req, res) => {
     const origin = getPublicOrigin(req) || "https://lasthumanstanding.thisyearnofear.com";
@@ -31,13 +60,10 @@ export default function farcasterRoutes({ supabaseAdmin, log }) {
   router.post("/farcaster/action/vote", async (req, res) => {
     try {
       const { trustedData, untrustedData } = req.body;
-      if (!trustedData?.messageBytes) {
-        return res.status(400).json({ error: "missing_message_bytes" });
+      if (!trustedData?.messageBytes || !NEYNAR_API_KEY) {
+        return res.status(403).json({ error: "trusted_farcaster_identity_required" });
       }
-
-      if (!NEYNAR_API_KEY) {
-        return res.status(501).json({ error: "neynar_not_configured" });
-      }
+      if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
 
       const validateResp = await fetch(
         "https://api.neynar.com/v2/farcaster/action/validate",
@@ -50,98 +76,70 @@ export default function farcasterRoutes({ supabaseAdmin, log }) {
           body: JSON.stringify({ action_bytes: trustedData.messageBytes }),
         },
       );
-
       if (!validateResp.ok) {
         log("farcaster_action_validate_failed", { status: validateResp.status });
         return res.status(400).json({ error: "validation_failed" });
       }
 
       const validated = await validateResp.json();
+      if (!validated.valid) return res.status(400).json({ error: "invalid_action" });
 
-      if (!validated.valid) {
-        return res.status(400).json({ error: "invalid_action" });
-      }
+      const voterAddress = validated.interactor?.verifications?.[0]?.address?.toLowerCase();
+      const voter = await loadEligibleVoter(voterAddress);
+      if (!voter) return res.status(403).json({ error: "eligible_verified_cohort_member_required" });
 
-      const interactor = validated.interactor;
       const cast = validated.cast;
-      const fid = interactor?.fid;
-      const voterAddress = interactor?.verifications?.[0]?.address;
-
-      if (!cast?.embeds?.length) {
-        return res.status(400).json({ error: "no_embeds" });
-      }
+      if (!cast?.embeds?.length) return res.status(400).json({ error: "no_embeds" });
 
       let checkinId = null;
       for (const embed of cast.embeds) {
         const url = typeof embed === "string" ? embed : embed.url;
-        if (!url) continue;
-        const match = url.match(/\/api\/share\/checkin\/(\d+)/);
+        const match = url?.match(/\/api\/share\/checkin\/(\d+)/);
         if (match) {
           checkinId = Number(match[1]);
           break;
         }
       }
+      if (!checkinId) return res.status(400).json({ error: "no_checkin_embed" });
 
-      if (!checkinId) {
-        return res.status(400).json({ error: "no_checkin_embed" });
+      const { data: checkin } = await supabaseAdmin
+        .from("checkins")
+        .select("address,day")
+        .eq("id", checkinId)
+        .maybeSingle();
+      if (!checkin) return res.status(404).json({ error: "checkin_not_found" });
+      if (voter.address.toLowerCase() === checkin.address.toLowerCase()) {
+        return res.status(403).json({ error: "self_vote_not_allowed" });
       }
 
-      let vote = untrustedData?.vote;
-      if (!vote || !["real", "fake"].includes(vote)) {
-        vote = String(req.query?.vote || req.body?.vote || "real");
-        if (!["real", "fake"].includes(vote)) vote = "real";
-      }
+      const { data: submission } = await supabaseAdmin
+        .from("submissions")
+        .select("id")
+        .eq("day", checkin.day)
+        .ilike("address", checkin.address)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!submission) return res.status(404).json({ error: "submission_not_found" });
 
-      if (supabaseAdmin) {
-        const { data: checkin } = await supabaseAdmin
-          .from("checkins")
-          .select("id,address,day")
-          .eq("id", checkinId)
-          .maybeSingle();
-
-        if (!checkin) {
-          return res.status(404).json({ error: "checkin_not_found" });
-        }
-
-        const voterAddressLower = voterAddress?.toLowerCase();
-        if (voterAddressLower === checkin.address.toLowerCase()) {
-          return res.status(403).json({ message: "Cannot vote on your own check-in" });
-        }
-
-        const { data: existingVote } = await supabaseAdmin
-          .from("votes")
-          .select("id")
-          .eq("voter_address", voterAddressLower)
-          .eq("submission_id", checkinId)
-          .maybeSingle();
-
-        if (existingVote) {
-          return res.status(200).json({ message: "Already voted" });
-        }
-
-        await supabaseAdmin.from("votes").insert({
-          submission_id: checkinId,
-          voter_address: voterAddressLower,
-          vote,
-          platform: "farcaster",
-        });
-
-        log("farcaster_vote", {
-          fid,
-          address: voterAddress,
-          checkinId,
-          vote,
-          day: checkin.day,
-        });
-      }
-
-      res.json({
-        message: "Vote recorded",
-        type: vote === "real" ? "human" : "sus",
+      const vote = ["real", "fake"].includes(untrustedData?.vote)
+        ? untrustedData.vote
+        : "real";
+      const { data: castResult, error: castError } = await castVerifiedFarcasterVote({
+        submissionId: submission.id,
+        voterAddress: voter.address,
+        vote,
       });
+      if (castError) return res.status(400).json({ error: "vote_failed" });
+      if (!castResult?.[0]?.inserted) {
+        return res.status(409).json({ error: "already_voted" });
+      }
+
+      log("farcaster_vote", { address: voter.address, checkinId, submissionId: submission.id, vote });
+      return res.json({ message: "Vote recorded", type: vote === "real" ? "human" : "sus" });
     } catch (e) {
       log("farcaster_action_error", { error: e instanceof Error ? e.message : "unknown" });
-      res.status(500).json({ error: "action_failed" });
+      return res.status(500).json({ error: "action_failed" });
     }
   });
 
@@ -204,7 +202,7 @@ export default function farcasterRoutes({ supabaseAdmin, log }) {
       let photoUrl = null;
       if (sub.media_path) {
         const bucket = process.env.SUPABASE_BUCKET || "checkins";
-        const isPrivate = process.env.SUPABASE_BUCKET_PRIVATE === "true";
+        const isPrivate = process.env.SUPABASE_BUCKET_PRIVATE !== "false";
         if (!isPrivate) {
           photoUrl = supabaseAdmin.storage.from(bucket).getPublicUrl(sub.media_path).data.publicUrl;
         } else {
@@ -251,61 +249,55 @@ export default function farcasterRoutes({ supabaseAdmin, log }) {
       const id = Number(req.params.id);
       const { trustedData, untrustedData } = req.body;
       if (!supabaseAdmin || !id) return res.status(404).json({ error: "not_found" });
+      if (!trustedData?.messageBytes || !NEYNAR_API_KEY) {
+        return res.status(403).json({ error: "trusted_farcaster_identity_required" });
+      }
 
-      // Determine vote from button index
       const buttonIndex = untrustedData?.buttonIndex;
       const vote = buttonIndex === 1 ? "real" : buttonIndex === 2 ? "fake" : null;
       if (!vote) return res.status(400).json({ error: "invalid_button" });
 
-      // Try to validate via Neymar if available
-      let voterAddress = null;
-      if (trustedData?.messageBytes && NEYNAR_API_KEY) {
-        try {
-          const validateResp = await fetch(
-            "https://api.neynar.com/v2/farcaster/action/validate",
-            {
-              method: "POST",
-              headers: { "api_key": NEYNAR_API_KEY, "content-type": "application/json" },
-              body: JSON.stringify({ action_bytes: trustedData.messageBytes }),
-            },
-          );
-          if (validateResp.ok) {
-            const validated = await validateResp.json();
-            if (validated.valid) {
-              voterAddress = validated.interactor?.verifications?.[0]?.address?.toLowerCase();
-            }
-          }
-        } catch { /* validation optional for frame votes */ }
-      }
+      const validateResp = await fetch(
+        "https://api.neynar.com/v2/farcaster/action/validate",
+        {
+          method: "POST",
+          headers: { "api_key": NEYNAR_API_KEY, "content-type": "application/json" },
+          body: JSON.stringify({ action_bytes: trustedData.messageBytes }),
+        },
+      );
+      if (!validateResp.ok) return res.status(400).json({ error: "validation_failed" });
+      const validated = await validateResp.json();
+      const voterAddress = validated.valid
+        ? validated.interactor?.verifications?.[0]?.address?.toLowerCase()
+        : null;
+      const voter = await loadEligibleVoter(voterAddress);
+      if (!voter) return res.status(403).json({ error: "eligible_verified_cohort_member_required" });
 
-      // Record vote (anonymous if no verification)
-      const voterKey = voterAddress || `fc:${untrustedData?.fid || "anon"}`;
-      const { data: existing } = await supabaseAdmin
-        .from("votes")
-        .select("id")
-        .eq("voter_address", voterKey)
-        .eq("submission_id", id)
+      const { data: submission } = await supabaseAdmin
+        .from("submissions")
+        .select("id,address")
+        .eq("id", id)
         .maybeSingle();
-
-      if (existing) {
-        return res.send(`<!DOCTYPE html><html><head><meta name="fc:frame" content="vNext"/><meta name="fc:frame:image" content="${getPublicOrigin(req)}/api/og-image/checkin/${id}"/><meta name="fc:frame:button:1" content="✓ Already voted"/></head><body></body></html>`);
+      if (!submission) return res.status(404).json({ error: "submission_not_found" });
+      if (submission.address.toLowerCase() === voter.address.toLowerCase()) {
+        return res.status(403).json({ error: "self_vote_not_allowed" });
       }
 
-      await supabaseAdmin.from("votes").insert({
-        submission_id: id,
-        voter_address: voterKey,
+      const { data: castResult, error: castError } = await castVerifiedFarcasterVote({
+        submissionId: id,
+        voterAddress: voter.address,
         vote,
-        platform: "farcaster_frame",
       });
+      if (castError || !castResult?.[0]?.inserted) {
+        return res.status(409).json({ error: "already_voted" });
+      }
 
-      log("farcaster_frame_vote", { id, vote, voter: voterKey });
-
-      // Return a thank-you frame
-      const origin = getPublicOrigin(req);
-      res.send(`<!DOCTYPE html><html><head><meta name="fc:frame" content="vNext"/><meta name="fc:frame:image" content="${origin}/api/og-image/checkin/${id}"/><meta name="fc:frame:button:1" content="✓ Vote recorded — see more"/><meta name="fc:frame:post_url" content="${origin}"/></head><body></body></html>`);
+      log("farcaster_frame_vote", { id, vote, voter: voter.address });
+      const origin = getPublicOrigin(req) || "https://lasthumanstanding.thisyearnofear.com";
+      return res.send(`<!DOCTYPE html><html><head><meta name="fc:frame" content="vNext"/><meta name="fc:frame:image" content="${origin}/api/og-image/checkin/${id}"/><meta name="fc:frame:button:1" content="✓ Vote recorded — see more"/><meta name="fc:frame:post_url" content="${origin}"/></head><body></body></html>`);
     } catch (e) {
       log("farcaster_frame_vote_error", { error: String(e) });
-      res.status(500).json({ error: "vote_failed" });
+      return res.status(500).json({ error: "vote_failed" });
     }
   });
 

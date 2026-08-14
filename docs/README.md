@@ -132,23 +132,21 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
 
 1. Create a Supabase project
 2. Create a storage bucket (default `checkins`)
-3. Apply the schema (idempotent — adds `users`, `submissions`, `votes`, `rounds`, `checkins`, plus runtime-persistence tables). Two options:
-
-   **A) SQL Editor (manual, no creds needed):** paste the contents of `supabase/schema.sql` and click Run.
-
-   **B) psql (scriptable, requires DB password from `Project Settings → Database`):**
+3. Apply the canonical schema for a new project. Prefer the linked Supabase CLI workflow so migration history stays tracked:
    ```bash
-   # Export your DB password into a local env var first (do not commit it).
-   export PGPASSWORD=<paste-from-supabase-dashboard>
-   PROJECT_REF=<your-project-ref>
-
-   psql -h db.${PROJECT_REF}.supabase.co -p 5432 -U postgres -d postgres \
-     -f supabase/schema.sql
-
-   # Optional: nudge PostgREST to refresh its schema cache immediately
-   psql -h db.${PROJECT_REF}.supabase.co -p 5432 -U postgres -d postgres \
-     -c "NOTIFY pgrst, 'reload schema';"
+   supabase link --project-ref <your-project-ref>
+   supabase migration list --linked
+   supabase db push --linked
    ```
+   The checked-in `supabase/schema.sql` remains available for initial manual
+   bootstrap only; do not use ad-hoc SQL-editor copies for tracked migrations.
+   The security migration (`036_security_hardening.sql`) enables RLS on public
+   tables, removes direct anon/authenticated table access, and makes the
+   `checkins` bucket private. Server routes use the service-role client and
+   issue short-lived signed media URLs after authorization.
+
+4. Confirm the `checkins` Storage bucket exists and is private. The API issues
+   signed upload/read URLs; clients should not receive direct table privileges.
 
 ### Schema tables
 
