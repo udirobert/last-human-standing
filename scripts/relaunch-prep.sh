@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# relaunch-prep.sh — Aug 3 cohort 1 re-launch prep
+# relaunch-prep.sh — Cohort 1 ETHOnline test pilot prep (Aug 24)
 #
-# Applies Supabase migration 029 (round bump + empty-cohort reset), updates
+# Applies Supabase migration 037 (round bump + empty-cohort reset), updates
 # production env vars, and verifies /api/game/state returns prelaunch.
 # Run from repo root.
 #
@@ -17,10 +17,10 @@ REMOTE_BASE="/opt/last-human-standing"
 ENV_FILE="${REMOTE_BASE}/shared/.env"
 DOMAIN="${LHS_DOMAIN:-lasthumanstanding.thisyearnofear.com}"
 
-GAME_LAUNCH_AT="2026-08-03T18:00:00Z"
+GAME_LAUNCH_AT="2026-08-24T18:00:00Z"
 COHORT_SIZE="25"
-COHORT_2_LAUNCH_AT="2026-08-17T18:00:00Z"
-# Lower floor for 25-person beta — draw fires once 5 free entrants sign up.
+COHORT_2_LAUNCH_AT="2026-09-13T18:00:00Z"
+# Lottery stays off for Cohort 1 pilot; value retained for a later cohort.
 LOTTERY_MIN_CANDIDATES="5"
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -43,7 +43,7 @@ done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-info "Applying Supabase migrations (029 Aug 3 launch bump + reset)…"
+info "Applying Supabase migrations (037 Aug 24 launch bump + reset)…"
 if command -v supabase >/dev/null 2>&1; then
   supabase db push --linked || fail "supabase db push failed — verify the linked project with supabase migration list --linked"
 else
@@ -69,6 +69,10 @@ upsert GAME_LAUNCH_AT "${GAME_LAUNCH_AT}"
 upsert COHORT_SIZE "${COHORT_SIZE}"
 upsert COHORT_2_LAUNCH_AT "${COHORT_2_LAUNCH_AT}"
 upsert LOTTERY_MIN_CANDIDATES "${LOTTERY_MIN_CANDIDATES}"
+upsert ENTRY_CLOSED "false"
+upsert LOTTERY_ENABLED "false"
+upsert PAID_ENTRY_ENABLED "false"
+upsert FREE_ENTRY_MODE "true"
 EOF
 
   info "Restarting PM2 with updated env…"
@@ -91,7 +95,7 @@ RESERVED=$(echo "$STATE" | python3 -c "import json,sys; d=json.load(sys.stdin); 
 echo "  phase=${PHASE}  launchAt=${LAUNCH}  reservedCount=${RESERVED}"
 
 if [ "$PHASE" = "prelaunch" ] && [ "$LAUNCH" = "${GAME_LAUNCH_AT}" ]; then
-  info "Game state looks ready for Aug 3 pre-launch."
+  info "Game state looks ready for Aug 24 pre-launch."
 elif [ "$UPDATE_ENV" = false ] && [ "$PHASE" = "live" ]; then
   warn "Still in live phase — run with --update-env after migrations to bump GAME_LAUNCH_AT."
 else

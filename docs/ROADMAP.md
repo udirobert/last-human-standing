@@ -7,16 +7,15 @@ dependency, not wishful thinking. Each phase lists its exit gate.
 
 Code: containment flags, verified-human gates, Celo fixes, payout hardening,
 route-leak fix, verdict-threshold unification, roster freeze. DB: migrations
-030/031/032 applied to prod. Rollout: launch postponed 2026-08-03 → **2026-08-10
-18:00 UTC** (provisional), rounds shifted, release `20260802-120644` deployed
-and verified live. Record: `docs/ops/2026-08-02-pilot-containment-log.md`.
+030/031/032 applied to prod. Rollout: launch postponed 2026-08-03 → **2026-08-24
+18:00 UTC** (Cohort 1 test pilot); Cohort 2 **2026-09-13 18:00 UTC** (ETHOnline).
 
 ## Phase 1 — Cohort 1: closed verified-human pilot 🔄 IN PROGRESS
 
 Spec: `docs/COHORT1_PILOT.md`. Optional but recommended extension:
 `docs/COHORT1_AGENT_EXHIBITION.md` (operator-run agents, prize-ineligible).
 
-- [ ] Confirm final launch date (Aug 10 18:00Z is provisional)
+- [x] Confirm final launch date — **2026-08-24 18:00 UTC** (Cohort 2: 2026-09-13)
 - [ ] Recruit 8–25 players: World ID/Self verified, reachable, schedule-confirmed
 - [x] (If agent exhibition) build the deltas listed in the exhibition doc — **DONE 2026-08-02: migration 033 applied to prod (human-only winner math); 4 agents (aria_fieldnotes, blot.exe, claude_ennui, duct_tape) seeded and driven through REAL prod SIWE auth; runner `lhs-exhibition-agents` on pm2 `*/10` cron with deterministic 5–45 min jitter; feed reveals (closed days only, fail-hidden) + day-close caught-count push + `agent-detection-metrics.mjs` shipped**
 - [~] Curate exhibition photos: `shared/exhibition-photos/day<N>/<username>.jpg`

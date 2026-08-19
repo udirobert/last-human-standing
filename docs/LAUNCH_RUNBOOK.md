@@ -1,8 +1,9 @@
 # Launch runbook — Cohort 1 pilot
 
-> **Current operating plan (2026-08-02):** Cohort 1 is a free, closed,
-> verified-human pilot with manual in-kind settlement. The current provisional
-> launch is **2026-08-10 18:00 UTC**, subject to the roster and dry-run gates.
+> **Current operating plan (2026-08-19):** Cohort 1 is a free, closed,
+> verified-human test pilot with manual in-kind settlement. Launch
+> **2026-08-24 18:00 UTC**; Cohort 2 (ETHOnline iteration)
+> **2026-09-13 18:00 UTC**, subject to roster and dry-run gates.
 > Paid entry, lottery admission, automatic payout, infiltrator mode, and
 > revival are disabled. Use [`PILOT_INVITATION_READINESS.md`](./PILOT_INVITATION_READINESS.md)
 > as the authoritative pre-invite checklist.

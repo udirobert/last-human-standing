@@ -5,8 +5,9 @@ Do not begin broad invitations until the pre-invite gates pass.
 
 ## Current posture
 
-- Provisional launch: **2026-08-10 18:00 UTC**. Reconfirm with
-  `/api/game/state`; this date may be moved before roster freeze.
+- Cohort 1 (test pilot): **2026-08-24 18:00 UTC**. Cohort 2 (ETHOnline
+  public iteration): **2026-09-13 18:00 UTC**. Reconfirm with
+  `/api/game/state` before roster freeze.
 - Cohort size: 25.
 - Minimum launch roster: 8 verified humans.
 - Entry: free; paid entry and lottery disabled.
@@ -17,37 +18,41 @@ Do not begin broad invitations until the pre-invite gates pass.
 
 ## Gate 0 — code and database
 
-- [ ] Deploy the latest commit and verify PM2 is online.
-- [ ] Confirm migrations 032, 033, 034, and 035 are applied.
-- [ ] Confirm `PAID_ENTRY_ENABLED=false`.
-- [ ] Confirm `FREE_ENTRY_MODE=true`.
-- [ ] Confirm `LOTTERY_ENABLED=false`.
-- [ ] Confirm `REQUIRE_HUMANITY_FOR_PLAY=true`.
-- [ ] Confirm `REQUIRE_WORLD_ID_FOR_VOTING=true`.
-- [ ] Confirm `AUTO_PAYOUT_ENABLED=false`.
-- [ ] Confirm `INFILTRATOR_ENABLED=false` and `REVIVAL_ENABLED=false`.
-- [ ] Confirm `ENABLE_TEST_ROUTES` is unset or false.
-- [ ] Confirm the active cohort and launch date from `/api/game/state`.
+- [x] Deploy the latest commit and verify PM2 is online. (`20260819-225643`)
+- [x] Confirm migrations 032, 033, 034, 035, and **037** are applied.
+- [x] Confirm `PAID_ENTRY_ENABLED=false`.
+- [x] Confirm `FREE_ENTRY_MODE=true`.
+- [x] Confirm `LOTTERY_ENABLED=false`.
+- [x] Confirm `REQUIRE_HUMANITY_FOR_PLAY=true`.
+- [x] Confirm `REQUIRE_WORLD_ID_FOR_VOTING=true`.
+- [x] Confirm `AUTO_PAYOUT_ENABLED=false`.
+- [x] Confirm `INFILTRATOR_ENABLED=false` and `REVIVAL_ENABLED=false`.
+- [x] Confirm `ENABLE_TEST_ROUTES` is unset or false.
+- [x] Confirm the active cohort and launch date from `/api/game/state`.
+
+Run: `bash scripts/pilot-gate0-check.sh`
 
 ## Gate 1 — operator dry run
 
 Use a non-public test cohort or tightly controlled operator accounts. Do not
 use test-route bypasses in the participant cohort.
 
-1. Authenticate a wallet.
-2. Complete World ID or Self verification.
-3. Complete reachability: notifications plus email/Telegram fallback.
-4. Claim a free seat and verify the user is in the current cohort.
-5. Submit a check-in and proof.
-6. Confirm an unverified user is rejected at claim/check-in/proof stages.
-7. Cast a valid vote and confirm a self-vote is rejected.
-8. Close a short test round through the admin path.
-9. Verify the single 70% verdict rule, DQ/replacement, and human-only winner.
-10. Verify a pending payout row is recorded and no transfer is attempted.
-11. Walk through the manual WLD + cUSD settlement procedure using small
-    operator-controlled test amounts, if the networks and wallets permit it.
+Run: `bash scripts/pilot-dry-run.sh` (briefly enables test routes; auto-reverts)
 
-Record the result, timestamp, commit, and any exceptions in the ops log.
+- [x] Authenticate a wallet.
+- [x] Complete World ID or Self verification. *(simulated via seeded verified rows)*
+- [ ] Complete reachability: notifications plus email/Telegram fallback. *(human pilot only)*
+- [x] Claim a free seat and verify the user is in the current cohort.
+- [x] Submit a check-in and proof.
+- [x] Confirm an unverified user is rejected at claim/check-in/proof stages.
+- [x] Cast a valid vote and confirm a self-vote is rejected.
+- [x] Close a short test round through the admin path.
+- [x] Verify the single 70% verdict rule, DQ/replacement, and human-only winner.
+- [x] Verify a pending payout row is recorded and no transfer is attempted.
+- [ ] Walk through the manual WLD + cUSD settlement procedure using small
+  operator-controlled test amounts, if the networks and wallets permit it.
+
+Record: `docs/ops/2026-08-19-gate1-dry-run.md`
 
 ## Gate 2 — private recruitment
 
