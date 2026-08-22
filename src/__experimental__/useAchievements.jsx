@@ -1,3 +1,4 @@
+// __experimental__: prototype code, not mounted in production. See __experimental__/README.md
 import { useState, useEffect, useCallback } from 'react';
 import Mascot from '../components/Mascot.jsx';
 

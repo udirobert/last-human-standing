@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \".claude/skills/open-edit/hooks/session-start.mjs\" gemini",
+            "name": "Open Edit preflight",
+            "timeout": 120000
+          }
+        ]
+      }
+    ]
+  }
+}

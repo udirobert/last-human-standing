@@ -177,7 +177,7 @@ describe("useFocusTrap", () => {
 // ===========================================================================
 // 3. Mascot name migration (useMascotName)
 // ===========================================================================
-import { useMascotName } from "../src/hooks/usePersonalization.jsx";
+import { useMascotName } from "../src/__experimental__/usePersonalization.jsx";
 
 function NameHarness({ saveValue }) {
   const { name, saveName } = useMascotName();

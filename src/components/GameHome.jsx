@@ -38,7 +38,7 @@ import { useDelight } from './DelightProvider.jsx';
 import { HeaderSoundButton } from './MusicDock.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import ThemeMotif from './ui/ThemeMotif.jsx';
-import { DEFAULT_MASCOT_NAME } from '../hooks/usePersonalization.jsx';
+import { DEFAULT_MASCOT_NAME } from '../__experimental__/usePersonalization.jsx';
 
 /**
  * GameHome — persistent Survive view.

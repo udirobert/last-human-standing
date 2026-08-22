@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, useRef, useEffect } f
 import { motion } from 'framer-motion';
 import { Confetti } from '../hooks/useDelight.jsx';
 import { useSound } from '../hooks/useSound.js';
-import { useAchievements, AchievementToast } from '../hooks/useAchievements.jsx';
+import { useAchievements, AchievementToast } from '../__experimental__/useAchievements.jsx';
 import { 
   useSurvivalTips, 
   TipToast, 
@@ -11,7 +11,7 @@ import {
   useSuspenseNotification,
   SuspenseNotification,
 } from '../hooks/useSurprises.jsx';
-import { useMascotName, MascotNameModal } from '../hooks/usePersonalization.jsx';
+import { useMascotName, MascotNameModal } from '../__experimental__/usePersonalization.jsx';
 import { ensureCuelumeBound, CUE_TOGGLE } from '../lib/cuelume.js';
 
 // Combined context for all delight features

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { MascotEventContext } from "../context/MascotEventContext.js";
+import { MascotEventContext } from "../__experimental__/MascotEventContext.js";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { MASCOT_LINES, getProfiledMascotLines } from "../lib/copy.js";
