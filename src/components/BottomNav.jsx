@@ -126,3 +126,5 @@ export default function BottomNav({
     </div>
   );
 }
+
+export default React.memo(BottomNav);

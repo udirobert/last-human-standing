@@ -85,3 +85,5 @@ export default function CoffeeBrew({ size = 140, className = "", "aria-label": a
     </svg>
   );
 }
+
+export default React.memo(CoffeeBrew);

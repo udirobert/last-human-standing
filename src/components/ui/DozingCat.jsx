@@ -74,3 +74,5 @@ export default function DozingCat({ size = 120, className = "", title = "a sleep
     </svg>
   );
 }
+
+export default React.memo(DozingCat);

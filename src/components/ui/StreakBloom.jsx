@@ -112,3 +112,5 @@ function Leaf({ x, y, rot, p }) {
     </g>
   );
 }
+
+export default React.memo(StreakBloom);

@@ -570,3 +570,6 @@ export function MascotAvatar({ size = 32, status = "alive", badgeCount = 0 }) {
     </div>
   );
 }
+
+const MemoMascot = React.memo(Mascot);
+export default MemoMascot;

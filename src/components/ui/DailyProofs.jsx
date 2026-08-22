@@ -35,8 +35,10 @@ export default function DailyProofs() {
   const reduce = useReducedMotion();
   const idFor = (t) => `theme-world-${t.id}`;
   
-  // Shuffle day assignments every 5-8 seconds to create mystery
-  // Players see all themes with day labels, but the mapping keeps changing
+  // Shuffle day assignments once on mount to create mystery — players see all
+  // themes with day labels, but the mapping is randomised. Only re-shuffles when
+  // motion is not reduced; under reduced motion the assignment is stable for the
+  // session so screen-reader users aren't surprised by changing labels.
   const [shuffledSchedule, setShuffledSchedule] = useState(() => {
     const picked = [...DAILY_THEMES].sort(() => Math.random() - 0.5).slice(0, 5);
     return picked.map((theme, i) => ({
@@ -47,6 +49,7 @@ export default function DailyProofs() {
   });
   
   useEffect(() => {
+    if (reduce) return;
     let timeout;
     const scheduleNext = () => {
       timeout = setTimeout(() => {
@@ -63,7 +66,7 @@ export default function DailyProofs() {
     };
     scheduleNext();
     return () => clearTimeout(timeout);
-  }, []);
+  }, [reduce]);
 
   return (
     <section className="w-full max-w-[860px] mx-auto px-5">

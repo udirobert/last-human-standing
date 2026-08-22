@@ -246,3 +246,6 @@ export default function ThemeMotif({ emoji, size = 64, className = "", label }) 
     </svg>
   );
 }
+
+const MemoThemeMotif = React.memo(ThemeMotif);
+export default MemoThemeMotif;

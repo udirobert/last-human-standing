@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import ThemeMotif from "./ThemeMotif.jsx";
 import CoffeeBrew from "./CoffeeBrew.jsx";
 import DozingCat from "./DozingCat.jsx";
@@ -39,7 +39,15 @@ function diff(targetIso) {
 const PAPER_GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
 
-const MYSTERY_EMOJIS = ["❓", "🔮", "✨", "🎯", "🎲", "🌟"];
+/** Painted motifs used as the "mystery theme preview" beside the countdown copy. These are the real hand-painted artefacts from the brand (docs/ART_DIRECTION.md) instead of emoji glyphs — they freeze correctly under prefers-reduced-motion. */
+const MOTIF_PAIRS = [
+  { a: "☕", b: "🌅" },  // café / sunrise
+  { a: "🌳", b: "🍜" },  // park / meal
+  { a: "🤝", b: "🚇" },  // friend / transit
+  { a: "📚", b: "🛒" },  // bookstore / groceries
+  { a: "🏋️", b: "🌊" },  // gym / water
+  { a: "📡", b: "🌅" },  // signal / sunrise
+];
 
 /** Viewport width, for scaling the ambient paintings between phone and monitor. */
 function useViewportWidth() {
@@ -56,6 +64,7 @@ const clampPx = (lo, v, hi) => Math.min(hi, Math.max(lo, Math.round(v)));
 function HeroCountdown({ targetIso }) {
   const [t, setT] = useState(() => diff(targetIso));
   const [cycleIndex, setCycleIndex] = useState(0);
+  const reduce = useReducedMotion();
   
   useEffect(() => {
     if (!targetIso) return undefined;
@@ -63,12 +72,14 @@ function HeroCountdown({ targetIso }) {
     return () => clearInterval(id);
   }, [targetIso]);
   
+  // Only cycle the motif pair when motion is not reduced — otherwise freeze on first
   useEffect(() => {
+    if (reduce || !targetIso) return undefined;
     const emojiInterval = setInterval(() => {
-      setCycleIndex((i) => (i + 1) % MYSTERY_EMOJIS.length);
+      setCycleIndex((i) => (i + 1) % MOTIF_PAIRS.length);
     }, 4000);
     return () => clearInterval(emojiInterval);
-  }, []);
+  }, [reduce, targetIso]);
   
   if (!targetIso) return null;
 
@@ -114,7 +125,7 @@ function HeroCountdown({ targetIso }) {
         ))}
       </div>
       
-      {/* Cycling mystery theme preview */}
+      {/* Cycling motif preview — frozen under prefers-reduced-motion */}
       <div className="flex items-center gap-2">
         <motion.span
           key={cycleIndex}
@@ -125,7 +136,7 @@ function HeroCountdown({ targetIso }) {
           className="text-3xl"
           aria-hidden
         >
-          {MYSTERY_EMOJIS[cycleIndex]}
+          {MOTIF_PAIRS[cycleIndex].a}
         </motion.span>
         <span className="font-mono text-amber/80 text-xs uppercase tracking-widest">
           {countdownCopy}
@@ -139,7 +150,7 @@ function HeroCountdown({ targetIso }) {
           className="text-3xl"
           aria-hidden
         >
-          {MYSTERY_EMOJIS[(cycleIndex + 3) % MYSTERY_EMOJIS.length]}
+          {MOTIF_PAIRS[(cycleIndex + 3) % MOTIF_PAIRS.length].b}
         </motion.span>
       </div>
     </div>
