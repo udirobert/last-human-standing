@@ -21,12 +21,12 @@ check() {
 
 echo "=== Gate 0 — Cohort 1 pre-invite ==="
 
-# Migrations through 037
+# Migrations through 038
 if command -v supabase >/dev/null 2>&1; then
-  if supabase migration list --linked 2>/dev/null | grep -qE '^\s+037\s+\|\s+037'; then
-    pass "Migration 037 applied (linked Supabase)"
+  if supabase migration list --linked 2>/dev/null | grep -qE '^\s+038\s+\|\s+038'; then
+    pass "Migration 038 applied (linked Supabase)"
   else
-    warn "Migration 037 not applied — run: supabase db push --linked"
+    warn "Migration 038 not applied — run: supabase db push --linked"
     FAILURES=$((FAILURES + 1))
   fi
 else
@@ -39,7 +39,7 @@ ssh "$HOST" "pm2 describe last-human-standing" >/dev/null 2>&1 && pass "PM2 proc
 for var in PAID_ENTRY_ENABLED=false FREE_ENTRY_MODE=true LOTTERY_ENABLED=false \
   REQUIRE_HUMANITY_FOR_PLAY=true REQUIRE_WORLD_ID_FOR_VOTING=true \
   AUTO_PAYOUT_ENABLED=false INFILTRATOR_ENABLED=false REVIVAL_ENABLED=false \
-  ENTRY_CLOSED=false GAME_LAUNCH_AT=2026-08-24T18:00:00Z COHORT_2_LAUNCH_AT=2026-09-13T18:00:00Z; do
+  ENTRY_CLOSED=false GAME_LAUNCH_AT=2026-09-01T18:00:00Z COHORT_2_LAUNCH_AT=2026-09-13T18:00:00Z; do
   key="${var%%=*}"; val="${var#*=}"
   if ssh "$HOST" "grep -qx '${key}=${val}' ${ENV_FILE}" 2>/dev/null; then
     pass "${key}=${val}"
@@ -64,9 +64,9 @@ STATE=$(curl -sS --max-time 15 "https://${DOMAIN}/api/game/state" || echo '{}')
 echo "$STATE" | python3 -c "
 import json,sys
 d=json.load(sys.stdin)
-ok = d.get('phase')=='prelaunch' and d.get('launchAt')=='2026-08-24T18:00:00Z'
+ok = d.get('phase')=='prelaunch' and d.get('launchAt')=='2026-09-01T18:00:00Z'
 sys.exit(0 if ok else 1)
-" && pass "phase=prelaunch launchAt=2026-08-24" || { warn "Unexpected game state"; FAILURES=$((FAILURES + 1)); echo "$STATE" | python3 -m json.tool 2>/dev/null | head -20; }
+" && pass "phase=prelaunch launchAt=2026-09-01" || { warn "Unexpected game state"; FAILURES=$((FAILURES + 1)); echo "$STATE" | python3 -m json.tool 2>/dev/null | head -20; }
 
 STATS=$(curl -sS --max-time 15 "https://${DOMAIN}/api/stats" || echo '{}')
 echo "$STATS" | python3 -c "

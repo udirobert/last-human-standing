@@ -6,7 +6,7 @@ HOST="${LHS_HOST:-snel-bot}"
 ENV_FILE="/opt/last-human-standing/shared/.env"
 DOMAIN="${LHS_DOMAIN:-lasthumanstanding.thisyearnofear.com}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-RESTORE_LAUNCH="${GAME_LAUNCH_AT:-2026-08-24T18:00:00Z}"
+RESTORE_LAUNCH="${GAME_LAUNCH_AT:-2026-09-01T18:00:00Z}"
 DRY_LAUNCH="$(date -u -v-1H +%Y-%m-%dT%H:00:00Z 2>/dev/null || date -u -d '1 hour ago' +%Y-%m-%dT%H:00:00Z)"
 
 GREEN='\033[0;32m'; YELLOW='\033[1;33m'; NC='\033[0m'

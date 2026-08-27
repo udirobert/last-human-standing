@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# relaunch-prep.sh — Cohort 1 ETHOnline test pilot prep (Aug 24)
+# relaunch-prep.sh — Cohort 1 retry prep (Sep 1)
 #
-# Applies Supabase migration 037 (round bump + empty-cohort reset), updates
-# production env vars, and verifies /api/game/state returns prelaunch.
-# Run from repo root.
+# Applies Supabase migrations (038 = Sep 1 round bump + artifact reset),
+# updates production env vars, and verifies /api/game/state returns
+# prelaunch. Run from repo root.
 #
 # Usage:
 #   bash scripts/relaunch-prep.sh              # migrations + verify only
@@ -17,7 +17,7 @@ REMOTE_BASE="/opt/last-human-standing"
 ENV_FILE="${REMOTE_BASE}/shared/.env"
 DOMAIN="${LHS_DOMAIN:-lasthumanstanding.thisyearnofear.com}"
 
-GAME_LAUNCH_AT="2026-08-24T18:00:00Z"
+GAME_LAUNCH_AT="2026-09-01T18:00:00Z"
 COHORT_SIZE="25"
 COHORT_2_LAUNCH_AT="2026-09-13T18:00:00Z"
 # Lottery stays off for Cohort 1 pilot; value retained for a later cohort.
@@ -43,7 +43,7 @@ done
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-info "Applying Supabase migrations (037 Aug 24 launch bump + reset)…"
+info "Applying Supabase migrations (038 Sep 1 launch bump + reset)…"
 if command -v supabase >/dev/null 2>&1; then
   supabase db push --linked || fail "supabase db push failed — verify the linked project with supabase migration list --linked"
 else
@@ -95,7 +95,7 @@ RESERVED=$(echo "$STATE" | python3 -c "import json,sys; d=json.load(sys.stdin); 
 echo "  phase=${PHASE}  launchAt=${LAUNCH}  reservedCount=${RESERVED}"
 
 if [ "$PHASE" = "prelaunch" ] && [ "$LAUNCH" = "${GAME_LAUNCH_AT}" ]; then
-  info "Game state looks ready for Aug 24 pre-launch."
+  info "Game state looks ready for Sep 1 pre-launch."
 elif [ "$UPDATE_ENV" = false ] && [ "$PHASE" = "live" ]; then
   warn "Still in live phase — run with --update-env after migrations to bump GAME_LAUNCH_AT."
 else
