@@ -18,6 +18,23 @@
 import { createHash } from "node:crypto";
 
 /**
+ * Recursively sort object keys so the canonical form is independent of
+ * insertion order at every nesting level (arrays keep their order — it is
+ * meaningful). Same spec → same canonical JSON → same hash, always.
+ */
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === "object") {
+    const sorted = {};
+    for (const key of Object.keys(value).sort()) {
+      sorted[key] = canonicalize(value[key]);
+    }
+    return sorted;
+  }
+  return value;
+}
+
+/**
  * Compute the commit hash for a resolution spec.
  * The hash is of the canonical JSON — same spec → same hash, always.
  *
@@ -25,7 +42,7 @@ import { createHash } from "node:crypto";
  * @returns {string}     0x-prefixed hex hash
  */
 export function computeSpecHash(spec) {
-  const canonical = JSON.stringify(spec, Object.keys(spec).sort());
+  const canonical = JSON.stringify(canonicalize(spec));
   const hash = createHash("sha256").update(canonical, "utf8").digest("hex");
   return `0x${hash}`;
 }

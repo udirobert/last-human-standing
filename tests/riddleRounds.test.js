@@ -103,6 +103,18 @@ describe("computeSpecHash", () => {
   it("produces a 0x-prefixed hex hash", () => {
     expect(computeSpecHash({ a: 1 })).toMatch(/^0x[0-9a-f]{64}$/);
   });
+
+  it("is independent of key insertion order (recursive canonical form)", () => {
+    const a = { z: { b: 2, a: 1 }, a: ["x", "y"] };
+    const b = { a: ["x", "y"], z: { a: 1, b: 2 } };
+    expect(computeSpecHash(a)).toBe(computeSpecHash(b));
+  });
+
+  it("preserves array order (arrays are meaningful)", () => {
+    expect(computeSpecHash({ a: ["x", "y"] })).not.toBe(
+      computeSpecHash({ a: ["y", "x"] }),
+    );
+  });
 });
 
 describe("verifySpecHash", () => {

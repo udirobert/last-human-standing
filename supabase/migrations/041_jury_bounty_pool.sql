@@ -17,3 +17,9 @@ comment on table public.jury_bounty_pools is
   'Operator-seeded jury accuracy bounty. At cohort end, the pool is split '
   'pro-rata by accumulated jury tickets among eligible jurors. Manual '
   'settlement (no on-chain automation) for the pilot.';
+
+-- RLS: enabled with NO policies. The server reads/writes via the service
+-- role (bypasses RLS) through the /api/jury-bounty/* endpoints. Anon/auth
+-- clients cannot read or write the pool directly — the public status
+-- endpoint is served by the server, not by direct table access.
+alter table public.jury_bounty_pools enable row level security;
