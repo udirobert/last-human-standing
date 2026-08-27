@@ -65,16 +65,25 @@ describe("daylightTemp", () => {
     }
   });
 
-  it("sin curve peaks at noon; evening boost warms the late window", () => {
+  it("is monotonically non-decreasing in timeOfDay (strictly-warming day)", () => {
+    for (let d = 0; d < 5; d++) {
+      let prev = daylightTemp(d, 0);
+      for (let t = 0.05; t <= 1.0001; t += 0.05) {
+        const v = daylightTemp(d, Math.min(1, t));
+        expect(v).toBeGreaterThanOrEqual(prev);
+        prev = v;
+      }
+    }
+  });
+
+  it("warms through the window and accelerates in the golden hour", () => {
     const dawn = daylightTemp(0, 0.05);
     const noon = daylightTemp(0, 0.5);
     const eveBoostStart = daylightTemp(0, 0.7);
     const eve = daylightTemp(0, 0.95);
-    // Sin rises from dawn to noon.
     expect(noon).toBeGreaterThan(dawn);
-    // The evening warm-up (after 70% of the window) makes late-day warmer
-    // than the moment the boost begins, even as the sin curve falls.
-    expect(eve).toBeGreaterThan(eveBoostStart);
+    // Golden-hour acceleration: the 0.7→0.95 gain outpaces the 0.5→0.7 gain.
+    expect(eve - eveBoostStart).toBeGreaterThan(eveBoostStart - noon);
   });
 });
 
@@ -195,13 +204,19 @@ describe("getLandscapeProfile", () => {
   it("is deterministic per seed", () => {
     const a = getLandscapeProfile(42);
     const b = getLandscapeProfile(42);
-    expect(a).toEqual(b);
+    // Compare data fields (topoSeedForDay is a closure — assert by behavior).
+    const { topoSeedForDay: _fa, ...dataA } = a;
+    const { topoSeedForDay: _fb, ...dataB } = b;
+    expect(dataA).toEqual(dataB);
+    expect(a.topoSeedForDay(3)).toBe(b.topoSeedForDay(3));
   });
 
   it("differs across seeds", () => {
     const a = getLandscapeProfile(42);
     const b = getLandscapeProfile(43);
-    expect(a).not.toEqual(b);
+    const { topoSeedForDay: _fa, ...dataA } = a;
+    const { topoSeedForDay: _fb, ...dataB } = b;
+    expect(dataA).not.toEqual(dataB);
   });
 
   it("exposes a motifSeed distinct from popSeed", () => {
@@ -209,6 +224,22 @@ describe("getLandscapeProfile", () => {
     expect(p).toHaveProperty("motifSeed");
     expect(typeof p.motifSeed).toBe("number");
     expect(p.motifSeed).not.toBe(p.popSeed);
+  });
+
+  it("topoSeedForDay varies per day but stays deterministic", () => {
+    const p = getLandscapeProfile(deriveLandscapeSeed(1, 1700000000000));
+    const d1 = p.topoSeedForDay(1);
+    const d2 = p.topoSeedForDay(2);
+    expect(d1).not.toBe(d2);
+    expect(p.topoSeedForDay(1)).toBe(d1); // deterministic
+    expect(p.topoSeedForDay(5)).not.toBe(d1);
+  });
+
+  it("topoSeedForDay falls back to the cohort topoSeed without a day", () => {
+    const p = getLandscapeProfile(42);
+    expect(p.topoSeedForDay(null)).toBe(p.topoSeed);
+    expect(p.topoSeedForDay(undefined)).toBe(p.topoSeed);
+    expect(p.topoSeedForDay(0)).toBe(p.topoSeed);
   });
 });
 

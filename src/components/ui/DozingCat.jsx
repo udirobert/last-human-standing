@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import GouacheFilters from "./GouacheFilters.jsx";
 import { GOUACHE as P } from "./gouachePalette.js";
 
@@ -12,7 +12,7 @@ import { GOUACHE as P } from "./gouachePalette.js";
  *
  * Breathing freezes under prefers-reduced-motion (.cat-breathe, index.css).
  */
-export default function DozingCat({ size = 120, className = "", title = "a sleeping cat, keeping you company" }) {
+function DozingCat({ size = 120, className = "", title = "a sleeping cat, keeping you company" }) {
   const uid = useId().replace(/:/g, "");
   const bodyPath =
     "M24,60 C24,38 50,28 80,30 C108,32 122,46 122,64 C122,82 100,90 68,90 C40,90 24,80 24,60 Z";
@@ -75,4 +75,4 @@ export default function DozingCat({ size = 120, className = "", title = "a sleep
   );
 }
 
-export default React.memo(DozingCat);
+export default memo(DozingCat);

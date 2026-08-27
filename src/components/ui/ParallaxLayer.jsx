@@ -42,8 +42,17 @@ export default function ParallaxLayer({
 
   if (!ctx) return <div className={className} style={style}>{children}</div>;
 
+  // Overscan moving layers by the max shift (±14px, rounded up) so a tilt
+  // never exposes a sliver at the container edge. The depth-0 room gradient
+  // stays inset-0 behind everything, so the overscanned box never shows a
+  // seam of its own. Inline inset wins over the className's inset-0.
+  const overscan = d > 0 ? 16 : 0;
+
   return (
-    <motion.div className={className} style={{ ...style, x: dx, y: dy, willChange: "transform" }}>
+    <motion.div
+      className={className}
+      style={{ ...style, inset: -overscan, x: dx, y: dy, willChange: "transform" }}
+    >
       {children}
     </motion.div>
   );

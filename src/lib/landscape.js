@@ -48,6 +48,7 @@ export function deriveLandscapeSeed(cohortNumber, launchAtMs) {
  * @param {number} seed  from deriveLandscapeSeed
  * @returns {{
  *   topoSeed: number,    // TopographicTexture seed — different contour shapes
+ *   topoSeedForDay: (day: number|null) => number, // per-day contour variation
  *   popSeed: number,     // PopulationField seed — different scatter pattern
  *   motifSeed: number,   // AmbientMotifs seed — different corner layout
  *   emberCx: number,     // EmberField center X (%), 30–70
@@ -57,10 +58,20 @@ export function deriveLandscapeSeed(cohortNumber, launchAtMs) {
  */
 export function getLandscapeProfile(seed) {
   const rng = mulberry32(seed);
+  // Offset from the day-based topo seeds (which live ~17–89) so a cohort's
+  // contours differ from the generic per-day ones.
+  const topoSeed = 100 + Math.floor(rng() * 200); // 100–299
   return {
-    // Offset from the day-based topo seeds (which live ~17–89) so a cohort's
-    // contours differ from the generic per-day ones.
-    topoSeed: 100 + Math.floor(rng() * 200), // 100–299
+    topoSeed,
+    // The map still shifts as the game progresses: each day gets its own
+    // contour field derived from the cohort seed AND the day, so the cohort
+    // keeps its identity while the terrain changes under it. (The first
+    // revision pinned one topoSeed for the whole cohort, silently dropping
+    // the per-day variation the backdrop had before — restored here.)
+    topoSeedForDay: (day) =>
+      Number.isFinite(Number(day)) && Number(day) >= 1
+        ? deriveLandscapeSeed(seed, Math.floor(Number(day)))
+        : topoSeed,
     popSeed: seed,
     // A distinct seed for motif corner shuffling, so changing it doesn't
     // perturb the scatter/topo streams above.

@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import AmbientBackdrop from "./AmbientBackdrop.jsx";
 import LandscapeBadge from "./ui/LandscapeBadge.jsx";
+import ParallaxPermissionChip from "./ui/ParallaxPermissionChip.jsx";
+import { ParallaxProvider } from "../hooks/ParallaxContext.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useStats } from "../hooks/useStats.js";
 
@@ -63,17 +65,8 @@ export default function AppShell({
   const populationTotal = cohortSize || 50;
   const populationWinner = isEnded && Boolean(winner);
 
-  return (
-    <div
-      className={`relative h-[100svh] max-h-[100svh] flex flex-col font-body overflow-hidden bg-transparent ${className}`}
-      style={
-        padTop
-          ? {
-              paddingTop: "env(safe-area-inset-top, 0px)",
-            }
-          : undefined
-      }
-    >
+  const shellContent = (
+    <>
       <AmbientBackdrop
         phase={phase}
         flourishes={flourishes}
@@ -90,11 +83,36 @@ export default function AppShell({
         parallax={parallax}
       />
       {children}
-      {/* Landscape identity stamp — subtle, bottom-left, above the nav.
-          Deterministic per cohort; null (renders nothing) before launch. */}
-      <div className="pointer-events-none absolute left-4 bottom-[5.75rem] z-10 hidden min-[480px]:block">
+      {/* iOS orientation permission prompt — only renders when parallax is
+          on and iOS still needs a gesture-tied request. Inside the provider
+          so it can read permissionState / requestOrientationPermission. */}
+      {parallax && <ParallaxPermissionChip />}
+      {/* Landscape identity stamp — subtle, bottom-left, in the reserved
+          bottom padding band above the nav (safe-area aware so it clears the
+          home indicator). Deterministic per cohort; null (renders nothing)
+          before launch. Visible on mobile too — the collectible identity is
+          for phone players first. */}
+      <div className="pointer-events-none absolute left-4 bottom-[calc(5.75rem+env(safe-area-inset-bottom,0px))] z-10">
         <LandscapeBadge cohortNumber={cohortNumber} cohortLaunchAt={cohortLaunchAt} />
       </div>
+    </>
+  );
+
+  return (
+    <div
+      className={`relative h-[100svh] max-h-[100svh] flex flex-col font-body overflow-hidden bg-transparent ${className}`}
+      style={
+        padTop
+          ? {
+              paddingTop: "env(safe-area-inset-top, 0px)",
+            }
+          : undefined
+      }
+    >
+      {/* ParallaxProvider lives HERE (not inside AmbientBackdrop) so the
+          permission chip can sit inside the provider while staying tappable
+          outside the backdrop's pointer-events-none container. */}
+      {parallax ? <ParallaxProvider>{shellContent}</ParallaxProvider> : shellContent}
     </div>
   );
 }

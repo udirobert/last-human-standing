@@ -9,7 +9,6 @@ import {
   deriveLandscapeSeed,
   getLandscapeProfile,
 } from "../lib/landscape.js";
-import { ParallaxProvider } from "../hooks/ParallaxContext.jsx";
 import ParallaxLayer from "./ui/ParallaxLayer.jsx";
 
 const PAPER_GRAIN =
@@ -118,7 +117,10 @@ export default function AmbientBackdrop({
   cohortLaunchAt = null,
   /** Depth parallax via device orientation / mouse. Opt-in (default off)
    *  so the default DOM is unchanged; layers wrap in ParallaxLayer only when
-   *  on. Respects prefers-reduced-motion (no listeners, MotionValues stay 0). */
+   *  on. Respects prefers-reduced-motion (no listeners, MotionValues stay 0).
+   *  NOTE: the ParallaxProvider lives in AppShell (so its iOS permission
+   *  chip can be tappable); ParallaxLayer is a plain passthrough when no
+   *  provider is mounted, which is the case for every non-AppShell usage. */
   parallax = false,
 }) {
   const reduceMotion = useReducedMotion();
@@ -145,7 +147,11 @@ export default function AmbientBackdrop({
     if (!Number.isFinite(ms)) return null;
     return getLandscapeProfile(deriveLandscapeSeed(cohortNumber, ms));
   }, [cohortNumber, cohortLaunchAt]);
-  const topoSeed = landscape ? landscape.topoSeed : baseTopoSeed;
+  // Per-day contour variation survives the cohort landscape: the cohort keeps
+  // its identity (seed) while the terrain still shifts day to day.
+  const topoSeed = landscape
+    ? landscape.topoSeedForDay(phase === "live" ? day : null)
+    : baseTopoSeed;
   const popSeed = landscape ? landscape.popSeed : 7;
   const emberCx = landscape ? landscape.emberCx : 50;
   const emberCy = landscape ? landscape.emberCy : 82;
@@ -161,18 +167,17 @@ export default function AmbientBackdrop({
   // the Lattice night-system principle. Pure function of inputs, no state.
   const timeOfDay = computeTimeOfDay(checkinOpensAt, checkinClosesAt);
   const useDynamicTint = phase === "live" && day != null && timeOfDay != null;
-  const ambientTint =
-    useDynamicTint
-      ? tempToColor(daylightTemp(day - 1, timeOfDay))
-      : null;
+  const temp = useDynamicTint ? daylightTemp(day - 1, timeOfDay) : null;
+  const ambientTint = useDynamicTint ? tempToColor(temp) : null;
   // Gradient origin shifts with temperature: cool mornings anchor upper-left,
   // warm evenings drift toward center-right. Mirrors DAY_ROOM_TINTS' positions.
-  const tintOriginX = useDynamicTint ? 50 - daylightTemp(day - 1, timeOfDay) * 20 : 50;
+  const tintOriginX = useDynamicTint ? 50 - temp * 20 : 50;
 
   // Depth parallax: only wrap layers when enabled, so the default (off) DOM
   // is byte-for-byte unchanged. When on, each layer sits in a ParallaxLayer
-  // scaled by depth (0=far/least move → 1=near/most move); ParallaxProvider
-  // runs useParallaxDepth once and feeds the MotionValues via context.
+  // scaled by depth (0=far/least move → 1=near/most move); the
+  // ParallaxProvider (mounted by AppShell) runs useParallaxDepth once and
+  // feeds the MotionValues via context.
   const wrap = (depth, node) => (parallax ? <ParallaxLayer depth={depth}>{node}</ParallaxLayer> : node);
 
   const layers = (
@@ -297,7 +302,7 @@ export default function AmbientBackdrop({
 
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden -z-0" aria-hidden="true">
-      {parallax ? <ParallaxProvider>{layers}</ParallaxProvider> : layers}
+      {layers}
     </div>
   );
 }

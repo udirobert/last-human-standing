@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { motion } from 'framer-motion';
 import { CUE_HOVER } from '../lib/cuelume.js';
 
@@ -64,7 +65,7 @@ const ICONS = { home: IconHome, feed: IconVote, chat: IconChat, leaderboard: Ico
 export const BOTTOM_NAV_OFFSET =
   "calc(4.25rem + env(safe-area-inset-bottom, 0px))";
 
-export default function BottomNav({
+function BottomNav({
   current,
   onChange,
   badges = {},
@@ -127,4 +128,4 @@ export default function BottomNav({
   );
 }
 
-export default React.memo(BottomNav);
+export default memo(BottomNav);

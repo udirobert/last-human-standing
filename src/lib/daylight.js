@@ -29,6 +29,12 @@ const DAY_BASE = [0.3, 0.35, 0.4, 0.45, 0.55];
  *   0.5 = warm gold midday
  *   1   = deep ember evening
  *
+ * MONOTONIC in timeOfDay by construction: both terms are non-decreasing,
+ * so the room only ever warms as the check-in window progresses — no
+ * midday cool-down. (The first revision used a sin curve that peaked at
+ * noon and fell before the evening boost caught up; review chose the
+ * strictly-warming day instead.)
+ *
  * @param {number} dayOfWeek  0–4 (game day minus 1). Clamped.
  * @param {number} timeOfDay  0–1 fraction of the check-in window elapsed. Clamped.
  * @returns {number} temperature in [0, 1]
@@ -38,13 +44,14 @@ export function daylightTemp(dayOfWeek, timeOfDay) {
   const tod = Math.max(0, Math.min(1, timeOfDay));
   const dayBase = DAY_BASE[d] ?? DAY_BASE[0];
 
-  // Time curve: dawn rises, noon holds, evening fades. Sin peaks at midday.
-  const timeCurve = Math.sin(tod * Math.PI); // 0→1→0
+  // Steady warming through the window (non-decreasing in tod).
+  const timeCurve = tod * 0.15;
 
-  // Evening warm-up after 70% of the window has passed.
+  // Golden-hour acceleration after 70% of the window has passed
+  // (also non-decreasing in tod, so the sum stays monotonic).
   const eveningWarm = tod > 0.7 ? (tod - 0.7) * 0.5 : 0;
 
-  return Math.max(0, Math.min(1, dayBase + timeCurve * 0.15 + eveningWarm));
+  return Math.max(0, Math.min(1, dayBase + timeCurve + eveningWarm));
 }
 
 /**

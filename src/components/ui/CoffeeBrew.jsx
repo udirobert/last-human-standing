@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import GouacheFilters from "./GouacheFilters.jsx";
 import { GOUACHE as PALETTE } from "./gouachePalette.js";
 
@@ -18,7 +18,7 @@ import { GOUACHE as PALETTE } from "./gouachePalette.js";
 const CUP_PATH = "M34,72 C34,72 36,118 45,131 C53,141 87,141 95,131 C104,118 106,72 106,72 Z";
 const HANDLE_PATH = "M104,80 C132,74 134,116 104,114 L104,104 C120,106 120,86 104,90 Z";
 
-export default function CoffeeBrew({ size = 140, className = "", "aria-label": ariaLabel = "a fresh cup of coffee" }) {
+function CoffeeBrew({ size = 140, className = "", "aria-label": ariaLabel = "a fresh cup of coffee" }) {
   const uid = useId().replace(/:/g, "");
   const brush = `${uid}-brush`;
   const grain = `${uid}-grain`;
@@ -86,4 +86,4 @@ export default function CoffeeBrew({ size = 140, className = "", "aria-label": a
   );
 }
 
-export default React.memo(CoffeeBrew);
+export default memo(CoffeeBrew);
