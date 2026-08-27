@@ -21,12 +21,12 @@ check() {
 
 echo "=== Gate 0 — Cohort 1 pre-invite ==="
 
-# Migrations through 038
+# Migrations through 041 (Riddle Rounds: 039 round_specs, 040 lottery close_day, 041 jury pool)
 if command -v supabase >/dev/null 2>&1; then
-  if supabase migration list --linked 2>/dev/null | grep -qE '^\s+038\s+\|\s+038'; then
-    pass "Migration 038 applied (linked Supabase)"
+  if supabase migration list --linked 2>/dev/null | grep -qE '^\s+041\s+\|\s+041'; then
+    pass "Migrations through 041 applied (linked Supabase)"
   else
-    warn "Migration 038 not applied — run: supabase db push --linked"
+    warn "Migrations through 041 not applied — run: supabase db push --linked"
     FAILURES=$((FAILURES + 1))
   fi
 else
@@ -79,7 +79,7 @@ sys.exit(0 if wld>=5 and cusd>=35 else 1)
 " && pass "Prize pool meets pilot minimum (5 WLD + 35 cUSD)" || { warn "Prize pool below pilot minimum"; FAILURES=$((FAILURES + 1)); }
 
 if [ -x "$ROOT/node_modules/.bin/vitest" ] || command -v npm >/dev/null; then
-  npm run test:run --silent >/dev/null 2>&1 && pass "252 unit tests passing" || { warn "Unit tests failed"; FAILURES=$((FAILURES + 1)); }
+  npm run test:run --silent >/dev/null 2>&1 && pass "Unit tests passing" || { warn "Unit tests failed"; FAILURES=$((FAILURES + 1)); }
 fi
 
 echo

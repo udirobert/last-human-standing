@@ -10,7 +10,9 @@ import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, checkVelocityS
 import { rateLimit } from "./rateLimit.js";
 import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
-import { drawLottery, ALGORITHM_VERSION, freeSlotsFor } from "./lib/lottery.js";
+import { drawLottery, ALGORITHM_VERSION, freeSlotsFor, lotterySeed } from "./lib/lottery.js";
+import { drawSurvivalLottery } from "./lib/survivalLottery.js";
+import { splitJuryBounty } from "./lib/juryBounty.js";
 import { debugCeloBalances } from "./lib/celoBalance.js";
 import { ariaBroadcastPayoutTx, ariaSuggestNextRound } from "./lib/ariaAgent.js";
 import { agentSeatSummary, isValidAgentTier } from "./lib/agents.js";
@@ -277,6 +279,87 @@ async function cleanupPersistentState() {
   ]);
 }
 
+/**
+ * Close a round with the server-drawn survival lottery (Riddle Rounds §5.1).
+ *
+ * 1. Fetch eligible check-ins (everyone who checked in within the window).
+ * 2. If eligible > cap, draw survivors with the deterministic JS lottery
+ *    (server/lib/survivalLottery.js — Mulberry32 + Fisher-Yates).
+ * 3. Persist the draw to survival_draws (audit trail, replayable by anyone).
+ * 4. Call close_day() with the survivor list; SQL applies it and runs the
+ *    full verdict/elimination/streak/winner ceremony.
+ *
+ * Returns the close_day result object, or null if the round was already
+ * closed (idempotent re-entry after a crash between scheduler ticks).
+ */
+async function closeRoundWithLottery(day, cap) {
+  const { data: checkins, error: checkinErr } = await supabaseAdmin
+    .from("checkins")
+    .select("address, rank")
+    .eq("day", day)
+    .eq("survived", true);
+  if (checkinErr) throw new Error(`checkin_fetch_failed: ${checkinErr.message}`);
+
+  const eligible = checkins || [];
+  const effectiveCap = cap ?? survivalCapForDay(day);
+
+  let lotterySurvivors = null;
+  let lotteryMeta = null;
+
+  if (eligible.length > effectiveCap) {
+    // Overflow: deterministic cohort-seed lottery decides survival.
+    if (!GAME_LAUNCH_AT) {
+      throw new Error("GAME_LAUNCH_AT not set; cannot seed the survival lottery");
+    }
+    const cohortSeed = lotterySeed({ launchAtIso: GAME_LAUNCH_AT, cohort: COHORT_CONFIG.cohort });
+    const draw = drawSurvivalLottery(eligible, { cohortSeed, day, cap: effectiveCap });
+
+    // Persist the audit row before applying. ignoreDuplicates (ON CONFLICT
+    // DO NOTHING) keeps re-entry idempotent — the first draw is canonical.
+    // The draw is deterministic (same seed + same eligible list → same
+    // survivors), so a re-draw after a partial failure yields the same result.
+    const { error: drawErr } = await supabaseAdmin
+      .from("survival_draws")
+      .upsert({
+        day,
+        cohort: COHORT_CONFIG.cohort,
+        seed: draw.seed,
+        algorithm_version: draw.algorithmVersion,
+        eligible: draw.eligible,
+        cap: draw.cap,
+        survivors: draw.survivors,
+        eliminated: draw.eliminated,
+      }, { onConflict: "day", ignoreDuplicates: true });
+    if (drawErr) throw new Error(`survival_draw_persist_failed: ${drawErr.message}`);
+
+    lotterySurvivors = draw.survivors;
+    lotteryMeta = {
+      seed: draw.seed,
+      algorithm: draw.algorithmVersion,
+      eligible: draw.eligible,
+      cap: draw.cap,
+    };
+    log("survival_lottery_drawn", { day, seed: draw.seed, eligible: draw.eligible, cap: draw.cap, survivors: draw.survivors.length });
+  }
+
+  const { data: closeResult, error: closeErr } = await supabaseAdmin.rpc("close_day", {
+    p_day: day,
+    p_cap: effectiveCap,
+    p_flag_pct: 0.30,
+    p_min_votes: VOTE_QUORUM_MIN,
+    p_cohort: COHORT_CONFIG.cohort,
+    p_verify_pct: REAL_PCT_TO_VERIFY,
+    p_lottery_survivors: lotterySurvivors,
+    p_lottery_meta: lotteryMeta,
+  });
+  if (closeErr) throw new Error(`close_day_failed: ${closeErr.message}`);
+  if (closeResult?.already_closed) {
+    log("round_close_skipped", { day, reason: "already_closed" });
+    return null;
+  }
+  return closeResult;
+}
+
 async function autoAdvanceRounds() {
   if (!supabaseAdmin) return;
 
@@ -378,11 +461,24 @@ async function autoAdvanceRounds() {
       }
     }
 
-    // Day-close ceremony: survivors, DQ'd, eliminated, verdict, winner.
-    if ((result.closed ?? []).length > 0) {
+    // Day-close: advance_rounds() reports past-deadline rounds as "closing".
+    // The server draws the survival lottery (if overflow) with the tested JS
+    // implementation, persists the draw for audit, then calls close_day()
+    // with the survivor list. JS decides; SQL applies. (Riddle Rounds §5.1)
+    const closedResults = [];
+    for (const c of result.closing ?? []) {
+      try {
+        const r = await closeRoundWithLottery(c.day, c.survival_cap);
+        if (r) closedResults.push(r);
+      } catch (e) {
+        log("round_close_error", { day: c.day, error: e instanceof Error ? e.message : "unknown" });
+      }
+    }
+
+    if (closedResults.length > 0) {
       endgameCache = { value: null, fetchedAt: 0 };
     }
-    for (const r of result.closed ?? []) {
+    for (const r of closedResults) {
       log("round_auto_closed", {
         day: r.day, survivors: r.survivors, eliminated: r.eliminated,
         flagged: r.flagged ?? 0, dq: (r.dq || []).length, promoted: (r.promoted || []).length,
@@ -3100,9 +3196,21 @@ app.get("/api/game/state", async (req, res) => {
     let checkinCount = 0;
     let payoutInfo = null;
     let breakdown = null;
+    let roundSpec = null;
     if (phase === "live" && currentDay != null) {
       round = await loadRound(currentDay);
       if (round) checkinCount = await checkinCountForDay(currentDay);
+      // Fetch the riddle spec for the current day. The spec_jsonb is only
+      // included if revealed_at is set (T+18h); before that only the riddle
+      // text + spec_hash (the commit) are exposed — never the criteria.
+      if (supabaseAdmin) {
+        const { data: spec } = await supabaseAdmin
+          .from("round_specs")
+          .select("riddle, spec_jsonb, spec_hash, committed_at, revealed_at")
+          .eq("day", currentDay)
+          .maybeSingle();
+        roundSpec = spec || null;
+      }
     }
     if (phase === "ended" && supabaseAdmin) {
       const { data: payout } = await supabaseAdmin
@@ -3234,6 +3342,12 @@ app.get("/api/game/state", async (req, res) => {
             status: round.status,
             checkinCount,
             slotsRemaining: Math.max(0, (round.survival_cap ?? survivalCapForDay(currentDay)) - checkinCount),
+            // Riddle spec: commit-reveal for judging. Before reveal: riddle
+            // text + committed hash only. After reveal (T+18h): full spec.
+            riddle: roundSpec?.riddle ?? null,
+            specHash: roundSpec?.spec_hash ?? null,
+            specRevealed: Boolean(roundSpec?.revealed_at),
+            spec: roundSpec?.revealed_at ? roundSpec.spec_jsonb : null,
           }
         : null,
       commitReveal: buildCommitRevealState(round),
@@ -3400,14 +3514,20 @@ app.post(
           return res.status(400).json({ error: "db_insert_failed", message: error.message });
         }
         if (!data?.survived) {
-          // Update cohort_participations (the trigger syncs users.eliminated).
+          // With the riddle-rounds model, create_checkin sets survived=true
+          // for everyone (eligible). This branch should not fire, but keep
+          // the guard for backward compat with any old rounds that still
+          // use the rank-based first-come model.
           await supabaseAdmin.from("cohort_participations")
             .update({ eliminated: true, eliminated_at_day: day })
             .eq("address", req.user.address)
             .eq("cohort", COHORT_CONFIG.cohort);
           log("checkin_eliminated", { address: req.user.address, day, rank: data?.rank });
         } else {
-          log("checkin_survived", { address: req.user.address, day, rank: data?.rank });
+          // Riddle rounds: everyone who checks in is eligible. Survival is
+          // decided at close_day by the deterministic seed lottery, not at
+          // check-in time. No immediate elimination.
+          log("checkin_eligible", { address: req.user.address, day, rank: data?.rank });
         }
 
         // Track streak: update last_checkin_day on cohort_participations
@@ -3783,6 +3903,92 @@ app.post("/api/lottery/draw", requireAdmin, async (req, res) => {
   }
 });
 
+// =============== Jury bounty pool (Riddle Rounds §4, item #1) ===============
+
+// Seed the jury bounty pool for a cohort. Operator-only.
+app.post("/api/jury-bounty/seed", requireAdmin, async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const cohort = Number(req.body?.cohort) || COHORT_CONFIG.cohort;
+    const token = req.body?.token || "WLD";
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ error: "invalid_amount" });
+    }
+    const { error } = await supabaseAdmin
+      .from("jury_bounty_pools")
+      .upsert({ cohort, token, amount, seeded_at: new Date().toISOString() }, { onConflict: "cohort" });
+    if (error) return res.status(400).json({ error: "db_upsert_failed", message: error.message });
+    log("jury_bounty_seeded", { cohort, token, amount });
+    return res.json({ ok: true, cohort, token, amount });
+  } catch (e) {
+    res.status(400).json({ error: "jury_bounty_seed_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Settle the jury bounty pool — split pro-rata by accumulated jury tickets.
+// Returns the split for manual disbursement. Does NOT auto-send.
+app.post("/api/jury-bounty/settle", requireAdmin, async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const cohort = Number(req.body?.cohort) || COHORT_CONFIG.cohort;
+
+    // Fetch the pool
+    const { data: pool } = await supabaseAdmin
+      .from("jury_bounty_pools")
+      .select("*")
+      .eq("cohort", cohort)
+      .maybeSingle();
+    if (!pool) return res.status(404).json({ error: "no_pool_seeded" });
+    if (pool.settled_at) return res.status(400).json({ error: "already_settled", settlement: pool.settlement });
+
+    // Fetch all jurors with jury tickets > 0. The jury is the eliminated
+    // players ("you're out — but you're the jury now"). Map the snake_case
+    // DB columns to the camelCase shape splitJuryBounty() expects.
+    const { data: jurors } = await supabaseAdmin
+      .from("users")
+      .select("address, jury_tickets")
+      .gt("jury_tickets", 0)
+      .eq("eliminated", true);
+
+    const jurorRows = (jurors || []).map((j) => ({
+      address: j.address,
+      juryTickets: Number(j.jury_tickets) || 0,
+    }));
+    const split = splitJuryBounty(pool.amount, jurorRows);
+    const settlement = { ...split, token: pool.token, settledAt: new Date().toISOString() };
+
+    // Mark as settled
+    await supabaseAdmin
+      .from("jury_bounty_pools")
+      .update({ settled_at: new Date().toISOString(), settlement })
+      .eq("cohort", cohort);
+
+    log("jury_bounty_settled", { cohort, recipients: split.recipients, totalTickets: split.totalTickets });
+    return res.json({ ok: true, settlement });
+  } catch (e) {
+    res.status(400).json({ error: "jury_bounty_settle_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// Get the jury bounty pool status (public — shows pool size + whether settled)
+app.get("/api/jury-bounty/:cohort", async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const cohort = Number(req.params.cohort) || COHORT_CONFIG.cohort;
+    const { data } = await supabaseAdmin
+      .from("jury_bounty_pools")
+      .select("cohort, token, amount, seeded_at, settled_at")
+      .eq("cohort", cohort)
+      .maybeSingle();
+    if (!data) return res.json({ ok: true, pool: null });
+    return res.json({ ok: true, pool: data });
+  } catch (e) {
+    res.status(400).json({ error: "jury_bounty_fetch_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+
 app.get("/api/checkins/today", async (req, res) => {
   try {
     const launchAtMs = GAME_LAUNCH_AT ? Date.parse(GAME_LAUNCH_AT) : null;
@@ -3930,9 +4136,9 @@ app.use("/api", adminRoutes({
   COHORT_CONFIG,
   AGENTS_ENABLED,
   SILENT_VERIFICATION,
-  FAKE_PCT_TO_FLAG,
   notifyDayClosed,
   handleWinnerPayout,
+  closeRoundWithLottery,
   clearEndgameCache: () => { endgameCache = { value: null, fetchedAt: 0 }; },
 }));
 

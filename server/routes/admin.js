@@ -23,9 +23,9 @@ export default function adminRoutes(deps) {
     COHORT_CONFIG,
     AGENTS_ENABLED,
     SILENT_VERIFICATION,
-    FAKE_PCT_TO_FLAG,
     notifyDayClosed,
     handleWinnerPayout,
+    closeRoundWithLottery,
     clearEndgameCache,
   } = deps;
 
@@ -216,12 +216,10 @@ export default function adminRoutes(deps) {
 
       if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
 
-      const { data, error } = await supabaseAdmin.rpc("close_day", {
-        p_day: day,
-        p_cap: cap,
-        p_flag_pct: FAKE_PCT_TO_FLAG,
-      });
-      if (error) return res.status(400).json({ error: "close_day_failed", message: error.message });
+      // Use the same server-drawn survival lottery as the scheduler so an
+      // admin-triggered close behaves identically (Riddle Rounds §5.1).
+      const data = await closeRoundWithLottery(day, cap);
+      if (!data) return res.status(409).json({ error: "already_closed", day });
 
       clearEndgameCache?.();
       notifyDayClosed(data).catch((e) => log("push_error", { where: "admin_close_day", error: String(e) }));
@@ -295,7 +293,28 @@ export default function adminRoutes(deps) {
     try {
       const { data, error } = await supabaseAdmin.rpc("advance_rounds");
       if (error) return res.status(500).json({ error: "rpc_failed", message: error.message });
-      return res.json({ ok: true, result: data });
+
+      // advance_rounds opens due rounds and reports past-deadline rounds as
+      // "closing" without closing them. Close them here with the same
+      // server-drawn survival lottery the scheduler uses (Riddle Rounds §5.1).
+      const closed = [];
+      for (const c of data?.closing ?? []) {
+        try {
+          const r = await closeRoundWithLottery(c.day, c.survival_cap);
+          if (r) {
+            closed.push(r);
+            notifyDayClosed(r).catch((e) => log("push_error", { where: "admin_trigger_close", error: String(e) }));
+            if (r.winner) {
+              handleWinnerPayout(r.day, r.winner).catch((e) => log("admin_payout_error", { error: String(e) }));
+            }
+          }
+        } catch (e) {
+          log("admin_trigger_close_error", { day: c.day, error: e instanceof Error ? e.message : "unknown" });
+        }
+      }
+      if (closed.length > 0) clearEndgameCache?.();
+
+      return res.json({ ok: true, result: data, closed });
     } catch (e) {
       return res.status(500).json({ error: "trigger_failed", message: e instanceof Error ? e.message : "unknown_error" });
     }
