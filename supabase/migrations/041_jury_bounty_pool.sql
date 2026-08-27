@@ -1,0 +1,19 @@
+-- 041 — Jury bounty pool (docs/RIDDLE_ROUNDS.md §4, item #1).
+--
+-- Operator seeds a small jury pool; at cohort end it is split pro-rata by
+-- accumulated jury tickets. Manual settlement, matching the pilot posture.
+-- The pool is a single record keyed by cohort number.
+
+create table if not exists public.jury_bounty_pools (
+  cohort      int primary key,
+  token       text not null default 'WLD',
+  amount      numeric not null default 0,
+  seeded_at   timestamptz not null default now(),
+  settled_at  timestamptz,
+  settlement  jsonb  -- the pro-rata split result, set at settlement
+);
+
+comment on table public.jury_bounty_pools is
+  'Operator-seeded jury accuracy bounty. At cohort end, the pool is split '
+  'pro-rata by accumulated jury tickets among eligible jurors. Manual '
+  'settlement (no on-chain automation) for the pilot.';

@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { createClient } from '@supabase/supabase-js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
+import RiddleCard from './ui/RiddleCard.jsx';
 import { resolveActiveTheme, COHORT_SCHEDULE } from '../data/game';
 import { track } from '../lib/track.js';
 import { useOnlineStatus } from '../hooks/useOnlineStatus.js';
@@ -430,6 +431,8 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </div>
                 <p className="text-dim text-sm font-body relative">{themeData.description}</p>
                 {round.prompt && <p className="text-dim text-xs font-mono mt-2 relative">{round.prompt}</p>}
+                {/* Riddle Rounds: show the riddle + commit-reveal transparency */}
+                {round.riddle && <RiddleCard className="mt-3 relative" />}
                 <ThemeFairness theme={themeData} className="mt-3 relative" />
                 <div className="mt-3 flex justify-between text-xs font-mono text-dim relative">
                   <span className="tabular-nums">Slots: {round.slotsRemaining}/{round.survivalCap}</span>
