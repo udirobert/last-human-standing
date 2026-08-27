@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 
 /**
  * EmberField — a warm, living ripple woven into the hero's own ambient layer
@@ -30,18 +31,6 @@ const RINGS = [
   { radius: 24, count: 9, size: 6 },
   { radius: 34, count: 12, size: 5 },
 ];
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const on = (e) => setReduced(e.matches);
-    mq.addEventListener?.("change", on);
-    return () => mq.removeEventListener?.("change", on);
-  }, []);
-  return reduced;
-}
 
 export default function EmberField({ cx = 50, cy = 42, className = "" }) {
   const reduce = usePrefersReducedMotion();

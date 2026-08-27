@@ -5,10 +5,18 @@ import DozingCat from "./DozingCat.jsx";
 import FoldedNote from "./FoldedNote.jsx";
 import WiltingPlant from "./WiltingPlant.jsx";
 import EmberSeeds from "./EmberSeeds.jsx";
+import { mulberry32 } from "../../lib/rng.js";
 
 /**
  * Quiet corner flourishes — max two per day (Manus backdrop pass).
  * One familiar motif + one smaller peripheral flourish.
+ *
+ * Per-cohort identity: when a `seed` is provided, the corner each motif
+ * occupies is deterministically reshuffled for that cohort. The day's motif
+ * *selection* (coffee + sunrise on D1, etc.) is preserved — that's the art
+ * direction's day-rotation — only the corner placement varies, so each
+ * cohort's room is laid out a little differently while staying on-theme.
+ * No seed (null) ⇒ the hand-tuned default corners, unchanged.
  */
 
 const DAY_SETS = {
@@ -46,6 +54,29 @@ const CORNER_CLASS = {
   br: "right-[3%] bottom-[14%]",
 };
 
+const CORNERS = ["tl", "tr", "bl", "br"];
+
+/** Seeded Fisher–Yates shuffle of the four corners, returning a permutation. */
+function shuffleCorners(seed) {
+  const rng = mulberry32(seed);
+  const arr = [...CORNERS];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+/**
+ * Apply a seeded corner permutation to a motif set, keeping each motif's
+ * kind/size/emoji but reassigning its corner. Items keep their order so the
+ * primary motif (index 0) still reads as the larger one.
+ */
+function withSeededCorners(set, seed) {
+  const order = shuffleCorners(seed);
+  return set.map((item, i) => ({ ...item, corner: order[i % order.length] }));
+}
+
 function MotifNode({ item }) {
   if (item.kind === "coffee") return <CoffeeBrew size={item.size} />;
   if (item.kind === "cat") return <DozingCat size={item.size} />;
@@ -55,10 +86,11 @@ function MotifNode({ item }) {
   return <ThemeMotif emoji={item.emoji} size={item.size} />;
 }
 
-export default function AmbientMotifs({ density = "soft", day = null }) {
+export default function AmbientMotifs({ density = "soft", day = null, seed = null }) {
   const reduceMotion = useReducedMotion();
   const opacity = density === "rich" ? 0.3 : 0.2;
-  const set = (day != null && DAY_SETS[day]) || DEFAULT_SET;
+  const baseSet = (day != null && DAY_SETS[day]) || DEFAULT_SET;
+  const set = seed != null ? withSeededCorners(baseSet, seed) : baseSet;
 
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden="true">

@@ -1,7 +1,8 @@
 import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRound } from "../world/RoundProvider.jsx";
 import { useStats } from "../hooks/useStats.js";
+import { deriveLandscapeSeed, getLandscapeProfile } from "../lib/landscape.js";
 import TopographicTexture from "./ui/TopographicTexture.jsx";
 import PopulationField from "./ui/PopulationField.jsx";
 import CoordinateGrid from "./ui/CoordinateGrid.jsx";
@@ -47,9 +48,20 @@ function useViewportWidth() {
 const clamp = (lo, v, hi) => Math.min(hi, Math.max(lo, Math.round(v)));
 
 export default function DesktopBackdrop({ phase = "prelaunch" }) {
-  const { reservedCount, cohortSize, isEnded, winner, currentDay } = useRound();
+  const { reservedCount, cohortSize, isEnded, winner, currentDay, launchAt, cohort } = useRound();
   const { stats } = useStats();
   const vw = useViewportWidth();
+
+  // Deterministic per-cohort landscape — share the same identity as the
+  // in-app AmbientBackdrop so desktop gutters and the game column read as
+  // one world. Additive: absent cohort info keeps the existing defaults.
+  const landscape = useMemo(() => {
+    const num = cohort?.cohort ?? null;
+    if (num == null || !launchAt) return null;
+    const ms = Date.parse(launchAt);
+    if (!Number.isFinite(ms)) return null;
+    return getLandscapeProfile(deriveLandscapeSeed(num, ms));
+  }, [cohort, launchAt]);
 
   // Gutter art must read on a 1440–2560px canvas, not just a laptop: scale
   // with viewport width between floors tuned to stay tasteful.
@@ -67,7 +79,8 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
         : activePlayers ?? totalPlayers;
   const populationTotal = cohortSize || 50;
   const populationWinner = isEnded && Boolean(winner);
-  const topoSeed = TOPO_SEEDS[phase] ?? TOPO_SEEDS.prelaunch;
+  const topoSeed = landscape ? landscape.topoSeed : (TOPO_SEEDS[phase] ?? TOPO_SEEDS.prelaunch);
+  const popSeed = landscape ? landscape.popSeed : 23;
 
   const watermarkRight =
     phase === "prelaunch"
@@ -107,7 +120,7 @@ export default function DesktopBackdrop({ phase = "prelaunch" }) {
           total={populationTotal}
           phase={phase}
           winner={populationWinner}
-          seed={23}
+          seed={popSeed}
         />
 
         {/* Large hand-painted motifs in the gutters — the warm human

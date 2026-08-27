@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { mulberry32 } from "../../lib/rng.js";
+import IsometricCamp from "./IsometricCamp.jsx";
+import { usePrefersReducedMotion } from "../../hooks/usePrefersReducedMotion.js";
 
 /**
  * PopulationField — the living backdrop of Last Human Standing.
@@ -18,32 +21,14 @@ import { motion } from "framer-motion";
  *   total     — cohort size (for calculating eliminated dots)
  *   phase     — "prelaunch" | "live" | "ended"
  *   winner    — boolean, when true the last dot gets a crown glow
+ *   variant   — "dot" (default) | "camp". "camp" replaces dots with
+ *               isometric campfire tiles (IsometricCamp) that slot into the
+ *               same rAF via data-dot. Opt-in so the default visual is
+ *               unchanged; revert by omitting the prop.
  *
  * The dots are deterministic per-index (seeded positions) so they don't
  * jump around when the count changes — eliminated dots fade in place.
  */
-
-function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setReduced(mq.matches);
-    const on = (e) => setReduced(e.matches);
-    mq.addEventListener?.("change", on);
-    return () => mq.removeEventListener?.("change", on);
-  }, []);
-  return reduced;
-}
-
-// Deterministic pseudo-random for stable dot positions
-function mulberry32(seed) {
-  return function () {
-    let t = (seed += 0x6d2b79f5);
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 // Cap painted dots for paint cost — 50 rAF-driven nodes janks mid-tier phones.
 const MAX_DOTS = 28;
@@ -89,6 +74,10 @@ export default function PopulationField({
   phase = "prelaunch",
   winner = false,
   seed = 7,
+  /** "dot" (default) renders the original warm dots. "camp" renders
+   *  isometric campfire tiles (IsometricCamp) that slot into the same rAF.
+   *  Opt-in so the default visual is unchanged. */
+  variant = "dot",
 }) {
   const reduce = usePrefersReducedMotion();
   const dotsRef = useRef(null);
@@ -111,6 +100,7 @@ export default function PopulationField({
   const eliminatedColor = "#3a2a1e";
   const winnerColor = "#FFB800";
   const ghostColor = phase === "live" ? "#F4B84A" : "#E7DDC6";
+  const useCamp = variant === "camp";
 
   // Animation: use rAF for smooth drift, like EmberField
   useEffect(() => {
@@ -126,9 +116,17 @@ export default function PopulationField({
         const p = positions[i];
         if (!p) return;
         const wave = Math.sin(t * p.speed + p.phase);
-        const x = p.x + p.driftX * wave;
-        const y = p.y + p.driftY * Math.cos(t * p.speed + p.phase);
-        el.style.transform = `translate(${x}%, ${y}%)`;
+        // Base position is set container-relative on each item's wrapper via
+        // left/top (see below), so the rAF only needs to apply the small
+        // drift as a px translate. Previously this wrote
+        // `translate(${baseX + drift}%, ...)` — but CSS translate() % is
+        // relative to the element's OWN border box (~4px), not the
+        // container, so every dot collapsed to within ~2px of the origin.
+        // Drift values (driftX ±3, driftY ±2) read directly as px here — a
+        // gentle ±3px wobble around the base position.
+        const dx = p.driftX * wave;
+        const dy = p.driftY * Math.cos(t * p.speed + p.phase);
+        el.style.transform = `translate(${dx}px, ${dy}px)`;
       });
       raf = requestAnimationFrame(tick);
     };
@@ -161,55 +159,80 @@ export default function PopulationField({
         const size = isWinner ? 8 : p.size;
 
         return (
-          <div key={i} className="absolute" style={{ left: 0, top: 0 }}>
-            {/* Eliminated ghost ring — a faint persistent echo where a
-                player used to be. By game end, 49 ghost rings scatter
-                the backdrop with one bright dot remaining. */}
-            {isEliminated && (
-              <motion.span
-                initial={{ opacity: 0, scale: 0.3 }}
-                animate={{ opacity: 0.12, scale: 1 }}
-                transition={{ duration: 2, ease: "easeOut", delay: 0.3 }}
-                className="absolute rounded-full"
-                style={{
-                  width: size * 2.5,
-                  height: size * 2.5,
-                  border: `1px solid ${ghostColor}30`,
-                  left: 0,
-                  top: 0,
-                  marginLeft: -size * 0.75,
-                  marginTop: -size * 0.75,
-                }}
+          /* Base position is container-relative (left/top in %), set once and
+           * static — the rAF only adds a small px drift transform to the
+           * data-dot child. This fixes the prior scatter bug where
+           * translate(%, %) was relative to the ~4px element box, not the
+           * container, collapsing all dots to the origin. */
+          <div key={i} className="absolute" style={{ left: `${p.x}%`, top: `${p.y}%` }}>
+            {useCamp ? (
+              /* Isometric camp path — slots into the same rAF via data-dot.
+               * The camp's data-dot root sits at left:0/top:0 (i.e. at the
+               * wrapper's base position); the rAF adds the px drift; the
+               * camp SVG centers itself on that anchor. */
+              <IsometricCamp
+                alive={isAlive}
+                isWinner={isWinner}
+                isEliminated={isEliminated}
+                anchorSize={size}
+                visualSize={isWinner ? 12 : isAlive ? 9 : 8}
+                baseOpacity={baseOpacity}
+                ghostColor={ghostColor}
+                reduce={reduce}
+                delay={isAlive ? i * 0.02 : 0}
               />
-            )}
+            ) : (
+              <>
+                {/* Eliminated ghost ring — a faint persistent echo where a
+                    player used to be. By game end, 49 ghost rings scatter
+                    the backdrop with one bright dot remaining. */}
+                {isEliminated && (
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.3 }}
+                    animate={{ opacity: 0.12, scale: 1 }}
+                    transition={{ duration: 2, ease: "easeOut", delay: 0.3 }}
+                    className="absolute rounded-full"
+                    style={{
+                      width: size * 2.5,
+                      height: size * 2.5,
+                      border: `1px solid ${ghostColor}30`,
+                      left: 0,
+                      top: 0,
+                      marginLeft: -size * 0.75,
+                      marginTop: -size * 0.75,
+                    }}
+                  />
+                )}
 
-            <motion.span
-              data-dot
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{
-                opacity: baseOpacity,
-                scale: isAlive ? 1 : 0.3,
-              }}
-              transition={{
-                duration: isAlive ? 0.8 : 1.5,
-                ease: "easeOut",
-                delay: isAlive ? i * 0.02 : 0,
-              }}
-              className="absolute rounded-full"
-              style={{
-                width: size,
-                height: size,
-                background: color,
-                left: 0,
-                top: 0,
-                willChange: reduce ? undefined : "transform",
-                boxShadow: isWinner
-                  ? "0 0 12px rgba(255,184,0,0.8), 0 0 24px rgba(255,184,0,0.4)"
-                  : isAlive
-                    ? `0 0 ${size * 1.5}px ${color}40`
-                    : "none",
-              }}
-            />
+                <motion.span
+                  data-dot
+                  initial={{ opacity: 0, scale: 0 }}
+                  animate={{
+                    opacity: baseOpacity,
+                    scale: isAlive ? 1 : 0.3,
+                  }}
+                  transition={{
+                    duration: isAlive ? 0.8 : 1.5,
+                    ease: "easeOut",
+                    delay: isAlive ? i * 0.02 : 0,
+                  }}
+                  className="absolute rounded-full"
+                  style={{
+                    width: size,
+                    height: size,
+                    background: color,
+                    left: 0,
+                    top: 0,
+                    willChange: reduce ? undefined : "transform",
+                    boxShadow: isWinner
+                      ? "0 0 12px rgba(255,184,0,0.8), 0 0 24px rgba(255,184,0,0.4)"
+                      : isAlive
+                        ? `0 0 ${size * 1.5}px ${color}40`
+                        : "none",
+                  }}
+                />
+              </>
+            )}
           </div>
         );
       })}
