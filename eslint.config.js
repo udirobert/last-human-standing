@@ -39,6 +39,15 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  // Quarantine zone: prototype code, not mounted in production
+  // (src/__experimental__/README.md). Mixed exports are expected here;
+  // everything else (undefined vars, bad imports) stays linted.
+  {
+    files: ['src/__experimental__/**/*.{js,jsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
   // Decorative animation: random layout is intentional, computed once per mount
   {
     files: ['src/components/CelebrationAnimation.jsx'],
