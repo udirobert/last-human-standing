@@ -342,6 +342,14 @@ body.landing-mode .tip-toast {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
+/* Isometric camp campfire — a soft pulsing glow on the ember circle.
+ * No SMIL; the global prefers-reduced-motion rule (see below) caps this to
+ * ~0ms so reduced-motion users see a static mid-opacity glow. */
+@keyframes campfire-glow {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.7; }
+}
+
 @keyframes float {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }

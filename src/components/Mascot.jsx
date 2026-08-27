@@ -1,5 +1,5 @@
 import { motion, useMotionValue, useReducedMotion, useSpring, useTransform } from 'framer-motion';
-import { useState, useEffect, useCallback, useRef, useId } from 'react';
+import { useState, useEffect, useCallback, useRef, useId, memo } from 'react';
 import GouacheFilters from './ui/GouacheFilters.jsx';
 import { GOUACHE as P } from './ui/gouachePalette.js';
 
@@ -21,7 +21,7 @@ import { GOUACHE as P } from './ui/gouachePalette.js';
  * The component is intentionally self-contained — drop it in
  * anywhere and the eye tracking + breathing work out of the box.
  */
-export default function Mascot({
+function Mascot({
   variant = "idle",
   size = 96,
   showBadge = false,
@@ -571,5 +571,5 @@ export function MascotAvatar({ size = 32, status = "alive", badgeCount = 0 }) {
   );
 }
 
-const MemoMascot = React.memo(Mascot);
+const MemoMascot = memo(Mascot);
 export default MemoMascot;

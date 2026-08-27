@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import GouacheFilters from "./GouacheFilters.jsx";
 import { GOUACHE as P } from "./gouachePalette.js";
 
@@ -17,7 +17,7 @@ import { GOUACHE as P } from "./gouachePalette.js";
  *
  * A whisper-slow sway keeps it alive; frozen under prefers-reduced-motion.
  */
-export default function StreakBloom({ streak = 0, size = 64, className = "", title }) {
+function StreakBloom({ streak = 0, size = 64, className = "", title }) {
   const uid = useId().replace(/:/g, "");
   const stage = streak >= 30 ? 4 : streak >= 7 ? 3 : streak >= 3 ? 2 : streak >= 1 ? 1 : 0;
   const topY = [92, 74, 52, 44, 36][stage];
@@ -113,4 +113,4 @@ function Leaf({ x, y, rot, p }) {
   );
 }
 
-export default React.memo(StreakBloom);
+export default memo(StreakBloom);

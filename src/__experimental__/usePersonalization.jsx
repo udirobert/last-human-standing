@@ -1,7 +1,7 @@
 // __experimental__: prototype code, not mounted in production. See __experimental__/README.md
 import { useState, useEffect, useCallback } from 'react';
 import OverlayPortal from '../components/OverlayPortal.jsx';
-import { useFocusTrap } from './useFocusTrap.js';
+import { useFocusTrap } from '../hooks/useFocusTrap.js';
 
 /** Opinionated default guide — renameable, never a blank "Name me". */
 export const DEFAULT_MASCOT_NAME = "Ember";

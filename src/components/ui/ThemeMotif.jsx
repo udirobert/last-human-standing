@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { memo, useId } from "react";
 import GouacheFilters from "./GouacheFilters.jsx";
 import { GOUACHE as P } from "./gouachePalette.js";
 import CoffeeBrew from "./CoffeeBrew.jsx";
@@ -220,7 +220,7 @@ const MOTIFS = {
   ),
 };
 
-export default function ThemeMotif({ emoji, size = 64, className = "", label }) {
+function ThemeMotif({ emoji, size = 64, className = "", label }) {
   const uid = useId().replace(/:/g, "");
 
   // Coffee is the calibration hero — delegate to its richer component.
@@ -247,5 +247,5 @@ export default function ThemeMotif({ emoji, size = 64, className = "", label }) 
   );
 }
 
-const MemoThemeMotif = React.memo(ThemeMotif);
+const MemoThemeMotif = memo(ThemeMotif);
 export default MemoThemeMotif;
