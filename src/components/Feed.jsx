@@ -22,6 +22,7 @@ import { postSealCopy } from '../lib/copy.js';
 import { getDetectiveTitle } from '../lib/detective.js';
 import { consumeFeedIntent } from '../lib/feedIntent.js';
 import { usePolling } from '../hooks/usePolling.js';
+import { useCountdown } from '../hooks/useCountdown.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
@@ -49,32 +50,10 @@ const STATUS_MASCOT = {
 };
 
 function VerdictHour({ round }) {
-  const [timeLeft, setTimeLeft] = useState('');
-  const [isVerdictHour, setIsVerdictHour] = useState(false);
+  const closesIso = round?.closesAt || round?.closes_at;
+  const { totalHours, hours, minutes } = useCountdown(closesIso, 60_000);
 
-  useEffect(() => {
-    const closesIso = round?.closesAt || round?.closes_at;
-    if (!closesIso) return;
-
-    const checkTime = () => {
-      const closesAt = new Date(closesIso);
-      const now = new Date();
-      const hoursLeft = (closesAt - now) / (1000 * 60 * 60);
-
-      setIsVerdictHour(hoursLeft <= 2 && hoursLeft > 0);
-
-      if (hoursLeft > 0) {
-        const hours = Math.floor(hoursLeft);
-        const minutes = Math.floor((hoursLeft - hours) * 60);
-        setTimeLeft(`${hours}h ${minutes}m`);
-      }
-    };
-
-    checkTime();
-    const interval = setInterval(checkTime, 60000); // check every minute
-    return () => clearInterval(interval);
-  }, [round?.closesAt, round?.closes_at]);
-
+  const isVerdictHour = totalHours <= 2 && totalHours > 0;
   if (!isVerdictHour) return null;
 
   return (
@@ -85,7 +64,7 @@ function VerdictHour({ round }) {
           <p className="font-mono text-xs text-bone/80">Final votes needed</p>
         </div>
         <div className="text-right">
-          <p className="font-display text-2xl text-amber tabular-nums">{timeLeft}</p>
+          <p className="font-display text-2xl text-amber tabular-nums">{hours}h {minutes}m</p>
           <p className="font-mono text-xs text-bone/60">until close</p>
         </div>
       </div>

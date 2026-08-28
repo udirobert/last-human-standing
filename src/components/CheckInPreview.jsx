@@ -1,44 +1,23 @@
 import { motion } from "framer-motion";
-import { TODAY_THEME, findTheme, DAILY_THEMES, COHORT_SCHEDULE } from "../data/game";
+import { TODAY_THEME, findTheme, COHORT_SCHEDULE } from "../data/game";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
+import InfoStrip from "./ui/InfoStrip.jsx";
 import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
 import { survivalRule } from "../lib/copy.js";
 
 /**
- * CheckInPreview — prelaunch educational briefing for the Check-in screen.
+ * CheckInPreview — prelaunch briefing for the Check-in screen, compact.
  *
- * Before the game starts, CheckIn shows a clock emoji and "No round set
- * for today yet." That's a dead end for a user exploring the interface.
- *
- * This replaces it with:
- *   1. What check-in is and why it matters (survival cap, first-come)
- *   2. A mock theme card showing what today's mission will look like
- *   3. The proof requirements (photo + GPS, what counts / doesn't)
- *   4. The check-in flow steps (snap → submit → await verdict)
- *   5. The stakes: miss the cap and you're out
+ * One mock riddle card shows what a day looks like; a tight 4-step strip
+ * covers the flow; the shrinking-cap bar chart carries the stakes. No big
+ * hero explainer — the header is two lines.
  */
 
 const STEPS = [
-  {
-    icon: "📸",
-    title: "Snap your proof",
-    body: "Answer the riddle in the real world. Take a photo with you and your answer clearly in frame. No old photos, no stock images.",
-  },
-  {
-    icon: "📍",
-    title: "Share your GPS",
-    body: "Your location is attached as proof you're really there. It's only used for verification — never shown to other players unless you opt in.",
-  },
-  {
-    icon: "⏱️",
-    title: "Use the window",
-    body: `${survivalRule(25)} After that, the cap shrinks every day.`,
-  },
-  {
-    icon: "⚖️",
-    title: "Face the audit",
-    body: "Your photo goes to the Vote tab. The crowd votes HUMAN or SUS. If the majority says SUS, you're eliminated — even if you were honest.",
-  },
+  { icon: "📸", title: "Snap your proof", body: "You + your answer in frame. No old photos, no stock." },
+  { icon: "📍", title: "Share your GPS", body: "Attached for verification, never shown unless you opt in." },
+  { icon: "⏱️", title: "Use the window", body: survivalRule(25) },
+  { icon: "⚖️", title: "Face the audit", body: "The crowd votes HUMAN or SUS. Majority SUS = out." },
 ];
 
 export default function CheckInPreview() {
@@ -46,27 +25,21 @@ export default function CheckInPreview() {
 
   return (
     <div className="space-y-5">
-      {/* Hero explainer */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.smooth }}
-        className="bg-smoke/60 border border-ember/40 rounded-2xl p-5 text-center"
+        className="text-center"
       >
-        <p className="font-mono text-[10px] text-neon uppercase tracking-widest mb-2">
+        <p className="font-mono text-[10px] text-neon uppercase tracking-widest mb-1">
           Daily check-in
         </p>
-        <p className="font-display text-lg text-bone leading-snug mb-1">
+        <p className="font-display text-xl text-bone leading-snug">
           Prove you're human. Stay alive.
-        </p>
-        <p className="text-dim text-xs leading-relaxed max-w-sm mx-auto">
-          Each day has a riddle. Interpret it, snap a
-          photo with GPS, and submit within the 18-hour window. The
-          crowd audits your proof. Survive or get eliminated.
         </p>
       </motion.div>
 
-      {/* Mock theme card */}
+      {/* Mock riddle card */}
       <div>
         <p className="font-mono text-[10px] text-dim uppercase tracking-widest mb-2 px-1">
           Today's riddle (preview)
@@ -75,27 +48,23 @@ export default function CheckInPreview() {
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.smooth, delay: 0.1 }}
-          className="bg-smoke border border-neon/20 rounded-3xl p-6 relative overflow-hidden"
+          className="bg-smoke border border-neon/20 rounded-3xl p-5 relative overflow-hidden"
         >
           <div className="absolute -right-3 -top-3 opacity-25 pointer-events-none" aria-hidden>
-            <ThemeMotif emoji={themeData.emoji} size={88} label={TODAY_THEME.theme} />
+            <ThemeMotif emoji={themeData.emoji} size={80} label={TODAY_THEME.theme} />
           </div>
-          <p className="font-mono text-neon text-xs tracking-widest uppercase mb-1 relative">
-            Today's mission
-          </p>
           <div className="flex items-center gap-3 mb-2 relative">
-            <ThemeMotif emoji={themeData.emoji} size={64} label={TODAY_THEME.theme} className="-my-2 shrink-0" />
+            <ThemeMotif emoji={themeData.emoji} size={52} label={TODAY_THEME.theme} className="-my-1 shrink-0" />
             <p className="font-display text-2xl text-bone">{TODAY_THEME.theme}</p>
           </div>
-          <p className="text-dim text-sm font-body relative mb-4">{themeData.description}</p>
+          <p className="text-dim text-sm font-body relative mb-3">{themeData.description}</p>
 
-          {/* What counts */}
-          <div className="space-y-2 relative">
+          <div className="grid grid-cols-2 gap-3 relative">
             <div>
               <p className="font-mono text-[10px] text-neon uppercase tracking-wider mb-1">Counts</p>
               <ul className="space-y-1">
                 {themeData.counts.map((c) => (
-                  <li key={c} className="text-bone/70 text-xs font-body flex items-start gap-2">
+                  <li key={c} className="text-bone/70 text-[11px] font-body flex items-start gap-1.5">
                     <span className="text-neon mt-0.5">✓</span>
                     <span>{c}</span>
                   </li>
@@ -103,10 +72,10 @@ export default function CheckInPreview() {
               </ul>
             </div>
             <div>
-              <p className="font-mono text-[10px] text-blood uppercase tracking-wider mb-1">Doesn't count</p>
+              <p className="font-mono text-[10px] text-blood uppercase tracking-wider mb-1">Doesn't</p>
               <ul className="space-y-1">
                 {themeData.doesnt.map((c) => (
-                  <li key={c} className="text-bone/50 text-xs font-body flex items-start gap-2">
+                  <li key={c} className="text-bone/50 text-[11px] font-body flex items-start gap-1.5">
                     <span className="text-blood mt-0.5">✗</span>
                     <span>{c}</span>
                   </li>
@@ -116,39 +85,14 @@ export default function CheckInPreview() {
           </div>
         </motion.div>
         <p className="text-dim text-[10px] font-mono mt-2 px-1 text-center">
-          Preview — the real riddle is assigned when the game goes live.
+          Preview — the real riddle is assigned at launch.
         </p>
       </div>
 
-      {/* Four-step flow */}
-      <div className="space-y-3">
-        <p className="font-mono text-[10px] text-dim uppercase tracking-widest mb-1 px-1">
-          How check-in works
-        </p>
-        {STEPS.map((step, i) => (
-          <motion.div
-            key={step.title}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{
-              duration: MOTION_DURATION.base,
-              ease: MOTION_EASE.smooth,
-              delay: i * 0.08,
-            }}
-            className="flex gap-3 items-start"
-          >
-            <div className="w-10 h-10 rounded-xl bg-smoke border border-ember/40 flex items-center justify-center text-lg shrink-0">
-              {step.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-display text-sm text-bone mb-0.5">{step.title}</p>
-              <p className="text-dim text-xs leading-relaxed">{step.body}</p>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+      {/* Four-step flow — tight strip */}
+      <InfoStrip items={STEPS} />
 
-      {/* Survival cap visual */}
+      {/* Shrinking cap — the stakes, as a chart */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -156,41 +100,38 @@ export default function CheckInPreview() {
         className="bg-smoke/60 border border-ember/40 rounded-2xl p-4"
       >
         <p className="font-mono text-[10px] text-amber uppercase tracking-widest mb-3 text-center">
-          The survival cap shrinks every day
+          The cap shrinks every day
         </p>
-        <div className="flex items-center justify-between gap-1">
-          {COHORT_SCHEDULE.map((d) => (
-            <div key={d.day} className="flex flex-col items-center gap-1">
-              <span className="font-mono text-[9px] text-dim">Day {d.day}</span>
+        <div className="flex items-end justify-between gap-1">
+          {COHORT_SCHEDULE.map((d, i) => (
+            <motion.div
+              key={d.day}
+              initial={{ opacity: 0, scaleY: 0 }}
+              animate={{ opacity: 1, scaleY: 1 }}
+              transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.smooth, delay: 0.35 + i * 0.07 }}
+              style={{ originY: 1 }}
+              className="flex flex-col items-center gap-1"
+            >
               <div
                 className="w-8 rounded-full bg-amber/20 border border-amber/40 flex items-end justify-center"
-                style={{ height: `${Math.max(8, d.cap * 0.8)}px` }}
+                style={{ height: `${Math.max(10, d.cap * 0.8)}px` }}
               >
                 <span className="font-display text-[10px] text-amber tabular-nums pb-1">{d.cap}</span>
               </div>
-            </div>
+              <span className="font-mono text-[9px] text-dim">D{d.day}</span>
+            </motion.div>
           ))}
         </div>
         <p className="text-dim text-[10px] font-mono mt-3 text-center leading-relaxed">
-          Day 1: everyone in the window is eligible; if more than 25, the seed lottery decides. Day 5: one human remains. The last verified human takes the prize.
+          Day 1 everyone in the window is eligible — overflow goes to the seed
+          lottery. Day 5 one human remains.
         </p>
       </motion.div>
 
-      {/* Stakes */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: MOTION_DURATION.slow, ease: MOTION_EASE.smooth, delay: 0.4 }}
-        className="bg-blood/5 border border-blood/30 rounded-2xl p-4 text-center"
-      >
-        <p className="font-display text-sm text-bone leading-snug mb-1">
-          Miss the window, and you're out.
-        </p>
-        <p className="text-dim text-xs leading-relaxed">
-          Check in within the window. Check in honest. The audit decides who stays —
-          but you have to be eligible to even have a chance.
-        </p>
-      </motion.div>
+      <p className="text-dim text-xs font-body text-center leading-relaxed">
+        Miss the window and you're out. Check in within it, check in honest —
+        the audit decides who stays, but you have to be eligible first.
+      </p>
     </div>
   );
 }

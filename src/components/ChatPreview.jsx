@@ -1,35 +1,27 @@
 import { motion } from "framer-motion";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import EmptyState from "./EmptyState.jsx";
+import InfoStrip from "./ui/InfoStrip.jsx";
 import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
 import { postSealCopy } from "../lib/copy.js";
 
 /**
- * ChatPreview — educational briefing for an empty Chat tab.
- * Prelaunch: full lobby explainer. Live: cat EmptyState + modes + optional
- * post-seal prompt when the player already checked in.
+ * ChatPreview — briefing for an empty Chat tab, compact.
+ * Prelaunch: 2-line header + mock conversation + tight mode strip + rules.
+ * Live: cat EmptyState + modes + optional post-seal prompt.
  */
 
 const EXAMPLE_MESSAGES = [
-  { user: "@marina_sol", msg: "let's gooo, who's still standing?", color: "#FF6B6B" },
-  { user: "@kai_nomad", msg: "flagging everyone at a hotel pool. that ain't a beach", color: "#FFB800" },
-  { user: "@ghost_protocol", msg: "my submission better not get flagged i literally walked 2km for this shot", color: "#00FF94" },
-  { user: "@luna_waves", msg: "the prize pool is growing. i'm not sleeping", color: "#00C8FF" },
-  { user: "@spectre_x", msg: "anyone else think today's riddle was too easy?", color: "#AA55FF" },
-  { user: "@marina_sol", msg: "bro you have 31 sus votes lmaooo", color: "#FF6B6B" },
+  { user: "@marina_sol", msg: "let's gooo, who's still standing?" },
+  { user: "@kai_nomad", msg: "flagging that submission. stock photo, not a real answer" },
+  { user: "@ghost_protocol", msg: "i literally walked 2km for this shot. better not get sus'd" },
+  { user: "@luna_waves", msg: "the prize pool is growing. i'm not sleeping" },
+  { user: "@spectre_x", msg: "anyone else think today's riddle was too easy?" },
 ];
 
 const MODES = [
-  {
-    icon: "📡",
-    title: "Lobby",
-    body: "Broadcast to every survivor. Strategy calls, sus accusations, last-minute panic. Everyone sees it.",
-  },
-  {
-    icon: "💬",
-    title: "DM",
-    body: "Private 1:1 via World Chat. Cut a side deal, challenge a proof, coordinate a vote — off the record.",
-  },
+  { icon: "📡", title: "Lobby", body: "Broadcast to every survivor. Strategy calls, sus accusations, panic. Everyone sees it." },
+  { icon: "💬", title: "DM", body: "Private 1:1 via World Chat. Side deals, proof challenges, vote coordination — off the record." },
 ];
 
 function stringToColor(str) {
@@ -63,18 +55,13 @@ export default function ChatPreview({ isLive = false, checkedIn = false }) {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.smooth }}
-          className="bg-smoke/60 border border-ember/40 rounded-2xl p-5 text-center"
+          className="text-center"
         >
-          <p className="font-mono text-[10px] text-amber uppercase tracking-widest mb-2">
+          <p className="font-mono text-[10px] text-amber uppercase tracking-widest mb-1">
             Survivors lobby
           </p>
-          <p className="font-display text-lg text-bone leading-snug mb-1">
+          <p className="font-display text-xl text-bone leading-snug">
             Where the living talk strategy.
-          </p>
-          <p className="text-dim text-xs leading-relaxed max-w-sm mx-auto">
-            The lobby comes alive when the game starts. Survivors share tips,
-            call out sus proofs, and negotiate votes. Spectators can watch;
-            only verified players can send.
           </p>
         </motion.div>
       )}
@@ -90,91 +77,74 @@ export default function ChatPreview({ isLive = false, checkedIn = false }) {
         </div>
       )}
 
-      {/* Example conversation — prelaunch only (live has EmptyState above) */}
+      {/* Mock conversation — prelaunch only */}
       {!isLive && (
         <div>
           <p className="font-mono text-[10px] text-dim uppercase tracking-widest mb-2 px-1">
             What it looks like mid-game
           </p>
-          <div className="space-y-2.5">
+          <div className="space-y-2">
             {EXAMPLE_MESSAGES.map((msg, i) => (
               <motion.div
                 key={i}
-                initial={false}
+                initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{
-                  duration: MOTION_DURATION.fast,
-                  ease: MOTION_EASE.smooth,
-                  delay: i * 0.06,
-                }}
-                className="flex gap-3"
+                transition={{ duration: MOTION_DURATION.fast, ease: MOTION_EASE.smooth, delay: i * 0.06 }}
+                className="flex gap-2.5"
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-mono bg-ember text-dim">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-mono bg-ember text-dim">
                   {msg.user.slice(1, 3).toUpperCase()}
                 </div>
                 <div className="flex flex-col gap-0.5 max-w-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs" style={{ color: stringToColor(msg.user) }}>
-                      {msg.user}
-                    </span>
-                  </div>
-                  <div className="rounded-2xl px-4 py-2.5 bg-smoke border border-ember text-bone rounded-tl-sm">
-                    <p className="text-sm leading-relaxed font-body">{msg.msg}</p>
+                  <span className="font-mono text-[11px]" style={{ color: stringToColor(msg.user) }}>
+                    {msg.user}
+                  </span>
+                  <div className="rounded-2xl px-3.5 py-2 bg-smoke border border-ember text-bone rounded-tl-sm">
+                    <p className="text-[13px] leading-relaxed font-body">{msg.msg}</p>
                   </div>
                 </div>
               </motion.div>
             ))}
+            {/* Typing indicator — the room feels like it's filling */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.smooth, delay: EXAMPLE_MESSAGES.length * 0.06 + 0.2 }}
+              className="flex gap-2.5 items-center"
+            >
+              <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-[10px] font-mono bg-ember text-dim">
+                ??
+              </div>
+              <div className="rounded-2xl px-3.5 py-2.5 bg-smoke border border-ember rounded-tl-sm flex items-center gap-1">
+                {[0, 1, 2].map((d) => (
+                  <motion.span
+                    key={d}
+                    className="w-1.5 h-1.5 rounded-full bg-dim"
+                    animate={{ opacity: [0.25, 1, 0.25] }}
+                    transition={{ duration: 1.1, repeat: Infinity, delay: d * 0.18, ease: "easeInOut" }}
+                  />
+                ))}
+              </div>
+            </motion.div>
           </div>
-          <p className="text-dim text-[10px] font-mono mt-3 px-1 text-center">
-            Preview — real messages appear when the game goes live.
+          <p className="text-dim text-[10px] font-mono mt-2.5 px-1 text-center">
+            Preview — real messages appear at launch.
           </p>
         </div>
       )}
 
-      {/* Mode explainer */}
-      <div className="space-y-3">
+      {/* Two ways to talk — tight strip */}
+      <div>
         <p className="font-mono text-[10px] text-dim uppercase tracking-widest mb-1 px-1">
           Two ways to talk
         </p>
-        {MODES.map((mode, i) => (
-          <motion.div
-            key={mode.title}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{
-              duration: MOTION_DURATION.base,
-              ease: MOTION_EASE.smooth,
-              delay: i * 0.08,
-            }}
-            className="flex gap-3 items-start"
-          >
-            <div className="w-10 h-10 rounded-xl bg-smoke border border-ember/40 flex items-center justify-center text-lg shrink-0">
-              {mode.icon}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-display text-sm text-bone mb-0.5">{mode.title}</p>
-              <p className="text-dim text-xs leading-relaxed">{mode.body}</p>
-            </div>
-          </motion.div>
-        ))}
+        <InfoStrip items={MODES} />
       </div>
 
-      {/* Rules */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: MOTION_DURATION.slow, ease: MOTION_EASE.smooth, delay: 0.3 }}
-        className="bg-amber/5 border border-amber/30 rounded-2xl p-4 text-center"
-      >
-        <p className="font-mono text-[10px] text-amber uppercase tracking-widest mb-1">
-          Lobby rules
-        </p>
-        <p className="text-dim text-xs leading-relaxed">
-          Messages are visible to all survivors. Don&apos;t share photos
-          off-platform or harass players. The lobby is for strategy and
-          banter — keep it human.
-        </p>
-      </motion.div>
+      <p className="text-dim text-xs font-body text-center leading-relaxed">
+        Messages are visible to all survivors. Don&apos;t share photos
+        off-platform or harass players. Keep it human.
+      </p>
 
       <MotifFrieze className="w-full opacity-85" />
     </div>
