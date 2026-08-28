@@ -3197,10 +3197,18 @@ async function getLastDayClose() {
   }
 
   // Count survivors, eliminated, DQ'd for this day
-  const [survivorsRes, eliminatedRes, dqRes] = await Promise.all([
+  const [survivorsRes, eliminatedRes, dqRes, drawRes] = await Promise.all([
     supabaseAdmin.from("checkins").select("address", { count: "exact", head: true }).eq("day", round.day).eq("survived", true),
     supabaseAdmin.from("users").select("address", { count: "exact", head: true }).eq("eliminated_at_day", round.day),
     supabaseAdmin.from("checkins").select("address", { count: "exact", head: true }).eq("day", round.day).eq("dq", true),
+    // Survival lottery audit trail (migration 040). Present only when the
+    // field overflowed the cap and the seed lottery decided survival — the
+    // client stages a "the draw" ceremony from this (Riddle Rounds §5.1).
+    supabaseAdmin
+      .from("survival_draws")
+      .select("seed,algorithm_version,eligible,cap,survivors,eliminated")
+      .eq("day", round.day)
+      .maybeSingle(),
   ]);
 
   // Count remaining active players
@@ -3211,6 +3219,17 @@ async function getLastDayClose() {
     .eq("eliminated", false)
     .eq("cohort", COHORT_CONFIG.cohort);
 
+  const draw = drawRes.data
+    ? {
+        seed: drawRes.data.seed,
+        algorithm: drawRes.data.algorithm_version,
+        eligible: drawRes.data.eligible,
+        cap: drawRes.data.cap,
+        survivors: Array.isArray(drawRes.data.survivors) ? drawRes.data.survivors.length : null,
+        eliminated: Array.isArray(drawRes.data.eliminated) ? drawRes.data.eliminated.length : null,
+      }
+    : null;
+
   const value = {
     day: round.day,
     survivors: survivorsRes.count ?? 0,
@@ -3218,6 +3237,7 @@ async function getLastDayClose() {
     dq: dqRes.count ?? 0,
     remaining: remaining ?? 0,
     closedAt: round.closing_notified_at ?? null,
+    draw,
   };
   lastDayCloseCache = { value, fetchedAt: Date.now() };
   return value;

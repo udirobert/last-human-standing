@@ -289,6 +289,28 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
           field overflows, a seed lottery decides. A SUS verdict disqualifies you. One human takes the prize.
         </p>
 
+        {/* The hook — a real riddle, not a rule list. Interpretation is the
+            skill; this is the Day 1 prompt (already public in the invite kit). */}
+        <div
+          className="mx-auto rounded-2xl border border-amber/30 bg-smoke/40 backdrop-blur-sm px-5 py-4 text-left"
+          style={{ maxWidth: "min(26rem, calc(100vw - 44px))", marginTop: "clamp(18px,2.5vw,26px)" }}
+        >
+          <p className="font-mono text-amber/80 uppercase" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
+            Day 1 · the riddle
+          </p>
+          <p
+            className="font-display text-bone leading-snug"
+            style={{ fontSize: "clamp(19px,2.6vw,24px)", marginTop: 6 }}
+          >
+            “Find the place where strangers become regulars. Bring proof.”
+          </p>
+          <p className="font-body text-dim" style={{ fontSize: 12, marginTop: 8 }}>
+            Your answer is a photo + one line on why it fits. The judging
+            criteria are locked before anyone submits — then revealed before
+            the vote.
+          </p>
+        </div>
+
         <MotifFrieze className="w-full" style={{ marginTop: "clamp(22px,3vw,34px)" }} />
         <p className="font-mono text-dim uppercase mt-2.5" style={{ fontSize: "11px", letterSpacing: "0.14em" }}>
           the little proofs you're human

@@ -76,6 +76,8 @@ export default function DayRecap() {
   const dq = recapData?.dq ?? "—";
   const remaining = recapData?.remaining ?? "—";
   const day = recapData?.day ?? "—";
+  // Seed lottery ran this day (field overflowed the cap) — stage the draw.
+  const draw = recapData?.draw ?? null;
 
   // Personal result
   const youSurvived = you?.survivedToday === true;
@@ -159,6 +161,30 @@ export default function DayRecap() {
               <RecapStat label="DQ'd" value={dq} tone="amber" />
             </div>
 
+            {/* The draw — staged when the seed lottery decided survival
+                (field overflowed the cap). Fairness as spectacle, not a
+                footnote (Riddle Rounds §5.1). */}
+            {draw && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="mt-4 max-w-sm mx-auto rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3 text-left"
+              >
+                <p className="font-mono text-amber text-[10px] uppercase tracking-widest mb-1">
+                  The draw decided today
+                </p>
+                <p className="text-bone/80 font-body text-xs leading-relaxed">
+                  {draw.eligible} were eligible for {draw.cap} slots — the seed
+                  lottery chose who stays. Not speed. The draw is public and
+                  replayable from the cohort seed.
+                </p>
+                <p className="font-mono text-dim/60 text-[9px] mt-1.5 break-all">
+                  seed {draw.seed} · {draw.algorithm}
+                </p>
+              </motion.div>
+            )}
+
             <motion.p
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -170,7 +196,7 @@ export default function DayRecap() {
 
             {tomorrow && personalResult !== "eliminated" && (
               <p className="font-mono text-dim text-[10px] mt-4 tracking-wide">
-                Theme waiting downstairs · {tomorrow.emoji} {tomorrow.theme}
+                Riddle waiting downstairs · {tomorrow.emoji} {tomorrow.theme}
               </p>
             )}
 

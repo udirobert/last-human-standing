@@ -7,6 +7,7 @@ import {
   D1ClosingBeat,
   D1RankBeat,
   D1AuditBeat,
+  D1DrawBeat,
   D1CutBeat,
   D2RevealBeat,
   D2PathBeat,
@@ -31,6 +32,7 @@ const BEAT_VIEW = {
   d1_closing: D1ClosingBeat,
   d1_rank: D1RankBeat,
   d1_audit: D1AuditBeat,
+  d1_draw: D1DrawBeat,
   d1_cut: D1CutBeat,
   d2_reveal: D2RevealBeat,
   d2_path: D2PathBeat,
@@ -142,6 +144,8 @@ function SpeedRunShell({ onReserve, onExit }) {
       beatFeel("seal");
     } else if (beat === "d1_audit" || beat === "d4_jury") {
       beatFeel(beat === "d4_jury" ? "wildcard" : "pressure");
+    } else if (beat === "d1_draw") {
+      beatFeel("tally");
     } else if (beat === "d2_outcome") {
       beatFeel("survive");
     } else if (beat === "d1_cut" || beat === "d2_cut" || beat === "d3_cut") {

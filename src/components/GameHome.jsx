@@ -27,6 +27,7 @@ import WaitlistCard from './WaitlistCard.jsx';
 import ArsenalCard from './ArsenalCard.jsx';
 import DayRecap from './DayRecap.jsx';
 import RuleReveal from './RuleReveal.jsx';
+import SpecReveal from './ui/SpecReveal.jsx';
 import Mascot from './Mascot.jsx';
 import DayZeroBanner from './DayZeroBanner.jsx';
 import ThemeReveal from './ThemeReveal.jsx';
@@ -90,6 +91,7 @@ export default function GameHome({ onCheckIn, onViewFeed, onViewHistory, onRoute
     <AppShell phase={phase}>
       <DayRecap />
       {isLive && <RuleReveal onAudit={onViewFeed} />}
+      {isLive && <SpecReveal onAudit={onViewFeed} />}
       {isLive && <DayBriefing />}
 
       <NetworkPill onRetry={onRefresh || refreshRound} error={usesDemoState} />

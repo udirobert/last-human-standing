@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import ThemeMotif from "../components/ui/ThemeMotif.jsx";
 import MotifFrieze from "../components/ui/MotifFrieze.jsx";
@@ -156,6 +156,93 @@ export function CutCeremony({ from, to, title, body, chip, onContinue, cta = "Co
       </div>
       <QuietFrieze className="w-full mb-6 opacity-85" />
       <HumanCta onClick={onContinue}>{cta}</HumanCta>
+    </Ceremony>
+  );
+}
+
+/**
+ * DrawCeremony — the seed lottery, staged (Riddle Rounds §5.1).
+ *
+ * The fairness centerpiece: everyone who checked in is eligible, and when the
+ * field overflows the cap a deterministic cohort-seed lottery decides who
+ * survives — not speed. Entrants flip one by one to SURVIVED / NOT DRAWN so
+ * the player FEELS the draw instead of reading a clause about it. The public
+ * seed + algorithm are shown so the mechanic reads as auditable, not random.
+ */
+export function DrawCeremony({ draw, onContinue, cta = "Continue →" }) {
+  const [revealed, setRevealed] = useState(0);
+  const entrants = draw?.entrants ?? [];
+  const done = revealed >= entrants.length;
+
+  // Flip entrants one at a time.
+  useEffect(() => {
+    if (done) return undefined;
+    const t = setTimeout(() => setRevealed((n) => n + 1), 340);
+    return () => clearTimeout(t);
+  }, [revealed, done]);
+
+  if (!draw) return null;
+
+  return (
+    <Ceremony>
+      <p className="font-mono text-amber/90 uppercase mb-3" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
+        Day {draw.day} · the draw
+      </p>
+      <h2 className="font-display text-bone leading-[0.9] mb-1" style={{ fontSize: "clamp(30px,8vw,42px)" }}>
+        The seed lottery
+      </h2>
+      <p className="font-body text-bone/60 text-sm mb-4 max-w-xs leading-relaxed">
+        {draw.eligible} checked in. Only {draw.cap} survive. No one raced — the
+        draw decides, and anyone can replay it from the public seed.
+      </p>
+
+      <div className="w-full max-w-sm rounded-3xl border border-ember/30 bg-smoke/50 backdrop-blur-sm p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="font-mono text-dim text-[10px] uppercase tracking-widest">Eligible</p>
+          <p className="font-mono text-bone text-[11px] tabular-nums">{draw.eligible} → {draw.cap}</p>
+        </div>
+        <ul className="space-y-1.5">
+          {entrants.map((e, i) => {
+            const isRevealed = i < revealed;
+            return (
+              <motion.li
+                key={e.user}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.25 }}
+                className={`flex items-center justify-between rounded-xl px-3 py-2 border ${
+                  !isRevealed
+                    ? "border-ember/20 bg-ash/30"
+                    : e.survived
+                      ? "border-neon/40 bg-neon/10"
+                      : "border-blood/40 bg-blood/10"
+                }`}
+              >
+                <span className={`font-mono text-xs ${e.isYou ? "text-amber" : "text-bone/85"}`}>
+                  {e.user}{e.isYou ? " · you" : ""}
+                </span>
+                <span
+                  className={`font-mono text-[9px] uppercase tracking-widest ${
+                    !isRevealed ? "text-dim/40" : e.survived ? "text-neon" : "text-blood"
+                  }`}
+                >
+                  {!isRevealed ? "…" : e.survived ? "survived" : "not drawn"}
+                </span>
+              </motion.li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <div className="w-full max-w-sm rounded-xl border border-ember/25 bg-ash/40 px-3 py-2 mb-5 text-left">
+        <p className="font-mono text-dim/70 text-[9px] leading-relaxed break-all">
+          seed <span className="text-bone/60">{draw.seed}</span> · {draw.algorithm}
+        </p>
+      </div>
+
+      <HumanCta onClick={onContinue} disabled={!done}>
+        {done ? "See the cut →" : "Drawing…"}
+      </HumanCta>
     </Ceremony>
   );
 }

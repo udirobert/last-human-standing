@@ -5,6 +5,7 @@ import {
   FINALE_COPY,
   JURY_COPY,
   DEMO_SHARE_URL_PATH,
+  DEMO_DRAW,
   WILDCARD_CANDIDATES,
   dayMeta,
 } from "./script.js";
@@ -24,6 +25,7 @@ import {
   Ceremony,
   DayReveal,
   CutCeremony,
+  DrawCeremony,
   ThemeMissionCard,
   OutcomeCeremony,
 } from "./beatUi.jsx";
@@ -552,6 +554,28 @@ export function D1AuditBeat() {
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+export function D1DrawBeat() {
+  const { nextBeat } = useSpeedRun();
+  const { beatFeel } = useSpeedRunFeel();
+
+  // Fire the draw feel once on mount, then the survive feel when it lands.
+  useEffect(() => {
+    beatFeel("tally");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <DrawCeremony
+      draw={DEMO_DRAW}
+      cta="See your result →"
+      onContinue={() => {
+        beatFeel("survive");
+        nextBeat();
+      }}
+    />
   );
 }
 

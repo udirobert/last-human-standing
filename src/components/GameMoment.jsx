@@ -317,6 +317,17 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
 
   // Fetch the vote breakdown for this day's submission — "why was I eliminated"
   const [verdict, setVerdict] = useState(null);
+  // Jury bounty pool — the paid-jury turn is real money, not just a role.
+  // Cohort param 0 → server falls back to its configured cohort.
+  const [juryPool, setJuryPool] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/jury-bounty/0", { credentials: "include" })
+      .then((r) => r.json())
+      .then((data) => { if (!cancelled) setJuryPool(data?.pool ?? null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   useEffect(() => {
     if (!currentDay) return;
     let cancelled = false;
@@ -498,7 +509,8 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         </motion.div>
       )}
 
-      {/* Jury card — appears immediately, part of the moment */}
+      {/* Jury card — appears immediately, part of the moment.
+          Elimination is a role change, not an exit: you become the paid jury. */}
       <motion.div
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -514,6 +526,11 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
             votes count <span className="text-amber">×2</span> — accuracy
             is your influence now.
           </p>
+          {juryPool && !juryPool.settled_at && (
+            <p className="text-amber/90 font-mono text-[11px] mb-2">
+              {juryPool.amount} {juryPool.token} jury pool · split among accurate voters at cohort end
+            </p>
+          )}
           <HumanCta onClick={onDismiss} className="!py-3">
             Open the audit feed →
           </HumanCta>

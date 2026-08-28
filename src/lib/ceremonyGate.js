@@ -47,3 +47,26 @@ export function markBriefingSeen(day) {
     /* ignore */
   }
 }
+
+/** Spec-reveal ("the turn") ceremony — one per day, at reveal_at. */
+export function specRevealStorageKey(day) {
+  return `lhs_spec_reveal_seen_${day}`;
+}
+
+export function readSpecRevealSeen(day) {
+  if (day == null) return false;
+  try {
+    return localStorage.getItem(specRevealStorageKey(day)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function markSpecRevealSeen(day) {
+  if (day == null) return;
+  try {
+    localStorage.setItem(specRevealStorageKey(day), "1");
+  } catch {
+    /* ignore */
+  }
+}

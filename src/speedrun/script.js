@@ -20,6 +20,7 @@ export const SPEEDRUN_BEATS = [
   "d1_checkin",
   "d1_closing",
   "d1_audit",
+  "d1_draw",
   "d1_rank",
   "d1_cut",
   "d2_reveal",
@@ -39,7 +40,7 @@ export const SPEEDRUN_BEATS = [
 /** Map beat → demo day (for chrome / progress). */
 export const BEAT_DAY = {
   intro: 0,
-  d1_reveal: 1, d1_checkin: 1, d1_closing: 1, d1_audit: 1, d1_rank: 1, d1_cut: 1,
+  d1_reveal: 1, d1_checkin: 1, d1_closing: 1, d1_audit: 1, d1_draw: 1, d1_rank: 1, d1_cut: 1,
   d2_reveal: 2, d2_path: 2, d2_outcome: 2, d2_cut: 2,
   d3_reveal: 3, d3_pulse: 3, d3_cut: 3,
   d4_reveal: 4, d4_jury: 4, d4_revive: 4,
@@ -47,6 +48,34 @@ export const BEAT_DAY = {
 };
 
 export const CAP_SCHEDULE = [null, 25, 12, 6, 3, 1];
+
+/**
+ * Staged Day-1 draw for the demo. Teaches the seed lottery (Riddle Rounds
+ * §5.1): everyone who checked in is eligible, and when the field overflows
+ * the cap a deterministic cohort-seed lottery decides who survives — not
+ * speed. The draw is replayable by anyone from the public seed.
+ *
+ * Fiction: 31 eligible for 25 slots. A sample of the field is shown; "you"
+ * are drawn in. @ghost_protocol survives the draw but gets DQ'd at the cut
+ * (flagged by the audit), which the next beat dramatizes.
+ */
+export const DEMO_DRAW = {
+  day: 1,
+  seed: "2026-09-01T18:00:00Z:cohort-1:lottery",
+  algorithm: "mulberry32-fy-survival/v1",
+  eligible: 31,
+  cap: 25,
+  entrants: [
+    { user: "@you", isYou: true, survived: true },
+    { user: "@marina_sol", survived: true },
+    { user: "@luna_waves", survived: true },
+    { user: "@ghost_protocol", survived: true },
+    { user: "@quiet_fox", survived: true },
+    { user: "@ember_knit", survived: false },
+    { user: "@spectre_x", survived: false },
+    { user: "@north_pier", survived: false },
+  ],
+};
 
 /**
  * Decoy riddles — same FORMAT as the real cohort (interpretive prompt +
@@ -272,19 +301,19 @@ export const WILDCARD_CANDIDATES = [
   {
     id: "spectre",
     user: "@spectre_x",
-    blurb: "Out on demo day 2. Fierce auditor since. 4-day check-in streak before the fall.",
+    blurb: "Not drawn on Day 1 — the lottery, not the crowd. Fierce auditor since.",
     tickets: 3,
   },
   {
     id: "ghost",
     user: "@ghost_protocol",
-    blurb: "Flagged for the Uber bit. Has been voting like a bloodhound ever since.",
+    blurb: "Survived the draw, flagged for the Uber bit. Has been voting like a bloodhound ever since.",
     tickets: 5,
   },
   {
     id: "ember",
     user: "@ember_knit",
-    blurb: "Missed the window by 40 seconds. Everyone liked their photos.",
+    blurb: "Not drawn on Day 1. Everyone liked their photos.",
     tickets: 2,
   },
 ];
