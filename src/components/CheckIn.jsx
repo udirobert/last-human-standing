@@ -35,7 +35,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, phase, refresh: refreshRound, pilot } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
   const { unlockAchievement, checkAchievement, playSound, handleMascotClick, recordSurvival } = useDelight();
-  const { dispatchMascotEvent } = useMascotEvent();
+  const { dispatchMascotEvent, mascotEvent } = useMascotEvent();
   const reduceMotion = useReducedMotion();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
@@ -58,7 +58,13 @@ export default function CheckIn({ onBack, onSubmit }) {
   // all — honest check-in is the only mode.
   const infiltratorEnabled = Boolean(pilot?.infiltratorEnabled);
   const infiltratorUnlocked = infiltratorEnabled && (currentDay ?? 1) >= 2;
-  const checkInMascot = getCheckInMascot({ step, photoPreview, gpsEnabled });
+  // A transient mascot event (e.g. the riddle-reaction beat dispatched on
+  // mount) overrides the local coaching line while it's live — otherwise
+  // nothing on this screen ever renders the dispatched event.
+  const riddleBeat = step === 0 && mascotEvent && !mascotEvent.durable && mascotEvent.message
+    ? { variant: mascotEvent.variant, message: mascotEvent.message }
+    : null;
+  const checkInMascot = riddleBeat || getCheckInMascot({ step, photoPreview, gpsEnabled });
   const [queuedCheckin, setQueuedCheckin] = useState(false);
   const { online, queueCheckin } = useOnlineStatus();
   const { markQueuedCheckin, clearQueuedCheckin } = useWorld();

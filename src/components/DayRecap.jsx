@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { getDayRecapMascot, dayRecapContinueLabel } from "../lib/copy.js";
@@ -77,6 +77,45 @@ export default function DayRecap() {
   const day = recapData?.day ?? "—";
   // Seed lottery ran this day (field overflowed the cap) — stage the draw.
   const draw = recapData?.draw ?? null;
+
+  // Animating cut: the "remaining" count burns down from the pre-cut total
+  // (survived + eliminated + DQ'd) to the post-cut remaining over ~1.2s.
+  // Push payloads can omit any count — only animate when every number is
+  // finite and the cut is real; otherwise render the plain value ("—").
+  const preCutTotal =
+    Number.isFinite(Number(survived)) &&
+    Number.isFinite(Number(eliminated)) &&
+    Number.isFinite(Number(dq))
+      ? Number(survived) + Number(eliminated) + Number(dq)
+      : null;
+  const postCut = Number(remaining);
+  const canAnimate = show && preCutTotal != null && Number.isFinite(postCut) && postCut < preCutTotal;
+  const [displayCount, setDisplayCount] = useState(null);
+  const animFrameRef = useRef(null);
+  useEffect(() => {
+    if (!show) return undefined;
+    if (!canAnimate) {
+      setDisplayCount(null);
+      return undefined;
+    }
+    const start = preCutTotal;
+    const end = postCut;
+    setDisplayCount(start); // paint the pre-cut total before the first frame
+    const durationMs = 1200;
+    const startTime = performance.now();
+    const tick = (now) => {
+      const t = Math.min(1, (now - startTime) / durationMs);
+      // ease-out cubic for a "settling" feel
+      const eased = 1 - Math.pow(1 - t, 3);
+      setDisplayCount(Math.round(start + (end - start) * eased));
+      if (t < 1) animFrameRef.current = requestAnimationFrame(tick);
+    };
+    animFrameRef.current = requestAnimationFrame(tick);
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [show, canAnimate, preCutTotal, postCut]);
+  const shownRemaining = displayCount != null ? displayCount : remaining;
 
   // Personal result
   const youSurvived = you?.survivedToday === true;
@@ -169,7 +208,7 @@ export default function DayRecap() {
         transition={{ delay: 0.5 }}
         className="text-bone font-body text-sm mt-6"
       >
-        <span className="font-display text-2xl text-amber tabular-nums">{remaining}</span> humans remain
+        <span className="font-display text-2xl text-amber tabular-nums">{shownRemaining}</span> humans remain
       </motion.p>
 
       {tomorrow && personalResult !== "eliminated" && (
