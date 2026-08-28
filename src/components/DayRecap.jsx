@@ -1,14 +1,13 @@
 import { useEffect, useState, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useRound } from "../world/RoundProvider.jsx";
 import { getDayRecapMascot, dayRecapContinueLabel } from "../lib/copy.js";
 import { resolveTomorrow } from "../lib/tomorrow.js";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta } from "./ui/CraftCta.jsx";
-import { MOTION_DURATION, MOTION_EASE, MOTION_SPRING } from "../lib/motion.js";
-import OverlayPortal from "./OverlayPortal.jsx";
-import { useFocusTrap } from "../hooks/useFocusTrap.js";
+import { CeremonyShell } from "./ui/Ceremony.jsx";
+import { Stat, StatGrid } from "./ui/StatGrid.jsx";
 
 /**
  * DayRecap — a cinematic full-screen overlay shown when a day closes.
@@ -84,7 +83,6 @@ export default function DayRecap() {
   const youEliminated = you?.isEliminated === true && you?.eliminatedAtDay === day;
   const personalResult = youSurvived ? "survived" : youEliminated ? "eliminated" : null;
   const recapMascot = getDayRecapMascot({ personalResult });
-  const trapRef = useFocusTrap(show, { onEscape: dismiss });
   const tomorrow = resolveTomorrow(recapData?.day ?? currentDay, {
     remaining: recapData?.remaining,
   });
@@ -95,134 +93,97 @@ export default function DayRecap() {
   });
 
   return (
-    <OverlayPortal>
-    <AnimatePresence>
-      {show && (
+    <CeremonyShell
+      open={show}
+      onDismiss={dismiss}
+      label="Day recap"
+      spring="gentle"
+    >
+      <p className="font-mono text-dim text-sm tracking-widest uppercase mb-3">
+        Day {day} closed
+      </p>
+      <p className="font-display text-5xl text-bone leading-none mb-4 animate-glow">
+        Verdicts in
+      </p>
+      <MotifFrieze className="w-full mb-5" />
+
+      <div className="flex justify-center mb-5">
+        <MascotGuide
+          variant={recapMascot.variant}
+          size={64}
+          message={recapMascot.message}
+          position="top"
+        />
+      </div>
+
+      {personalResult && (
         <motion.div
-          ref={trapRef}
-          tabIndex={-1}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Day recap"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
-          className="fixed inset-0 z-[70] flex flex-col items-center justify-center px-5 overflow-y-auto overscroll-y-contain outline-none"
-          style={{
-            background: "radial-gradient(120% 90% at 50% 0%, rgba(74,50,33,0.97) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
-            paddingBottom: "max(1.5rem, env(safe-area-inset-bottom, 0px))",
-            paddingTop: "max(1.5rem, env(safe-area-inset-top, 0px))",
-          }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className={`mb-6 inline-block px-4 py-2 rounded-full border ${
+            personalResult === "survived"
+              ? "bg-neon/10 border-neon/40 text-neon"
+              : "bg-blood/10 border-blood/40 text-blood"
+          }`}
         >
-          <motion.div
-            initial={{ scale: 0.92, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={MOTION_SPRING.gentle}
-            className="text-center w-full max-w-sm"
-          >
-            <p className="font-mono text-dim text-sm tracking-widest uppercase mb-3">
-              Day {day} closed
-            </p>
-            <p className="font-display text-5xl text-bone leading-none mb-4 animate-glow">
-              Verdicts in
-            </p>
-            <MotifFrieze className="w-full mb-5" />
-
-            <div className="flex justify-center mb-5">
-              <MascotGuide
-                variant={recapMascot.variant}
-                size={64}
-                message={recapMascot.message}
-                position="top"
-              />
-            </div>
-
-            {personalResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className={`mb-6 inline-block px-4 py-2 rounded-full border ${
-                  personalResult === "survived"
-                    ? "bg-neon/10 border-neon/40 text-neon"
-                    : "bg-blood/10 border-blood/40 text-blood"
-                }`}
-              >
-                <p className="font-mono text-sm font-bold">
-                  {personalResult === "survived" ? "You survived" : "You were eliminated"}
-                </p>
-              </motion.div>
-            )}
-
-            <div className="grid grid-cols-3 gap-3 max-w-sm mx-auto">
-              <RecapStat label="Survived" value={survived} tone="neon" />
-              <RecapStat label="Eliminated" value={eliminated} tone="blood" />
-              <RecapStat label="DQ'd" value={dq} tone="amber" />
-            </div>
-
-            {/* The draw — staged when the seed lottery decided survival
-                (field overflowed the cap). Fairness as spectacle, not a
-                footnote (Riddle Rounds §5.1). */}
-            {draw && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mt-4 max-w-sm mx-auto rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3 text-left"
-              >
-                <p className="font-mono text-amber text-[10px] uppercase tracking-widest mb-1">
-                  The draw decided today
-                </p>
-                <p className="text-bone/80 font-body text-xs leading-relaxed">
-                  {draw.eligible} were eligible for {draw.cap} slots — the seed
-                  lottery chose who stays. Not speed. The draw is public and
-                  replayable from the cohort seed.
-                </p>
-                <p className="font-mono text-dim/60 text-[9px] mt-1.5 break-all">
-                  seed {draw.seed} · {draw.algorithm}
-                </p>
-              </motion.div>
-            )}
-
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="text-bone font-body text-sm mt-6"
-            >
-              <span className="font-display text-2xl text-amber tabular-nums">{remaining}</span> humans remain
-            </motion.p>
-
-            {tomorrow && personalResult !== "eliminated" && (
-              <p className="font-mono text-dim text-[10px] mt-4 tracking-wide">
-                Riddle waiting downstairs · {tomorrow.emoji} {tomorrow.theme}
-              </p>
-            )}
-
-            <HumanCta onClick={dismiss} className="mt-6">
-              {continueLabel}
-            </HumanCta>
-          </motion.div>
-
-          <AutoDismiss onDismiss={dismiss} />
+          <p className="font-mono text-sm font-bold">
+            {personalResult === "survived" ? "You survived" : "You were eliminated"}
+          </p>
         </motion.div>
       )}
-    </AnimatePresence>
-    </OverlayPortal>
-  );
-}
 
-function RecapStat({ label, value, tone }) {
-  const color =
-    tone === "neon" ? "text-neon" :
-    tone === "blood" ? "text-blood" :
-    "text-amber";
-  return (
-    <div className="bg-smoke/60 border border-ember/40 rounded-xl p-3">
-      <p className={`font-display text-2xl ${color} leading-none tabular-nums`}>{value}</p>
-      <p className="text-dim text-[9px] font-mono uppercase mt-1">{label}</p>
-    </div>
+      <StatGrid boxed className="max-w-sm mx-auto">
+        <Stat label="Survived" value={survived} tone="neon" boxed />
+        <Stat label="Eliminated" value={eliminated} tone="blood" boxed />
+        <Stat label="DQ'd" value={dq} tone="amber" boxed />
+      </StatGrid>
+
+      {/* The draw — staged when the seed lottery decided survival
+          (field overflowed the cap). Fairness as spectacle, not a
+          footnote (Riddle Rounds §5.1). */}
+      {draw && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.4 }}
+          className="mt-4 max-w-sm mx-auto rounded-2xl border border-amber/40 bg-amber/10 px-4 py-3 text-left"
+        >
+          <p className="font-mono text-amber text-[10px] uppercase tracking-widest mb-1">
+            The draw decided today
+          </p>
+          <p className="text-bone/80 font-body text-xs leading-relaxed">
+            {draw.eligible} were eligible for {draw.cap} slots — the seed
+            lottery chose who stays. Not speed. The draw is public and
+            replayable from the cohort seed.
+          </p>
+          <p className="font-mono text-dim/60 text-[9px] mt-1.5 break-all">
+            seed {draw.seed} · {draw.algorithm}
+          </p>
+        </motion.div>
+      )}
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="text-bone font-body text-sm mt-6"
+      >
+        <span className="font-display text-2xl text-amber tabular-nums">{remaining}</span> humans remain
+      </motion.p>
+
+      {tomorrow && personalResult !== "eliminated" && (
+        <p className="font-mono text-dim text-[10px] mt-4 tracking-wide">
+          Riddle waiting downstairs · {tomorrow.emoji} {tomorrow.theme}
+        </p>
+      )}
+
+      <HumanCta onClick={dismiss} className="mt-6">
+        {continueLabel}
+      </HumanCta>
+
+      <AutoDismiss onDismiss={dismiss} />
+    </CeremonyShell>
   );
 }
 

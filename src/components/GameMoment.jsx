@@ -5,6 +5,7 @@ import { HumanCta, GameCta, GhostLink } from "./ui/CraftCta.jsx";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
 import DozingCat from "./ui/DozingCat.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
+import VoteBar from "./ui/VoteBar.jsx";
 import ShareSheet from "./ShareSheet.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { useDelight } from "./DelightProvider.jsx";
@@ -478,28 +479,11 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
               </p>
             )}
             {/* Vote bar */}
-            <div className="flex h-6 rounded-lg overflow-hidden border border-ember/30">
-              {verdict.votes.realPct != null && verdict.votes.realPct > 0 && (
-                <div
-                  className="bg-neon/40 flex items-center justify-center"
-                  style={{ width: `${verdict.votes.realPct}%` }}
-                >
-                  <span className="text-neon font-mono text-[10px] tabular-nums">{verdict.votes.realPct}%</span>
-                </div>
-              )}
-              {verdict.votes.fakePct != null && verdict.votes.fakePct > 0 && (
-                <div
-                  className="bg-blood/40 flex items-center justify-center"
-                  style={{ width: `${verdict.votes.fakePct}%` }}
-                >
-                  <span className="text-blood font-mono text-[10px] tabular-nums">{verdict.votes.fakePct}%</span>
-                </div>
-              )}
-            </div>
-            <div className="flex justify-between mt-1.5">
-              <p className="text-neon font-mono text-[10px] tabular-nums">🧍 HUMAN · {verdict.votes.real}</p>
-              <p className="text-blood font-mono text-[10px] tabular-nums">SUS · {verdict.votes.fake}</p>
-            </div>
+            <VoteBar
+              real={verdict.votes.real}
+              fake={verdict.votes.fake}
+              size="verdict"
+            />
             {wasFlagged && (
               <p className="text-dim text-[10px] font-mono mt-2 text-center leading-relaxed">
                 The crowd voted SUS. {wasInfiltrator ? "Your bluff was called." : "Next time, try adding GPS or a landmark for credibility."}

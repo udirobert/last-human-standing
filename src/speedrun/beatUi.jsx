@@ -5,6 +5,7 @@ import MotifFrieze from "../components/ui/MotifFrieze.jsx";
 import DozingCat from "../components/ui/DozingCat.jsx";
 import ThemeFairness from "../components/ThemeFairness.jsx";
 import { HumanCta, GameCta } from "../components/ui/CraftCta.jsx";
+import { CeremonyContent } from "../components/ui/Ceremony.jsx";
 import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
 
 export { HumanCta, GameCta };
@@ -12,20 +13,18 @@ export { HumanCta, GameCta };
 /**
  * Shared speed-run UI — cold system chrome + warm human motifs
  * (docs/ART_DIRECTION.md). CTAs live in CraftCta so live game matches.
+ *
+ * The inner column + spring entrance come from the shared CeremonyContent
+ * (src/components/ui/Ceremony.jsx) — the same contract the live overlays use.
+ * The demo's SpeedRunShell already provides the full-screen room, so this
+ * wrapper only supplies the flex-1 scroll container around it.
  */
 
 /** Centered ceremony stage with staggered entrance. */
 export function Ceremony({ children, className = "" }) {
   return (
-    <div className={`flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-10 text-center ${className}`}>
-      <motion.div
-        initial={{ opacity: 0, y: 14 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: MOTION_DURATION.slow, ease: MOTION_EASE.out }}
-        className="w-full max-w-sm flex flex-col items-center"
-      >
-        {children}
-      </motion.div>
+    <div className={`flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-10 ${className}`}>
+      <CeremonyContent className="flex flex-col items-center">{children}</CeremonyContent>
     </div>
   );
 }

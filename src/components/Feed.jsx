@@ -28,6 +28,7 @@ import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
 import { saveCommitBallot, getCommitBallot } from '../lib/commitRevealStore.js';
 import RevealVotesPanel from './RevealVotesPanel.jsx';
 import RiddleCard from './ui/RiddleCard.jsx';
+import VoteBar from './ui/VoteBar.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -116,44 +117,15 @@ function JuryStakes() {
 }
 
 function LiveTally({ real = 0, fake = 0, sealed = false, commitCount = 0 }) {
-  if (sealed) {
-    return (
-      <div className="mt-3 rounded-xl border border-ember/40 bg-ash/60 px-3 py-3 text-center">
-        <p className="font-mono text-amber text-[10px] uppercase tracking-widest mb-1">Sealed ballots</p>
-        <p className="font-display text-3xl text-bone leading-none tabular-nums">{commitCount}</p>
-        <p className="font-mono text-dim text-[10px] mt-1">HUMAN/SUS hidden until reveal</p>
-      </div>
-    );
-  }
-  const total = real + fake;
-  const realPct = total > 0 ? Math.round((real / total) * 100) : 50;
-  const fakePct = total > 0 ? 100 - realPct : 50;
   return (
-    <div className="mt-3">
-      <div className="flex items-end justify-between mb-1.5">
-        <div>
-          <p className="font-mono text-[10px] text-neon uppercase tracking-widest">Human</p>
-          <p className="font-display text-3xl text-neon leading-none tabular-nums">{real}</p>
-        </div>
-        <p className="font-mono text-dim text-xs pb-1 tabular-nums">
-          {total === 0 ? 'awaiting votes' : `${realPct}% · ${fakePct}%`}
-        </p>
-        <div className="text-right">
-          <p className="font-mono text-[10px] text-blood uppercase tracking-widest">Sus</p>
-          <p className="font-display text-3xl text-blood leading-none tabular-nums">{fake}</p>
-        </div>
-      </div>
-      <div className="flex h-3 rounded-full overflow-hidden border border-ember/40 bg-ash">
-        <div
-          className="h-full bg-neon transition-[width] duration-500 ease-out"
-          style={{ width: `${realPct}%` }}
-        />
-        <div
-          className="h-full bg-blood transition-[width] duration-500 ease-out"
-          style={{ width: `${fakePct}%` }}
-        />
-      </div>
-    </div>
+    <VoteBar
+      real={real}
+      fake={fake}
+      sealed={sealed}
+      commitCount={commitCount}
+      size="hero"
+      className="mt-3"
+    />
   );
 }
 

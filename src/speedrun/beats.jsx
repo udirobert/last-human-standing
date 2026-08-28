@@ -13,6 +13,7 @@ import ThemeMotif from "../components/ui/ThemeMotif.jsx";
 import GameMoment from "../components/GameMoment.jsx";
 import ShareSheet from "../components/ShareSheet.jsx";
 import MascotGuide from "../components/ui/MascotGuide.jsx";
+import VoteBar from "../components/ui/VoteBar.jsx";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import BuiltWithStack from "./BuiltWithStack.jsx";
@@ -294,30 +295,7 @@ function SealedTally() {
 }
 
 function LiveTally({ real = 0, fake = 0 }) {
-  const total = real + fake;
-  const realPct = total > 0 ? Math.round((real / total) * 100) : 50;
-  const fakePct = total > 0 ? 100 - realPct : 50;
-  return (
-    <div className="mt-3">
-      <div className="flex items-end justify-between mb-1.5">
-        <div>
-          <p className="font-mono text-[10px] text-neon uppercase tracking-widest">Human</p>
-          <p className="font-display text-3xl text-neon leading-none tabular-nums">{real}</p>
-        </div>
-        <p className="font-mono text-dim text-xs pb-1 tabular-nums">
-          {total === 0 ? "awaiting votes" : `${realPct}% · ${fakePct}%`}
-        </p>
-        <div className="text-right">
-          <p className="font-mono text-[10px] text-blood uppercase tracking-widest">Sus</p>
-          <p className="font-display text-3xl text-blood leading-none tabular-nums">{fake}</p>
-        </div>
-      </div>
-      <div className="flex h-3 rounded-full overflow-hidden border border-ember/40 bg-ash">
-        <div className="h-full bg-neon transition-[width] duration-500" style={{ width: `${realPct}%` }} />
-        <div className="h-full bg-blood transition-[width] duration-500" style={{ width: `${fakePct}%` }} />
-      </div>
-    </div>
-  );
+  return <VoteBar real={real} fake={fake} size="hero" className="mt-3" />;
 }
 
 export function D1AuditBeat() {
