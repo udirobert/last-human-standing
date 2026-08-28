@@ -1,12 +1,16 @@
 # Launch runbook — Cohort 1 pilot
 
-> **Current operating plan (2026-08-19):** Cohort 1 is a free, closed,
-> verified-human test pilot with manual in-kind settlement. Launch
-> **2026-08-24 18:00 UTC**; Cohort 2 (ETHOnline iteration)
-> **2026-09-13 18:00 UTC**, subject to roster and dry-run gates.
-> Paid entry, lottery admission, automatic payout, infiltrator mode, and
-> revival are disabled. Use [`PILOT_INVITATION_READINESS.md`](./PILOT_INVITATION_READINESS.md)
-> as the authoritative pre-invite checklist.
+> **Current operating plan (2026-08-28):** Cohort 1 is a free, closed,
+> verified-human test pilot running **Riddle Rounds** (interpretive riddles,
+> 18h timezone-fair window, commit-reveal judging specs, seed-lottery
+> survival on overflow — see [`RIDDLE_ROUNDS.md`](./RIDDLE_ROUNDS.md)) with
+> manual in-kind settlement. Launch **2026-09-01 18:00 UTC**; Cohort 2
+> (ETHOnline iteration) **2026-09-13 18:00 UTC**, subject to roster and
+> dry-run gates. Paid entry, lottery admission, automatic payout, infiltrator
+> mode, and revival are disabled. Use
+> [`PILOT_INVITATION_READINESS.md`](./PILOT_INVITATION_READINESS.md) as the
+> authoritative pre-invite checklist. Migrations through **042** are applied;
+> the jury bounty pool (2 WLD) is seeded.
 
 The historical timeline and older paid/lottery procedures below are retained
 for incident context. They do **not** describe the current Cohort 1 launch

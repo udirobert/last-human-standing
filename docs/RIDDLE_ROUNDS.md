@@ -1,6 +1,8 @@
 # Riddle Rounds — game design v2
 
-Status: **design converged, pending implementation.**
+Status: **implemented and deployed for the Sep 1 retry** (migrations
+039–042, release 20260828-063102). §5.1 scope is live; §5.2 (full scoring
+engine) is Cohort 2 scope.
 Decided 2026-08-27 after player feedback that the game is "a little
 simplistic" and unfair across time zones.
 

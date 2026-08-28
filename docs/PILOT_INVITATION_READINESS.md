@@ -5,21 +5,26 @@ Do not begin broad invitations until the pre-invite gates pass.
 
 ## Current posture
 
-- Cohort 1 (test pilot): **2026-08-24 18:00 UTC**. Cohort 2 (ETHOnline
-  public iteration): **2026-09-13 18:00 UTC**. Reconfirm with
-  `/api/game/state` before roster freeze.
+- Cohort 1 (test pilot retry, **Riddle Rounds**): **2026-09-01 18:00 UTC**.
+  Cohort 2 (ETHOnline public iteration): **2026-09-13 18:00 UTC**. Reconfirm
+  with `/api/game/state` before roster freeze.
 - Cohort size: 25.
 - Minimum launch roster: 8 verified humans.
 - Entry: free; paid entry and lottery disabled.
 - Settlement: manual, in-kind, after a 48-hour appeal window.
-- Prize: 5 WLD on World Chain plus 35 cUSD on Celo.
+- Prize: 5 WLD on World Chain plus 35 cUSD on Celo. Jury pool: 2 WLD
+  (seeded, split pro-rata among accurate jurors at cohort end).
 - Public agents: disabled. Existing operator-run exhibition agents are
   prize-ineligible and must not be counted as human invitees.
+- Game format: Riddle Rounds — 24h daily cycle (18h hunt, reveal + vote
+  T+18..24, close T+24), commit-reveal judging specs, seed-lottery survival
+  on overflow. See [`RIDDLE_ROUNDS.md`](./RIDDLE_ROUNDS.md).
 
 ## Gate 0 — code and database
 
-- [x] Deploy the latest commit and verify PM2 is online. (`20260819-225643`)
-- [x] Confirm migrations 032, 033, 034, 035, and **037** are applied.
+- [x] Deploy the latest commit and verify PM2 is online. (`20260828-063102`)
+- [x] Confirm migrations through **042** are applied (039–041 Riddle Rounds;
+      042 reveal/vote window).
 - [x] Confirm `PAID_ENTRY_ENABLED=false`.
 - [x] Confirm `FREE_ENTRY_MODE=true`.
 - [x] Confirm `LOTTERY_ENABLED=false`.
@@ -29,6 +34,7 @@ Do not begin broad invitations until the pre-invite gates pass.
 - [x] Confirm `INFILTRATOR_ENABLED=false` and `REVIVAL_ENABLED=false`.
 - [x] Confirm `ENABLE_TEST_ROUTES` is unset or false.
 - [x] Confirm the active cohort and launch date from `/api/game/state`.
+- [x] Confirm the jury bounty pool is seeded (`/api/jury-bounty/1`).
 
 Run: `bash scripts/pilot-gate0-check.sh`
 
@@ -71,7 +77,7 @@ signup link while the roster is being assembled.
 ## Gate 3 — roster freeze
 
 When at least 8 participants have completed verification and confirmed the
-schedule:
+schedule (target: **Aug 31**, the day before launch):
 
 1. Review `/api/game/state`, `/api/cohort/roster`, and `/api/stats`.
 2. Remove duplicate or unverified rows before freezing.
@@ -86,14 +92,19 @@ schedule:
 
 Send each admitted player a short message covering:
 
+- The Riddle Rounds format: daily riddle, 18-hour hunt window, reveal + vote
+  window, then close (see the schedule table in
+  [`COHORT1_RECRUITMENT.md`](./COHORT1_RECRUITMENT.md))
 - Daily check-in window and timezone conversion
-- What makes a proof valid
+- What makes a proof valid (photo answering the riddle + one-line argument)
 - That humanity verification is required before admission
 - How crowd audits and self-vote prevention work
+- That survival on overflow is a deterministic seed lottery, not speed
 - Missed-day and disqualification behavior
 - Appeal/review process
 - Public/private data handling
 - Exact prize assets and 48-hour settlement timing
+- The jury pool (2 WLD) and how eliminated jurors earn a share
 - The postponement conditions
 
 Use the prize wording in `docs/COHORT1_PILOT.md` verbatim.

@@ -7,21 +7,37 @@ A mobile-first World Mini App: **a daily real-world elimination game for verifie
 
 ## How it works
 
-A cohort of N players (default 50) competes over ~5 days. Each day:
+A cohort of N players (default 50) competes over ~5 days. Each day is a
+24-hour cycle (Riddle Rounds — see [`RIDDLE_ROUNDS.md`](./RIDDLE_ROUNDS.md)):
 
-1. A **theme** is revealed at round open — each day has a unique real-world challenge (e.g., "AT A CAFÉ", "AT A PARK", "WITH A FRIEND"). **Pre-launch, themes are hidden**: the DailyProofs wheel cycles day-labels randomly across all 10 possible themes every 5–8 seconds, and the GetReadyCard uses cycling mystery emojis (❓🔮🎲🎯✨🌟) so no one can map which theme falls on which day. The mapping stays secret until the round opens.
-2. The check-in window opens (e.g., 4 hours)
-3. Players check in from **anywhere on Earth** with:
-   - **Photo** (required) — capture a photo matching the theme
-   - **GPS** (optional) — share your location for bonus credibility metadata
-   - **Crowd** — community votes HUMAN / SUS (audit layer)
-4. The **first N arrivals** survive (e.g., first 25). Slow / no-show = eliminated.
-5. **Audit verdicts have consequences.** At day close, every pending submission is finalized (weighted votes; ≥30% SUS with 3+ votes = flagged). Flagged survivors are **disqualified** and the highest-ranked "too late" check-ins inherit their slots (DQ-and-replace).
-6. **Infiltrator Mode:** Opt in and let the crowd judge you. Voted HUMAN → immunity through the next day's cut. Flagged → DQ'd and any held immunity is burned. Infiltrator status is hidden from the audit feed. Voters earn accuracy stats for catching them.
-7. **Jury system:** Eliminated players keep playing as the jury — their votes count double once their audit accuracy is ≥80% (min 5 resolved votes), and every correct verdict vote earns a jury ticket that weights the next cohort's free-entry lottery.
-8. The cap shrinks each day (e.g., 25 → 12 → 6 → 3 → 1) until one human remains.
+1. **The Asking (T+0h)** — ARIA posts an interpretive **riddle**, not a
+   literal instruction (e.g. *"Find the place where strangers become
+   regulars. Bring proof."*), and **hash-commits a hidden resolution spec**
+   before any submission exists. Pre-launch, riddles stay hidden.
+2. **The Hunt (T+0..18h)** — an 18-hour check-in window (timezone-fair by
+   design). Players answer with:
+   - **Photo** (required) — a real photo that answers the riddle
+   - **Caption** — a one-line argument ("my answer, because…")
+   - **GPS** (optional) — location credibility metadata
+3. **The Reveal (T+18h)** — check-in closes, the committed spec is revealed,
+   and the vote window opens.
+4. **The Reckoning (T+18..24h)** — the crowd votes each answer against the
+   revealed criteria.
+5. **Close (T+24h)** — verdicts finalized (weighted votes; single 70%
+   threshold). Flagged survivors are **disqualified** and the highest-ranked
+   too-late check-ins inherit their slots (DQ-and-replace). If eligible
+   check-ins exceeded the cap, survival is decided by a **deterministic
+   seed lottery** (Fisher–Yates, replayable from the public cohort seed) —
+   not speed.
+6. **Jury system:** Eliminated players keep playing as the jury — their votes
+   count double once their audit accuracy is ≥80% (min 5 resolved votes),
+   and every correct verdict vote earns a jury ticket. A jury pool is split
+   pro-rata among accurate voters at cohort end.
+7. The cap shrinks each day (25 → 12 → 6 → 3 → 1) until one human remains.
 
-**Theme reveal moment:** When a round opens, a dramatic full-screen animation briefly shows the theme, emoji, and description before fading away — making each day's reveal feel special and building daily return motivation.
+**Riddle reveal moment:** When a round opens, a dramatic full-screen
+animation briefly shows the riddle before fading away — making each day's
+ask feel special and building daily return motivation.
 
 The last verified human takes the on-chain prize pool. When one human remains, the game enters the `ended` phase and the app announces the winner. The audit feed is publicly viewable — spectators can watch, but voting requires entry. Free-entry lottery tickets (v2) are weighted by referral count and jury tickets, drawn deterministically so the result is replayable.
 
@@ -168,18 +184,21 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
 The admin endpoints are gated by the `x-admin-token` header. Examples:
 
 ```bash
-# Reveal today's round (global — no GPS pin)
+# Reveal today's round (global — no GPS pin). Two-phase round: opens_at is
+# the ask, reveal_at is the T+18h boundary (check-in closes, spec revealed,
+# vote opens), closes_at is the T+24h survival close.
 curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
   -H "x-admin-token: $ADMIN_TOKEN" \
   -H "content-type: application/json" \
   -d '{
     "day": 1,
-    "name": "AT A CAFÉ",
-    "place_type": "AT A CAFÉ",
+    "name": "THE GATHERING",
+    "place_type": "THE GATHERING",
     "survival_cap": 25,
-    "opens_at": "2026-05-02T15:00:00Z",
-    "closes_at": "2026-05-02T19:00:00Z",
-    "prompt": "Show us your café — anywhere in the world"
+    "opens_at": "2026-09-01T18:00:00Z",
+    "reveal_at": "2026-09-02T12:00:00Z",
+    "closes_at": "2026-09-02T18:00:00Z",
+    "prompt": "Find the place where strangers become regulars. Bring proof."
   }'
 
 # Or with optional GPS pin for a local event
@@ -193,8 +212,9 @@ curl -X POST https://lasthumanstanding.thisyearnofear.com/api/admin/round \
     "lng": -73.9881,
     "radius_m": 100,
     "survival_cap": 25,
-    "opens_at": "2026-05-02T15:00:00Z",
-    "closes_at": "2026-05-02T19:00:00Z",
+    "opens_at": "2026-09-01T18:00:00Z",
+    "reveal_at": "2026-09-02T12:00:00Z",
+    "closes_at": "2026-09-02T18:00:00Z",
     "prompt": "Selfie at the carousel"
   }'
 

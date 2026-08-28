@@ -16,6 +16,13 @@ prize-ineligible agents to the pilot: `docs/COHORT1_AGENT_EXHIBITION.md`.
 > published in the recap. No conversion to a synthetic USD total is
 > performed. If no legitimate winner emerges, the prize rolls to Cohort 2.
 
+## Jury pool disclosure (publish verbatim)
+
+> A **2 WLD jury pool** is seeded for Cohort 1. At cohort end it is split
+> pro-rata by accumulated jury tickets among eligible jurors, settled
+> manually alongside the prize. Accurate voting pays — even if you're
+> eliminated.
+
 ## Containment flags (defaults are the pilot posture)
 
 | Flag | Default | Effect |
@@ -32,18 +39,22 @@ prize-ineligible agents to the pilot: `docs/COHORT1_AGENT_EXHIBITION.md`.
 
 ## Database
 
-Before invitations, confirm migrations **032, 033, 034, and 035** are applied
-in production. They provide:
+Before invitations, confirm migrations through **042** are applied in
+production. The Riddle Rounds set (039–042) provides:
 
-1. Unique `payouts (cohort, day)` claim — kills the check-then-insert
-   double-payment race.
-2. `close_day` now applies **one** verdict threshold everywhere
-   (`REAL >= 70%` of weighted votes at quorum ⇒ verified, else flagged),
-   identical to mid-day settlement. Previously a 70/30 tally could be
-   verified mid-day but flagged at close.
-3. Human-only winner/endgame accounting for the optional exhibition-agent
-   track, plus the vote-queue relayer fix.
-4. Anonymous pilot funnel-event storage used by `/api/track`.
+1. `round_specs` — commit-reveal for judging: each day's resolution spec is
+   hash-committed before any submission, revealed at T+18h before voting.
+2. Lottery-aware `close_day` — everyone who checks in is eligible; on
+   overflow, survival is a server-drawn deterministic Fisher–Yates lottery
+   (persisted to `survival_draws` for audit), not first-come.
+3. `jury_bounty_pools` — operator-seeded jury pool, split pro-rata by jury
+   tickets at cohort end.
+4. `rounds.reveal_at` — the two-phase round: hunt closes at reveal_at (T+18h),
+   spec revealed + vote opens, survival close at closes_at (T+24h).
+
+Earlier migrations (032–035) provide the unique payout claim, the single
+70% verdict threshold, human-only winner accounting, and funnel-event
+storage.
 
 The active roster is not a lottery. Free claims are first-come within the
 private invitation window, then the operator freezes admission with
