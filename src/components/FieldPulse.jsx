@@ -34,13 +34,13 @@ function formatLine(event) {
   if (event.text) return event.text;
   switch (event.type) {
     case "checkin":
-      return event.rank != null ? `checked in · Rank #${event.rank}` : "checked in";
+      return "checked in · eligible";
     case "vote":
       return "cast a vote";
     case "elimination":
       return "was eliminated";
     case "late":
-      return "arrived too late";
+      return "wasn't drawn";
     default:
       return "moved in the field";
   }

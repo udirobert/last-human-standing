@@ -227,11 +227,6 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
         <p className="text-dim font-body text-sm tabular-nums">
           one of {result.survivalCap} still standing
         </p>
-        {result.rank != null && (
-          <p className="text-dim/60 font-mono text-[11px] mt-1 tabular-nums">
-            checked in #{result.rank}
-          </p>
-        )}
         {result.gpsShared && (
           <p className="text-neon/70 font-mono text-xs mt-2">GPS shared</p>
         )}
@@ -340,19 +335,19 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
   }, [currentDay]);
 
   const daysSurvived = currentDay ?? "—";
-  const percentile = Math.round((Number(currentDay) || 1) * 100 / 5);
   const rank = Number(result.rank) || 0;
   const cap = Number(result.survivalCap) || 0;
-  // Near-miss: were you within 3 spots of the survival cap?
-  const nearMiss = rank > cap && rank <= cap + 3;
-  // How close were you? (spots away from survival)
-  const spotsAway = rank > cap ? rank - cap : 0;
   // Was the elimination due to being flagged (DQ'd) vs ranked out?
   const wasFlagged = verdict?.status === "flagged";
   const wasInfiltrator = verdict?.wasInfiltrator;
+
+  // The server computes the real, lottery-aware reason (not_drawn on draw
+  // days, too_slow only on the rare rank-fallback). Prefer it; fall back to a
+  // local rank-based guess only if the verdict hasn't loaded yet.
+  const serverReason = verdict?.eliminationReason ?? null;
   const immediateReason = formatEliminationReason(
     !result.survived
-      ? {
+      ? serverReason ?? {
           code: rank > cap && cap > 0 ? "too_slow" : "ranked_out",
           day: currentDay,
           rank,
@@ -362,13 +357,19 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
       : null,
   );
 
+  // Near-miss only makes sense when survival was rank-based (the too_slow
+  // fallback). On lottery days you simply weren't drawn — no "spots away."
+  const isRankBased = immediateReason?.code === "too_slow";
+  const spotsAway = isRankBased && rank > cap ? rank - cap : 0;
+  const nearMiss = isRankBased && rank > cap && rank <= cap + 3;
+
   return (
     <motion.div
       ref={trapRef}
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
-      aria-label={`Eliminated on day ${currentDay ?? ""} — rank ${result.rank}`}
+      aria-label={`Eliminated on day ${currentDay ?? ""}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -408,7 +409,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
           You survived {daysSurvived} day{Number(daysSurvived) !== 1 ? "s" : ""}
         </p>
         <p className="text-dim font-mono text-sm tabular-nums">
-          Rank #{result.rank} of {result.survivalCap} · Top {percentile}%
+          Day {daysSurvived} closed at {result.survivalCap ?? "?"} survivors
         </p>
         {immediateReason && (!verdict || verdict.votes?.total === 0) && (
           <p className="text-bone/70 text-sm font-body mt-3 max-w-xs mx-auto leading-relaxed">

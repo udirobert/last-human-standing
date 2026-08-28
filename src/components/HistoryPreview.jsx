@@ -12,14 +12,14 @@ import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
  */
 
 const MOCK_CHECKINS = [
-  { rank: 3, survived: true, time: "09:14", distance: 240, theme: "THE GATHERING" },
-  { rank: 12, survived: true, time: "08:42", distance: 1800, theme: "THE WILD" },
-  { rank: 27, survived: false, time: "14:20", distance: 500, theme: "THE BOND" },
+  { survived: true, time: "09:14", distance: 240, theme: "THE GATHERING" },
+  { survived: true, time: "08:42", distance: 1800, theme: "THE WILD" },
+  { survived: false, time: "14:20", distance: 500, theme: "THE BOND" },
 ];
 
 const TRACKED = [
-  { icon: "📊", title: "Rank at check-in", body: "Your queue position. Everyone in the window is eligible — overflow goes to the seed lottery." },
-  { icon: "✅", title: "Survival verdict", body: "HUMAN or SUS from the crowd. Survived or eliminated." },
+  { icon: "📊", title: "Check-in & eligibility", body: "When you checked in and whether you were eligible. Everyone in the window is eligible — overflow goes to the seed lottery." },
+  { icon: "✅", title: "Survival verdict", body: "Drawn or not drawn; HUMAN or SUS from the crowd. Survived or eliminated." },
   { icon: "📏", title: "Distance traveled", body: "From the round's anchor point, if set. GPS plausibility — not scored." },
   { icon: "🔥", title: "Survival streak", body: "Consecutive days survived. Unlocks achievements and jury visibility." },
 ];
@@ -97,7 +97,7 @@ export default function HistoryPreview() {
                 <div className="flex items-center gap-2">
                   <MascotAvatar status={ck.survived ? "alive" : "eliminated"} size={22} />
                   <p className="font-display text-base text-bone">
-                    {ck.survived ? "Survived" : "Out"} #{ck.rank}
+                    {ck.survived ? "Survived the draw" : "Not drawn"}
                   </p>
                 </div>
                 <span className="font-mono text-xs text-dim tabular-nums">{ck.time}</span>

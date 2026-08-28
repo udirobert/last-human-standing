@@ -567,7 +567,7 @@ export function D1CutBeat() {
       to={d.capTo}
       title="The cut"
       body="@ghost_protocol got flagged. A cleaner check-in inherited their slot — DQ and replace, live."
-      chip="You made it · your rank still holds"
+      chip="You made it · you're still in"
       onContinue={nextBeat}
     />
   );
@@ -736,21 +736,21 @@ export function D3PulseBeat() {
       <ThemeMissionCard
         day={3}
         theme={d.theme}
-        mantra={`${d.capTo} spots left. The field is thinner.`}
+        mantra={`Only ${d.capTo} survive today. The field is thinner.`}
       />
       <div className="bg-amber/10 border border-amber/35 rounded-2xl p-4 mb-4">
         <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2">Mid-day pulse</p>
         <p className="font-body text-bone/85 text-sm leading-relaxed">
-          A flagged survivor just got DQ&apos;d. You were rank #{d.capTo + 1} — you{" "}
+          A flagged survivor just got DQ&apos;d. You were next in line — you{" "}
           <span className="text-neon font-semibold">inherited their slot</span>.
-          Slow and real can still beat fast and fake.
+          Real and honest can still beat fake and fast.
         </p>
       </div>
       <div className="bg-smoke/70 border border-ember/35 rounded-2xl p-4 mb-5 space-y-2.5">
         <p className="font-mono text-dim text-[10px] uppercase tracking-widest">Activity</p>
-        <p className="font-body text-bone/80 text-sm">@marina_sol checked in · rank #2</p>
-        <p className="font-body text-bone/80 text-sm">@luna_waves checked in · rank #4</p>
-        <p className="font-body text-bone/80 text-sm">You · checked in · rank #{d.capTo}</p>
+        <p className="font-body text-bone/80 text-sm">@marina_sol checked in · eligible</p>
+        <p className="font-body text-bone/80 text-sm">@luna_waves checked in · eligible</p>
+        <p className="font-body text-bone/80 text-sm">You · checked in · eligible</p>
         <p className="font-body text-blood/80 text-sm">3 humans flagged in the last hour</p>
       </div>
       <MotifFrieze className="w-full mb-5 opacity-85" />

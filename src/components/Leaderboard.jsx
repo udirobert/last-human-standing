@@ -119,7 +119,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
   const loading = ckLoading;
 
   const survivors = checkins.filter((c) => c.survived);
-  const tooLate = checkins.filter((c) => !c.survived);
+  const notDrawn = checkins.filter((c) => !c.survived);
   const isPrelaunch = phase === 'prelaunch';
   const isLive = phase === 'live';
   const activeTheme = resolveActiveTheme(round);
@@ -210,7 +210,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
               ]
             : [
                 { id: 'today', label: 'Today' },
-                { id: 'late', label: 'Too late' },
+                { id: 'late', label: 'Not drawn' },
                 { id: 'jurors', label: 'Jurors' },
                 { id: 'detectives', label: 'Detectives' },
               ]
@@ -439,7 +439,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 <ThemeMotif emoji={activeTheme.emoji || "🌅"} size={56} label="check-in" />
               </div>
               <p className="text-bone/70 text-sm font-body">No one has checked in yet.</p>
-              <p className="text-bone text-xs font-body mt-1 mb-3">Be first.</p>
+              <p className="text-bone text-xs font-body mt-1 mb-3">Everyone in the window is eligible.</p>
               {onCheckIn && (
                 <HumanCta onClick={onCheckIn} className="!py-3 animate-pulse-blood">
                   Check in now →
@@ -484,15 +484,15 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
 
       {isLive && tab === 'late' && (
         <div className="px-5 space-y-2">
-          {tooLate.length === 0 ? (
+          {notDrawn.length === 0 ? (
             <EmptyState
               motif="cat"
-              title="No late arrivals yet"
-              body="When the survival cap fills, stragglers land here."
+              title="No one is out yet"
+              body="Everyone who checked in is still eligible. The seed lottery draws survivors when the round closes."
               className="py-6"
             />
           ) : (
-            tooLate.map((c, i) => (
+            notDrawn.map((c, i) => (
               <motion.div
                 key={c.address || c.rank}
                 initial={{ opacity: 0, x: -16 }}
@@ -504,7 +504,9 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 <MascotAvatar status="eliminated" size={24} />
                 <div className="flex-1">
                   <p className="font-mono text-bone text-sm line-through">{c.username || shortAddr(c.address)}</p>
-                  <p className="text-dim text-xs mt-0.5 tabular-nums">Arrived as #{c.rank}</p>
+                  <p className="text-dim text-xs mt-0.5">
+                    {c.dq ? 'Flagged by the audit' : 'Not drawn in the seed lottery'}
+                  </p>
                 </div>
                 <p className="font-mono text-dim text-xs">{c.distance_m != null ? `${Math.round(c.distance_m)}m` : ''}</p>
               </motion.div>

@@ -9,8 +9,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const PROMPTS = [
   {
-    id: "weird-proof",
-    q: "What's the weirdest place that still counts as a valid proof photo?",
+    id: "weird-answer",
+    q: "What's the weirdest thing that could still count as an answer to a riddle?",
     options: [
       "A literal location",
       "A creative setup with props",
@@ -20,7 +20,7 @@ const PROMPTS = [
   },
   {
     id: "day-1-theme",
-    q: "Day 1 is tomorrow. What do you think the riddle will involve?",
+    q: "Day 1 is THE GATHERING. What do you think the riddle will ask for?",
     options: ["Somewhere social", "Somewhere public", "Somewhere private", "Something unexpected"],
   },
   {

@@ -639,27 +639,18 @@ async function notifyDayClosed(r) {
   const survivalCap = r.survivalCap ?? r.cap ?? null;
   for (const u of eliminatedRows || []) {
     const wasDq = dq.has(u.address.toLowerCase());
-    // Near-miss detection: was their rank within 3 of the cap?
-    let nearMissBody = "";
-    if (!wasDq && survivalCap != null) {
-      const { data: ci } = await supabaseAdmin
-        .from("checkins")
-        .select("rank")
-        .eq("day", day)
-        .eq("address", u.address)
-        .maybeSingle();
-      const rank = Number(ci?.rank) || 0;
-      if (rank > survivalCap && rank <= survivalCap + 3) {
-        const spotsAway = rank - survivalCap;
-        nearMissBody = ` So close — ${spotsAway} ${spotsAway === 1 ? "spot" : "spots"} from survival. The next cohort is calling.`;
-      }
-    }
+    // Lottery-honest framing: when the draw decided the day, being "close"
+    // to the cap means nothing — you simply weren't drawn. Only mention the
+    // cap when it's relevant context.
+    const lotteryNote = !wasDq && survivalCap != null
+      ? ` The seed lottery drew ${survivalCap} from the eligible field — your number wasn't called.`
+      : "";
     sendPushToAddress(supabaseAdmin, u.address, {
       title: wasDq ? "Disqualified by the crowd 🚫" : "Eliminated 💀",
       body: wasDq
         ? `The audit flagged your Day ${day} photo. You're out — but the jury needs you: accurate votes count double.`
-        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double.${nearMissBody}`,
-      data: { type: "eliminated", day, near_miss: Boolean(nearMissBody) },
+        : `Day ${day} is closed. You're out — but you're the jury now: accurate votes count double.${lotteryNote}`,
+      data: { type: "eliminated", day },
     }).catch(() => {});
   }
 
@@ -886,17 +877,18 @@ async function notifyRankSnapshot() {
       const streak = userRec?.checkin_streak ?? 0;
 
       if (ci) {
-        // Already checked in — tell them their rank
+        // Already checked in — confirm eligibility, not rank (the seed
+        // lottery decides survival, not check-in order).
         sendPushToAddress(supabaseAdmin, p.address, {
           title: `📊 Mid-day snapshot`,
-          body: `You're rank #${ci.rank ?? "?"}. ${checkinCount ?? "?"} humans checked in so far. Verdicts start landing soon.`,
+          body: `You're checked in and eligible. ${checkinCount ?? "?"} humans in so far — the draw decides at close.`,
           data: { type: "rank_snapshot", day: r.day },
         }).catch(() => {});
       } else {
         // Haven't checked in — nudge them with streak loss aversion
         const streakWarning = streak >= 2
           ? `🔥 Your ${streak}-day streak is at risk. Don't lose it — check in now.`
-          : `${checkinCount ?? "?"} humans already checked in. Don't get ranked out — check in now.`;
+          : `${checkinCount ?? "?"} humans already checked in. Miss the window and you're out — check in now.`;
         sendPushToAddress(supabaseAdmin, p.address, {
           title: streak >= 2 ? `🔥 Don't lose your streak` : `⏰ Day ${r.day} is half over`,
           body: streakWarning,
@@ -2959,6 +2951,10 @@ app.get("/api/my-verdict/:day", requireAuth, async (req, res) => {
     const realPct = total > 0 ? Math.round((real / total) * 100) : null;
     const fakePct = total > 0 ? Math.round((fake / total) * 100) : null;
 
+    // The real "why did I lose" reason (lottery-aware). GameMoment used to
+    // re-derive this locally from rank-vs-cap, which is wrong on lottery days.
+    const eliminationReason = await getEliminationReason(supabaseAdmin, req.user.address, day);
+
     res.json({
       ok: true,
       verdict: {
@@ -2969,6 +2965,7 @@ app.get("/api/my-verdict/:day", requireAuth, async (req, res) => {
         caption: sub.caption,
         wasInfiltrator: sub.is_infiltrator,
         votes: { real, fake, total, realPct, fakePct },
+        eliminationReason,
       },
     });
   } catch (e) {
@@ -4135,7 +4132,7 @@ app.get("/api/checkins/today", async (req, res) => {
     if (day == null) return res.json({ ok: true, day: null, checkins: [] });
 
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
-    const { data, error } = await supabaseAdmin.from("checkins").select("rank, address, username, distance_m, survived, created_at").eq("day", day).order("rank", { ascending: true }).limit(100);
+    const { data, error } = await supabaseAdmin.from("checkins").select("rank, address, username, distance_m, survived, dq, created_at").eq("day", day).order("rank", { ascending: true }).limit(100);
     if (error) return res.status(400).json({ error: "db_read_failed", message: error.message });
     return res.json({ ok: true, day, checkins: data || [] });
   } catch (e) {

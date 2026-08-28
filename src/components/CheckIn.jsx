@@ -124,14 +124,14 @@ export default function CheckIn({ onBack, onSubmit }) {
       : (user?.displayName || user?.address?.slice(0, 8) || 'anon');
     const day = Number(currentDay) || 0;
     // Dynamic next-cap from the real schedule — the social challenge hook:
-    // "I survived Day 2 at #7/12. Tomorrow only six remain."
+    // "I survived Day 2 — one of 12. Tomorrow only six remain."
     const nextDay = COHORT_SCHEDULE.find((d) => d.day === day + 1);
     const nextCapLine = nextDay
       ? `Tomorrow only ${nextDay.cap} remain.`
       : "The finale is tomorrow.";
     const strip = survived
-      ? `Day ${currentDay} · I survived at #${rank}/${cap}.`
-      : `Out on Day ${currentDay} after ${rank !== '?' ? `rank #${rank}/${cap}` : 'a brutal cut'}.`;
+      ? `Day ${currentDay} · I survived the draw — one of ${cap}.`
+      : `Out on Day ${currentDay} — my number wasn't called.`;
     const text = survived
       ? `${strip} ${nextCapLine} Think you can outlast me?`
       : `${strip} I'm on the jury now — my votes decide who stays. Can you outlast the room?`;
@@ -435,7 +435,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                 {round.riddle && <RiddleCard className="mt-3 relative" />}
                 <ThemeFairness theme={themeData} className="mt-3 relative" />
                 <div className="mt-3 flex justify-between text-xs font-mono text-dim relative">
-                  <span className="tabular-nums">Slots: {round.slotsRemaining}/{round.survivalCap}</span>
+                  <span className="tabular-nums">{round.checkinCount ?? 0} eligible · {round.survivalCap} drawn</span>
                   <span>Anywhere on Earth</span>
                 </div>
               </div>

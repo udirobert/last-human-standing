@@ -238,12 +238,10 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const themeLabel = themeData.theme;
   const opens = formatWindow(round?.opensAt);
   const closes = formatWindow(round?.closesAt);
-  const slotsLeft = round?.slotsRemaining ?? null;
   const cap = round?.survivalCap ?? 25;
 
   const checkedIn = Boolean(you?.checkedInToday);
   const survived = you?.survivedToday;
-  const rank = you?.rankToday;
   const eliminated = Boolean(you?.isEliminated);
 
   // A verdict is only real once the server closes the round. Submission
@@ -435,10 +433,10 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           )}
         </div>
         <div className="bg-ash rounded-xl p-3 border border-ember">
-          <p className="text-bone/70 text-xs font-mono uppercase">Spots left</p>
+          <p className="text-bone/70 text-xs font-mono uppercase">Eligible so far</p>
           <p className="text-bone font-display text-2xl mt-0.5 tabular-nums">
-            {slotsLeft != null ? slotsLeft : "—"}
-            <span className="text-dim text-sm font-mono"> / {cap}</span>
+            {round?.checkinCount != null ? round.checkinCount : "—"}
+            <span className="text-dim text-sm font-mono"> → {cap} drawn</span>
           </p>
         </div>
       </div>
@@ -460,7 +458,7 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
               </p>
             <p className="text-dim text-xs font-mono mt-1">
               {survived
-                ? `Day ${currentDay ?? "—"} closed at rank #${rank ?? "—"}.`
+                ? `The seed lottery drew ${cap} survivors — you were one of them.`
                 : "The crowd has spoken. You're on the jury now — your votes decide who survives, and count double once you hit 80% accuracy on 5+ votes."}
             </p>
             </div>
@@ -500,15 +498,15 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
               ))}
             </div>
 
-            {/* Cold system chrome — rank / risk */}
+            {/* Cold system chrome — eligibility / draw */}
             <div className="bg-neon/10 border border-neon/30 rounded-xl p-3">
               <p className="font-display text-xl text-neon">
-                {survived ? `Surviving · Rank #${rank ?? "—"}` : `Checked in · Rank #${rank ?? "—"}`}
+                {survived ? "Surviving · drawn" : "Checked in · eligible"}
               </p>
               <p className="text-dim text-xs font-mono mt-1">
                 {survived
-                  ? "Provisional cut. Flagged survivors get replaced when the window closes."
-                  : "At risk until close — a DQ above you frees a seat."}
+                  ? "Provisional. Flagged survivors get replaced when the round closes."
+                  : `The seed lottery draws ${cap} survivors at close — check-in order doesn't decide it.`}
               </p>
               {you?.checkinStreak >= 2 && (
                 <div className="mt-2 flex items-center gap-2">

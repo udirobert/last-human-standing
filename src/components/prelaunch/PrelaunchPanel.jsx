@@ -288,15 +288,16 @@ function LotteryStatus({ launchAt }) {
 }
 
 function CountdownCard({ launchAt, split, paidEnabled = false }) {
-  // T-minus rotating copy — cycles through schedule-themed hints every 5s
-  // so the countdown feels concrete instead of abstract.
+  // T-minus rotating copy — cycles through the real riddle schedule so the
+  // countdown feels concrete instead of abstract. Names are public; the
+  // prompts themselves stay server-side until each round opens.
   const tMinusLines = useMemo(() => [
-    `tomorrow · find your proof ☕`,
-    `day 3 · prove you know someone 🤝`,
-    `day 4 · hunt for the hidden 📚`,
-    `day 5 · rise before the sun 🌅`,
+    `day 1 · THE GATHERING ☕`,
+    `day 2 · THE WILD 🌳`,
+    `day 3 · THE BOND 🤝`,
+    `day 4 · THE QUIET 📚`,
+    `day 5 · THE DAWN 🌅`,
     `50 humans · 5 days · 1 winner`,
-    `the crowd votes · stay honest`,
   ], []);
 
   const [lineIdx, setLineIdx] = useState(0);
