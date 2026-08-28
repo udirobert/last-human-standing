@@ -27,6 +27,7 @@ import { CUE_PRESS } from '../lib/cuelume.js';
 import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
 import { saveCommitBallot, getCommitBallot } from '../lib/commitRevealStore.js';
 import RevealVotesPanel from './RevealVotesPanel.jsx';
+import RiddleCard from './ui/RiddleCard.jsx';
 
 const STATUS_COLORS = {
   verified: '#00FF94',
@@ -398,31 +399,49 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
           credentials: "include",
           body: JSON.stringify({ submissionId: id, vote: type }),
         });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data?.juryWeight) {
-            setVoteMeta((m) => ({ ...m, [id]: { juryWeight: data.juryWeight } }));
+        if (!resp.ok) {
+          // Two-phase round (Riddle Rounds §2.3): voting only opens after the
+          // spec is revealed (T+18h). Surface the window state instead of
+          // failing silently, and roll back the optimistic linger.
+          let err = {};
+          try { err = await resp.json(); } catch { /* non-JSON body */ }
+          if (err.error === "voting_not_open") {
+            setCommitError("Voting opens when the spec is revealed — the hunt is still on.");
+          } else if (err.error === "voting_closed") {
+            setCommitError("Voting has closed for this round.");
+          } else if (err.error === "self_vote_not_allowed") {
+            setCommitError("You can't audit your own proof.");
+          } else if (err.error === "already_voted") {
+            setCommitError("You've already voted on this one.");
+          } else {
+            setCommitError(err.error || "vote_failed");
           }
-          if (data?.status && data.status !== "pending") {
-            const agreed = (data.status === "verified" && type === "real") ||
-                           (data.status === "flagged" && type === "fake");
-            setVoteFeedback((f) => ({ ...f, [id]: { status: data.status, agreed } }));
-            setTimeout(() => setVoteFeedback((f) => { const n = { ...f }; delete n[id]; return n; }), 4000);
-          }
-          if (data?.status || data?.voteQuorum) {
-            setSubmissions((subs) =>
-              subs.map((s) =>
-                s.id === id
-                  ? {
-                      ...s,
-                      status: data.status || s.status,
-                      voteQuorum: data.voteQuorum || s.voteQuorum,
-                      votes: data.votes || s.votes,
-                    }
-                  : s,
-              ),
-            );
-          }
+          setVoteLinger(null);
+          return;
+        }
+        const data = await resp.json();
+        if (data?.juryWeight) {
+          setVoteMeta((m) => ({ ...m, [id]: { juryWeight: data.juryWeight } }));
+        }
+        if (data?.status && data.status !== "pending") {
+          const agreed = (data.status === "verified" && type === "real") ||
+                         (data.status === "flagged" && type === "fake");
+          setVoteFeedback((f) => ({ ...f, [id]: { status: data.status, agreed } }));
+          setTimeout(() => setVoteFeedback((f) => { const n = { ...f }; delete n[id]; return n; }), 4000);
+        }
+        if (data?.status || data?.voteQuorum) {
+          setSubmissions((subs) =>
+            subs.map((s) =>
+              s.id === id
+                ? {
+                    ...s,
+                    status: data.status || s.status,
+                    voteQuorum: data.voteQuorum || s.voteQuorum,
+                    votes: data.votes || s.votes,
+                  }
+                : s,
+            ),
+          );
         }
       } catch (error) {
         void error;
@@ -553,6 +572,11 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
         )}
         <VoteGateBanner onReserve={onReserve} />
         <VerdictHour round={round} />
+        {/* The riddle + commit-reveal spec (Riddle Rounds §2.3): voters judge
+            against the revealed criteria, so the spec lives at the top of the
+            audit feed. Before reveal it shows the locked hash; after reveal
+            (T+18h) it shows the full criteria. */}
+        {round?.riddle && <RiddleCard className="mx-1 mb-4" />}
         <JuryStakes />
         {crEnabled && crPhase === "reveal" && voterAddress && roundId != null && (
           <RevealVotesPanel

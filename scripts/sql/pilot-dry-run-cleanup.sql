@@ -58,16 +58,18 @@ update public.rounds set
   game_winner = null
 where day = 1;
 
--- Restore round 1's full Riddle Rounds schedule (migration 039). The dry-run
--- overwrites name/prompt/caps/times via /api/admin/round; without this the
--- real launch would open "DRY RUN — AT A CAFÉ" instead of THE GATHERING.
+-- Restore round 1's full Riddle Rounds schedule (migrations 039 + 042). The
+-- dry-run overwrites name/prompt/caps/times via /api/admin/round; without
+-- this the real launch would open "DRY RUN — AT A CAFÉ" instead of THE
+-- GATHERING. 24h cycle: hunt T+0..18 (reveal_at), vote T+18..24 (closes_at).
 update public.rounds set
   name = 'THE GATHERING',
   prompt = 'Find the place where strangers become regulars. Bring proof.',
   place_type = 'THE GATHERING',
   survival_cap = 25,
   opens_at = '2026-09-01T18:00:00Z'::timestamptz,
-  closes_at = '2026-09-02T12:00:00Z'::timestamptz
+  reveal_at = '2026-09-02T12:00:00Z'::timestamptz,
+  closes_at = '2026-09-02T18:00:00Z'::timestamptz
 where day = 1;
 
 -- Re-hide any committed spec revealed by the dry-run close-day, so the real

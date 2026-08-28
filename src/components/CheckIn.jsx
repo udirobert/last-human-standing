@@ -506,12 +506,14 @@ export default function CheckIn({ onBack, onSubmit }) {
                 </motion.div>
               )}
 
-              {/* Caption */}
+              {/* Caption — the player's argument for the fit (Riddle Rounds §2.2).
+                  Turns the submission from proof-of-presence into an argument;
+                  interpretation becomes a skill. Optional, but framed as the move. */}
               <input
                 type="text"
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                placeholder="Add a caption (optional)"
+                placeholder="My answer, because…"
                 maxLength={140}
                 className="mb-4 w-full bg-smoke border border-ember rounded-xl px-4 py-3 text-bone font-mono text-sm placeholder:text-dim focus:outline-none focus:border-neon/40"
               />

@@ -65,9 +65,13 @@ export default function adminRoutes(deps) {
       const survival_cap = ensureNumber(body.survival_cap, { field: "survival_cap", required: false, integer: true, min: 1, max: 100000 }) ?? DAILY_SURVIVAL_CAP;
       const opens_at = ensureIsoDate(body.opens_at, { field: "opens_at", required: true });
       const closes_at = ensureIsoDate(body.closes_at, { field: "closes_at", required: true });
+      // Two-phase round (Riddle Rounds §2): reveal_at is the T+18h boundary
+      // (check-in closes, spec revealed, vote opens). Optional — omit for
+      // legacy single-phase rounds.
+      const reveal_at = ensureIsoDate(body.reveal_at, { field: "reveal_at", required: false });
       const status = ensureEnum(body.status, { field: "status", required: false, values: ["scheduled", "open", "closed"] }) || "scheduled";
 
-      const row = { day, name, prompt, place_type, lat, lng, radius_m, survival_cap, opens_at, closes_at, status, updated_at: new Date().toISOString() };
+      const row = { day, name, prompt, place_type, lat, lng, radius_m, survival_cap, opens_at, closes_at, reveal_at: reveal_at ?? null, status, updated_at: new Date().toISOString() };
       if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
       const { data, error } = await supabaseAdmin.from("rounds").upsert(row, { onConflict: "day" }).select("*").single();
       if (error) return res.status(400).json({ error: "db_upsert_failed", message: error.message });

@@ -36,13 +36,26 @@ export default function RiddleCard({ className = "" }) {
             </span>
           </div>
 
-          {/* After reveal (T+18h): show the actual resolution criteria */}
+          {/* After reveal (T+18h): show the full resolution criteria so
+              voters judge against what ARIA actually committed. */}
           {round.specRevealed && round.spec && (
             <div className="mt-2 space-y-1.5">
               {round.spec.literal_categories && (
                 <div>
                   <span className="font-mono text-[10px] text-dim/50 uppercase">Accepts</span>
                   <p className="text-dim text-xs">{round.spec.literal_categories.join(" · ")}</p>
+                </div>
+              )}
+              {round.spec.required_elements && (
+                <div>
+                  <span className="font-mono text-[10px] text-dim/50 uppercase">Must show</span>
+                  <p className="text-dim text-xs">{round.spec.required_elements.join(" · ")}</p>
+                </div>
+              )}
+              {round.spec.interpretive_axes && (
+                <div>
+                  <span className="font-mono text-[10px] text-dim/50 uppercase">Judged on</span>
+                  <p className="text-dim text-xs">{round.spec.interpretive_axes.join(" · ")}</p>
                 </div>
               )}
               {round.spec.hard_rejects && (
@@ -56,7 +69,7 @@ export default function RiddleCard({ className = "" }) {
 
           {!round.specRevealed && (
             <p className="text-dim/40 text-[10px] mt-1">
-              Resolution criteria locked. Revealed at round close, before voting.
+              Resolution criteria locked. Revealed when check-in closes, before voting.
             </p>
           )}
         </div>

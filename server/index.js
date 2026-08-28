@@ -360,6 +360,58 @@ async function closeRoundWithLottery(day, cap) {
   return closeResult;
 }
 
+/**
+ * Reveal step for two-phase rounds (Riddle Rounds §2.3).
+ *
+ * Finds open rounds past their reveal_at whose committed spec is not yet
+ * revealed, sets revealed_at, and announces the reveal (push + chat). This
+ * opens the vote window: /api/vote only accepts votes in [reveal_at,
+ * closes_at). Idempotent — the revealed_at-is-null filter guards re-entry,
+ * and close_day carries the same update as a safety net.
+ */
+async function revealDueSpecs() {
+  if (!supabaseAdmin) return;
+  const nowIso = new Date().toISOString();
+
+  const { data: dueRounds } = await supabaseAdmin
+    .from("rounds")
+    .select("day, name, reveal_at")
+    .eq("status", "open")
+    .not("reveal_at", "is", null)
+    .lte("reveal_at", nowIso);
+
+  for (const r of dueRounds || []) {
+    const { data: updated, error } = await supabaseAdmin
+      .from("round_specs")
+      .update({ revealed_at: nowIso })
+      .eq("day", r.day)
+      .is("revealed_at", null)
+      .select("day");
+    if (error) {
+      log("spec_reveal_error", { day: r.day, error: error.message });
+      continue;
+    }
+    if (!updated || updated.length === 0) continue; // already revealed
+
+    log("spec_revealed", { day: r.day });
+    broadcastPush(supabaseAdmin, {
+      title: `🔓 Day ${r.day} spec revealed`,
+      body: `${r.name || `Day ${r.day}`}: here's what ARIA was actually looking for. Voting is open — judge each other against the real criteria.`,
+      data: { type: "spec_revealed", day: r.day },
+    }).catch((e) => log("push_error", { where: "spec_revealed", error: String(e) }));
+
+    try {
+      await supabaseAdmin.from("chat_messages").insert({
+        address: "0x0000000000000000000000000000000000000000",
+        username: "LHS_Bot",
+        message: `🔓 Day ${r.day} resolution spec revealed. The vote window is open — audit submissions against the criteria.`,
+      });
+    } catch (e) {
+      log("chat_seed_error", { day: r.day, where: "reveal", error: String(e) });
+    }
+  }
+}
+
 async function autoAdvanceRounds() {
   if (!supabaseAdmin) return;
 
@@ -398,7 +450,12 @@ async function autoAdvanceRounds() {
       log("round_scheduler_error", { source: "rpc", error: error.message });
       return;
     }
-    const result = data ?? { opened: [], closed: [], errors: [] };
+    const result = data ?? { opened: [], closing: [], errors: [] };
+
+    // Reveal step (Riddle Rounds §2.3): open rounds past reveal_at get their
+    // committed spec revealed, opening the vote window. Runs every tick; the
+    // revealed_at-is-null filter makes it idempotent.
+    await revealDueSpecs();
 
     // Notify subscribing users when rounds open — personalized per player
     for (const r of result.opened ?? []) {
@@ -661,27 +718,33 @@ async function notifyDayClosed(r) {
 
 // "Final hour" urgency push — fired once per round (closing_notified_at
 // guards repeats), checked on the same 60s scheduler tick.
+//
+// Two-phase round (Riddle Rounds §2): the urgency deadline is the HUNT close
+// (reveal_at, T+18h), not the survival close (closes_at, T+24h). We select
+// both and pick the effective check-in deadline in JS because PostgREST can't
+// coalesce columns in a filter.
 async function notifyClosingSoon() {
   if (!supabaseAdmin) return;
-  const nowIso = new Date().toISOString();
-  const soonIso = new Date(Date.now() + 60 * 60_000).toISOString();
+  const nowMs = Date.now();
+  const soonMs = nowMs + 60 * 60_000;
   const { data: rows } = await supabaseAdmin
     .from("rounds")
-    .select("day,closes_at")
+    .select("day,reveal_at,closes_at")
     .eq("status", "open")
-    .is("closing_notified_at", null)
-    .gt("closes_at", nowIso)
-    .lte("closes_at", soonIso);
+    .is("closing_notified_at", null);
   for (const r of rows || []) {
+    const huntClosesAtMs = Date.parse(r.reveal_at ?? r.closes_at);
+    if (!Number.isFinite(huntClosesAtMs)) continue;
+    if (huntClosesAtMs <= nowMs || huntClosesAtMs > soonMs) continue;
     const { error } = await supabaseAdmin
       .from("rounds")
-      .update({ closing_notified_at: nowIso })
+      .update({ closing_notified_at: new Date().toISOString() })
       .eq("day", r.day)
       .is("closing_notified_at", null);
     if (error) continue;
     broadcastPush(supabaseAdmin, {
       title: "⏳ Final hour",
-      body: `Day ${r.day} check-in closes soon. Don't get ranked out.`,
+      body: `Day ${r.day} check-in closes soon — the riddle's answer window is ending. Submit your proof.`,
       data: { type: "closing_soon", day: r.day },
     }).catch(() => {});
   }
@@ -776,15 +839,17 @@ async function notifyRankSnapshot() {
   if (!supabaseAdmin) return;
   const { data: rounds } = await supabaseAdmin
     .from("rounds")
-    .select("day,opens_at,closes_at")
+    .select("day,opens_at,reveal_at,closes_at")
     .eq("status", "open");
   for (const r of rounds || []) {
     if (rankSnapshotFiredFor.has(r.day)) continue;
     if (!r.opens_at || !r.closes_at) continue;
     const open = Date.parse(r.opens_at);
-    const close = Date.parse(r.closes_at);
+    // Two-phase round (Riddle Rounds §2): the check-in window is
+    // [opens_at, reveal_at), so the midpoint is measured against reveal_at.
+    const huntClose = Date.parse(r.reveal_at ?? r.closes_at);
     const now = Date.now();
-    const midpoint = open + (close - open) * 0.5;
+    const midpoint = open + (huntClose - open) * 0.5;
     // Fire after the midpoint of the check-in window
     if (now < midpoint) continue;
 
@@ -1910,6 +1975,25 @@ app.post("/api/checkin",
 
     if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
 
+    // Two-phase round (Riddle Rounds §2): submissions are only accepted during
+    // the HUNT window [opens_at, reveal_at). After reveal_at the spec is
+    // public and the vote window is open — late submissions would let players
+    // tailor answers to the revealed criteria. Fall back to closes_at for
+    // rounds without a reveal_at (pre-042).
+    const subRound = await loadRound(day);
+    if (subRound) {
+      const nowMs = Date.now();
+      const opensAtMs = subRound.opens_at ? Date.parse(subRound.opens_at) : NaN;
+      const huntClosesAtIso = subRound.reveal_at ?? subRound.closes_at;
+      const huntClosesAtMs = huntClosesAtIso ? Date.parse(huntClosesAtIso) : NaN;
+      if (Number.isFinite(opensAtMs) && nowMs < opensAtMs) {
+        return res.status(400).json({ error: "round_not_open", opensAt: subRound.opens_at });
+      }
+      if (Number.isFinite(huntClosesAtMs) && nowMs > huntClosesAtMs) {
+        return res.status(400).json({ error: "round_closed", closesAt: huntClosesAtIso });
+      }
+    }
+
     // Pilot: only admitted, verified humans from the frozen roster may
     // submit proofs. Exhibition agents (operator-run, is_agent=true) are
     // admitted by the operator, not by proof-of-personhood — they bypass
@@ -2239,7 +2323,7 @@ app.get("/api/audit/status", async (req, res) => {
 
     const { data: round } = await supabaseAdmin
       .from("rounds")
-      .select("day,opens_at,closes_at,status")
+      .select("day,opens_at,reveal_at,closes_at,status")
       .eq("status", "open")
       .maybeSingle();
 
@@ -2307,6 +2391,9 @@ app.get("/api/audit/status", async (req, res) => {
       unvotedCount,
       goalMet,
       opensAt: round.opens_at,
+      // Two-phase round (Riddle Rounds §2): reveal_at is when the vote window
+      // opens (spec revealed). closes_at is the survival/vote close.
+      revealAt: round.reveal_at ?? null,
       closesAt: round.closes_at,
     });
   } catch (e) {
@@ -2352,15 +2439,40 @@ app.post(
       }
 
       // Self-votes are never allowed: a player may not audit their own proof.
+      // Also fetch the submission's day so we can enforce the vote window.
+      let targetSubDay = null;
       if (supabaseAdmin) {
         const { data: targetSub } = await supabaseAdmin
           .from("submissions")
-          .select("address")
+          .select("address, day")
           .eq("id", submissionId)
           .maybeSingle();
         if (!targetSub) return res.status(404).json({ error: "submission_not_found" });
         if (targetSub.address?.toLowerCase() === req.user.address.toLowerCase()) {
           return res.status(403).json({ error: "self_vote_not_allowed" });
+        }
+        targetSubDay = targetSub.day;
+      }
+
+      // Two-phase round (Riddle Rounds §2.3): voting opens only AFTER the spec
+      // is revealed (reveal_at, T+18h) and closes at survival close (closes_at,
+      // T+24h). Voters must judge against the revealed criteria — not blind
+      // during the hunt. Fall back to [opens_at, closes_at) for rounds without
+      // a reveal_at (pre-042), preserving the old vote-anytime-while-open
+      // behavior.
+      if (supabaseAdmin && targetSubDay != null) {
+        const voteRound = await loadRound(targetSubDay);
+        if (voteRound) {
+          const nowMs = Date.now();
+          const voteOpensAtIso = voteRound.reveal_at ?? voteRound.opens_at;
+          const voteOpensAtMs = voteOpensAtIso ? Date.parse(voteOpensAtIso) : NaN;
+          const voteClosesAtMs = voteRound.closes_at ? Date.parse(voteRound.closes_at) : NaN;
+          if (Number.isFinite(voteOpensAtMs) && nowMs < voteOpensAtMs) {
+            return res.status(400).json({ error: "voting_not_open", opensAt: voteOpensAtIso });
+          }
+          if (Number.isFinite(voteClosesAtMs) && nowMs > voteClosesAtMs) {
+            return res.status(400).json({ error: "voting_closed", closesAt: voteRound.closes_at });
+          }
         }
       }
 
@@ -3337,6 +3449,9 @@ app.get("/api/game/state", async (req, res) => {
             survivalCap: round.survival_cap ?? survivalCapForDay(currentDay),
             opensAt: round.opens_at,
             closesAt: round.closes_at,
+            // Two-phase round (Riddle Rounds §2): reveal_at is the T+18h
+            // boundary — check-in closes, spec revealed, vote window opens.
+            revealAt: round.reveal_at ?? null,
             commitDeadline: round.commit_deadline ?? null,
             revealDeadline: round.reveal_deadline ?? null,
             status: round.status,
@@ -3427,10 +3542,14 @@ app.post(
       if (!round) return res.status(400).json({ error: "round_not_set", day });
 
       const opensAtMs = Date.parse(round.opens_at);
-      const closesAtMs = Date.parse(round.closes_at);
+      // Two-phase round (Riddle Rounds §2): the HUNT (check-in) closes at
+      // reveal_at (T+18h), not at closes_at (T+24h, survival close). Fall
+      // back to closes_at for rounds without a reveal_at (pre-042).
+      const huntClosesAtIso = round.reveal_at ?? round.closes_at;
+      const huntClosesAtMs = Date.parse(huntClosesAtIso);
       const nowMs = Date.now();
       if (nowMs < opensAtMs) return res.status(400).json({ error: "round_not_open", opensAt: round.opens_at });
-      if (nowMs > closesAtMs) return res.status(400).json({ error: "round_closed", closesAt: round.closes_at });
+      if (nowMs > huntClosesAtMs) return res.status(400).json({ error: "round_closed", closesAt: huntClosesAtIso });
 
       const hasUserGps = typeof lat === "number" && typeof lng === "number";
       const hasRoundGps = round.lat != null && round.lng != null;

@@ -77,7 +77,11 @@ async function main() {
 
   const now = Date.now();
   const opensAt = new Date(now - 60_000).toISOString();
-  const closesAt = new Date(now + 45 * 60_000).toISOString();
+  // Two-phase round (Riddle Rounds §2): reveal_at starts in the future so the
+  // hunt (check-in + submit) is open. We flip it to the past after submissions
+  // to open the vote window, simulating the T+18h phase transition.
+  const revealAt = new Date(now + 45 * 60_000).toISOString();
+  const closesAt = new Date(now + 90 * 60_000).toISOString();
   const roundResp = await adminFetch("/api/admin/round", {
     method: "POST",
     body: JSON.stringify({
@@ -87,6 +91,7 @@ async function main() {
       place_type: "AT A CAFÉ",
       survival_cap: 1,
       opens_at: opensAt,
+      reveal_at: revealAt,
       closes_at: closesAt,
       status: "scheduled",
     }),
@@ -160,6 +165,25 @@ async function main() {
     alphaSub = (feed.submissions || []).find((s) => s.address?.toLowerCase() === ALPHA.toLowerCase());
   }
   record("alpha submission id resolved", Boolean(alphaSub?.id), alphaSub ? `id=${alphaSub.id}` : "missing");
+
+  // Simulate the T+18h phase transition: flip reveal_at into the past so the
+  // vote window opens (Riddle Rounds §2.3). In production the scheduler's
+  // revealDueSpecs() does this at the real reveal_at.
+  const flipResp = await adminFetch("/api/admin/round", {
+    method: "POST",
+    body: JSON.stringify({
+      day: DAY,
+      name: "DRY RUN — AT A CAFÉ",
+      prompt: "Operator dry run only",
+      place_type: "AT A CAFÉ",
+      survival_cap: 1,
+      opens_at: opensAt,
+      reveal_at: new Date(now - 30_000).toISOString(),
+      closes_at: closesAt,
+      status: "open",
+    }),
+  });
+  record("reveal phase flip", flipResp.ok, `status ${flipResp.status}`);
 
   const selfVote = await authed(alpha, "/api/vote", {
     method: "POST",
