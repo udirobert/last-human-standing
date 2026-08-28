@@ -92,6 +92,20 @@ export function WorldProvider({ children }) {
   const [lastError, setLastError] = useState(null);
   const [hasWorldAppId, setHasWorldAppId] = useState(false);
   const [hasQueuedCheckin, setHasQueuedCheckin] = useState(false);
+  // "Session expired" awareness: set when a returning user (who had persisted
+  // auth) hits a 401 on syncAuth — so the UI can explain, instead of silently
+  // dropping them into onboarding. Cleared on any successful re-auth.
+  const hadAuthOnMountRef = useRef(
+    Boolean(persisted?.user || persisted?.walletAuthed),
+  );
+  const [sessionExpired, setSessionExpired] = useState(false);
+
+  const clearSessionExpired = useCallback(() => setSessionExpired(false), []);
+
+  // A successful re-auth clears the expired notice.
+  useEffect(() => {
+    if (walletAuthed) setSessionExpired(false);
+  }, [walletAuthed]);
 
   // Surface queued check-ins globally so home can show a chip after the
   // user navigates away from CheckIn. Cleared when the user submits
@@ -110,6 +124,9 @@ export function WorldProvider({ children }) {
           setEntryPaid(false);
           setWorldIdVerified(false);
           setUser(null);
+          // If this user had a valid session before (persisted auth), the
+          // session just lapsed — surface that instead of silently resetting.
+          if (hadAuthOnMountRef.current) setSessionExpired(true);
         }
         return;
       }
@@ -507,6 +524,9 @@ export function WorldProvider({ children }) {
       lastError,
       prizePoolAddress,
       hasQueuedCheckin,
+      sessionExpired,
+      clearSessionExpired,
+
       walletAuth,
       payEntryFee,
       signCheckIn,
@@ -534,6 +554,9 @@ export function WorldProvider({ children }) {
       lastError,
       prizePoolAddress,
       hasQueuedCheckin,
+      sessionExpired,
+      clearSessionExpired,
+
       walletAuth,
       payEntryFee,
       signCheckIn,

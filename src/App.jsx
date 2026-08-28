@@ -7,6 +7,7 @@ import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
 import MusicDock from './components/MusicDock.jsx';
 import ScreenLoader from './components/ui/ScreenLoader.jsx';
+import ReturnExperience from './components/ReturnExperience.jsx';
 import AmbientBackdrop from './components/AmbientBackdrop.jsx';
 import DesktopBackdrop from './components/DesktopBackdrop.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
@@ -208,6 +209,10 @@ const SCREENS = {
 
   return (
     <div className="relative">
+
+      {/* Return experience — session-expired toast, elimination discovery,
+          catch-up. Mounted once so the beats show over any screen. */}
+      <ReturnExperience />
 
       {/* Desktop-only backdrop for the gutters outside the 430px column.
           Fixed positioning escapes #root's max-width. Hidden on mobile. */}
