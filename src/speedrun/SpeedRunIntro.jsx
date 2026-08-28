@@ -149,7 +149,7 @@ export default function SpeedRunIntro({ onStart, onExit, soundEnabled, onToggleS
             margin: "clamp(16px,2vw,22px) auto 0",
           }}
         >
-          Five compressed days. Theme, proof, audit, cut — until one human
+          Five compressed days. Riddle, answer, audit, cut — until one human
           remains.{" "}
           <b className="text-amber font-semibold">You&apos;re the only real player.</b>
         </motion.p>

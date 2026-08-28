@@ -327,7 +327,7 @@ function CountdownCard({ launchAt, split, paidEnabled = false }) {
         <span className="text-bone/80">50 → 25</span>
       </p>
       <p className="font-mono text-dim text-[10px] tracking-widest uppercase mt-1 relative">
-        snap your proof from anywhere on Earth
+        snap your answer from anywhere on Earth
       </p>
 
       <div className="mt-5 space-y-3 relative">

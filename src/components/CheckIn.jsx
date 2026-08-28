@@ -476,7 +476,7 @@ export default function CheckIn({ onBack, onSubmit }) {
                       transition={{ duration: 0.3 }}
                       className="text-bone font-body text-sm"
                     >
-                      Snap your proof of presence
+                      Snap your answer
                     </motion.span>
                     <motion.span
                       animate={ritualMode ? { opacity: 0 } : { opacity: 1 }}

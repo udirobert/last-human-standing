@@ -14,7 +14,7 @@ import { survivalRule } from "../lib/copy.js";
  */
 
 const STEPS = [
-  { icon: "📸", title: "Snap your proof", body: "You + your answer in frame. No old photos, no stock." },
+  { icon: "📸", title: "Snap your answer", body: "You + your answer in frame. No old photos, no stock." },
   { icon: "📍", title: "Share your GPS", body: "Attached for verification, never shown unless you opt in." },
   { icon: "⏱️", title: "Use the window", body: survivalRule(25) },
   { icon: "⚖️", title: "Face the audit", body: "The crowd votes HUMAN or SUS. Majority SUS = out." },

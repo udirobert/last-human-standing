@@ -5,7 +5,7 @@ export const DAILY_THEMES = [
     id: 1,
     theme: "AT A CAFÉ",
     emoji: "☕",
-    description: "Find a café anywhere in the world. Snap your proof.",
+    description: "Find a café anywhere in the world. Snap your answer.",
     color: "#FFB800",
     counts: ["Coffee shop, tea house, bakery with seating", "Your cup + the space in frame", "Outdoor café terrace"],
     doesnt: ["Just a mug at home with no café context", "Stock latte art with no you in it"],

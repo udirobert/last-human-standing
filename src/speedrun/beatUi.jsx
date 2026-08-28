@@ -246,8 +246,11 @@ export function DrawCeremony({ draw, onContinue, cta = "Continue →" }) {
   );
 }
 
-/** Mission card — MissionBoard parity for check-in / path beats. */
-export function ThemeMissionCard({ day, theme, mantra, children }) {
+/** Mission card — MissionBoard parity for check-in / path beats.
+ *  `mantra` is the task ("your photo is your answer"); `footnote` is an
+ *  optional de-emphasized mechanic line (e.g. the seed lottery) so it informs
+ *  without hijacking the job. */
+export function ThemeMissionCard({ day, theme, mantra, footnote, children }) {
   return (
     <div className="bg-smoke/75 border border-neon/20 rounded-3xl p-5 mb-4 backdrop-blur-sm relative overflow-hidden">
       <div className="absolute -right-3 -top-3 opacity-30 pointer-events-none" aria-hidden>
@@ -263,7 +266,12 @@ export function ThemeMissionCard({ day, theme, mantra, children }) {
       <p className="font-mono text-amber text-[10px] tracking-[0.18em] uppercase mb-1 relative">
         Your only job today
       </p>
-      <p className="font-display text-xl text-bone leading-snug mb-3 relative">{mantra}</p>
+      <p className={`font-display text-xl text-bone leading-snug relative ${footnote ? "mb-1" : "mb-3"}`}>
+        {mantra}
+      </p>
+      {footnote && (
+        <p className="text-dim text-[10px] font-mono leading-relaxed mb-3 relative">{footnote}</p>
+      )}
       {theme.description && (
         <p className="text-dim text-xs font-body leading-relaxed mb-3 relative">{theme.description}</p>
       )}

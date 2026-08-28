@@ -42,7 +42,7 @@ export default function ThemeReveal() {
       day: currentDay,
       theme: theme.theme,
       emoji: theme.emoji,
-      description: theme.description || roundPrompt || "Snap your proof. Be real.",
+      description: theme.description || roundPrompt || "Snap your answer. Be real.",
       cap: roundCap ?? null,
     });
     setShowReveal(true);

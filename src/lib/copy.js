@@ -85,7 +85,7 @@ export const RULES = [
   {
     n: "02",
     title: "DAILY RIDDLE",
-    body: "Every day a new riddle drops — interpret it, find your answer, snap the proof. Interpretation is the skill.",
+    body: "Every day a new riddle drops — interpret it, find your answer, snap it. Interpretation is the skill.",
     icon: "🧩",
   },
   {
@@ -264,7 +264,6 @@ export function postSealCopy({
 }
 
 export function missionMantra({
-  theme,
   cap = 25,
   checkedIn = false,
   eliminated = false,
@@ -282,10 +281,12 @@ export function missionMantra({
     const warm = holdRoomCopy({ minutesLeft, survived: false, cap });
     return { kicker: warm.shelf, line: warm.body };
   }
-  const place = theme ? String(theme) : "TODAY'S RIDDLE";
+  // The riddle name is already displayed above the mantra on the mission
+  // card, so keep the line generic — the job is "answer the riddle".
   return {
     kicker: "Your only job today",
-    line: `${survivalRuleShort(cap)} ${place}.`,
+    line: "Answer the riddle. Your photo is your answer — add one line on why it fits.",
+    footnote: survivalRuleShort(cap),
   };
 }
 

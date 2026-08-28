@@ -91,7 +91,8 @@ export function D1CheckInBeat() {
       <ThemeMissionCard
         day={1}
         theme={d.theme}
-        mantra={`Answer the riddle. If more than ${d.capTo} are eligible, the seed lottery decides.`}
+        mantra="Answer the riddle. Your photo is your answer — add one line on why it fits."
+        footnote={`If more than ${d.capTo} are eligible, the seed lottery decides who survives.`}
       />
 
       {photoPreview ? (
@@ -114,7 +115,7 @@ export function D1CheckInBeat() {
           className="mb-4 w-full aspect-[4/5] max-h-[36vh] rounded-3xl border border-dashed border-amber/45 flex flex-col items-center justify-center gap-3 bg-smoke/40 active:scale-[0.98] transition-transform shadow-[inset_0_0_0_1px_rgba(244,184,74,0.12)]"
         >
           <ThemeMotif emoji={d.theme.emoji} size={72} label={d.theme.theme} />
-          <span className="font-body text-bone text-sm">Snap your proof of presence</span>
+          <span className="font-body text-bone text-sm">Snap your answer</span>
           <span className="font-mono text-amber/80 text-[10px] uppercase tracking-wider">Tap to open camera</span>
         </button>
       )}
@@ -122,12 +123,12 @@ export function D1CheckInBeat() {
 
       {photoPreview ? (
         <GameCta onClick={submit} className="mb-2">
-          Lock in proof →
+          Lock in your answer →
         </GameCta>
       ) : (
         <>
           <HumanCta onClick={() => fileRef.current?.click()} className="mb-2">
-            Snap your proof →
+            Snap your answer →
           </HumanCta>
           <button
             type="button"

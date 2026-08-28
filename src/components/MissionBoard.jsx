@@ -341,7 +341,6 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const juryTickets = you?.juryTickets ?? 0;
 
   const mantra = missionMantra({
-    theme: themeLabel,
     cap,
     checkedIn,
     eliminated,
@@ -395,6 +394,9 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         <p className="font-display text-xl text-bone leading-snug tracking-wide">
           {mantra.line}
         </p>
+        {mantra.footnote && (
+          <p className="text-dim text-[10px] font-mono mt-1.5 leading-relaxed">{mantra.footnote}</p>
+        )}
         {round?.prompt && (
           <p className="text-dim text-xs font-mono mt-2 leading-relaxed">{round.prompt}</p>
         )}
