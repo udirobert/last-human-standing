@@ -20,7 +20,12 @@ export default defineConfig({
           if (id.includes("node_modules/viem")) return "vendor-viem";
           if (id.includes("node_modules/@tanstack")) return "vendor-tanstack";
           if (id.includes("node_modules/framer-motion")) return "vendor-framer";
-          if (id.includes("node_modules/@worldcoin")) return "vendor-worldcoin";
+          // @worldcoin: minikit-js is imported at startup (MiniKitProvider in
+          // main.jsx) so it stays on the critical path. The full idkit UI is
+          // only needed by the lazy WorldIdVerify flow — we give it NO manual
+          // chunk so rolldown co-locates it with the lazy WorldIdVerify chunk
+          // and keeps it out of the modulepreload set.
+          if (id.includes("node_modules/@worldcoin/minikit-js")) return "vendor-minikit";
           if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) return "vendor-react";
         },
       },

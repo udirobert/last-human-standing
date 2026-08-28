@@ -1,10 +1,12 @@
 import { useState, lazy, Suspense } from "react";
-import WorldIdVerify from "../../world/WorldIdVerify.jsx";
 import { useTrustTier } from "../../hooks/useTrustTier.js";
 import { useWorld } from "../../world/WorldProvider.jsx";
 import ScreenLoader from "../ui/ScreenLoader.jsx";
 
 const SelfVerify = lazy(() => import("../SelfVerify.jsx"));
+// WorldIdVerify pulls in @worldcoin/idkit (~116 kB). It only renders when the
+// panel is opened, so lazy-load it off the critical path.
+const WorldIdVerify = lazy(() => import("../../world/WorldIdVerify.jsx"));
 
 /**
  * Humanity verify — wallet + pay happen first; this lives in the lobby.
@@ -56,7 +58,11 @@ export default function VerifyOptIn({ defaultOpen = false, required = false }) {
 
       {open && (
         <div className="px-4 pb-4 space-y-2 border-t border-neon/20 pt-3">
-          {!isFarcaster && worldEnabled && <WorldIdVerify />}
+          {!isFarcaster && worldEnabled && (
+            <Suspense fallback={<ScreenLoader kind="detail" />}>
+              <WorldIdVerify />
+            </Suspense>
+          )}
           {selfEnabled && (
             <Suspense fallback={<ScreenLoader kind="detail" />}>
               <SelfVerify />

@@ -1,6 +1,10 @@
+import { lazy, Suspense } from "react";
 import { useTrustTier } from "../hooks/useTrustTier.js";
-import WorldIdVerify from "../world/WorldIdVerify.jsx";
 import { HumanCta } from "./ui/CraftCta.jsx";
+
+// WorldIdVerify pulls in @worldcoin/idkit (~116 kB). It only renders for
+// provisional users when the PoH vote gate is on, so lazy-load it.
+const WorldIdVerify = lazy(() => import("../world/WorldIdVerify.jsx"));
 
 export default function VoteGateBanner({ onReserve }) {
   const { canVote, voteBlockedReason, tier, requireWorldIdForVoting } = useTrustTier();
@@ -15,7 +19,9 @@ export default function VoteGateBanner({ onReserve }) {
       <p className="text-bone text-sm leading-relaxed">{voteBlockedReason}</p>
       {tier === "provisional" && requireWorldIdForVoting && (
         <div className="mt-3">
-          <WorldIdVerify />
+          <Suspense fallback={null}>
+            <WorldIdVerify />
+          </Suspense>
         </div>
       )}
       {needsReserve && onReserve && (

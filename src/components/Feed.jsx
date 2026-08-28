@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { MOCK_SUBMISSIONS, resolveActiveTheme } from '../data/game';
+import { resolveActiveTheme } from '../data/game';
+import { MOCK_SUBMISSIONS } from '../data/mockSubmissions.js';
 import { useWorld } from '../world/WorldProvider.jsx';
 import { useRound } from '../world/RoundProvider.jsx';
 import { useTrustTier } from '../hooks/useTrustTier.js';
