@@ -21,7 +21,7 @@ import OverlayPortal from './OverlayPortal.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import { shareMoment } from '../lib/shareMoment.js';
-import { getCheckInMascot, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
+import { getCheckInMascot, getProfiledMascotLines, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
 import { ritualFeel } from '../lib/ritualFeel.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
 import CheckInPreview from './CheckInPreview.jsx';
@@ -35,7 +35,7 @@ export default function CheckIn({ onBack, onSubmit }) {
   const { round, currentDay, phase, refresh: refreshRound, pilot } = useRound();
   const { isFarcaster, farcasterUser, signCheckIn, user } = useWorld();
   const { unlockAchievement, checkAchievement, playSound, handleMascotClick, recordSurvival } = useDelight();
-  const { dispatchMascotEvent } = useMascotEvent();
+  const { dispatchMascotEvent, mascotEvent } = useMascotEvent();
   const reduceMotion = useReducedMotion();
   const [infiltratorStats, setInfiltratorStats] = useState(null);
   const [step, setStep] = useState(0); // 0=theme, 1=submitting, 2=done
@@ -58,7 +58,13 @@ export default function CheckIn({ onBack, onSubmit }) {
   // all — honest check-in is the only mode.
   const infiltratorEnabled = Boolean(pilot?.infiltratorEnabled);
   const infiltratorUnlocked = infiltratorEnabled && (currentDay ?? 1) >= 2;
-  const checkInMascot = getCheckInMascot({ step, photoPreview, gpsEnabled });
+  // A transient mascot event (e.g. the riddle-reaction beat dispatched on
+  // mount) overrides the local coaching line while it's live — otherwise
+  // nothing on this screen ever renders the dispatched event.
+  const riddleBeat = step === 0 && mascotEvent && !mascotEvent.durable && mascotEvent.message
+    ? { variant: mascotEvent.variant, message: mascotEvent.message }
+    : null;
+  const checkInMascot = riddleBeat || getCheckInMascot({ step, photoPreview, gpsEnabled });
   const [queuedCheckin, setQueuedCheckin] = useState(false);
   const { online, queueCheckin } = useOnlineStatus();
   const { markQueuedCheckin, clearQueuedCheckin } = useWorld();
@@ -95,9 +101,20 @@ export default function CheckIn({ onBack, onSubmit }) {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
 
-  // Funnel: checkin_opened.
+  // Funnel: checkin_opened + riddle-reaction mascot beat.
   useEffect(() => {
     track("checkin_opened", { day: currentDay });
+    // Riddle reaction: mascot mutters a day-specific one-liner when the
+    // riddle is first read. Uses the riddleReaction lines from copy.js.
+    const riddleLine = getProfiledMascotLines().riddleReaction?.[Number(currentDay)];
+    if (riddleLine) {
+      dispatchMascotEvent({
+        type: "vote_react",
+        variant: "thinking",
+        message: riddleLine,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDay]);
 
   // Fetch infiltrator success rate for the path choice (only meaningful

@@ -284,7 +284,7 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
             margin: "clamp(16px,2vw,22px) auto 0",
           }}
         >
-          {cohortSize} humans. 5 days. Each day, prove you're still here — from{" "}
+          {cohortSize} humans. 5 days. Each day, a riddle drops — answer it with a photo from{" "}
           <b className="text-amber font-semibold">anywhere on Earth</b>. Everyone in the window is eligible; if the
           field overflows, a seed lottery decides. A SUS verdict disqualifies you. One human takes the prize.
         </p>
