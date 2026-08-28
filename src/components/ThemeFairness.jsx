@@ -37,7 +37,7 @@ export default function ThemeFairness({ theme, className = "" }) {
           )}
           {theme.doesnt?.length > 0 && (
             <div>
-              <p className="font-mono text-[9px] text-blood uppercase tracking-widest mb-1">Doesn&apos;t</p>
+              <p className="font-mono text-[9px] text-blood uppercase tracking-widest mb-1">Doesn&apos;t count</p>
               <ul className="space-y-0.5">
                 {theme.doesnt.map((line) => (
                   <li key={line} className="text-dim text-[11px] font-mono leading-snug">

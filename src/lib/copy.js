@@ -19,7 +19,7 @@ export const COHORT = {
 };
 
 /**
- * THE canonical survival sentence (design review, finding 3).
+ * THE canonical survival sentence.
  *
  * Survival is a hybrid: everyone who checks in within the window is eligible,
  * and if eligible players exceed the cap a deterministic cohort-seed lottery
@@ -109,10 +109,10 @@ export const RULES = [
  */
 export const ROUND_UNLOCKS = {
   1: {
-    id: "day1_riddle",
-    eyebrow: "Day 1 · The asking",
+    id: "day1_asking",
+    eyebrow: "The asking",
     title: "READ IT. ANSWER IT.",
-    body: survivalRule(25),
+    body: "A riddle drops. Your answer is a photo — yourself with your proof, plus one line on why it fits. Submit inside the 18-hour window. The crowd votes HUMAN or SUS on every photo.",
     cta: "I'M IN →",
   },
   2: {
@@ -324,6 +324,9 @@ export const DAILY_LOOP = [
     body: "50 → 25 → 12 → 6 → 3 → 1. If more players are eligible than the cap, a seed lottery decides. Outlast the crowd for five days and the whole pot is yours.",
   },
 ];
+
+/** The one-line premise — stated once, on the Day 1 ceremony. */
+export const PREMISE_LINE = "50 humans. 5 days. One pot. Answer the riddle, survive the crowd.";
 
 export const FAQS = [
   {
@@ -557,7 +560,7 @@ export const MASCOT_LINES = {
   voteProgressNeeds: (n) => `${n} photo${n !== 1 ? "s" : ""} below quorum. The audit needs you.`,
 
   // Rule reveal per day
-  ruleUnlock1: (cap) => survivalRule(cap),
+  ruleUnlock1: () => "Today's riddle is live. Check in within the window — the crowd votes on every photo.",
   ruleUnlock2: "Infiltrators can bluff. Caught = out. Fooled = immunity.",
   ruleUnlock3: "The cap shrinks again. If the field overflows, the seed lottery decides.",
   ruleUnlock4: "The jury can vote one eliminated player back in. Keep auditing.",
@@ -572,6 +575,16 @@ export const MASCOT_LINES = {
   dayRecapSurvived: "You survived. The cut shrinks tomorrow.",
   dayRecapEliminated: "You were cut. The jury can still bring you back.",
   dayRecapDefault: "Day closed. The remaining humans face tomorrow.",
+
+  // Riddle reaction — mascot mutters when the riddle is first read.
+  // Keyed by day, so each riddle gets a tailored reaction.
+  riddleReaction: {
+    1: "The gathering. Everyone has a place they belong. Make yours unreadable.",
+    2: "The wild. Find green the city forgot. Not hard to find — hard to make yours.",
+    3: "The bond. Proof of love. Don't overthink it — but don't fake it either.",
+    4: "The quiet. A place that asks for silence. The silence is the proof.",
+    5: "The dawn. First to see the day. The sky doesn't lie — but you still have to be there.",
+  },
 };
 
 /**

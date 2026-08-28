@@ -21,7 +21,7 @@ import OverlayPortal from './OverlayPortal.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import { shareMoment } from '../lib/shareMoment.js';
-import { getCheckInMascot, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
+import { getCheckInMascot, getProfiledMascotLines, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
 import { ritualFeel } from '../lib/ritualFeel.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
 import CheckInPreview from './CheckInPreview.jsx';
@@ -95,9 +95,20 @@ export default function CheckIn({ onBack, onSubmit }) {
     return () => { if (watchRef.current != null) navigator.geolocation.clearWatch(watchRef.current); };
   }, []);
 
-  // Funnel: checkin_opened.
+  // Funnel: checkin_opened + riddle-reaction mascot beat.
   useEffect(() => {
     track("checkin_opened", { day: currentDay });
+    // Riddle reaction: mascot mutters a day-specific one-liner when the
+    // riddle is first read. Uses the riddleReaction lines from copy.js.
+    const riddleLine = getProfiledMascotLines().riddleReaction?.[Number(currentDay)];
+    if (riddleLine) {
+      dispatchMascotEvent({
+        type: "vote_react",
+        variant: "thinking",
+        message: riddleLine,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentDay]);
 
   // Fetch infiltrator success rate for the path choice (only meaningful

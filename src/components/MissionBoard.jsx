@@ -240,6 +240,9 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
   const closes = formatWindow(round?.closesAt);
   const cap = round?.survivalCap ?? 25;
 
+  // Live pulse — check-in count from the round data, ticks as players answer.
+  const eligibleCount = round?.checkinCount ?? null;
+
   const checkedIn = Boolean(you?.checkedInToday);
   const survived = you?.survivedToday;
   const eliminated = Boolean(you?.isEliminated);
@@ -421,9 +424,12 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
 
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div className="bg-ash rounded-xl p-3 border border-ember">
-          <p className="text-bone/70 text-xs font-mono uppercase">Check-in window</p>
-          <p className="text-bone font-mono text-sm mt-1">
-            {opens && closes ? `${opens} – ${closes}` : "Set by admin"}
+          <p className="text-bone/70 text-xs font-mono uppercase">Eligible</p>
+          <p className="text-bone font-display text-2xl mt-0.5 tabular-nums">
+            {eligibleCount != null ? eligibleCount : "—"}
+            {cap != null && (
+              <span className="text-dim text-sm font-mono"> / {cap} cap</span>
+            )}
           </p>
           {round?.closesAt && (
             <p className={closingSoon ? 'text-amber font-mono text-sm font-semibold mt-1 animate-pulse' : 'text-amber text-xs font-mono mt-1'}>
@@ -433,10 +439,16 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           )}
         </div>
         <div className="bg-ash rounded-xl p-3 border border-ember">
-          <p className="text-bone/70 text-xs font-mono uppercase">Eligible so far</p>
-          <p className="text-bone font-display text-2xl mt-0.5 tabular-nums">
-            {round?.checkinCount != null ? round.checkinCount : "—"}
-            <span className="text-dim text-sm font-mono"> → {cap} drawn</span>
+          <p className="text-bone/70 text-xs font-mono uppercase">Window</p>
+          <p className="text-bone font-mono text-sm mt-1">
+            {opens && closes ? `${opens} – ${closes}` : "Set by admin"}
+          </p>
+          <p className="text-dim text-[10px] font-mono mt-1 leading-relaxed">
+            {eligibleCount != null && cap != null
+              ? eligibleCount > cap
+                ? "over cap — the draw decides at close"
+                : `field ${eligibleCount}/${cap} · draw at close if over`
+              : "18-hour window"}
           </p>
         </div>
       </div>

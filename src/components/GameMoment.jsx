@@ -51,6 +51,16 @@ export default function GameMoment({
 }) {
   const [showShareSheet, setShowShareSheet] = useState(false);
 
+  // Haptic on mount — the ceremony moment itself fires a buzz even if the
+  // CheckIn ritualFeel fired first (double-tap is intentional: the seal
+  // haptic says "submitted", this says "result is in").
+  useEffect(() => {
+    if (!result) return;
+    if (result.survived) ritualFeel("survive");
+    else ritualFeel("eliminate");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result?.survived]);
+
   if (!result) return null;
 
   // Queued state — keep it simple, no cinematic
