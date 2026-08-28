@@ -1,12 +1,14 @@
-import { findTheme } from "../data/game.js";
 import { ROUND_UNLOCKS, JURY_UNLOCK } from "../lib/copy.js";
 import { proofSceneDataUri } from "../components/ui/proofSceneData.js";
 
 /**
  * 5-day speed-run — compressed cohort myth.
  *
- * Spoiler discipline: demo themes are outside the real Jul 18–22 schedule
- * and use a scrambled order. Mechanics + RuleReveal copy stay real.
+ * Spoiler discipline: the demo teaches the FORMAT the real cohort uses
+ * (interpretive riddle + committed spec + reveal-then-vote + seed lottery)
+ * but with decoy riddles that are NOT cohort 1's actual five (THE GATHERING
+ * → THE WILD → THE BOND → THE QUIET → THE DAWN). Mechanics + RuleReveal copy
+ * stay real; the riddle content stays a decoy.
  */
 
 export const DEMO_SHARE_URL_PATH = "/?demo=1";
@@ -47,13 +49,101 @@ export const BEAT_DAY = {
 export const CAP_SCHEDULE = [null, 25, 12, 6, 3, 1];
 
 /**
- * Decoy themes — none of these are in cohort 1's drop order
- * (Café → Park → Friend → Bookstore → Sunrise).
+ * Decoy riddles — same FORMAT as the real cohort (interpretive prompt +
+ * committed spec) but none of these are cohort 1's actual five riddles.
+ * Each maps to an available proof-scene so the demo photos stay coherent.
+ */
+export const DEMO_RIDDLES = [
+  {
+    theme: "THE CROSSING",
+    emoji: "🚇",
+    description: "A place where everyone is going somewhere else. Show me the in-between.",
+    color: "#AA55FF",
+    counts: [
+      "Bus, train, metro, tram, ferry — you inside",
+      "Station platform with you clearly in frame",
+      "You mid-journey, the vehicle or stop visible",
+    ],
+    doesnt: [
+      "Private car or rideshare backseat",
+      "Stock photo of a train with no you",
+      "Just a ticket or map with no human",
+    ],
+  },
+  {
+    theme: "THE GRIND",
+    emoji: "🏋️",
+    description: "Proof you chose something hard today. Show me the effort.",
+    color: "#FF6B00",
+    counts: [
+      "Gym floor, weights, machines — you in frame",
+      "Home gym with obvious equipment",
+      "Mid-rep or clearly about to work",
+    ],
+    doesnt: [
+      "Athletic clothes on a couch",
+      "Yoga mat in a bedroom with no gear",
+      "Stock photo of a gym",
+    ],
+  },
+  {
+    theme: "THE HARVEST",
+    emoji: "🛒",
+    description: "A place where food waits to be chosen. Show me the picking.",
+    color: "#00FF94",
+    counts: [
+      "Aisles, produce, checkout — you shopping",
+      "Market stall with you choosing",
+      "Cart or basket in your hands",
+    ],
+    doesnt: [
+      "Fridge at home",
+      "Delivery bag on the doorstep",
+      "Receipt only, no store, no you",
+    ],
+  },
+  {
+    theme: "THE EDGE",
+    emoji: "🌊",
+    description: "Where the land gives up. Show me the boundary.",
+    color: "#00C8FF",
+    counts: [
+      "Ocean, lake, river — you + the water",
+      "Shoreline with you standing at the edge",
+      "Any water body, coastal not required",
+    ],
+    doesnt: [
+      "Glass of water on a desk",
+      "Rain on a window only",
+      "Stock photo of a beach",
+    ],
+  },
+  {
+    theme: "THE TABLE",
+    emoji: "🍜",
+    description: "Proof you still take time to eat. Show me the meal.",
+    color: "#FF6B00",
+    counts: [
+      "Real food in front of you, you in frame",
+      "Mid-bite or clearly about to eat",
+      "Restaurant, street food, or home plate",
+    ],
+    doesnt: [
+      "Empty plate",
+      "Unopened packaged snack only",
+      "Food photo with no human presence",
+    ],
+  },
+];
+
+/**
+ * Decoy riddle days — none of these are in cohort 1's real drop order
+ * (THE GATHERING → THE WILD → THE BOND → THE QUIET → THE DAWN).
  */
 export const DEMO_DAYS = {
   1: {
     day: 1,
-    theme: findTheme("ON PUBLIC TRANSIT"),
+    theme: DEMO_RIDDLES[0],
     samplePhoto: proofSceneDataUri({ scene: "transit", seed: 1 }),
     unlock: ROUND_UNLOCKS[1],
     capFrom: 50,
@@ -61,7 +151,7 @@ export const DEMO_DAYS = {
   },
   2: {
     day: 2,
-    theme: findTheme("AT A GYM"),
+    theme: DEMO_RIDDLES[1],
     samplePhoto: proofSceneDataUri({ scene: "gym", seed: 2 }),
     unlock: ROUND_UNLOCKS[2],
     capFrom: 25,
@@ -69,7 +159,7 @@ export const DEMO_DAYS = {
   },
   3: {
     day: 3,
-    theme: findTheme("AT A GROCERY STORE"),
+    theme: DEMO_RIDDLES[2],
     samplePhoto: proofSceneDataUri({ scene: "grocery", seed: 3 }),
     unlock: ROUND_UNLOCKS[3],
     capFrom: 12,
@@ -77,7 +167,7 @@ export const DEMO_DAYS = {
   },
   4: {
     day: 4,
-    theme: findTheme("AT A BEACH OR WATER"),
+    theme: DEMO_RIDDLES[3],
     samplePhoto: proofSceneDataUri({ scene: "beach", seed: 4 }),
     unlock: ROUND_UNLOCKS[4],
     capFrom: 6,
@@ -85,7 +175,7 @@ export const DEMO_DAYS = {
   },
   5: {
     day: 5,
-    theme: findTheme("EATING SOMETHING"),
+    theme: DEMO_RIDDLES[4],
     samplePhoto: proofSceneDataUri({ scene: "eating", seed: 5 }),
     unlock: ROUND_UNLOCKS[5],
     capFrom: 3,
@@ -96,14 +186,14 @@ export const DEMO_DAYS = {
 export const INTRO_COPY = {
   eyebrow: "Feel the week before it starts",
   title: "LAST HUMAN STANDING",
-  body: "Five compressed days. Theme, proof, audit, cut — until one human remains.",
+  body: "Five compressed days. Riddle, proof, reveal, vote — until one human remains.",
   cta: "Step into day one →",
 };
 
 export const FINALE_COPY = {
   eyebrow: "The season, compressed",
   title: "YOU ARE THE LAST HUMAN STANDING",
-  body: "In the real cohort this stretches across five real days with fifty verified humans. The pot is on-chain. Twists unlock as you survive.",
+  body: "In the real cohort this stretches across five real days with verified humans. The pot is on-chain. The riddles are different — these were practice.",
   shareCta: "SHARE THIS PRACTICE RUN",
   reserveCta: "Reserve your real slot →",
 };
@@ -143,7 +233,7 @@ export function buildDay1Audit({ playerPhoto, playerName = "you" } = {}) {
     {
       id: "you",
       user: playerName.startsWith("@") ? playerName : `@${playerName}`,
-      caption: "My proof · demo day 1",
+      caption: "My answer, because… the in-between is where everyone is going somewhere else.",
       votes: { real: 8, fake: 2 },
       status: "pending",
       mediaUrl: playerPhoto || DEMO_DAYS[1].samplePhoto,
@@ -152,7 +242,7 @@ export function buildDay1Audit({ playerPhoto, playerName = "you" } = {}) {
     {
       id: "marina",
       user: "@marina_sol",
-      caption: "Line 3 · standing room only",
+      caption: "My answer, because… Line 3, standing room only — nobody stays here.",
       votes: { real: 14, fake: 1 },
       status: "pending",
       mediaUrl: photos[0],
@@ -160,7 +250,7 @@ export function buildDay1Audit({ playerPhoto, playerName = "you" } = {}) {
     {
       id: "ghost",
       user: "@ghost_protocol",
-      caption: "Is an Uber counted as transit…?",
+      caption: "My answer, because… an Uber is basically transit…?",
       votes: { real: 3, fake: 11 },
       status: "pending",
       mediaUrl: photos[1],
@@ -168,7 +258,7 @@ export function buildDay1Audit({ playerPhoto, playerName = "you" } = {}) {
     {
       id: "luna",
       user: "@luna_waves",
-      caption: "Ferry deck. Still standing.",
+      caption: "My answer, because… the ferry deck is the edge between two somewhere-elses.",
       votes: { real: 18, fake: 0 },
       status: "pending",
       mediaUrl: photos[2],

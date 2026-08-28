@@ -42,7 +42,7 @@ export default function ThemeReveal() {
       day: currentDay,
       theme: theme.theme,
       emoji: theme.emoji,
-      description: theme.description || roundPrompt || "Snap your proof. Be fast. Be real.",
+      description: theme.description || roundPrompt || "Snap your proof. Be real.",
       cap: roundCap ?? null,
     });
     setShowReveal(true);
@@ -75,7 +75,7 @@ export default function ThemeReveal() {
               transition={{ delay: 0.3, duration: 0.5 }}
             >
               <p className="font-mono text-neon text-xs uppercase tracking-widest mb-4">
-                Day {revealed.day} · theme reveal
+                Day {revealed.day} · riddle reveal
               </p>
               <div className="mb-6">
                 <ThemeMotif emoji={revealed.emoji} size={120} label={revealed.theme} />

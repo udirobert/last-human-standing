@@ -10,7 +10,7 @@ import { GOUACHE as P } from "./gouachePalette.js";
  * GameplayLoopDemo — auto-playing animated sequence showing the core loop.
  *
  * Replaces the need for a video demo by animating the actual game mechanics
- * in-place: theme drops → proof submitted → crowd votes → survive or cut.
+ * in-place: riddle drops → proof submitted → crowd votes → survive or cut.
  * Three phases cycle on a timer, giving the user a visual taste of the game
  * before they commit.
  *
@@ -19,7 +19,7 @@ import { GOUACHE as P } from "./gouachePalette.js";
 const PHASES = [
   {
     id: "theme",
-    label: "THEME DROPS",
+    label: "RIDDLE DROPS",
     duration: 2000,
   },
   {
@@ -115,7 +115,7 @@ export default function GameplayLoopDemo() {
                   transition={{ delay: 0.4 }}
                   className="font-display text-2xl text-bone text-center leading-tight"
                 >
-                  AT A CAFÉ
+                  A room that isn't home and isn't work. Show me the third place.
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -242,7 +242,7 @@ export default function GameplayLoopDemo() {
                   transition={{ delay: 0.3 }}
                   className="font-display text-3xl text-bone leading-none"
                 >
-                  RANK #14
+                  MADE THE CUT
                 </motion.p>
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -268,7 +268,7 @@ export default function GameplayLoopDemo() {
 
       {/* Caption below the phone */}
       <p className="font-mono text-dim text-[10px] tracking-widest uppercase text-center mt-3">
-        the loop · theme → proof → vote → survive
+        the loop · riddle → proof → vote → survive
       </p>
     </div>
   );

@@ -11,7 +11,7 @@ const STEPS = [
   {
     emoji: "☕",
     title: "Daily check-in",
-    description: "Each day, a new theme drops. Show your proof from anywhere on Earth.",
+    description: "Each day, a new riddle drops. Answer it with a proof from anywhere on Earth.",
     accent: "border-amber/40 bg-amber/10",
   },
   {

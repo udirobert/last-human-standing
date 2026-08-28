@@ -398,7 +398,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
                 </div>
                 <div className="flex-1">
                   <p className={`font-display text-2xl ${d.day === 5 ? 'text-amber' : 'text-bone'}`}>
-                    {d.cap === 1 ? 'Last human standing' : `First ${d.cap} survive`}
+                    {d.cap === 1 ? 'Last human standing' : `${d.cap} survive`}
                   </p>
                   <p className="text-dim text-xs font-mono mt-0.5">
                     {dropped > 0 ? `−${dropped} cut` : ''}
@@ -409,7 +409,7 @@ export default function Leaderboard({ onBack, onCheckIn, onRouteToOnboarding }) 
             );
           })}
           <p className="text-dim text-xs font-mono text-center mt-3">
-            Each day: a place type drops, 4-hour window, first N to check in survive.
+            Each day: a riddle drops, 18-hour window, everyone who checks in is eligible — overflow is decided by seed lottery.
           </p>
         </div>
       )}

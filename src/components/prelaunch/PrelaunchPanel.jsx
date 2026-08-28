@@ -197,7 +197,7 @@ function GetReadyCard() {
               Day 1: ???
             </p>
             <p className="text-bone/60 text-[11px] font-mono mt-0.5">
-              {day1.dayLabel} · first-come cap {day1.cap}
+              {day1.dayLabel} · survival cap {day1.cap}
             </p>
           </div>
         </div>

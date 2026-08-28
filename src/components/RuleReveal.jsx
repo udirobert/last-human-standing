@@ -134,7 +134,7 @@ export default function RuleReveal({ onAudit }) {
               {theme.theme}
             </h2>
             <p className="font-mono text-neon/80 uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.16em" }}>
-              Today&apos;s theme
+              Today&apos;s riddle
             </p>
 
             <div className="w-full rounded-3xl border border-ember/30 bg-smoke/50 backdrop-blur-sm p-4 mb-4 text-left">

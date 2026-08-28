@@ -88,7 +88,7 @@ export function D1CheckInBeat() {
       <ThemeMissionCard
         day={1}
         theme={d.theme}
-        mantra={`Be one of the first ${d.capTo}. ${d.theme.theme}.`}
+        mantra={`Answer the riddle. If more than ${d.capTo} are eligible, the seed lottery decides.`}
       />
 
       {photoPreview ? (
@@ -237,7 +237,7 @@ export function D1RankBeat() {
   const { rank, nextBeat, shareCopied, setShareCopied, photoPreview } = useSpeedRun();
   const cap = dayMeta(1).capTo;
 
-  const shareText = `Day 1 · Rank #${rank}/${cap} · SURVIVED\nLast Human Standing practice run`;
+  const shareText = `Day 1 · SURVIVED\nLast Human Standing practice run`;
   const shareUrl = `${window.location.origin}${DEMO_SHARE_URL_PATH}`;
 
   const onShare = async () => {
@@ -413,6 +413,19 @@ export function D1AuditBeat() {
         <ThemeMotif emoji={theme.emoji} size={32} label={theme.theme} />
       </div>
 
+      {/* Spec revealed — the reveal-then-vote phase (Riddle Rounds §2.3).
+          The committed criteria unlock before voting, so every vote is judged
+          against what was locked, not invented after the fact. */}
+      <div className="shrink-0 mb-3 rounded-xl border border-amber/35 bg-amber/10 px-3 py-2.5">
+        <div className="flex items-center justify-between mb-1">
+          <span className="font-mono text-[9px] text-amber uppercase tracking-widest">Spec revealed</span>
+          <span className="font-mono text-[9px] text-dim/50">vote against these</span>
+        </div>
+        <p className="font-body text-bone/75 text-[11px] leading-snug">
+          <span className="text-neon">Accepts</span> {theme.counts?.[0]} · <span className="text-blood">Rejects</span> {theme.doesnt?.[0]}
+        </p>
+      </div>
+
       {/* Your proof — on trial */}
       {mySub && (
         <div className="shrink-0 mb-3 rounded-2xl border border-amber/35 bg-smoke/70 overflow-hidden backdrop-blur-sm">
@@ -550,7 +563,7 @@ export function D1CutBeat() {
       from={d.capFrom}
       to={d.capTo}
       title="The cut"
-      body="@ghost_protocol got flagged. A slower, cleaner check-in inherited their slot — DQ and replace, live."
+      body="@ghost_protocol got flagged. A cleaner check-in inherited their slot — DQ and replace, live."
       chip="You made it · your rank still holds"
       onContinue={nextBeat}
     />
@@ -564,7 +577,7 @@ export function D2RevealBeat() {
     <DayReveal
       day={2}
       theme={d.theme}
-      unlock={d.unlock}
+      unlock={{ ...d.unlock, eyebrow: `${d.unlock.eyebrow} · twist preview` }}
       capFrom={d.capFrom}
       capTo={d.capTo}
       onContinue={nextBeat}
@@ -583,7 +596,10 @@ export function D2PathBeat() {
         theme={d.theme}
         mantra="Choose your path. The crowd will judge."
       />
-      <p className="font-body text-bone/55 text-sm text-center mb-4 px-2">
+      <p className="font-body text-bone/55 text-sm text-center mb-1 px-2">
+        Twist preview — infiltrators return in a future cohort.
+      </p>
+      <p className="font-body text-bone/40 text-xs text-center mb-4 px-2">
         In the real game this choice is irrevocable for the day.
       </p>
       <div className="space-y-3 mb-5">
@@ -717,7 +733,7 @@ export function D3PulseBeat() {
       <ThemeMissionCard
         day={3}
         theme={d.theme}
-        mantra={`${d.capTo} spots left. The race is thinner.`}
+        mantra={`${d.capTo} spots left. The field is thinner.`}
       />
       <div className="bg-amber/10 border border-amber/35 rounded-2xl p-4 mb-4">
         <p className="font-mono text-amber text-[10px] tracking-widest uppercase mb-2">Mid-day pulse</p>
@@ -760,6 +776,7 @@ export function D4RevealBeat() {
   const d = dayMeta(4);
   const unlock = {
     ...d.unlock,
+    eyebrow: `${d.unlock.eyebrow} · twist preview`,
     body: d.unlock.bodyAlive || d.unlock.body,
   };
   return (
@@ -788,8 +805,11 @@ export function D4JuryBeat() {
           <h2 className="font-display text-3xl text-bone leading-tight">Who walks back in?</h2>
         </div>
       </div>
-      <p className="font-body text-bone/70 text-sm mb-5 leading-relaxed">
+      <p className="font-body text-bone/70 text-sm mb-2 leading-relaxed">
         You&apos;re still alive — cast the jury&apos;s vote anyway. In the real game, only the eliminated decide.
+      </p>
+      <p className="font-body text-bone/40 text-xs mb-5 leading-relaxed">
+        Twist preview — the wildcard revival returns in a future cohort.
       </p>
       <MotifFrieze className="w-full mb-5 opacity-85" />
       <div className="space-y-3 mb-6">

@@ -285,8 +285,8 @@ export default function LandingHero({ targetIso, reservedCount = 0, cohortSize =
           }}
         >
           {cohortSize} humans. 5 days. Each day, prove you're still here — from{" "}
-          <b className="text-amber font-semibold">anywhere on Earth</b>. Be among the first valid proofs; a SUS
-          verdict disqualifies you and promotes the next player. One human takes the prize.
+          <b className="text-amber font-semibold">anywhere on Earth</b>. Everyone in the window is eligible; if the
+          field overflows, a seed lottery decides. A SUS verdict disqualifies you. One human takes the prize.
         </p>
 
         <MotifFrieze className="w-full" style={{ marginTop: "clamp(22px,3vw,34px)" }} />

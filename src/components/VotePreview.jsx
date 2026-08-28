@@ -12,7 +12,7 @@ import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
  * the bare "No submissions yet" empty state with a rich explainer that:
  *   1. Shows a mock submission card with the HUMAN / SUS voting UI
  *   2. Explains the three-step audit loop (check-in → vote → verdict)
- *   3. Previews today's theme so players know what to expect
+ *   3. Previews today's riddle so players know what to expect
  *   4. Shows the detective rank ladder as a progression teaser
  *
  * The mock card is interactive — tapping HUMAN or SUS gives haptic-style
@@ -24,7 +24,7 @@ const STEPS = [
   {
     icon: "📸",
     title: "Players check in",
-    body: "Each day has a theme. Players snap a photo proving they're really there.",
+    body: "Each day has a riddle. Players snap a photo answering it, with a one-line argument.",
   },
   {
     icon: "⚖️",

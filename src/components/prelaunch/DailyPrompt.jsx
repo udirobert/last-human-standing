@@ -20,7 +20,7 @@ const PROMPTS = [
   },
   {
     id: "day-1-theme",
-    q: "Day 1 is tomorrow. What do you think the theme will involve?",
+    q: "Day 1 is tomorrow. What do you think the riddle will involve?",
     options: ["Somewhere social", "Somewhere public", "Somewhere private", "Something unexpected"],
   },
   {
@@ -36,7 +36,7 @@ const PROMPTS = [
   {
     id: "playmate",
     q: "Who are you recruiting into your cohort?",
-    options: ["My group chat", "Only people I can beat", "Whoever is fastest", "Just me, 1v50"],
+    options: ["My group chat", "Only people I can out-argue", "Whoever shows up", "Just me, 1v50"],
   },
   {
     id: "pot-prediction",

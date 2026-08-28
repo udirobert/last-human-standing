@@ -22,21 +22,21 @@ const MOCK_CHECKINS = [
     survived: true,
     time: "09:14",
     distance: 240,
-    theme: "AT A CAFÉ",
+    theme: "THE GATHERING",
   },
   {
     rank: 12,
     survived: true,
     time: "08:42",
     distance: 1800,
-    theme: "AT A PARK",
+    theme: "THE WILD",
   },
   {
     rank: 27,
     survived: false,
     time: "14:20",
     distance: 500,
-    theme: "AT A GYM",
+    theme: "THE BOND",
   },
 ];
 
@@ -135,9 +135,9 @@ export default function HistoryPreview() {
           What we track
         </p>
         {[
-          { icon: "📊", title: "Rank at check-in", body: "Your position in the queue. Lower is better — first 25 provisionally survive." },
+          { icon: "📊", title: "Rank at check-in", body: "Your position in the queue. Everyone in the window is eligible — overflow is decided by seed lottery." },
           { icon: "✅", title: "Survival verdict", body: "Whether the crowd voted you HUMAN or SUS. Survived or eliminated." },
-          { icon: "📏", title: "Distance traveled", body: "How far you were from the theme location. Closer is more convincing." },
+          { icon: "📏", title: "Distance traveled", body: "How far you were from the round's anchor point, if one is set. Used for GPS plausibility — not scored." },
           { icon: "🔥", title: "Survival streak", body: "Consecutive days survived. Long streaks unlock achievements and jury visibility." },
         ].map((item, i) => (
           <motion.div

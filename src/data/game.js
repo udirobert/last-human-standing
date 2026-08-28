@@ -96,16 +96,33 @@ export const DAILY_THEMES = [
 export const TODAY_THEME = DAILY_THEMES[Math.floor(Date.now() / (1000 * 60 * 60 * 24)) % DAILY_THEMES.length];
 
 /**
- * The cohort 1 schedule — 5 daily themes with their day number, date, and
- * survival cap. Used by DailyProofs (day-label overlay) and CountdownCard
+ * Motif metadata for the cohort 1 riddle rounds (supabase/migrations/
+ * 039_riddle_rounds.sql). Riddle PROMPTS intentionally stay server-side —
+ * they drop with each round via the API, so the client bundle never leaks
+ * them. Only the public names + painted motifs live here so home, check-in,
+ * audit, and reveal resolve the right motif for a riddle round.
+ */
+export const RIDDLE_META = {
+  "THE GATHERING": { emoji: "☕", color: "#FFB800" },
+  "THE WILD": { emoji: "🌳", color: "#00FF94" },
+  "THE BOND": { emoji: "🤝", color: "#FF1A1A" },
+  "THE QUIET": { emoji: "📚", color: "#00C8FF" },
+  "THE DAWN": { emoji: "🌅", color: "#FFB800" },
+};
+
+/**
+ * The cohort 1 schedule — 5 daily riddle rounds with their day number, date,
+ * and survival cap. Used by DailyProofs (day-label overlay) and CountdownCard
  * (T-minus rotating copy) so the UI always reflects the real calendar.
+ * Rounds open 18:00 UTC on the date; reveal + vote follows the 24h cycle
+ * (migration 042).
  */
 export const COHORT_SCHEDULE = [
-  { day: 1, theme: "AT A CAFÉ",      emoji: "☕", date: "2026-08-03", cap: 25, dayLabel: "MON" },
-  { day: 2, theme: "AT A PARK",      emoji: "🌳", date: "2026-08-04", cap: 12, dayLabel: "TUE" },
-  { day: 3, theme: "WITH A FRIEND",  emoji: "🤝", date: "2026-08-05", cap: 6,  dayLabel: "WED" },
-  { day: 4, theme: "AT A BOOKSTORE", emoji: "📚", date: "2026-08-06", cap: 3,  dayLabel: "THU" },
-  { day: 5, theme: "OUTSIDE AT SUNRISE", emoji: "🌅", date: "2026-08-07", cap: 1, dayLabel: "FRI" },
+  { day: 1, theme: "THE GATHERING", emoji: "☕", date: "2026-09-01", cap: 25, dayLabel: "TUE" },
+  { day: 2, theme: "THE WILD",      emoji: "🌳", date: "2026-09-02", cap: 12, dayLabel: "WED" },
+  { day: 3, theme: "THE BOND",      emoji: "🤝", date: "2026-09-03", cap: 6,  dayLabel: "THU" },
+  { day: 4, theme: "THE QUIET",     emoji: "📚", date: "2026-09-04", cap: 3,  dayLabel: "FRI" },
+  { day: 5, theme: "THE DAWN",      emoji: "🌅", date: "2026-09-05", cap: 1,  dayLabel: "SAT" },
 ];
 
 /** Resolve theme metadata by round name / place type / id. */
@@ -115,6 +132,8 @@ export function findTheme(labelOrId) {
     return DAILY_THEMES.find((t) => t.id === labelOrId) || TODAY_THEME;
   }
   const key = String(labelOrId).trim().toUpperCase();
+  const riddle = RIDDLE_META[key];
+  if (riddle) return { ...riddle, theme: key };
   return (
     DAILY_THEMES.find((t) => t.theme === key) ||
     DAILY_THEMES.find((t) => t.theme.includes(key) || key.includes(t.theme.replace(/^AT\s+/, ""))) ||
@@ -218,7 +237,7 @@ export const CHAT_MESSAGES = [
   { id: 2, user: "@kai_nomad", msg: "flagging everyone at a hotel pool. that ain't a beach", time: "5m" },
   { id: 3, user: "@ghost_protocol", msg: "my submission better not get flagged i literally walked 2km for this shot", time: "8m" },
   { id: 4, user: "@luna_waves", msg: "the prize pool is growing. i'm not sleeping", time: "11m" },
-  { id: 5, user: "@spectre_x", msg: "anyone else think today's theme was too easy? getting boring", time: "14m" },
+  { id: 5, user: "@spectre_x", msg: "anyone else think today's riddle was too easy? getting boring", time: "14m" },
   { id: 6, user: "@marina_sol", msg: "bro you have 31 sus votes lmaooo", time: "15m" },
   { id: 7, user: "@spectre_x", msg: "those are my enemies voting. i have enemies because i'm winning", time: "16m" },
   { id: 8, user: "@kai_nomad", msg: "tomorrow better be something hard. outside at sunrise let's goooo", time: "20m" },

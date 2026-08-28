@@ -20,6 +20,7 @@ describe("getEliminationReason", () => {
         if (table === "checkins") return queryResult(null);
         if (table === "submissions") return queryResult([]);
         if (table === "rounds") return queryResult({ survival_cap: 25, name: "AT A CAFÉ" });
+        if (table === "survival_draws") return queryResult(null);
         throw new Error(`unexpected ${table}`);
       },
     };
@@ -27,12 +28,13 @@ describe("getEliminationReason", () => {
     expect(reason?.code).toBe("no_checkin");
   });
 
-  it("returns too_slow when rank exceeds cap", async () => {
+  it("returns too_slow when rank exceeds cap and no lottery ran", async () => {
     const sb = {
       from(table) {
         if (table === "checkins") return queryResult({ rank: 28, survived: false, dq: false });
         if (table === "submissions") return queryResult([{ status: "verified", is_infiltrator: false }]);
         if (table === "rounds") return queryResult({ survival_cap: 25, name: "AT A PARK" });
+        if (table === "survival_draws") return queryResult(null);
         throw new Error(`unexpected ${table}`);
       },
     };
@@ -41,12 +43,28 @@ describe("getEliminationReason", () => {
     expect(reason?.spotsAway).toBe(3);
   });
 
+  it("returns not_drawn when a survival lottery decided the day", async () => {
+    const sb = {
+      from(table) {
+        if (table === "checkins") return queryResult({ rank: 3, survived: false, dq: false });
+        if (table === "submissions") return queryResult([{ status: "verified", is_infiltrator: false }]);
+        if (table === "rounds") return queryResult({ survival_cap: 6, name: "THE BOND" });
+        if (table === "survival_draws") return queryResult({ eligible: 9, cap: 6, eliminated: ["0xabc"] });
+        throw new Error(`unexpected ${table}`);
+      },
+    };
+    const reason = await getEliminationReason(sb, "0xabc", 3);
+    expect(reason?.code).toBe("not_drawn");
+    expect(reason?.eligible).toBe(9);
+  });
+
   it("returns audit_flagged when submission was flagged", async () => {
     const sb = {
       from(table) {
         if (table === "checkins") return queryResult({ rank: 5, survived: false, dq: true });
         if (table === "submissions") return queryResult([{ status: "flagged", is_infiltrator: false }]);
         if (table === "rounds") return queryResult({ survival_cap: 25, name: "WITH A FRIEND" });
+        if (table === "survival_draws") return queryResult(null);
         throw new Error(`unexpected ${table}`);
       },
     };

@@ -118,7 +118,7 @@ export default function ThemeWorld({ theme, layoutId, onClose }) {
         )}
 
         <p className="font-mono uppercase text-[11px] tracking-[0.2em]" style={{ color: theme.color }}>
-          Today's proof
+          A place it might accept
         </p>
         <h3 className="font-display text-bone text-3xl tracking-wide mt-1">{theme.theme}</h3>
         <p className="font-body text-dim text-sm mt-2 max-w-xs mx-auto leading-snug">{theme.description}</p>

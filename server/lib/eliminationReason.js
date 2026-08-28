@@ -8,7 +8,7 @@ export async function getEliminationReason(supabaseAdmin, address, eliminatedAtD
   const day = Number(eliminatedAtDay);
   if (!Number.isFinite(day) || day < 1) return null;
 
-  const [{ data: checkin }, { data: submissions }, { data: round }] = await Promise.all([
+  const [{ data: checkin }, { data: submissions }, { data: round }, { data: draw }] = await Promise.all([
     supabaseAdmin
       .from("checkins")
       .select("rank,survived,dq")
@@ -25,6 +25,14 @@ export async function getEliminationReason(supabaseAdmin, address, eliminatedAtD
     supabaseAdmin
       .from("rounds")
       .select("survival_cap,name")
+      .eq("day", day)
+      .maybeSingle(),
+    // Survival lottery audit trail (migration 040). When a draw exists,
+    // overflow survival was decided by the seed lottery — not by rank — so
+    // the "why did I lose?" copy must say so.
+    supabaseAdmin
+      .from("survival_draws")
+      .select("eligible,cap,eliminated")
       .eq("day", day)
       .maybeSingle(),
   ]);
@@ -53,6 +61,20 @@ export async function getEliminationReason(supabaseAdmin, address, eliminatedAtD
       rank,
       theme: round?.name ?? null,
       wasInfiltrator: Boolean(submission?.is_infiltrator),
+    };
+  }
+
+  if (checkin.survived === false && draw) {
+    // Overflow day: survival was decided by the deterministic seed lottery
+    // (Riddle Rounds §5.1), not by check-in order.
+    return {
+      code: "not_drawn",
+      day,
+      cap,
+      rank,
+      theme: round?.name ?? null,
+      eligible: draw.eligible ?? null,
+      wasInfiltrator: false,
     };
   }
 

@@ -21,18 +21,20 @@ export const COHORT = {
 /**
  * THE canonical survival sentence (design review, finding 3).
  *
- * Survival is a hybrid: the fastest N valid check-ins provisionally survive,
- * and a SUS verdict disqualifies you — promoting the next player. One literal
- * sentence everywhere so the model can never read differently depending on
- * which screen you land on. Use `survivalRule(cap)` where there is room for
- * the full sentence; `survivalRuleShort(cap)` for one-line spots.
+ * Survival is a hybrid: everyone who checks in within the window is eligible,
+ * and if eligible players exceed the cap a deterministic cohort-seed lottery
+ * decides who survives. A SUS verdict disqualifies you — promoting the next
+ * player. One literal sentence everywhere so the model can never read
+ * differently depending on which screen you land on. Use `survivalRule(cap)`
+ * where there is room for the full sentence; `survivalRuleShort(cap)` for
+ * one-line spots.
  */
 export function survivalRule(cap) {
-  return `Be among the first ${cap} valid proofs. A SUS verdict disqualifies you and promotes the next player.`;
+  return `Check in within the window. If more than ${cap} are eligible, a seed lottery decides who survives. A SUS verdict disqualifies you and promotes the next player.`;
 }
 
 export function survivalRuleShort(cap) {
-  return `Be among the first ${cap} valid proofs.`;
+  return `Check in within the window. If more than ${cap} are eligible, the seed lottery decides.`;
 }
 
 export const ENTRY = {
@@ -82,20 +84,20 @@ export const RULES = [
   },
   {
     n: "02",
-    title: "DAILY THEME",
-    body: "Every day a new challenge drops — find the place, snap the proof. Be fast. Be real. Be first.",
-    icon: "🌍",
+    title: "DAILY RIDDLE",
+    body: "Every day a new riddle drops — interpret it, find your answer, snap the proof. Interpretation is the skill.",
+    icon: "🧩",
   },
   {
     n: "03",
     title: "PROVE IT",
-    body: "Snap a photo. The crowd votes HUMAN or SUS. A SUS verdict disqualifies you — the next player takes your slot.",
+    body: "Snap a photo with a one-line argument. The criteria are revealed before voting. The crowd votes HUMAN or SUS. A SUS verdict disqualifies you — the next player takes your slot.",
     icon: "📸",
   },
   {
     n: "04",
     title: "SURVIVE",
-    body: "Each day the cap shrinks. Outlast them all and the pot is yours.",
+    body: "Each day the cap shrinks. If more players are eligible than the cap, a seed lottery decides. Outlast them all and the pot is yours.",
     icon: "🏆",
   },
 ];
@@ -107,9 +109,9 @@ export const RULES = [
  */
 export const ROUND_UNLOCKS = {
   1: {
-    id: "day1_race",
-    eyebrow: "Day 1 · The race",
-    title: "BE FAST. BE REAL.",
+    id: "day1_riddle",
+    eyebrow: "Day 1 · The asking",
+    title: "READ IT. ANSWER IT.",
     body: survivalRule(25),
     cta: "I'M IN →",
   },
@@ -124,7 +126,7 @@ export const ROUND_UNLOCKS = {
     id: "day3_pressure",
     eyebrow: "Day 3 · The cut deepens",
     title: "FEWER SPOTS. SAME STAKES.",
-    body: "The survival cap just shrank again. Speed matters more. Looking human matters more. Miss today and you join the jury.",
+    body: "The survival cap just shrank again. If more players are eligible than the cap, the seed lottery decides. Miss today and you join the jury.",
     cta: "LET'S GO →",
   },
   4: {
@@ -280,7 +282,7 @@ export function missionMantra({
     const warm = holdRoomCopy({ minutesLeft, survived: false, cap });
     return { kicker: warm.shelf, line: warm.body };
   }
-  const place = theme ? String(theme) : "TODAY'S THEME";
+  const place = theme ? String(theme) : "TODAY'S RIDDLE";
   return {
     kicker: "Your only job today",
     line: `${survivalRuleShort(cap)} ${place}.`,
@@ -290,34 +292,35 @@ export function missionMantra({
 /**
  * The daily loop, for the landing's "How It Works" narrative (DayTimeline).
  * Kept in sync with the real close_day() mechanic (supabase/migrations/
- * 008_lethal_votes.sql): survival is a HYBRID of rank (the fastest N
- * check-ins provisionally survive) and crowd vote (a flagged submission is
- * disqualified and backfilled by the next-fastest check-in) — not pure
- * speed and not pure judgment. Also: don't promise a specific reveal
- * mechanism (time of day, "random") that the system doesn't actually
+ * 040_lottery_close_day.sql + 042_reveal_vote_window.sql): everyone who
+ * checks in within the window is eligible; if eligible players exceed the
+ * cap a deterministic cohort-seed lottery decides survival; a flagged
+ * submission is disqualified and backfilled by the next eligible check-in.
+ * Not a speed race and not pure judgment. Also: don't promise a specific
+ * reveal mechanism (time of day, "random") that the system doesn't actually
  * guarantee — promise what's true regardless of mechanism: you don't know
- * in advance.
+ * the criteria in advance.
  */
 export const DAILY_LOOP = [
   {
     num: "01",
-    title: "A theme drops",
-    body: "A real-world place is announced — you won't know which until it does. Find it anywhere on Earth, your way.",
+    title: "A riddle drops",
+    body: "An interpretive prompt is announced — you won't know which until it does. Read it, find your answer anywhere on Earth, your way.",
   },
   {
     num: "02",
-    title: "Snap yourself there",
-    body: "A selfie, optionally GPS-stamped, inside the check-in window. That's your proof you're still here.",
+    title: "Snap your answer",
+    body: "A selfie with a one-line argument, optionally GPS-stamped, inside the 18-hour window. That's your proof you're still here.",
   },
   {
     num: "03",
-    title: "Speed and trust",
-    body: "Be among the first N valid proofs. A SUS verdict disqualifies you and promotes the next player — so a fast photo only counts if it reads as real.",
+    title: "Reveal and trust",
+    body: "The judging criteria are revealed before voting. A SUS verdict disqualifies you and promotes the next player — so a photo only counts if it reads as real.",
   },
   {
     num: "04",
     title: "Last human standing",
-    body: "50 → 25 → 12 → 6 → 3 → 1. Outlast the crowd for five days and the whole pot is yours.",
+    body: "50 → 25 → 12 → 6 → 3 → 1. If more players are eligible than the cap, a seed lottery decides. Outlast the crowd for five days and the whole pot is yours.",
   },
 ];
 
@@ -332,7 +335,7 @@ export const FAQS = [
   },
   {
     q: "How do I survive a day?",
-    a: "Be among the first N valid proofs. A SUS verdict disqualifies you and promotes the next player. The cap shrinks every day: 25 → 12 → 6 → 3 → 1.",
+    a: "Check in within the window. Everyone who submits is eligible; if eligible players exceed the cap, a deterministic seed lottery decides who survives. A SUS verdict disqualifies you and promotes the next player. The cap shrinks every day: 25 → 12 → 6 → 3 → 1.",
   },
   {
     q: "What if I miss a day?",
@@ -344,7 +347,7 @@ export const FAQS = [
   },
   {
     q: "Any country?",
-    a: "Yes. Themes are place types (café, park), not GPS pins. Find one anywhere.",
+    a: "Yes. Riddles are interpretive prompts, not GPS pins. Find your answer anywhere.",
   },
   {
     q: "Who sees my check-in photo?",
@@ -394,7 +397,7 @@ export const PROFILE_QUESTIONS = [
   },
   {
     id: "theme",
-    question: "Which daily theme would you ace?",
+    question: "Which kind of riddle would you ace?",
     options: [
       { value: "cafe", label: "Café", emoji: "☕" },
       { value: "park", label: "Park", emoji: "🌳" },
@@ -406,8 +409,8 @@ export const PROFILE_QUESTIONS = [
     id: "rhythm",
     question: "When do you check in?",
     options: [
-      { value: "early", label: "Dawn raid", emoji: "🌅", blurb: "First to submit, every time." },
-      { value: "steady", label: "Steady", emoji: "⏰", blurb: "Mid-day, no rush." },
+      { value: "early", label: "First light", emoji: "🌅", blurb: "In as soon as the riddle drops." },
+      { value: "steady", label: "Steady", emoji: "⏰", blurb: "Mid-window, no rush." },
       { value: "late", label: "Last minute", emoji: "🌙", blurb: "I thrive under pressure." },
     ],
   },
@@ -423,16 +426,16 @@ export function getPersonalizedPaywall({ strategy, theme, rhythm } = {}) {
     park: "touching grass",
     gym: "the gym grind",
     water: "the beach",
-  }[theme] || "the daily theme";
+  }[theme] || "the daily riddle";
 
   const strategyHook = {
     honest: "Your honest proofs could take you all the way.",
     cunning: "You'll play it close. Careful reads win rooms.",
-    undecided: "You'll find your style fast. The first theme drops Day 1.",
+    undecided: "You'll find your style fast. The first riddle drops Day 1.",
   }[strategy] || "50 humans. One pot. Last one standing.";
 
   const rhythmHook = {
-    early: "Dawn raiders get the fastest slots. You'll love Day 1.",
+    early: "In at first light. You'll love Day 1.",
     steady: "Consistency wins this game. You're built for it.",
     late: "Pressure players thrive when the cap shrinks. Day 3+ is yours.",
   }[rhythm] || "50 humans. One pot. Last one standing.";
@@ -458,7 +461,7 @@ export const CHAT_COPY = {
   demoResponses: [
     "still alive another day. respectable.",
     "anyone else watching the survivor count instead of sleeping",
-    "if you haven't checked in yet, the clock is not your friend.",
+    "if you haven't checked in yet, the window won't stay open forever.",
     "that café proof needs a second look. we have standards.",
     "the pot grows. the cap shrinks. perfectly normal day.",
     "local spots make better proof. landmarks help.",
@@ -472,13 +475,13 @@ export const SURVIVAL_TIPS = [
   "Your check-in is your lifeline. Miss the window and you're out.",
   "Show the place and your face. The crowd needs both.",
   "GPS is optional. A visible landmark can earn the same trust.",
-  "Fast gets you a provisional slot. Believable keeps it.",
+  "Everyone in the window is eligible. Believable keeps you alive after the draw.",
   "Vote the proof, not the person.",
   "A flagged survivor gets replaced by the next convincing human.",
   "The cap shrinks every day. Tomorrow is less forgiving.",
   "Eliminated players become the jury. Their votes still count double.",
   "A clear background beats a clever caption.",
-  "Check in early. The audit can still change the cut.",
+  "The criteria are revealed before voting. Read them, then judge.",
 ];
 
 /**
@@ -532,7 +535,7 @@ export const MASCOT_LINES = {
 
   // Live-game mission card
   missionOpen: (cap, theme) => `${survivalRuleShort(cap)} ${theme}.`,
-  missionPrelaunch: "Registered. The first theme drops when the cohort opens.",
+  missionPrelaunch: "Registered. The first riddle drops when the cohort opens.",
   missionSpectator: "You're in the stands. Watch the audit and see how the game feels.",
   missionCheckedIn: "Submitted. Hold the room — audit while you wait.",
   missionCheckedInThinning: "The field is thinning. Stay sharp in the audit.",
@@ -555,7 +558,7 @@ export const MASCOT_LINES = {
   // Rule reveal per day
   ruleUnlock1: (cap) => survivalRule(cap),
   ruleUnlock2: "Infiltrators can bluff. Caught = out. Fooled = immunity.",
-  ruleUnlock3: "The cap shrinks again. Speed matters more.",
+  ruleUnlock3: "The cap shrinks again. If the field overflows, the seed lottery decides.",
   ruleUnlock4: "The jury can vote one eliminated player back in. Keep auditing.",
   ruleUnlock4Alive: "The eliminated are voting. One might walk back in.",
   ruleUnlock5: "One human. One pot. Last verified survivor wins.",
@@ -734,7 +737,7 @@ export function getProfiledMascotLines() {
 
   // Personalized finale — references their rhythm
   const finale = rhythm === "early"
-    ? "Last human standing. Dawn raider to the end. You earned this."
+    ? "Last human standing. First light to the end. You earned this."
     : rhythm === "late"
       ? "Last human standing. Under pressure, you delivered. You earned this."
       : MASCOT_LINES.finale;

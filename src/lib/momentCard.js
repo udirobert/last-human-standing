@@ -138,7 +138,6 @@ export async function renderMomentCard(kind, data = {}) {
 
   const name = data.name || "anon";
   const day = data.day ?? "—";
-  const rank = data.rank ?? "—";
   const cap = data.cap ?? "—";
   const originHost = data.originHost || "lasthumanstanding.thisyearnofear.com";
   const accent = kind === "win" ? C.neon : C.amber;
@@ -170,11 +169,11 @@ export async function renderMomentCard(kind, data = {}) {
     ctx.textAlign = "center";
     ctx.fillText(String(name).slice(0, 28), MOMENT_W / 2, 250);
     ctx.fillStyle = C.amber;
-    ctx.font = "700 96px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.fillText(`RANK #${rank}`, MOMENT_W / 2, 370);
+    ctx.font = "700 96px Bebas Neue, Impact, sans-serif";
+    ctx.fillText("SURVIVED", MOMENT_W / 2, 370);
     ctx.fillStyle = C.dim;
     ctx.font = "22px ui-monospace, SFMono-Regular, Menlo, monospace";
-    ctx.fillText(`Day ${day} · of ${cap} surviving today`, MOMENT_W / 2, 430);
+    ctx.fillText(`Day ${day} · one of ${cap} still standing`, MOMENT_W / 2, 430);
   } else if (kind === "jury") {
     paintStatusPill(ctx, "JURY NOW", C.amber);
     ctx.fillStyle = C.bone;

@@ -81,7 +81,7 @@ function deriveDurable(round, world, lines) {
         return { type: "check_in_closing", variant: "worried", message: lines.checkInSubmit, timestamp: 0, durable: true };
       }
     }
-    return { type: "check_in_due", variant: "determined", message: lines.missionOpen(roundData?.survivalCap ?? 25, roundData?.placeType || "today's theme"), timestamp: 0, durable: true };
+    return { type: "check_in_due", variant: "determined", message: lines.missionOpen(roundData?.survivalCap ?? 25, roundData?.placeType || "today's riddle"), timestamp: 0, durable: true };
   }
 
   return { type: "idle", variant: "idle", message: null, timestamp: 0, durable: true };

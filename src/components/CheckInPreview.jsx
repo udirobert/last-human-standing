@@ -22,7 +22,7 @@ const STEPS = [
   {
     icon: "📸",
     title: "Snap your proof",
-    body: "Get to the theme location. Take a photo with you and the place clearly in frame. No old photos, no stock images.",
+    body: "Answer the riddle in the real world. Take a photo with you and your answer clearly in frame. No old photos, no stock images.",
   },
   {
     icon: "📍",
@@ -31,7 +31,7 @@ const STEPS = [
   },
   {
     icon: "⏱️",
-    title: "Beat the cap",
+    title: "Use the window",
     body: `${survivalRule(25)} After that, the cap shrinks every day.`,
   },
   {
@@ -60,8 +60,8 @@ export default function CheckInPreview() {
           Prove you're human. Stay alive.
         </p>
         <p className="text-dim text-xs leading-relaxed max-w-sm mx-auto">
-          Each day has a theme. Get there, snap a
-          photo with GPS, and submit before the survival cap fills. The
+          Each day has a riddle. Interpret it, snap a
+          photo with GPS, and submit within the 18-hour window. The
           crowd audits your proof. Survive or get eliminated.
         </p>
       </motion.div>
@@ -69,7 +69,7 @@ export default function CheckInPreview() {
       {/* Mock theme card */}
       <div>
         <p className="font-mono text-[10px] text-dim uppercase tracking-widest mb-2 px-1">
-          Today's theme (preview)
+          Today's riddle (preview)
         </p>
         <motion.div
           initial={{ opacity: 0, y: 16 }}
@@ -116,7 +116,7 @@ export default function CheckInPreview() {
           </div>
         </motion.div>
         <p className="text-dim text-[10px] font-mono mt-2 px-1 text-center">
-          Preview — the real theme is assigned when the game goes live.
+          Preview — the real riddle is assigned when the game goes live.
         </p>
       </div>
 
@@ -172,7 +172,7 @@ export default function CheckInPreview() {
           ))}
         </div>
         <p className="text-dim text-[10px] font-mono mt-3 text-center leading-relaxed">
-          Day 1: first 25 valid proofs survive. Day 5: one human remains. The last verified human takes the prize.
+          Day 1: everyone in the window is eligible; if more than 25, the seed lottery decides. Day 5: one human remains. The last verified human takes the prize.
         </p>
       </motion.div>
 
@@ -184,11 +184,11 @@ export default function CheckInPreview() {
         className="bg-blood/5 border border-blood/30 rounded-2xl p-4 text-center"
       >
         <p className="font-display text-sm text-bone leading-snug mb-1">
-          Miss the cap, and you're out.
+          Miss the window, and you're out.
         </p>
         <p className="text-dim text-xs leading-relaxed">
-          Check in early. Check in honest. The audit decides who stays —
-          but you have to be among the first 25 valid proofs to even have a chance.
+          Check in within the window. Check in honest. The audit decides who stays —
+          but you have to be eligible to even have a chance.
         </p>
       </motion.div>
     </div>

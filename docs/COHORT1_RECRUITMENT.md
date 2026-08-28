@@ -8,9 +8,10 @@ will actually show up beats 50 ghosts.
 Live app (invite-only): https://lasthumanstanding.thisyearnofear.com
 Speed-run demo to share: https://lasthumanstanding.thisyearnofear.com/?demo=1
 
-> ⚠️ The demo still walks through the old literal-theme game. It shows the
-> loop (photo → audit → survive) accurately, but not the riddles. Mention
-> that the real cohort uses riddles, or walk them through it live.
+> The demo teaches the real format — riddle, proof, spec reveal, vote, seed
+> lottery — with practice riddles (the real five stay secret until each day).
+> Note: the demo's Day 2 infiltrator and Day 4 wildcard beats are labelled
+> "twist preview" — both return in a future cohort, not Sep 1.
 
 ---
 
@@ -88,6 +89,27 @@ human takes the pot; eliminated players become the paid jury.
 > 3. World App installed (or browser + wallet for Self verify)
 >
 > I'll send your private reserve link once you're confirmed.
+
+---
+
+## Nudge message (Aug 29 — for people who said "sounds fun" but haven't confirmed)
+
+Send 2 days before the roster freeze. Short, warm, one question. No guilt.
+
+> Hey — quick one. The game starts Tuesday (Sep 1, 18:00 UTC) and I'm locking
+> the roster Sunday night.
+>
+> You said it sounded fun — still in? It's ~15 min a day: one riddle, one
+> photo, one line on why it fits. Free, and even if you're voted out early you
+> can still earn from the jury pool.
+>
+> If yes, just reply with your timezone and I'll send your reserve link. If
+> the timing's bad, no worries at all — Cohort 2 is Sep 13.
+
+**Follow-up rules:**
+- One nudge max per person. Silence after that = no.
+- Anyone who confirms gets the reserve link + participant brief immediately.
+- Log them in the roster tracker the moment they confirm, not later.
 
 ---
 

@@ -177,7 +177,7 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
       tabIndex={-1}
       role="dialog"
       aria-modal="true"
-      aria-label={`Day ${currentDay ?? ""} survived — rank ${result.rank}`}
+      aria-label={`Day ${currentDay ?? ""} survived`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -221,11 +221,16 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
           Day {currentDay ?? "—"} · Survived
         </p>
         <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow tabular-nums">
-          RANK #{result.rank}
+          SURVIVED
         </p>
         <p className="text-dim font-body text-sm tabular-nums">
-          of {result.survivalCap} surviving today
+          one of {result.survivalCap} still standing
         </p>
+        {result.rank != null && (
+          <p className="text-dim/60 font-mono text-[11px] mt-1 tabular-nums">
+            checked in #{result.rank}
+          </p>
+        )}
         {result.gpsShared && (
           <p className="text-neon/70 font-mono text-xs mt-2">GPS shared</p>
         )}

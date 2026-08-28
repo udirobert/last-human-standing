@@ -69,7 +69,7 @@ export function DayReveal({ day, theme, unlock, onContinue, capFrom, capTo }) {
       </h2>
 
       <p className="font-mono text-neon/80 uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.16em" }}>
-        Today&apos;s theme
+        Today&apos;s riddle
       </p>
 
       <AnimatePresence mode="wait">

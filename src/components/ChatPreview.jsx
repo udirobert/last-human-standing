@@ -15,7 +15,7 @@ const EXAMPLE_MESSAGES = [
   { user: "@kai_nomad", msg: "flagging everyone at a hotel pool. that ain't a beach", color: "#FFB800" },
   { user: "@ghost_protocol", msg: "my submission better not get flagged i literally walked 2km for this shot", color: "#00FF94" },
   { user: "@luna_waves", msg: "the prize pool is growing. i'm not sleeping", color: "#00C8FF" },
-  { user: "@spectre_x", msg: "anyone else think today's theme was too easy?", color: "#AA55FF" },
+  { user: "@spectre_x", msg: "anyone else think today's riddle was too easy?", color: "#AA55FF" },
   { user: "@marina_sol", msg: "bro you have 31 sus votes lmaooo", color: "#FF6B6B" },
 ];
 

@@ -20,7 +20,7 @@ export default function EliminationReasonCard({ reason, className = "" }) {
       <p className="font-display text-lg text-bone leading-snug">{formatted.title}</p>
       <p className="text-bone/75 text-sm font-body mt-1 leading-relaxed">{formatted.body}</p>
       {formatted.theme && (
-        <p className="text-dim text-[11px] font-mono mt-2">Theme: {formatted.theme}</p>
+        <p className="text-dim text-[11px] font-mono mt-2">Round: {formatted.theme}</p>
       )}
       <p className="text-dim text-[11px] font-mono mt-2 leading-relaxed">{formatted.hint}</p>
     </motion.div>

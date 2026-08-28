@@ -6,21 +6,27 @@ const COPY = {
   no_checkin: {
     title: "No check-in",
     body: (r) =>
-      `You didn't check in on Day ${r.day}. Missing a day ends your run — the cap doesn't wait.`,
-    hint: "Set a reminder for the next cohort. The window is usually a few hours.",
+      `You didn't check in on Day ${r.day}. Missing a day ends your run — the window doesn't wait.`,
+    hint: "Set a reminder for the next cohort. The window is 18 hours — plenty, if you use it.",
+  },
+  not_drawn: {
+    title: "Not drawn",
+    body: (r) =>
+      `Day ${r.day} closed with ${r.eligible ?? "more"} eligible players for ${r.cap ?? "?"} slots. The seed lottery decided — your number wasn't called.`,
+    hint: "Your check-in was valid; the field just overflowed. The draw is public and replayable from the cohort seed.",
   },
   too_slow: {
-    title: "Too slow",
+    title: "Didn't make the cut",
     body: (r) =>
       r.spotsAway != null && r.spotsAway > 0
         ? `Rank #${r.rank} — ${r.spotsAway} ${r.spotsAway === 1 ? "spot" : "spots"} outside the cap of ${r.cap}.`
         : `Rank #${r.rank ?? "—"} didn't make the first-${r.cap ?? "?"} cut.`,
-    hint: "Speed matters every day. Check in as soon as the theme drops.",
+    hint: "This day fell back to check-in order. Normally the seed lottery decides — not speed.",
   },
   ranked_out: {
     title: "Didn't make the cut",
     body: (r) => `Day ${r.day} closed with you outside the survival cap${r.cap != null ? ` (${r.cap} spots)` : ""}.`,
-    hint: "The audit can still DQ flagged survivors — but you have to arrive in time first.",
+    hint: "The audit can still DQ flagged survivors — but you have to check in within the window first.",
   },
   audit_flagged: {
     title: "Flagged by the crowd",
@@ -51,6 +57,7 @@ export function formatEliminationReason(reason) {
     rank: reason.rank ?? null,
     cap: reason.cap ?? null,
     spotsAway: reason.spotsAway ?? null,
+    eligible: reason.eligible ?? null,
     theme: reason.theme ?? null,
     wasInfiltrator: Boolean(reason.wasInfiltrator),
   };
