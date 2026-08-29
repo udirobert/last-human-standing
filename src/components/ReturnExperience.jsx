@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useWorld } from "../world/WorldProvider.jsx";
 import { useRound } from "../world/RoundProvider.jsx";
@@ -6,6 +6,8 @@ import useReturnExperience from "../hooks/useReturnExperience.js";
 import { useServiceWorkerUpdate } from "../hooks/useServiceWorkerUpdate.js";
 import { useQueuedCheckinFeedback } from "../hooks/useQueuedCheckinFeedback.js";
 import { formatEliminationReason } from "../lib/eliminationReason.js";
+import { useDelight } from "./DelightProvider.jsx";
+import { haptic } from "../lib/haptics.js";
 import { GameCta } from "./ui/CraftCta.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import OverlayPortal from "./OverlayPortal.jsx";
@@ -32,6 +34,26 @@ export default function ReturnExperience({ onCheckIn }) {
     useReturnExperience();
   const { updateReady, dismiss: dismissUpdate, refresh } = useServiceWorkerUpdate();
   const { replayResult, clear: clearReplay } = useQueuedCheckinFeedback();
+  const { playSound } = useDelight();
+
+  // Delight grammar for the emotional beats — matches verify/enter/speedrun
+  // (playSound('victory') + celebrate/haptic on trust upgrades). The return
+  // overlays previously fired silently; each fires its cue exactly once,
+  // right when the beat first becomes visible.
+  const elimCueFiredRef = useRef(false);
+  useEffect(() => {
+    if (!eliminatedWhileAway || elimCueFiredRef.current) return;
+    elimCueFiredRef.current = true;
+    playSound?.("error");
+    haptic("warning");
+  }, [eliminatedWhileAway, playSound]);
+
+  const endedCueFiredRef = useRef(false);
+  useEffect(() => {
+    if (!phaseEndedWhileAway || eliminatedWhileAway || endedCueFiredRef.current) return;
+    endedCueFiredRef.current = true;
+    playSound?.("victory");
+  }, [phaseEndedWhileAway, eliminatedWhileAway, playSound]);
 
   // Session-expired toast state (auto-dismiss after a beat).
   const [showSessionToast, setShowSessionToast] = useState(false);
@@ -59,6 +81,7 @@ export default function ReturnExperience({ onCheckIn }) {
   useEffect(() => {
     if (!replayResult) return;
     setShowReplayToast(true);
+    haptic(replayResult.ok ? "success" : "warning");
     const t = setTimeout(() => {
       setShowReplayToast(false);
       clearReplay();
@@ -91,6 +114,33 @@ export default function ReturnExperience({ onCheckIn }) {
   const windowMissed = !urgencyDismissed && isLiveAlive && closesMs != null && nowMs > closesMs;
   const msLeft = closesMs != null ? Math.max(0, closesMs - nowMs) : null;
   const closingSoon = msLeft != null && msLeft < 6 * 60 * 60 * 1000; // 6h
+
+  // One light haptic when the urgency banner first appears, one firmer
+  // buzz when it flips into "closing soon" — echoes the vibration cadence
+  // haptic() already uses elsewhere (light/medium taps, not full alarms).
+  const urgencyCueRef = useRef(null);
+  useEffect(() => {
+    if (!windowOpen) {
+      urgencyCueRef.current = null;
+      return;
+    }
+    const stage = closingSoon ? "closing" : "open";
+    if (urgencyCueRef.current === stage) return;
+    urgencyCueRef.current = stage;
+    haptic(closingSoon ? "warning" : "light");
+  }, [windowOpen, closingSoon]);
+
+  const windowMissedCueFiredRef = useRef(false);
+  useEffect(() => {
+    if (!windowMissed) {
+      windowMissedCueFiredRef.current = false;
+      return;
+    }
+    if (windowMissedCueFiredRef.current) return;
+    windowMissedCueFiredRef.current = true;
+    haptic("error");
+  }, [windowMissed]);
+
   const fmtLeft = () => {
     if (msLeft == null) return "…";
     const h = Math.floor(msLeft / 3600000);
