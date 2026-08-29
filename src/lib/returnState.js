@@ -105,13 +105,3 @@ export function missedDayNumbers(lastSeenDay, currentDay) {
   for (let d = from + 1; d < to; d++) out.push(d);
   return out;
 }
-
-export default {
-  readReturnState,
-  writeReturnState,
-  clearReturnState,
-  detectEliminationWhileAway,
-  computeDaysAway,
-  missedDayNumbers,
-  KEY,
-};
