@@ -8,6 +8,7 @@ import FAQModal from './FAQModal.jsx';
 import AppShell from './AppShell.jsx';
 import ChatPreview from './ChatPreview.jsx';
 import { CHAT_COPY } from '../lib/copy.js';
+import { visibilityInterval } from '../lib/visibilityInterval.js';
 import { CUE_PRESS } from '../lib/cuelume.js';
 
 // Dev convenience: in development, fall back to simulated chat when not
@@ -86,21 +87,20 @@ export default function Chat({ onBack }) {
   }, [isMiniApp, walletAddress]);
 
   useEffect(() => {
-    loadMessages();
-    if (useMocks && !isMiniApp) return;
-    const id = setInterval(loadMessages, 5000);
-    return () => clearInterval(id);
+    if (useMocks && !isMiniApp) {
+      loadMessages(); // releases the initial loading state for the demo preview
+      return undefined;
+    }
+    return visibilityInterval(loadMessages, 5000);
   }, [loadMessages, isMiniApp]);
 
   // Fetch real roster count for mini app
   useEffect(() => {
-    if (!isMiniApp) return;
+    if (!isMiniApp) return undefined;
     const load = () => fetch('/api/cohort/roster').then(r => r.json()).then(d => {
       if (d?.roster) setRosterCount(d.roster.length);
     }).catch(() => {});
-    load();
-    const id = setInterval(load, 30000);
-    return () => clearInterval(id);
+    return visibilityInterval(load, 30000);
   }, [isMiniApp]);
 
   useEffect(() => {
