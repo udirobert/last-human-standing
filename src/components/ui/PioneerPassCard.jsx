@@ -22,7 +22,7 @@ function generatePioneerSerial() {
 }
 
 function PioneerPassCard({ className = "", onClaimSuccess }) {
-  const { user } = useWorld();
+  const { user, isWorldApp } = useWorld();
   const [claimed, setClaimed] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) === "1";
@@ -39,6 +39,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
   });
   const [claiming, setClaiming] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [skipped, setSkipped] = useState(false);
   const { playSound, celebrate } = useDelight();
   const serial = generatePioneerSerial();
 
@@ -55,6 +56,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
         body: JSON.stringify({
           address: user?.address || null,
           serial,
+          chain: isWorldApp ? "worldchain" : "celo",
         }),
       });
 
@@ -93,6 +95,20 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
     }
   };
 
+  if (skipped && !claimed) {
+    return (
+      <div className={`w-full max-w-sm text-center py-2 ${className}`}>
+        <button
+          type="button"
+          onClick={() => setSkipped(false)}
+          className="font-mono text-[11px] text-amber/80 hover:text-amber underline decoration-dotted underline-offset-2"
+        >
+          🎖️ Claim your optional Pioneer Pass
+        </button>
+      </div>
+    );
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.96 }}
@@ -107,7 +123,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber animate-pulse" />
           <span className="font-mono text-[10px] text-amber uppercase tracking-[0.2em] font-semibold">
-            Pioneer Pass · Free Mint
+            {isWorldApp ? "World Chain · Optional Free Mint" : "Celo Mainnet · Optional Free Mint"}
           </span>
         </div>
         <span className="font-mono text-[9px] text-bone/60 border border-amber/30 rounded-full px-2 py-0.5 tabular-nums">
@@ -122,10 +138,10 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-display text-lg text-bone leading-tight">
-            Alpha Playtester Pass
+            {isWorldApp ? "World ID Pioneer Badge" : "Alpha Playtester Pass"}
           </p>
           <p className="font-mono text-[10px] text-neon mt-0.5">
-            ✓ Practice Run Complete
+            ✓ 5 Practice Days Completed
           </p>
         </div>
       </div>
@@ -133,7 +149,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
       {/* Perks List */}
       <div className="space-y-1.5 mb-4 relative z-10 text-xs font-mono">
         <p className="text-[10px] text-bone/50 uppercase tracking-widest mb-1 font-semibold">
-          Unlocked Perks for Live Cohort:
+          Optional perks for live cohort:
         </p>
         <div className="flex items-center gap-2 text-bone/85 bg-smoke/40 px-2.5 py-1.5 rounded-lg border border-ember/30">
           <span className="text-amber">🎟️</span>
@@ -159,7 +175,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
               className="w-full py-3 rounded-2xl bg-neon/15 border border-neon/50 text-neon font-mono text-xs font-semibold text-center flex items-center justify-center gap-2 shadow-sm"
             >
               <span>✓</span>
-              <span>PASS MINTED · ACTIVE IN INVENTORY</span>
+              <span>{isWorldApp ? "BADGE SAVED · ACTIVE IN INVENTORY" : "PASS MINTED ON CELO · ACTIVE"}</span>
             </motion.div>
             {explorerUrl && (
               <a
@@ -168,23 +184,32 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
                 rel="noreferrer"
                 className="block text-center font-mono text-[10px] text-amber hover:underline decoration-dotted"
               >
-                Verify on Celoscan ↗
+                {isWorldApp ? "Verify on Worldscan ↗" : "Verify on Celoscan ↗"}
               </a>
             )}
           </>
         ) : (
-          <motion.button
-            type="button"
-            onClick={handleClaim}
-            disabled={claiming}
-            whileTap={{ scale: 0.97 }}
-            {...CUE_HOVER}
-            {...CUE_PRESS}
-            className="w-full py-3.5 rounded-2xl bg-amber hover:bg-amber/90 text-ash font-display text-sm uppercase tracking-wider font-bold transition-transform shadow-lg shadow-amber/20 flex items-center justify-center gap-2 cursor-pointer"
-          >
-            <span>🎖️</span>
-            <span>{claiming ? "Minting on Celo…" : "Claim Free Pioneer Pass →"}</span>
-          </motion.button>
+          <>
+            <motion.button
+              type="button"
+              onClick={handleClaim}
+              disabled={claiming}
+              whileTap={{ scale: 0.97 }}
+              {...CUE_HOVER}
+              {...CUE_PRESS}
+              className="w-full py-3.5 rounded-2xl bg-amber hover:bg-amber/90 text-ash font-display text-sm uppercase tracking-wider font-bold transition-transform shadow-lg shadow-amber/20 flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>🎖️</span>
+              <span>{claiming ? (isWorldApp ? "Verifying…" : "Minting on Celo…") : (isWorldApp ? "Claim Free Pioneer Badge →" : "Claim Free Pioneer Pass →")}</span>
+            </motion.button>
+            <button
+              type="button"
+              onClick={() => setSkipped(true)}
+              className="w-full text-center font-mono text-[10px] text-dim hover:text-bone underline decoration-dotted py-0.5 transition-colors"
+            >
+              Skip mint for now
+            </button>
+          </>
         )}
       </div>
 

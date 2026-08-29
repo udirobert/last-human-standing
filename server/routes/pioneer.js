@@ -25,7 +25,8 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
     }),
     async (req, res) => {
       try {
-        const { address, serial } = req.body || {};
+        const { address, serial, chain } = req.body || {};
+        const isWorld = chain === "worldchain" || chain === "world";
         const safeSerial = typeof serial === "string" && serial.trim() ? serial.trim() : `LHS-PIONEER-${Math.floor(1000 + Math.random() * 9000)}`;
         const normalizedAddress = typeof address === "string" && address.startsWith("0x") ? address.toLowerCase() : null;
 
@@ -34,35 +35,39 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
             ok: true,
             alreadyMinted: true,
             serial: safeSerial,
-            message: "Pioneer pass already minted for this address",
+            chain: isWorld ? "worldchain" : "celo",
+            message: "Pioneer pass already claimed for this address",
           });
         }
 
-        // On-chain broadcast via Celo Relayer if signing key is configured
+        // On-chain broadcast via Relayer if signing key is configured
         let txHash = null;
         let explorerUrl = null;
 
         if (CELO_SIGNING_KEY) {
           try {
             const { createWalletClient, http, encodeFunctionData } = await import("viem");
-            const { celo } = await import("viem/chains");
+            const { celo, worldchain } = await import("viem/chains");
             const { privateKeyToAccount } = await import("viem/accounts");
 
             const account = privateKeyToAccount(
               CELO_SIGNING_KEY.startsWith("0x") ? CELO_SIGNING_KEY : `0x${CELO_SIGNING_KEY}`
             );
 
+            const activeChain = isWorld ? worldchain : celo;
+            const rpcUrl = isWorld ? (process.env.WORLD_RPC || "https://worldchain-mainnet.g.alchemy.com/public") : CELO_RPC;
+
             const walletClient = createWalletClient({
               account,
-              chain: celo,
-              transport: http(CELO_RPC),
+              chain: activeChain,
+              transport: http(rpcUrl),
             });
 
             // If contract is deployed on Celo, call mintPioneer with attribution suffix
             let txData = "0x" + CELO_ATTRIBUTION_HEX;
             let targetAddress = account.address;
 
-            if (PIONEER_PASS_ADDRESS && PIONEER_PASS_ADDRESS.startsWith("0x")) {
+            if (!isWorld && PIONEER_PASS_ADDRESS && PIONEER_PASS_ADDRESS.startsWith("0x")) {
               targetAddress = PIONEER_PASS_ADDRESS;
               const { readFileSync } = await import("fs");
               const { resolve, dirname } = await import("path");
@@ -88,7 +93,7 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
               data: txData,
             });
 
-            explorerUrl = `https://celoscan.io/tx/${txHash}`;
+            explorerUrl = isWorld ? `https://worldscan.org/tx/${txHash}` : `https://celoscan.io/tx/${txHash}`;
           } catch (err) {
             console.warn("[pioneer] on-chain broadcast failed, falling back to verified receipt:", err?.message);
           }
