@@ -2,9 +2,11 @@ import { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { CUE_PRESS, CUE_HOVER } from "../../lib/cuelume.js";
 import { useDelight } from "../DelightProvider.jsx";
+import { useWorld } from "../../world/WorldProvider.jsx";
 import ThemeMotif from "./ThemeMotif.jsx";
 
 const STORAGE_KEY = "lhs_pioneer_pass_claimed";
+const TX_KEY = "lhs_pioneer_pass_tx";
 
 function generatePioneerSerial() {
   try {
@@ -20,6 +22,7 @@ function generatePioneerSerial() {
 }
 
 function PioneerPassCard({ className = "", onClaimSuccess }) {
+  const { user } = useWorld();
   const [claimed, setClaimed] = useState(() => {
     try {
       return localStorage.getItem(STORAGE_KEY) === "1";
@@ -27,35 +30,58 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
       return false;
     }
   });
+  const [explorerUrl, setExplorerUrl] = useState(() => {
+    try {
+      return localStorage.getItem(TX_KEY) || null;
+    } catch {
+      return null;
+    }
+  });
   const [claiming, setClaiming] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const { playSound, celebrate } = useDelight();
   const serial = generatePioneerSerial();
 
-  const handleClaim = () => {
+  const handleClaim = async () => {
     if (claimed || claiming) return;
     setClaiming(true);
     playSound("victory");
     celebrate(35);
 
-    setTimeout(() => {
-      try {
-        localStorage.setItem(STORAGE_KEY, "1");
-        // Also track bonus ticket for live round
-        localStorage.setItem("lhs_pioneer_bonus_ticket", "1");
-      } catch {
-        /* ignore */
+    try {
+      const resp = await fetch("/api/pioneer/mint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: user?.address || null,
+          serial,
+        }),
+      });
+
+      const data = await resp.json().catch(() => ({}));
+      if (data?.explorerUrl) {
+        setExplorerUrl(data.explorerUrl);
+        try { localStorage.setItem(TX_KEY, data.explorerUrl); } catch { /* ignore */ }
       }
-      setClaimed(true);
-      setClaiming(false);
-      onClaimSuccess?.();
-    }, 600);
+    } catch {
+      /* ignore network errors — local pass still activates */
+    }
+
+    try {
+      localStorage.setItem(STORAGE_KEY, "1");
+      localStorage.setItem("lhs_pioneer_bonus_ticket", "1");
+    } catch {
+      /* ignore */
+    }
+
+    setClaimed(true);
+    setClaiming(false);
+    onClaimSuccess?.();
   };
 
   const handleFeedback = (type) => {
     setFeedbackSent(true);
     playSound("click");
-    // Send lightweight track ping
     try {
       fetch("/api/track", {
         method: "POST",
@@ -124,16 +150,28 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
       </div>
 
       {/* Action Button */}
-      <div className="relative z-10 mb-3">
+      <div className="relative z-10 mb-3 space-y-2">
         {claimed ? (
-          <motion.div
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            className="w-full py-3 rounded-2xl bg-neon/15 border border-neon/50 text-neon font-mono text-xs font-semibold text-center flex items-center justify-center gap-2 shadow-sm"
-          >
-            <span>✓</span>
-            <span>PASS CLAIMED · ACTIVE IN INVENTORY</span>
-          </motion.div>
+          <>
+            <motion.div
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              className="w-full py-3 rounded-2xl bg-neon/15 border border-neon/50 text-neon font-mono text-xs font-semibold text-center flex items-center justify-center gap-2 shadow-sm"
+            >
+              <span>✓</span>
+              <span>PASS MINTED · ACTIVE IN INVENTORY</span>
+            </motion.div>
+            {explorerUrl && (
+              <a
+                href={explorerUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="block text-center font-mono text-[10px] text-amber hover:underline decoration-dotted"
+              >
+                Verify on Celoscan ↗
+              </a>
+            )}
+          </>
         ) : (
           <motion.button
             type="button"
@@ -145,7 +183,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
             className="w-full py-3.5 rounded-2xl bg-amber hover:bg-amber/90 text-ash font-display text-sm uppercase tracking-wider font-bold transition-transform shadow-lg shadow-amber/20 flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>🎖️</span>
-            <span>{claiming ? "Minting Pass…" : "Claim Free Pioneer Pass →"}</span>
+            <span>{claiming ? "Minting on Celo…" : "Claim Free Pioneer Pass →"}</span>
           </motion.button>
         )}
       </div>
@@ -194,3 +232,4 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
 }
 
 export default memo(PioneerPassCard);
+

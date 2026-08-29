@@ -13,7 +13,12 @@ export default function PersonalShelf({ className = "", onViewHistory }) {
   if (!you?.isAuthed || phase === "prelaunch") return null;
 
   const streak = you.checkinStreak ?? 0;
-  const tickets = you.juryTickets ?? 0;
+  const isPioneer = Boolean(
+    you?.hasPioneerPass ||
+    (typeof localStorage !== "undefined" && localStorage.getItem("lhs_pioneer_pass_claimed") === "1")
+  );
+  const bonusTicket = isPioneer && (typeof localStorage !== "undefined" && localStorage.getItem("lhs_pioneer_bonus_ticket") === "1") ? 1 : 0;
+  const tickets = (you.juryTickets ?? 0) + (you.juryTickets ? 0 : bonusTicket);
   const resolved = you.votesResolved ?? 0;
   const accuracy = you.voteAccuracy;
   const title = getDetectiveTitle(resolved, accuracy);
@@ -23,6 +28,7 @@ export default function PersonalShelf({ className = "", onViewHistory }) {
     streak > 0 ||
     tickets > 0 ||
     resolved > 0 ||
+    isPioneer ||
     Boolean(you.checkedInToday);
 
   if (!hasArtifacts) return null;
@@ -32,12 +38,19 @@ export default function PersonalShelf({ className = "", onViewHistory }) {
 
   return (
     <div
-      className={`rounded-2xl border border-ember/30 bg-ash/50 px-3 py-3 ${className}`}
+      className={`rounded-2xl border ${isPioneer ? 'border-amber/40 bg-gradient-to-r from-smoke/80 to-ash/60' : 'border-ember/30 bg-ash/50'} px-3 py-3 ${className}`}
     >
       <div className="flex items-center justify-between gap-2 mb-2">
-        <p className="font-mono text-xs text-amber uppercase tracking-[0.18em]">
-          Your shelf
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="font-mono text-xs text-amber uppercase tracking-[0.18em]">
+            Your shelf
+          </p>
+          {isPioneer && (
+            <span className="font-mono text-[9px] px-1.5 py-0.2 bg-amber/15 border border-amber/35 text-amber rounded-full tracking-wider uppercase">
+              🎖️ Pioneer
+            </span>
+          )}
+        </div>
         {onViewHistory && (
           <button
             type="button"
