@@ -12,6 +12,7 @@ import {
 import ThemeMotif from "../components/ui/ThemeMotif.jsx";
 import GameMoment from "../components/GameMoment.jsx";
 import ShareSheet from "../components/ShareSheet.jsx";
+import Mascot from "../components/Mascot.jsx";
 import MascotGuide from "../components/ui/MascotGuide.jsx";
 import VoteBar from "../components/ui/VoteBar.jsx";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
@@ -948,59 +949,65 @@ export function FinaleBeat({ onReserve, onExit }) {
 
   return (
     <Ceremony>
-      <p className="font-mono text-amber/90 uppercase mb-3" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
-        {c.eyebrow}
-      </p>
-      <h2
-        className="font-display text-bone leading-[0.9] mb-3"
-        style={{ fontSize: "clamp(32px,8vw,44px)" }}
-      >
-        {c.title}
-      </h2>
-      <p className="font-body text-bone/75 text-sm leading-relaxed mb-4">{c.body}</p>
+      <div className="flex flex-col items-center max-w-sm w-full text-center">
+        <p className="font-mono text-amber text-[10px] uppercase tracking-[0.2em] mb-2">
+          Practice season complete
+        </p>
+        <h2
+          className="font-display text-bone leading-[0.95] mb-2 animate-glow"
+          style={{ fontSize: "clamp(26px,7vw,36px)" }}
+        >
+          YOU ARE THE LAST HUMAN STANDING
+        </h2>
 
-      {/* Survivor — your guide, celebrating the finish */}
-      <MascotGuide
-        variant="winner"
-        size={64}
-        message={getProfiledMascotLines().finale}
-        position="top"
-        className="mb-4"
-        interactive
-        onMascotClick={(type) => {
-          cue("tap");
-          if (type === "secret") celebrate(24);
-        }}
-      />
+        {/* Celebratory Mascot */}
+        <div className="my-1.5 flex justify-center">
+          <Mascot
+            variant="winner"
+            size={60}
+            interactive
+            trackCursor={false}
+            onClick={() => {
+              cue("tap");
+              celebrate(24);
+            }}
+          />
+        </div>
 
-      <MotifFrieze className="w-full mb-2" />
-      <p className="font-mono text-dim uppercase mb-4" style={{ fontSize: 10, letterSpacing: "0.14em" }}>
-        you showed up. that&apos;s the whole game.
-      </p>
+        <p className="font-body text-bone/75 text-xs leading-relaxed mb-3 max-w-xs">
+          Five compressed days completed. In the live cohort, verified humans compete for the on-chain pot with real stakes.
+        </p>
 
-      {cardSrc && (
-        <img
-          src={cardSrc}
-          alt="Winner moment card"
-          className="w-full rounded-xl border border-ember/40 mb-5 shadow-[0_12px_40px_-16px_rgba(0,0,0,0.5)]"
-        />
-      )}
+        {cardSrc && (
+          <div className="w-full max-w-[240px] mx-auto mb-3.5 rounded-2xl overflow-hidden border border-ember/40 shadow-xl">
+            <img
+              src={cardSrc}
+              alt="Winner moment card"
+              className="w-full h-auto object-cover"
+            />
+          </div>
+        )}
 
-      <HumanCta onClick={onReserve} className="mb-3">
-        {c.reserveCta}
-      </HumanCta>
-      <GameCta tone="ghost" onClick={() => setShowShareSheet(true)} className="mb-3 !text-sm">
-        {shareCopied ? "✓ Copied" : c.shareCta}
-      </GameCta>
-      <BuiltWithStack className="mb-4 opacity-80" />
-      <button
-        type="button"
-        onClick={onExit}
-        {...CUE_PRESS}
-        className="font-mono text-dim text-xs underline decoration-dotted underline-offset-2"
-      >
-        Back to landing
-      </button>
+        <div className="w-full space-y-2 mb-3">
+          <HumanCta onClick={onReserve} className="w-full">
+            {c.reserveCta}
+          </HumanCta>
+          <GameCta tone="ghost" onClick={() => setShowShareSheet(true)} className="w-full !text-sm">
+            {shareCopied ? "✓ Copied" : c.shareCta}
+          </GameCta>
+        </div>
+
+        <BuiltWithStack className="mb-2 opacity-75 scale-90" />
+        <button
+          type="button"
+          onClick={onExit}
+          {...CUE_PRESS}
+          className="font-mono text-dim hover:text-bone text-xs underline decoration-dotted underline-offset-2 py-1 transition-colors"
+        >
+          Back to landing
+        </button>
+      </div>
+
       <ShareSheet
         open={showShareSheet}
         kind="win"
