@@ -9,9 +9,14 @@ export function usePolling(url, {
   transform,
   initial = null,
   fetchOpts = { credentials: "include" },
+  deps = [],
 } = {}) {
   const [data, setData] = useState(initial);
   const [loading, setLoading] = useState(Boolean(url));
+  // Serialize deps to a stable primitive so load() only changes identity
+  // when a dep's VALUE changes, not merely because callers pass a fresh
+  // array literal each render.
+  const depsKey = JSON.stringify(deps);
 
   const load = useCallback(async () => {
     if (!url) return;
@@ -25,7 +30,9 @@ export function usePolling(url, {
     } finally {
       setLoading(false);
     }
-  }, [url, fetchOpts, transform]);
+    // depsKey (not deps) is the real dependency — see comment above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, fetchOpts, transform, depsKey]);
 
   useEffect(() => {
     if (!url) return;
