@@ -4,20 +4,28 @@ import { CUE_PRESS, CUE_HOVER } from "../../lib/cuelume.js";
 import { useDelight } from "../DelightProvider.jsx";
 import { useWorld } from "../../world/WorldProvider.jsx";
 import ThemeMotif from "./ThemeMotif.jsx";
+import PioneerArtifactArt from "./PioneerArtifactArt.jsx";
 
 const STORAGE_KEY = "lhs_pioneer_pass_claimed";
 const TX_KEY = "lhs_pioneer_pass_tx";
+const TOTAL_EDITION = 100;
+
+function parseSerialNumber(serial) {
+  const match = serial.match(/\d+$/);
+  if (!match) return 42;
+  return (parseInt(match[0], 10) % TOTAL_EDITION) || 1;
+}
 
 function generatePioneerSerial() {
   try {
     const existing = localStorage.getItem("lhs_pioneer_serial");
     if (existing) return existing;
-    const num = Math.floor(1000 + Math.random() * 9000);
-    const serial = `LHS-PIONEER-${num}`;
+    const num = Math.floor(1 + Math.random() * 99);
+    const serial = `LHS-PIONEER-${String(num).padStart(3, "0")}`;
     localStorage.setItem("lhs_pioneer_serial", serial);
     return serial;
   } catch {
-    return "LHS-PIONEER-4201";
+    return "LHS-PIONEER-042";
   }
 }
 
@@ -131,19 +139,13 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
         </span>
       </div>
 
-      {/* Card Body */}
-      <div className="flex items-center gap-3.5 mb-4 relative z-10 bg-ash/50 border border-ember/40 rounded-2xl p-3">
-        <div className="w-14 h-14 rounded-xl bg-amber/10 border border-amber/35 flex items-center justify-center shrink-0 shadow-inner">
-          <ThemeMotif emoji="🎖️" size={36} label="pioneer" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-lg text-bone leading-tight">
-            {isWorldApp ? "World ID Pioneer Badge" : "Alpha Playtester Pass"}
-          </p>
-          <p className="font-mono text-[10px] text-neon mt-0.5">
-            ✓ 5 Practice Days Completed
-          </p>
-        </div>
+      {/* 3D Master Artwork Card */}
+      <div className="w-full max-w-[260px] mx-auto mb-4 relative z-10">
+        <PioneerArtifactArt
+          serialNumber={parseSerialNumber(serial)}
+          totalEdition={TOTAL_EDITION}
+          stamped={claimed}
+        />
       </div>
 
       {/* Perks List */}
