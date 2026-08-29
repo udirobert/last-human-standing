@@ -70,21 +70,23 @@ export default function GameMoment({
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-8 gap-6"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col items-center px-5 py-8 gap-6"
       >
-        <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center overflow-hidden">
-          <ThemeMotif emoji="📡" size={72} label="queued" />
+        <div className="my-auto flex flex-col items-center gap-6 w-full max-w-sm">
+          <div className="w-28 h-28 rounded-full bg-amber/10 border-2 border-amber flex items-center justify-center overflow-hidden">
+            <ThemeMotif emoji="📡" size={72} label="queued" />
+          </div>
+          <div className="text-center">
+            <p className="font-display text-4xl text-amber mb-1">Queued</p>
+            <p className="text-bone font-body text-sm">Check-in saved offline</p>
+            <p className="text-dim font-mono text-xs mt-2">
+              Submits automatically when you reconnect.
+            </p>
+          </div>
+          <GameCta tone="ghost" onClick={onDismiss}>
+            Back to today's mission →
+          </GameCta>
         </div>
-        <div className="text-center">
-          <p className="font-display text-4xl text-amber mb-1">Queued</p>
-          <p className="text-bone font-body text-sm">Check-in saved offline</p>
-          <p className="text-dim font-mono text-xs mt-2">
-            Submits automatically when you reconnect.
-          </p>
-        </div>
-        <GameCta tone="ghost" onClick={onDismiss}>
-          Back to today's mission →
-        </GameCta>
       </motion.div>
     );
   }
@@ -194,121 +196,123 @@ function SurvivalMoment({ result, currentDay, onDismiss, onShare, shareCopied, p
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-ash/88 backdrop-blur-sm px-5 overflow-y-auto overscroll-y-contain py-8 outline-none"
+      className="fixed inset-0 z-[70] flex flex-col items-center bg-ash/88 backdrop-blur-sm px-5 overflow-y-auto overscroll-y-contain py-8 outline-none min-h-full"
     >
-      {/* Pulse rings behind the checkmark */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+      <div className="my-auto flex flex-col items-center w-full max-w-sm relative">
+        {/* Pulse rings behind the checkmark */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0.4 }}
+            animate={{ scale: 2, opacity: 0 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
+            className="w-32 h-32 rounded-full border-2 border-neon"
+          />
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0.4 }}
+            animate={{ scale: 2, opacity: 0 }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut", delay: 0.3 }}
+            className="absolute w-32 h-32 rounded-full border-2 border-neon"
+          />
+        </div>
+
+        {/* Checkmark */}
         <motion.div
-          initial={{ scale: 0.5, opacity: 0.4 }}
-          animate={{ scale: 2, opacity: 0 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }}
-          className="w-32 h-32 rounded-full border-2 border-neon"
-        />
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0.4 }}
-          animate={{ scale: 2, opacity: 0 }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut", delay: 0.3 }}
-          className="absolute w-32 h-32 rounded-full border-2 border-neon"
-        />
-      </div>
-
-      {/* Checkmark */}
-      <motion.div
-        initial={{ scale: 0, rotate: -180 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ ...MOTION_SPRING.gentle, bounce: 0.3 }}
-        className="w-24 h-24 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-5 relative z-10 shrink-0 overflow-hidden"
-      >
-        <ThemeMotif emoji="🌅" size={64} label="survived" />
-      </motion.div>
-
-      {/* Result text */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
-        className="text-center relative z-10 mb-4"
-      >
-        <p className="font-mono text-neon text-sm tracking-widest uppercase mb-2">
-          Day {currentDay ?? "—"} · Survived
-        </p>
-        <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow tabular-nums">
-          SURVIVED
-        </p>
-        <p className="text-dim font-body text-sm tabular-nums">
-          one of {result.survivalCap} still standing
-        </p>
-        {result.gpsShared && (
-          <p className="text-neon/70 font-mono text-xs mt-2">GPS shared</p>
-        )}
-      </motion.div>
-
-      {/* Survivor celebrates with you */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.5, type: "spring", bounce: 0.4 }}
-        className="relative z-10 mb-2"
-      >
-        <MascotGuide
-          variant="celebrating"
-          size={48}
-          message={getProfiledMascotLines().survived}
-          position="top"
-          interactive
-          onMascotClick={handleMascotClick}
-        />
-      </motion.div>
-
-      <MomentCardPreview
-        kind="survive"
-        name={playerName}
-        day={currentDay}
-        rank={result.rank}
-        cap={result.survivalCap}
-        photoUrl={photoUrl}
-      />
-
-      <div className="relative z-10 w-full max-w-sm mt-5">
-        <MotifFrieze className="w-full opacity-85" />
-      </div>
-
-      {/* Photo warning */}
-      {photoUploadFailed && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
-          className="w-full max-w-sm mt-4 rounded-xl border border-amber/40 bg-amber/10 p-3 relative z-10"
+          initial={{ scale: 0, rotate: -180 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ ...MOTION_SPRING.gentle, bounce: 0.3 }}
+          className="w-24 h-24 rounded-full bg-neon/15 border-2 border-neon flex items-center justify-center mb-5 relative z-10 shrink-0 overflow-hidden"
         >
-          <p className="text-amber font-mono text-xs">
-            Photo didn&apos;t upload — voters see this without a photo.
-          </p>
+          <ThemeMotif emoji="🌅" size={64} label="survived" />
         </motion.div>
-      )}
 
-      {/* Return ritual — next day is the primary exit; share stays optional */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="w-full max-w-sm mt-6 space-y-3 relative z-10"
-      >
-        {nextDay && (
-          <div className="rounded-2xl border border-neon/25 bg-neon/5 px-4 py-3 text-center">
-            <p className="font-mono text-neon text-[10px] uppercase tracking-[0.18em] mb-1">
-              Tomorrow&apos;s return
+        {/* Result text */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
+          className="text-center relative z-10 mb-4"
+        >
+          <p className="font-mono text-neon text-sm tracking-widest uppercase mb-2">
+            Day {currentDay ?? "—"} · Survived
+          </p>
+          <p className="font-display text-6xl text-bone leading-none mb-2 animate-glow tabular-nums">
+            SURVIVED
+          </p>
+          <p className="text-dim font-body text-sm tabular-nums">
+            one of {result.survivalCap} still standing
+          </p>
+          {result.gpsShared && (
+            <p className="text-neon/70 font-mono text-xs mt-2">GPS shared</p>
+          )}
+        </motion.div>
+
+        {/* Survivor celebrates with you */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.5, type: "spring", bounce: 0.4 }}
+          className="relative z-10 mb-2"
+        >
+          <MascotGuide
+            variant="celebrating"
+            size={48}
+            message={getProfiledMascotLines().survived}
+            position="top"
+            interactive
+            onMascotClick={handleMascotClick}
+          />
+        </motion.div>
+
+        <MomentCardPreview
+          kind="survive"
+          name={playerName}
+          day={currentDay}
+          rank={result.rank}
+          cap={result.survivalCap}
+          photoUrl={photoUrl}
+        />
+
+        <div className="relative z-10 w-full max-w-sm mt-5">
+          <MotifFrieze className="w-full opacity-85" />
+        </div>
+
+        {/* Photo warning */}
+        {photoUploadFailed && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="w-full max-w-sm mt-4 rounded-xl border border-amber/40 bg-amber/10 p-3 relative z-10"
+          >
+            <p className="text-amber font-mono text-xs">
+              Photo didn&apos;t upload — voters see this without a photo.
             </p>
-            <p className="font-body text-bone/80 text-sm leading-snug">
-              Day {nextDay} opens with a new theme. One photo. One chance.
-            </p>
-          </div>
+          </motion.div>
         )}
-        <HumanCta onClick={onDismiss}>{continueLabel}</HumanCta>
-        <GhostLink onClick={onShare} className="w-full py-2">
-          {shareCopied ? "Copied" : "Share your card"}
-        </GhostLink>
-      </motion.div>
+
+        {/* Return ritual — next day is the primary exit; share stays optional */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+          className="w-full max-w-sm mt-6 space-y-3 relative z-10"
+        >
+          {nextDay && (
+            <div className="rounded-2xl border border-neon/25 bg-neon/5 px-4 py-3 text-center">
+              <p className="font-mono text-neon text-[10px] uppercase tracking-[0.18em] mb-1">
+                Tomorrow&apos;s return
+              </p>
+              <p className="font-body text-bone/80 text-sm leading-snug">
+                Day {nextDay} opens with a new theme. One photo. One chance.
+              </p>
+            </div>
+          )}
+          <HumanCta onClick={onDismiss}>{continueLabel}</HumanCta>
+          <GhostLink onClick={onShare} className="w-full py-2">
+            {shareCopied ? "Copied" : "Share your card"}
+          </GhostLink>
+        </motion.div>
+      </div>
     </motion.div>
   );
 }
@@ -385,7 +389,7 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto overscroll-y-contain py-8 outline-none"
+      className="fixed inset-0 z-[70] flex flex-col items-center bg-ash/95 backdrop-blur-md px-5 overflow-y-auto overscroll-y-contain py-8 outline-none min-h-full"
     >
       {/* Red vignette */}
       <motion.div
@@ -396,158 +400,160 @@ function EliminationMoment({ result, currentDay, onDismiss, onShare, shareCopied
         style={{ filter: "blur(60px)" }}
       />
 
-      {/* Skull */}
-      <motion.div
-        initial={{ scale: 3, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: "spring", duration: 0.8, bounce: 0 }}
-        className="mb-4 relative z-10 shrink-0"
-      >
-        <DozingCat size={72} />
-      </motion.div>
+      <div className="my-auto flex flex-col items-center w-full max-w-sm relative">
+        {/* Skull */}
+        <motion.div
+          initial={{ scale: 3, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: "spring", duration: 0.8, bounce: 0 }}
+          className="mb-4 relative z-10 shrink-0"
+        >
+          <DozingCat size={72} />
+        </motion.div>
 
-      {/* Eliminated text */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
-        className="text-center relative z-10 mb-4"
-      >
-        <p className="font-display text-5xl text-blood leading-none mb-2 animate-glow">
-          ELIMINATED
-        </p>
-        <p className="text-bone font-mono text-base mb-1 tabular-nums">
-          You survived {daysSurvived} day{Number(daysSurvived) !== 1 ? "s" : ""}
-        </p>
-        <p className="text-dim font-mono text-sm tabular-nums">
-          Day {daysSurvived} closed at {result.survivalCap ?? "?"} survivors
-        </p>
-        {immediateReason && (!verdict || verdict.votes?.total === 0) && (
-          <p className="text-bone/70 text-sm font-body mt-3 max-w-xs mx-auto leading-relaxed">
-            {immediateReason.body}
-          </p>
-        )}
-
-        {/* Near-miss banner — the most powerful re-engagement trigger */}
-        {nearMiss && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5, type: "spring", bounce: 0.3 }}
-            className="mt-3 inline-block px-4 py-2 rounded-full bg-amber/15 border border-amber/50"
-          >
-            <p className="font-mono text-amber text-xs tracking-wide tabular-nums">
-              So close — {spotsAway} {spotsAway === 1 ? "spot" : "spots"} from survival
-            </p>
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* Survivor feels it with you */}
-      <motion.div
-        initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.6, type: "spring", bounce: 0.3 }}
-        className="relative z-10 mb-2"
-      >
-        <MascotGuide
-          variant={nearMiss ? "determined" : "sad"}
-          size={48}
-          message={nearMiss ? getProfiledMascotLines().eliminatedNear : getProfiledMascotLines().eliminated}
-          position="top"
-          interactive
-          onMascotClick={handleMascotClick}
-        />
-      </motion.div>
-
-      <MomentCardPreview
-        kind="jury"
-        name={playerName}
-        day={daysSurvived}
-        rank={result.rank}
-        cap={result.survivalCap}
-        photoUrl={photoUrl}
-      />
-
-      <div className="relative z-10 w-full max-w-sm mt-5">
-        <MotifFrieze className="w-full opacity-85" />
-      </div>
-
-      {/* Verdict breakdown — "why was I eliminated" closure */}
-      {verdict && verdict.votes?.total > 0 && (
+        {/* Eliminated text */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.55, type: "spring", duration: 0.5 }}
-          className="w-full max-w-sm mt-4 relative z-10"
+          transition={{ delay: 0.3, type: "spring", duration: 0.5 }}
+          className="text-center relative z-10 mb-4"
         >
-          <div className="bg-smoke/80 border border-ember/40 rounded-2xl p-4">
-            <p className="font-mono text-dim text-[10px] uppercase tracking-widest mb-2 text-center">
-              {wasFlagged ? "Your submission was flagged" : "The verdict on your photo"}
-            </p>
-            {wasInfiltrator && (
-              <p className="text-purple-300 font-mono text-[10px] text-center mb-2">
-                🕶️ Infiltrator attempt — {wasFlagged ? "caught" : "trusted"}
-              </p>
-            )}
-            {/* Vote bar */}
-            <VoteBar
-              real={verdict.votes.real}
-              fake={verdict.votes.fake}
-              size="verdict"
-            />
-            {wasFlagged && (
-              <p className="text-dim text-[10px] font-mono mt-2 text-center leading-relaxed">
-                The crowd voted SUS. {wasInfiltrator ? "Your bluff was called." : "Next time, try adding GPS or a landmark for credibility."}
-              </p>
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Jury card — appears immediately, part of the moment.
-          Elimination is a role change, not an exit: you become the paid jury. */}
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ delay: 0.6, type: "spring", duration: 0.5, bounce: 0.2 }}
-        className="w-full max-w-sm mt-6 relative z-10"
-      >
-        <div className="bg-amber/10 border border-amber/40 rounded-2xl p-4 text-center">
-          <p className="font-mono text-amber text-sm uppercase tracking-widest mb-2">
-            You&apos;re the jury now
+          <p className="font-display text-5xl text-blood leading-none mb-2 animate-glow">
+            ELIMINATED
           </p>
-          <p className="text-bone font-body text-xs leading-relaxed mb-2">
-            Your votes decide who survives. Hit 80% accuracy on 5+ votes and your
-            votes count <span className="text-amber">×2</span> — accuracy
-            is your influence now.
+          <p className="text-bone font-mono text-base mb-1 tabular-nums">
+            You survived {daysSurvived} day{Number(daysSurvived) !== 1 ? "s" : ""}
           </p>
-          {juryPool && !juryPool.settled_at && (
-            <p className="text-amber/90 font-mono text-[11px] mb-2">
-              {juryPool.amount} {juryPool.token} jury pool · split among accurate voters at cohort end
+          <p className="text-dim font-mono text-sm tabular-nums">
+            Day {daysSurvived} closed at {result.survivalCap ?? "?"} survivors
+          </p>
+          {immediateReason && (!verdict || verdict.votes?.total === 0) && (
+            <p className="text-bone/70 text-sm font-body mt-3 max-w-xs mx-auto leading-relaxed">
+              {immediateReason.body}
             </p>
           )}
-          <HumanCta onClick={onDismiss} className="!py-3">
-            Open the audit feed →
-          </HumanCta>
-        </div>
-      </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.8, duration: 0.3 }}
-        className="w-full max-w-sm mt-4 space-y-3 relative z-10"
-      >
-        {nearMiss && (
-          <HumanCta onClick={onShare}>
-            {shareCopied ? "Copied" : "Claim your comeback →"}
-          </HumanCta>
+          {/* Near-miss banner — the most powerful re-engagement trigger */}
+          {nearMiss && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.5, type: "spring", bounce: 0.3 }}
+              className="mt-3 inline-block px-4 py-2 rounded-full bg-amber/15 border border-amber/50"
+            >
+              <p className="font-mono text-amber text-xs tracking-wide tabular-nums">
+                So close — {spotsAway} {spotsAway === 1 ? "spot" : "spots"} from survival
+              </p>
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Survivor feels it with you */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.6, type: "spring", bounce: 0.3 }}
+          className="relative z-10 mb-2"
+        >
+          <MascotGuide
+            variant={nearMiss ? "determined" : "sad"}
+            size={48}
+            message={nearMiss ? getProfiledMascotLines().eliminatedNear : getProfiledMascotLines().eliminated}
+            position="top"
+            interactive
+            onMascotClick={handleMascotClick}
+          />
+        </motion.div>
+
+        <MomentCardPreview
+          kind="jury"
+          name={playerName}
+          day={daysSurvived}
+          rank={result.rank}
+          cap={result.survivalCap}
+          photoUrl={photoUrl}
+        />
+
+        <div className="relative z-10 w-full max-w-sm mt-5">
+          <MotifFrieze className="w-full opacity-85" />
+        </div>
+
+        {/* Verdict breakdown — "why was I eliminated" closure */}
+        {verdict && verdict.votes?.total > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.55, type: "spring", duration: 0.5 }}
+            className="w-full max-w-sm mt-4 relative z-10"
+          >
+            <div className="bg-smoke/80 border border-ember/40 rounded-2xl p-4">
+              <p className="font-mono text-dim text-[10px] uppercase tracking-widest mb-2 text-center">
+                {wasFlagged ? "Your submission was flagged" : "The verdict on your photo"}
+              </p>
+              {wasInfiltrator && (
+                <p className="text-purple-300 font-mono text-[10px] text-center mb-2">
+                  🕶️ Infiltrator attempt — {wasFlagged ? "caught" : "trusted"}
+                </p>
+              )}
+              {/* Vote bar */}
+              <VoteBar
+                real={verdict.votes.real}
+                fake={verdict.votes.fake}
+                size="verdict"
+              />
+              {wasFlagged && (
+                <p className="text-dim text-[10px] font-mono mt-2 text-center leading-relaxed">
+                  The crowd voted SUS. {wasInfiltrator ? "Your bluff was called." : "Next time, try adding GPS or a landmark for credibility."}
+                </p>
+              )}
+            </div>
+          </motion.div>
         )}
-        <GameCta tone="ghost" onClick={onShare} className="!text-sm">
-          {shareCopied ? "Copied" : "Share your card →"}
-        </GameCta>
-      </motion.div>
+
+        {/* Jury card — appears immediately, part of the moment.
+            Elimination is a role change, not an exit: you become the paid jury. */}
+        <motion.div
+          initial={{ opacity: 0, y: 30, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.6, type: "spring", duration: 0.5, bounce: 0.2 }}
+          className="w-full max-w-sm mt-6 relative z-10"
+        >
+          <div className="bg-amber/10 border border-amber/40 rounded-2xl p-4 text-center">
+            <p className="font-mono text-amber text-sm uppercase tracking-widest mb-2">
+              You&apos;re the jury now
+            </p>
+            <p className="text-bone font-body text-xs leading-relaxed mb-2">
+              Your votes decide who survives. Hit 80% accuracy on 5+ votes and your
+              votes count <span className="text-amber">×2</span> — accuracy
+              is your influence now.
+            </p>
+            {juryPool && !juryPool.settled_at && (
+              <p className="text-amber/90 font-mono text-[11px] mb-2">
+                {juryPool.amount} {juryPool.token} jury pool · split among accurate voters at cohort end
+              </p>
+            )}
+            <HumanCta onClick={onDismiss} className="!py-3">
+              Open the audit feed →
+            </HumanCta>
+          </div>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8, duration: 0.3 }}
+          className="w-full max-w-sm mt-4 space-y-3 relative z-10"
+        >
+          {nearMiss && (
+            <HumanCta onClick={onShare}>
+              {shareCopied ? "Copied" : "Claim your comeback →"}
+            </HumanCta>
+          )}
+          <GameCta tone="ghost" onClick={onShare} className="!text-sm">
+            {shareCopied ? "Copied" : "Share your card →"}
+          </GameCta>
+        </motion.div>
+      </div>
     </motion.div>
   );
 }

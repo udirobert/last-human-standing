@@ -190,49 +190,51 @@ export function D1ClosingBeat() {
   const ready = phase === "ready";
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8 items-center justify-center">
-      <div className="w-full max-w-sm text-center mb-5">
-        <p className="font-mono text-amber text-xs uppercase tracking-[0.2em] mb-2">Day 1 · Submitted</p>
-        <p className="font-display text-4xl text-bone leading-none mb-2">Proof received</p>
-        <p className="font-body text-bone/60 text-sm">
-          {phase === "sealed"
-            ? "Sealed for the jury. Your photo is on trial."
-            : ready
-              ? "The jury has spoken. Now you judge others."
-              : "The seal lifts. Votes are landing."}
-        </p>
-      </div>
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col px-5 py-6 items-center">
+      <div className="my-auto flex flex-col items-center w-full max-w-sm">
+        <div className="w-full max-w-sm text-center mb-5">
+          <p className="font-mono text-amber text-xs uppercase tracking-[0.2em] mb-2">Day 1 · Submitted</p>
+          <p className="font-display text-4xl text-bone leading-none mb-2">Proof received</p>
+          <p className="font-body text-bone/60 text-sm">
+            {phase === "sealed"
+              ? "Sealed for the jury. Your photo is on trial."
+              : ready
+                ? "The jury has spoken. Now you judge others."
+                : "The seal lifts. Votes are landing."}
+          </p>
+        </div>
 
-      <div className="w-full max-w-sm mb-5 rounded-3xl overflow-hidden border border-amber/30 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)] aspect-[4/5] max-h-[40vh] bg-ash relative">
-        {photo ? (
-          <img src={photo} alt="Your proof" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ThemeMotif emoji={dayMeta(1).theme.emoji} size={80} />
-          </div>
-        )}
-        {phase === "sealed" && (
-          <div className="absolute inset-0 bg-ash/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
-            <p className="font-mono text-amber text-[10px] uppercase tracking-[0.22em]">Sealed receipt</p>
-            <p className="font-display text-2xl text-bone">Awaiting jury</p>
-          </div>
-        )}
-      </div>
+        <div className="w-full max-w-sm mb-5 rounded-3xl overflow-hidden border border-amber/30 shadow-[0_16px_40px_-20px_rgba(0,0,0,0.55)] aspect-[4/5] max-h-[40vh] bg-ash relative">
+          {photo ? (
+            <img src={photo} alt="Your proof" className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center">
+              <ThemeMotif emoji={dayMeta(1).theme.emoji} size={80} />
+            </div>
+          )}
+          {phase === "sealed" && (
+            <div className="absolute inset-0 bg-ash/55 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+              <p className="font-mono text-amber text-[10px] uppercase tracking-[0.22em]">Sealed receipt</p>
+              <p className="font-display text-2xl text-bone">Awaiting jury</p>
+            </div>
+          )}
+        </div>
 
-      <div className="w-full max-w-sm mb-6">
-        {phase === "sealed" ? (
-          <SealedTally />
-        ) : (
-          <LiveTally real={displayReal} fake={displayFake} />
-        )}
-        <p className="text-center font-mono text-dim text-[10px] mt-2 uppercase tracking-widest">
-          {ready ? "Verdict in — enter the audit" : phase === "sealed" ? "Jury deliberating..." : "Votes landing..."}
-        </p>
-      </div>
+        <div className="w-full max-w-sm mb-6">
+          {phase === "sealed" ? (
+            <SealedTally />
+          ) : (
+            <LiveTally real={displayReal} fake={displayFake} />
+          )}
+          <p className="text-center font-mono text-dim text-[10px] mt-2 uppercase tracking-widest">
+            {ready ? "Verdict in — enter the audit" : phase === "sealed" ? "Jury deliberating..." : "Votes landing..."}
+          </p>
+        </div>
 
-      <GameCta onClick={nextBeat} disabled={!ready} className="w-full max-w-sm">
-        {ready ? "Enter the audit →" : "Holding the seal..."}
-      </GameCta>
+        <GameCta onClick={nextBeat} disabled={!ready} className="w-full max-w-sm">
+          {ready ? "Enter the audit →" : "Holding the seal..."}
+        </GameCta>
+      </div>
     </div>
   );
 }
@@ -346,28 +348,30 @@ export function D1AuditBeat() {
   // All done — show completion state
   if (votesDone || !sub) {
     return (
-      <div className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-8 gap-5">
-        <MascotGuide
-          variant="proud"
-          size={72}
-          message={lines.auditDone(totalVoted)}
-          position="top"
-          interactive
-          onMascotClick={(type) => {
-            cue("tap");
-            if (type === "secret") celebrate(12);
-          }}
-        />
-        <div className="text-center">
-          <p className="font-display text-4xl text-bone leading-none mb-2">Audit complete</p>
-          <p className="text-dim font-body text-sm">
-            The crowd has spoken.
-          </p>
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col items-center px-5 py-6 gap-5">
+        <div className="my-auto flex flex-col items-center gap-5 w-full max-w-sm">
+          <MascotGuide
+            variant="proud"
+            size={72}
+            message={lines.auditDone(totalVoted)}
+            position="top"
+            interactive
+            onMascotClick={(type) => {
+              cue("tap");
+              if (type === "secret") celebrate(12);
+            }}
+          />
+          <div className="text-center">
+            <p className="font-display text-4xl text-bone leading-none mb-2">Audit complete</p>
+            <p className="text-dim font-body text-sm">
+              The crowd has spoken.
+            </p>
+          </div>
+          <MotifFrieze className="w-full max-w-sm opacity-85" />
+          <GameCta tone="amber" onClick={nextBeat} className="w-full max-w-sm mt-2">
+            Close the day →
+          </GameCta>
         </div>
-        <MotifFrieze className="w-full max-w-sm opacity-85" />
-        <GameCta tone="amber" onClick={nextBeat} className="w-full max-w-sm mt-2">
-          Close the day →
-        </GameCta>
       </div>
     );
   }

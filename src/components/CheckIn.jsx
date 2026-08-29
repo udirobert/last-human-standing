@@ -691,21 +691,23 @@ export default function CheckIn({ onBack, onSubmit }) {
               key="submitting"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-8 gap-6"
+              className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col items-center px-5 py-8 gap-6"
             >
-              <MascotGuide
-                variant={checkInMascot.variant}
-                size={72}
-                message={checkInMascot.message}
-                position="top"
-                interactive
-                onMascotClick={handleMascotClick}
-              />
-              {/* Your bubble — seeded from your identity, so it's always yours. */}
-              <BubbleLoader size={112} seed={user?.username || user?.address} />
-              <div className="text-center">
-                <p className="font-display text-3xl text-bone">Sending…</p>
-                <p className="text-dim font-body text-sm mt-1">Recording your check-in</p>
+              <div className="my-auto flex flex-col items-center gap-6">
+                <MascotGuide
+                  variant={checkInMascot.variant}
+                  size={72}
+                  message={checkInMascot.message}
+                  position="top"
+                  interactive
+                  onMascotClick={handleMascotClick}
+                />
+                {/* Your bubble — seeded from your identity, so it's always yours. */}
+                <BubbleLoader size={112} seed={user?.username || user?.address} />
+                <div className="text-center">
+                  <p className="font-display text-3xl text-bone">Sending…</p>
+                  <p className="text-dim font-body text-sm mt-1">Recording your check-in</p>
+                </div>
               </div>
             </motion.div>
           )}

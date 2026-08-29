@@ -23,8 +23,8 @@ export { HumanCta, GameCta };
 /** Centered ceremony stage with staggered entrance. */
 export function Ceremony({ children, className = "" }) {
   return (
-    <div className={`flex-1 min-h-0 overflow-y-auto flex flex-col items-center justify-center px-5 pb-10 ${className}`}>
-      <CeremonyContent className="flex flex-col items-center">{children}</CeremonyContent>
+    <div className={`flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col items-center px-5 py-6 ${className}`}>
+      <CeremonyContent className="flex flex-col items-center my-auto">{children}</CeremonyContent>
     </div>
   );
 }

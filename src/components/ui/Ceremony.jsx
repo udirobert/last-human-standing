@@ -21,7 +21,7 @@ export function CeremonyContent({ children, className = "", maxW = "max-w-sm", a
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 12 }}
       transition={spring === "gentle" ? MOTION_SPRING.gentle : MOTION_SPRING.snappy}
-      className={`w-full ${maxW} ${align === "center" ? "text-center" : ""} ${className}`}
+      className={`w-full ${maxW} ${align === "center" ? "text-center my-auto" : "mt-4 mb-auto"} ${className}`}
     >
       {children}
     </motion.div>
@@ -77,9 +77,7 @@ export function CeremonyShell({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: MOTION_DURATION.base, ease: MOTION_EASE.out }}
-            className={`fixed inset-0 flex flex-col items-center px-5 overflow-y-auto overscroll-y-contain outline-none ${
-              align === "center" ? "justify-center" : "justify-start"
-            }`}
+            className="fixed inset-0 flex flex-col items-center px-5 py-6 overflow-y-auto overscroll-y-contain outline-none min-h-full"
             style={{ background: CEREMONY_BG, zIndex: z, ...CEREMONY_PAD }}
           >
             <CeremonyContent maxW={maxW} align={align} spring={spring}>
