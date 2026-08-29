@@ -7,12 +7,14 @@ import CheckIn from './components/CheckIn';
 import BottomNav from './components/BottomNav';
 import MusicDock from './components/MusicDock.jsx';
 import ScreenLoader from './components/ui/ScreenLoader.jsx';
+import ReturnExperience from './components/ReturnExperience.jsx';
 import AmbientBackdrop from './components/AmbientBackdrop.jsx';
 import DesktopBackdrop from './components/DesktopBackdrop.jsx';
 import { DelightProvider, useDelight } from './components/DelightProvider.jsx';
 import { MascotEventProvider } from './components/MascotEventProvider.jsx';
 import { isConfirming } from './lib/postReserve.js';
 import { useScreenState } from './hooks/useScreenState.js';
+import { useServerScreenSync } from './hooks/useServerScreenSync.js';
 import { useWorld } from './world/WorldProvider.jsx';
 import { useRound } from './world/RoundProvider.jsx';
 
@@ -98,6 +100,14 @@ const SCREENS = {
 
     const { screen, navTab, setScreen, setNavTab } = useScreenState({
       defaultScreen: SCREENS.ONBOARDING,
+      validScreens: Object.values(SCREENS),
+    });
+    // Server-side screen restore (item #9): mirror position + restore when
+    // localStorage was wiped (embedded webviews).
+    useServerScreenSync({
+      screen,
+      navTab,
+      setScreen,
       validScreens: Object.values(SCREENS),
     });
     const [badges, setBadges] = useState({});
@@ -208,6 +218,11 @@ const SCREENS = {
 
   return (
     <div className="relative">
+
+      {/* Return experience — session-expired toast, elimination discovery,
+          catch-up, check-in urgency, game-ended, app-update. Mounted once so
+          the beats show over any screen. */}
+      <ReturnExperience onCheckIn={() => { setScreen(SCREENS.CHECKIN); }} />
 
       {/* Desktop-only backdrop for the gutters outside the 430px column.
           Fixed positioning escapes #root's max-width. Hidden on mobile. */}

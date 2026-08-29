@@ -145,8 +145,31 @@ export default function authRoutes({
       contactEmail: userRecord?.contact_email ?? null,
       telegramLinked: Boolean(userRecord?.telegram_user_id),
       farcasterFid: userRecord?.farcaster_fid ?? null,
+      lastScreen: userRecord?.last_screen ?? null,
       reachability,
     });
+  });
+
+  // ---------- PUT /api/me/last-screen ----------
+  // Persist the user's current screen for cross-device / wiped-storage
+  // restore (return experience item #9). `screen` is a short validated token.
+  router.put("/me/last-screen", requireAuth, async (req, res) => {
+    const { screen } = req.body || {};
+    if (typeof screen !== "string" || screen.length === 0 || screen.length > 40) {
+      return res.status(400).json({ ok: false, error: "invalid_screen" });
+    }
+    try {
+      const { error } = await supabaseAdmin
+        .from("users")
+        .update({ last_screen: screen, last_screen_at: new Date().toISOString() })
+        .eq("address", req.user.address);
+      if (error) {
+        return res.status(400).json({ ok: false, error: error.message });
+      }
+      res.json({ ok: true, screen });
+    } catch (e) {
+      res.status(400).json({ ok: false, error: e instanceof Error ? e.message : "unknown_error" });
+    }
   });
 
   return router;
