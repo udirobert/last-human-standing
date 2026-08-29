@@ -29,7 +29,7 @@ function WalletModal({ open, onClose, connectors, onConnect, isConnecting }) {
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4 overflow-y-auto overscroll-y-contain"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -48,7 +48,7 @@ function WalletModal({ open, onClose, connectors, onConnect, isConnecting }) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16 }}
             transition={{ type: "spring", duration: 0.4, bounce: 0.12 }}
-            className="relative z-10 w-full max-w-sm rounded-3xl border border-ember/40 p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)]"
+            className="relative z-10 w-full max-w-sm rounded-3xl border border-ember/40 p-5 shadow-[0_24px_60px_-20px_rgba(0,0,0,0.65)] max-h-[85vh] overflow-y-auto overscroll-y-contain my-auto"
             style={{
               background: "radial-gradient(120% 90% at 50% 0%, #3a281c 0%, #1a1410 70%, #12100e 100%)",
             }}

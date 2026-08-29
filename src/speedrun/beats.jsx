@@ -88,7 +88,7 @@ export function D1CheckInBeat() {
   };
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col px-5 pb-8">
       <ThemeMissionCard
         day={1}
         theme={d.theme}
@@ -598,7 +598,7 @@ export function D2PathBeat() {
   const { beatFeel } = useSpeedRunFeel();
   const d = dayMeta(2);
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col px-5 pb-8">
       <ThemeMissionCard
         day={2}
         theme={d.theme}
@@ -737,7 +737,7 @@ export function D3PulseBeat() {
   const { nextBeat } = useSpeedRun();
   const d = dayMeta(3);
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col px-5 pb-8">
       <ThemeMissionCard
         day={3}
         theme={d.theme}
@@ -805,7 +805,7 @@ export function D4JuryBeat() {
   const d = dayMeta(4);
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto flex flex-col px-5 pb-8">
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain flex flex-col px-5 pb-8">
       <div className="flex items-start gap-3 mb-4">
         <ThemeMotif emoji={d.theme.emoji} size={52} label={d.theme.theme} />
         <div>

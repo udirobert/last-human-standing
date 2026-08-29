@@ -63,12 +63,12 @@ export default function ThemeReveal() {
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 1.2 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-smoke/95 backdrop-blur-sm"
+          className="fixed inset-0 z-[100] flex flex-col items-center bg-smoke/95 backdrop-blur-sm px-6 py-8 overflow-y-auto overscroll-y-contain"
           role="status"
           aria-live="polite"
           aria-label={`Day ${revealed.day} theme: ${revealed.theme}`}
         >
-          <div className="text-center px-6">
+          <div className="text-center px-4 my-auto max-w-sm w-full">
             <motion.div
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}

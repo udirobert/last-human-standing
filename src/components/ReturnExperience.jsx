@@ -325,7 +325,7 @@ export default function ReturnExperience({ onCheckIn }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex flex-col items-center justify-center px-6"
+              className="fixed inset-0 z-[70] flex flex-col items-center px-6 overflow-y-auto overscroll-y-contain py-6"
               style={{
                 background:
                   "radial-gradient(120% 90% at 50% 0%, rgba(74,40,33,0.96) 0%, rgba(22,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
@@ -338,7 +338,7 @@ export default function ReturnExperience({ onCheckIn }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 12 }}
                 transition={MOTION_SPRING.snappy}
-                className="w-full max-w-sm text-center"
+                className="w-full max-w-sm text-center my-auto"
               >
                 <p className="font-mono text-blood/80 uppercase mb-3" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
                   While you were away
@@ -421,7 +421,7 @@ export default function ReturnExperience({ onCheckIn }) {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[70] flex flex-col items-center justify-center px-6"
+              className="fixed inset-0 z-[70] flex flex-col items-center px-6 overflow-y-auto overscroll-y-contain py-6"
               style={{
                 background:
                   "radial-gradient(120% 90% at 50% 0%, rgba(54,50,33,0.96) 0%, rgba(20,16,12,0.98) 55%, rgba(13,13,13,0.99) 100%)",
@@ -434,7 +434,7 @@ export default function ReturnExperience({ onCheckIn }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 12 }}
                 transition={MOTION_SPRING.snappy}
-                className="w-full max-w-sm text-center"
+                className="w-full max-w-sm text-center my-auto"
               >
                 <p className="font-mono text-amber/80 uppercase mb-3" style={{ fontSize: 10, letterSpacing: "0.2em" }}>
                   The game has ended

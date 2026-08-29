@@ -58,7 +58,7 @@ export default function DayBriefing({ onDismiss }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[65] bg-ash/90 backdrop-blur-md flex items-end sm:items-center justify-center p-4"
+            className="fixed inset-0 z-[65] bg-ash/90 backdrop-blur-md flex items-end sm:items-center justify-center p-4 overflow-y-auto overscroll-y-contain"
             onClick={dismiss}
             role="presentation"
           >
@@ -72,7 +72,7 @@ export default function DayBriefing({ onDismiss }) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 32, opacity: 0 }}
               transition={{ type: "spring", damping: 26 }}
-              className="w-full max-w-md bg-smoke border border-neon/35 rounded-3xl p-6 outline-none"
+              className="w-full max-w-md bg-smoke border border-neon/35 rounded-3xl p-6 outline-none max-h-[85vh] overflow-y-auto overscroll-y-contain my-auto"
               onClick={(e) => e.stopPropagation()}
             >
               <p className="font-mono text-neon text-[10px] tracking-widest uppercase mb-2">
