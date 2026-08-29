@@ -290,6 +290,7 @@ const SCREENS = {
             <GameHome
               onCheckIn={() => { setScreen(SCREENS.CHECKIN); }}
               onViewFeed={() => handleNavChange('feed')}
+              onViewStandings={() => handleNavChange('leaderboard')}
               onViewHistory={() => { setScreen(SCREENS.HISTORY); setNavTab('home'); }}
               onRouteToOnboarding={() => {
                 try { sessionStorage.setItem("lhs_enter_reserve", "1"); } catch { /* ignore */ }

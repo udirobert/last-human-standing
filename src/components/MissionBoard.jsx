@@ -21,6 +21,7 @@ import ThemeMotif from "./ui/ThemeMotif.jsx";
 import MotifFrieze from "./ui/MotifFrieze.jsx";
 import StreakBloom from "./ui/StreakBloom.jsx";
 import DozingCat from "./ui/DozingCat.jsx";
+import UrgencyDial from "./ui/UrgencyDial.jsx";
 import MascotGuide from "./ui/MascotGuide.jsx";
 import { HumanCta, GameCta } from "./ui/CraftCta.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
@@ -366,9 +367,9 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
         <ThemeMotif emoji={themeData.emoji} size={96} label={themeLabel} />
       </div>
 
-      <div className="flex items-start justify-between gap-2 mb-3 relative">
+      <div className="flex items-center justify-between gap-3 mb-3 relative">
         <MascotGuide
-          variant={missionMascot.variant}
+          variant={closingSoon ? "alert" : missionMascot.variant}
           size={56}
           message={missionMascot.message}
           position="top"
@@ -378,14 +379,20 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           badgeCount={juryTickets}
           className="shrink-0"
         />
-        <div className="flex-1 min-w-0 pt-1">
-          <p className="font-mono text-neon text-xs tracking-widest uppercase">Today&apos;s mission · Day {currentDay ?? "—"}</p>
-          <div className="flex items-center gap-3 mt-1">
-            <ThemeMotif emoji={themeData.emoji} size={40} label={themeLabel} />
-            <p className="font-display text-2xl text-bone leading-tight">{themeLabel}</p>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-mono text-neon text-xs tracking-widest uppercase">Today&apos;s mission · Day {currentDay ?? "—"}</p>
+            {round?.closesAt && (
+              <UrgencyDial targetIso={round.closesAt} isLive={round?.status !== 'closed'} />
+            )}
+          </div>
+          <div className="flex items-center gap-2.5 mt-1">
+            <div className="p-1 rounded-xl bg-ash/60 border border-ember/40 shadow-sm">
+              <ThemeMotif emoji={themeData.emoji} size={48} label={themeLabel} />
+            </div>
+            <p className="font-display text-2xl text-bone leading-tight tracking-wide">{themeLabel}</p>
           </div>
         </div>
-        <TrustBadge />
       </div>
 
       <div className="mb-4">
@@ -431,12 +438,11 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
               <span className="text-dim text-sm font-mono"> / {cap} cap</span>
             )}
           </p>
-          {round?.closesAt && (
-            <p className={closingSoon ? 'text-amber font-mono text-sm font-semibold mt-1 animate-pulse' : 'text-amber text-xs font-mono mt-1'}>
-              {closingSoon ? 'Closes ' : 'Closes '}
-              <Countdown targetIso={round.closesAt} className="inline font-mono" />
-            </p>
-          )}
+          <p className="text-dim text-[10px] font-mono mt-1 leading-relaxed">
+            {eligibleCount != null && cap != null && eligibleCount > cap
+              ? "over cap · seed draw at close"
+              : "all verified advance"}
+          </p>
         </div>
         <div className="bg-ash rounded-xl p-3 border border-ember">
           <p className="text-bone/70 text-xs font-mono uppercase">Window</p>
@@ -444,10 +450,8 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
             {opens && closes ? `${opens} – ${closes}` : "Set by admin"}
           </p>
           <p className="text-dim text-[10px] font-mono mt-1 leading-relaxed">
-            {eligibleCount != null && cap != null
-              ? eligibleCount > cap
-                ? "over cap — the draw decides at close"
-                : `field ${eligibleCount}/${cap} · draw at close if over`
+            {round?.closesAt
+              ? (closingSoon ? "⚠️ Final votes being cast" : "18-hour daily window")
               : "18-hour window"}
           </p>
         </div>
