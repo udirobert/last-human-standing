@@ -18,6 +18,7 @@ import VoteBar from "../components/ui/VoteBar.jsx";
 import { shareMoment, momentCardDataUrl } from "../lib/shareMoment.js";
 import { getProfiledMascotLines } from "../lib/copy.js";
 import BuiltWithStack from "./BuiltWithStack.jsx";
+import PioneerPassCard from "../components/ui/PioneerPassCard.jsx";
 import SpeedRunIntro from "./SpeedRunIntro.jsx";
 import MotifFrieze from "../components/ui/MotifFrieze.jsx";
 import { useSpeedRunFeel, CUE_PRESS, CUE_HOVER } from "./useSpeedRunFeel.js";
@@ -964,7 +965,7 @@ export function FinaleBeat({ onReserve, onExit }) {
         <div className="my-1.5 flex justify-center">
           <Mascot
             variant="winner"
-            size={60}
+            size={56}
             interactive
             trackCursor={false}
             onClick={() => {
@@ -974,19 +975,10 @@ export function FinaleBeat({ onReserve, onExit }) {
           />
         </div>
 
-        <p className="font-body text-bone/75 text-xs leading-relaxed mb-3 max-w-xs">
-          Five compressed days completed. In the live cohort, verified humans compete for the on-chain pot with real stakes.
-        </p>
-
-        {cardSrc && (
-          <div className="w-full max-w-[240px] mx-auto mb-3.5 rounded-2xl overflow-hidden border border-ember/40 shadow-xl">
-            <img
-              src={cardSrc}
-              alt="Winner moment card"
-              className="w-full h-auto object-cover"
-            />
-          </div>
-        )}
+        {/* Interactive Free Pioneer Pass Card */}
+        <div className="w-full my-3">
+          <PioneerPassCard />
+        </div>
 
         <div className="w-full space-y-2 mb-3">
           <HumanCta onClick={onReserve} className="w-full">
