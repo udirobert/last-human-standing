@@ -9,8 +9,9 @@
 > dry-run gates. Paid entry, lottery admission, automatic payout, infiltrator
 > mode, and revival are disabled. Use
 > [`PILOT_INVITATION_READINESS.md`](./PILOT_INVITATION_READINESS.md) as the
-> authoritative pre-invite checklist. Migrations through **042** are applied;
-> the jury bounty pool (2 WLD) is seeded.
+> authoritative pre-invite checklist. Migrations through **043** are applied
+> (043 adds `users.last_screen` / `last_screen_at` for the return-experience
+> server-side screen restore); the jury bounty pool (2 WLD) is seeded.
 
 The historical timeline and older paid/lottery procedures below are retained
 for incident context. They do **not** describe the current Cohort 1 launch
@@ -372,22 +373,30 @@ the likely cause — roll back with `bash scripts/deploy-rollback.sh`.
   your own user or pm2 will fail to read the shared `node_modules`
   symlink on the next restart.
 
-### Direct DB connection (verified 2026-06-15)
+### Direct DB connection (verified 2026-06-15; updated 2026-08-29)
 
-The Supabase project is in `aws-0-eu-west-1`. The direct endpoint
-(port 5432) is connection-refused; the **pooler** is the working
-entry point. The service role JWT is **rejected** as the
-postgres password on the pooler (the project was created with
-a separate DB password).
+The Supabase project is in `aws-0-eu-west-1`. Two working paths, depending on
+where you run from:
 
-For ad-hoc queries, the working path is the `supabase` CLI
-(see T-24h above). For direct psql:
+- **From the production host (`snel-bot`)**: the **direct** endpoint resolves
+  and connects over IPv6 —
+  `postgresql://postgres:<DB_PASSWORD>@db.<project-ref>.supabase.co:5432/postgres`.
+  This is the path used to apply migration 043 (2026-08-29). It needs the
+  **database password** (not the service-role JWT), which is only shown once
+  in the dashboard — reset it under Project Settings → Database if unknown.
+- **From a machine without IPv6 routing** (e.g. some laptops/networks): the
+  `db.<project-ref>.supabase.co` host may not resolve. Use the **pooler**
+  instead —
+  `psql -h aws-0-eu-west-1.pooler.supabase.com -p 6543 -U postgres.<project-ref> -d postgres`
+  with `PGPASSWORD=<DB_PASSWORD>`.
 
-```bash
-PGPASSWORD=<password-from-supabase-dashboard> \
-  psql -h aws-0-eu-west-1.pooler.supabase.com -p 6543 \
-       -U postgres.emumokebsahapnqnstlr -d postgres
-```
+> **Auth gotcha (2026-08-29):** a stale/rotated database password fails auth
+> identically on *both* the pooler and the direct endpoint (`password
+> authentication failed for user "postgres"`). If a connection reaches the
+> server but auth fails on every host/port combination, the password is wrong,
+> not the connection string — reset it in the dashboard rather than permuting
+> the URI. The service role JWT is **rejected** as the postgres password; the
+> project was created with a separate DB password.
 
 Other regions return `tenant/user not found` (misleading Supabase
 error — the project isn't there).
@@ -419,7 +428,7 @@ DATABASE_URL='postgresql://postgres.emumokebsahapnqnstlr:<DB_PASSWORD>@aws-0-eu-
 
 | Date (UTC) | Release tag | Notes |
 |---|---|---|
-| 2026-06-17 | `20260617-163036` | World ID verify-first placement (signal bound to wallet, no-wallet guard, surfaced above paid card). |
+| 2026-08-29 | `20260829-095658` | **Return experience (PR #4).** Full returning-user pass across nine edge cases: session-expiry toast (was a silent reset into onboarding), elimination discovery ("while you were away" reveal), survivor catch-up, check-in urgency banner, a "Syncing…" pill to prevent stale-state flash, offline-queue replay feedback, game-ended recap, service-worker update prompt, and server-side screen restore. New client modules: `src/lib/returnState.js` (pure + unit-tested), `src/lib/serverScreen.js`, hooks `useReturnExperience` / `useServerScreenSync` / `useServiceWorkerUpdate` / `useQueuedCheckinFeedback`, and `src/components/ReturnExperience.jsx` (mounted once at App level, overlays any screen). Server: `GET /api/me` now returns `lastScreen`; new `PUT /api/me/last-screen`. **Migration 043** (`users.last_screen` + `last_screen_at`) — additive, idempotent (`add column if not exists`); the feature is backward-compatible, so the server was deployed first and the column added right after with no downtime. Applied via `psql -f` from `snel-bot` over the direct IPv6 endpoint (the pooler rejected the pre-reset password; see the DB-connection note below). Verified: `GET /api/me` → 401 (unauth, no 500 from a missing column), `/api/game/state` → 200. |
 | 2026-06-18 | `20260618-202401` | Animation pass (a11y `prefers-reduced-motion`, eased `cubic-bezier(0.23,1,0.32,1)`, GPU `translateX/Y/scale` strings, capped mascot loops). |
 | 2026-06-19 | `20260619-094447` | Dead-end sweep: SpectatorChip `onReserve` wired, Feed/Leaderboard empty-state CTAs, Leaderboard "Today"/"Roster" aliasing removed, Feed retry (3× × 5s n backoff), ErrorBoundary Discord link, photo-upload failure surfaced, queued check-in chip on home, WorldIdVerify/SelfVerify celebrate trust upgrade, wallet auth error cause, SelfVerify 60s polling timeout, PushOptIn "Subscribed" beat, Onboarding lastError recovery, Chat [Lobby \| DM] mode toggle, `markQueuedCheckin`/`clearQueuedCheckin` exposed on `useWorld`. |
 | 2026-06-19 | (env-only) | `GAME_LAUNCH_AT` bumped from `2026-06-17T18:00:00Z` (missed) to `2026-07-01T18:00:00Z`. No code change. New seed: `2026-07-01T18:00:00Z:cohort-1:lottery`. |

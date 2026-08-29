@@ -24,6 +24,7 @@ import { getDetectiveTitle } from '../lib/detective.js';
 import { consumeFeedIntent } from '../lib/feedIntent.js';
 import { usePolling } from '../hooks/usePolling.js';
 import { useCountdown } from '../hooks/useCountdown.js';
+import { visibilityInterval } from '../lib/visibilityInterval.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
 import { CUE_PRESS } from '../lib/cuelume.js';
 import { randomSalt, commitmentFor } from '../lib/commitRevealVote.js';
@@ -192,14 +193,9 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
     }
   }, [isMiniApp]);
 
-  useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loadFeed();
-    }, 0);
-    return () => clearTimeout(timeoutId);
-  }, [loadFeed]);
-
-  // Restore locally committed ballots after refresh.
+  // The audit is a live spectacle — poll so tallies move without refresh.
+  // Pauses in a backgrounded tab and catches up immediately on return.
+  useEffect(() => visibilityInterval(loadFeed, 12_000), [loadFeed]);
   useEffect(() => {
     if (!crEnabled || !voterAddress || roundId == null || !submissions.length) return;
     const next = {};
@@ -216,12 +212,6 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
     }
     if (Object.keys(next).length) setVoted((prev) => ({ ...next, ...prev }));
   }, [crEnabled, voterAddress, roundId, cohortNumber, submissions]);
-
-  // The audit is a live spectacle — poll so tallies move without refresh.
-  useEffect(() => {
-    const id = setInterval(() => loadFeed(), 12_000);
-    return () => clearInterval(id);
-  }, [loadFeed]);
 
   // Auto-retry on network errors with a small backoff so the user
   // doesn't see a permanent "Live feed unavailable" state when the

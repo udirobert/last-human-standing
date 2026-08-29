@@ -9,7 +9,7 @@ import { useCallback, useEffect, useState } from "react";
  * see public/sw.js replayQueue() → { type: "QUEUE_REPLAYED", results }.
  *
  * @returns {{
- *   replayResult: { ok: boolean, failedCount: number, nonCeased: number } | null,
+ *   replayResult: { ok: boolean, failedCount: number, nonReplayable: number } | null,
  *   clear: () => void,
  * }}
  */

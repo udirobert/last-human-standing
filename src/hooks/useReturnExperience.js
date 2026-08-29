@@ -5,6 +5,7 @@ import {
   writeReturnState,
   detectEliminationWhileAway,
   computeDaysAway,
+  missedDayNumbers,
 } from "../lib/returnState.js";
 
 /**
@@ -66,11 +67,7 @@ export function useReturnExperience() {
     if (away > 0) {
       setDaysAway(away);
       // Missed days are the ones strictly between the last-seen day and today.
-      const missed = [];
-      if (Number.isFinite(prev?.day)) {
-        for (let d = Number(prev.day) + 1; d < Number(next.day); d++) missed.push(d);
-      }
-      setMissedDays(missed);
+      setMissedDays(missedDayNumbers(prev?.day, next.day));
     }
 
     if (phase === "ended" && prev) setPhaseEndedWhileAway(true);

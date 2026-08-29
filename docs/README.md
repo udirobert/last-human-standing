@@ -266,6 +266,44 @@ The app registers a service worker (`public/sw.js`) that:
 
 Registered automatically in `src/main.jsx`. See `src/hooks/useOnlineStatus.js` for the client hook.
 
+## Return experience
+
+When a player comes back after being away, the app restores their last screen
+from `localStorage` and silently re-checks auth — no splash, no forced restart.
+On top of that baseline, a single `<ReturnExperience>` overlay (mounted once in
+`App.jsx`, so it renders over any screen) handles the edge cases:
+
+| Situation on return | What the player sees |
+|---|---|
+| Session expired (7-day cookie lapsed) | A "Session expired — sign in again" toast (seat/progress preserved), instead of a silent drop into onboarding. Set on a 401 from `syncAuth` only when auth was previously persisted; cleared on re-auth. |
+| Eliminated while away | A "While you were away" reveal explaining how/why they went out, with a CTA into the jury role. |
+| Survived, but rounds advanced | A dismissable "You missed Day X & Y — you're still in" catch-up toast. |
+| Check-in window open, not submitted | A global urgency banner with a live countdown (turns blood-red in the final 6h); a "you missed today's window" banner after close. |
+| First game-state fetch in flight | A subtle "Syncing…" pill so a cached render reads as about-to-update, not stale. |
+| Offline check-in replayed | A success / transient-failure / window-expired toast (from the SW's `QUEUE_REPLAYED` message). |
+| Game ended while away | A winner recap + next-cohort CTA. |
+| New app version activated | A "New version available — refresh" prompt (only on a true in-place SW update). |
+
+Implementation:
+
+- **`src/lib/returnState.js`** — pure, unit-tested helpers that persist a
+  minimal "last known race status" snapshot (`alive`/`eliminated`, day,
+  checked-in) and detect what changed since the last visit. Distinct from
+  `useScreenState` (UI position) — this records race status.
+- **`src/hooks/useReturnExperience.js`** — commits the snapshot exactly once
+  per authenticated visit (ref-guarded so the 15s poll never re-fires the
+  beats); only writes once `you.isAuthed` is true, so a non-authed visitor
+  can't trigger a false "eliminated while away".
+- **`src/hooks/useServerScreenSync.js`** + **`src/lib/serverScreen.js`** —
+  mirror the current screen to the server (debounced) and restore it from
+  `GET /api/me` **only** when `localStorage` was wiped (embedded World App /
+  Farcaster webviews). Backed by `users.last_screen` (migration 043) and
+  `PUT /api/me/last-screen`. Local storage remains the source of truth when
+  present, so this is a pure fallback.
+- **`src/hooks/useServiceWorkerUpdate.js`** / **`useQueuedCheckinFeedback.js`**
+  — the SW update-prompt and offline-queue-replay listeners; both guard
+  against first-install false positives.
+
 ## Push notifications
 
 Web Push (VAPID) notifications are supported. When enabled:
@@ -301,8 +339,8 @@ Web Push (VAPID) notifications are supported. When enabled:
 │   ├── components/           # React UI components
 │   ├── config/               # AI + humanity provider configs
 │   ├── data/                 # Game constants & mock data
-│   ├── hooks/                # Custom React hooks
-│   ├── lib/                  # Client-side utilities (pushClient)
+│   ├── hooks/                # Custom React hooks (return experience, online status, screen state)
+│   ├── lib/                  # Client-side utilities (pushClient, returnState, serverScreen)
 │   ├── wallet/               # Wagmi + viem wallet config
 │   └── world/                # World App integration providers
 ├── server/

@@ -13,23 +13,44 @@
  */
 
 const SCREEN_KEY = "lhs_screen_state_v1";
+export { SCREEN_KEY };
 
-/** Read the local screen state, or null if absent/unparseable. */
-export function readLocalScreenState() {
+/** Read the raw persisted { screen, navTab } object, or null if absent/unparseable/no screen. */
+function readLocalScreenObject() {
   if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(SCREEN_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return parsed && typeof parsed.screen === "string" ? parsed.screen : null;
+    return parsed && typeof parsed.screen === "string" ? parsed : null;
   } catch {
     return null;
   }
 }
 
+/** Read the local screen name, or null if absent/unparseable. */
+export function readLocalScreenState() {
+  return readLocalScreenObject()?.screen ?? null;
+}
+
+/** Read the full persisted { screen, navTab } state (for restore-on-mount use). */
+export function readLocalScreenAndTab() {
+  return readLocalScreenObject();
+}
+
 /** Does this device already have local screen state? */
 export function hasLocalScreenState() {
   return readLocalScreenState() != null;
+}
+
+/** Persist the screen + navTab to local storage. Best-effort, never throws. */
+export function writeLocalScreenState(screen, navTab) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(SCREEN_KEY, JSON.stringify({ screen, navTab }));
+  } catch {
+    /* ignore — storage unavailable */
+  }
 }
 
 /** GET /api/me → lastScreen, or null on failure/unauthenticated. */

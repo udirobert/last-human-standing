@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-
-const KEY = "lhs_screen_state_v1";
+import { SCREEN_KEY, readLocalScreenAndTab, writeLocalScreenState } from "../lib/serverScreen.js";
 
 /** Screens that are mid-flow / special-access — never restore from storage. */
 const EPHEMERAL = new Set(["checkin", "admin", "speedrun"]);
@@ -41,8 +40,7 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
       const urlScreen = params.get("screen");
       if (urlScreen && isValid(urlScreen)) return urlScreen;
 
-      const raw = localStorage.getItem(KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
+      const parsed = readLocalScreenAndTab();
       return resolveRestored(parsed?.screen ?? fallback);
     } catch {
       return fallback;
@@ -56,8 +54,7 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
       if (urlScreen === "feed" || urlScreen === "chat" || urlScreen === "leaderboard" || urlScreen === "home") {
         return urlScreen;
       }
-      const raw = localStorage.getItem(KEY);
-      const parsed = raw ? JSON.parse(raw) : null;
+      const parsed = readLocalScreenAndTab();
       const tab = parsed?.navTab ?? "home";
       // Don't restore a nav tab that doesn't map to a BottomNav item
       if (tab === "admin" || tab === "history") return "home";
@@ -87,21 +84,14 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
 
   // Persist on every change — never write ephemeral screens.
   useEffect(() => {
-    try {
-      const persistScreen = EPHEMERAL.has(screen)
-        ? screen === "speedrun"
-          ? fallback
-          : "home"
-        : screen;
-      const persistTab =
-        navTab === "admin" || navTab === "history" ? "home" : navTab;
-      localStorage.setItem(
-        KEY,
-        JSON.stringify({ screen: persistScreen, navTab: persistTab }),
-      );
-    } catch {
-      /* ignore */
-    }
+    const persistScreen = EPHEMERAL.has(screen)
+      ? screen === "speedrun"
+        ? fallback
+        : "home"
+      : screen;
+    const persistTab =
+      navTab === "admin" || navTab === "history" ? "home" : navTab;
+    writeLocalScreenState(persistScreen, persistTab);
   }, [screen, navTab, fallback]);
 
   const setScreen = useCallback(
@@ -127,7 +117,7 @@ export function useScreenState({ defaultScreen, validScreens = [] } = {}) {
  */
 export function clearScreenState() {
   try {
-    localStorage.removeItem(KEY);
+    localStorage.removeItem(SCREEN_KEY);
   } catch {
     /* ignore */
   }
