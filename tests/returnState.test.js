@@ -1,15 +1,19 @@
-// @vitest-environment node
-import { describe, expect, it } from "vitest";
+// @vitest-environment jsdom
+import { beforeEach, describe, expect, it } from "vitest";
 import {
   detectEliminationWhileAway,
   computeDaysAway,
   missedDayNumbers,
-  KEY,
+  KEY as RETURN_KEY,
 } from "../src/lib/returnState.js";
+import {
+  readLocalScreenState,
+  hasLocalScreenState,
+} from "../src/lib/serverScreen.js";
 
 describe("returnState KEY", () => {
   it("is a stable versioned key", () => {
-    expect(KEY).toBe("lhs_return_state_v1");
+    expect(RETURN_KEY).toBe("lhs_return_state_v1");
   });
 });
 
@@ -89,5 +93,30 @@ describe("missedDayNumbers", () => {
 
   it("returns [] for an implausibly large gap (safety)", () => {
     expect(missedDayNumbers(1, 2000)).toEqual([]);
+  });
+});
+
+describe("serverScreen localStorage helpers", () => {
+  const KEY = "lhs_screen_state_v1";
+  beforeEach(() => {
+    try { window.localStorage.clear(); } catch { /* jsdom */ }
+  });
+
+  it("readLocalScreenState returns null when empty", () => {
+    expect(readLocalScreenState()).toBeNull();
+    expect(hasLocalScreenState()).toBe(false);
+  });
+
+  it("parses a valid persisted screen", () => {
+    window.localStorage.setItem(KEY, JSON.stringify({ screen: "feed", navTab: "feed" }));
+    expect(readLocalScreenState()).toBe("feed");
+    expect(hasLocalScreenState()).toBe(true);
+  });
+
+  it("returns null for garbage / malformed state", () => {
+    window.localStorage.setItem(KEY, "{not json");
+    expect(readLocalScreenState()).toBeNull();
+    window.localStorage.setItem(KEY, JSON.stringify({ navTab: "home" })); // no screen
+    expect(readLocalScreenState()).toBeNull();
   });
 });

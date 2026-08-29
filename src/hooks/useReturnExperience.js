@@ -73,7 +73,7 @@ export function useReturnExperience() {
       setMissedDays(missed);
     }
 
-    if (phase === "ended") setPhaseEndedWhileAway(true);
+    if (phase === "ended" && prev) setPhaseEndedWhileAway(true);
 
     writeReturnState(next);
   }, [phase, you?.isAuthed, you?.isEliminated, you?.checkedInToday, dayNum]);
