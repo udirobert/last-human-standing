@@ -7,9 +7,11 @@ const PIONEER_PASS_ADDRESS = process.env.PIONEER_PASS_ADDRESS;
 const CELO_ATTRIBUTION_TAG = "celo_431e6208414d";
 const CELO_ATTRIBUTION_HEX = "63656c6f5f343331653632303834313464";
 
-// In-memory cache of minted addresses to prevent duplicate submissions
+// In-memory tracking of minted addresses/nullifiers and 50/50 split counts
 const mintedCache = new Set();
-let mockTokenCounter = 100;
+let worldMintCount = 0;
+let celoMintCount = 0;
+const MAX_PER_CHAIN = 50;
 
 export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
   const router = Router();
@@ -25,20 +27,45 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
     }),
     async (req, res) => {
       try {
-        const { address, serial, chain } = req.body || {};
+        const { address, nullifierHash, chain } = req.body || {};
         const isWorld = chain === "worldchain" || chain === "world";
-        const safeSerial = typeof serial === "string" && serial.trim() ? serial.trim() : `LHS-PIONEER-${Math.floor(1000 + Math.random() * 9000)}`;
-        const normalizedAddress = typeof address === "string" && address.startsWith("0x") ? address.toLowerCase() : null;
+        const identifier = (nullifierHash || address || "").toLowerCase().trim();
 
-        if (normalizedAddress && mintedCache.has(normalizedAddress)) {
+        if (identifier && mintedCache.has(identifier)) {
           return res.json({
             ok: true,
             alreadyMinted: true,
-            serial: safeSerial,
             chain: isWorld ? "worldchain" : "celo",
-            message: "Pioneer pass already claimed for this address",
+            message: "Pioneer pass already claimed for this verified identity",
           });
         }
+
+        // Check allocation limits (50 World + 50 Celo = 100 Total)
+        if (isWorld && worldMintCount >= MAX_PER_CHAIN) {
+          return res.status(409).json({
+            error: "world_edition_exhausted",
+            message: "All 50 World Chain Pioneer Passes have been claimed",
+          });
+        }
+        if (!isWorld && celoMintCount >= MAX_PER_CHAIN) {
+          return res.status(409).json({
+            error: "celo_edition_exhausted",
+            message: "All 50 Celo Mainnet Pioneer Passes have been claimed",
+          });
+        }
+
+        // Sequential Edition Numbering: #001–#050 on World, #051–#100 on Celo
+        let editionNum;
+        if (isWorld) {
+          worldMintCount += 1;
+          editionNum = worldMintCount;
+        } else {
+          celoMintCount += 1;
+          editionNum = 50 + celoMintCount;
+        }
+
+        const safeSerial = `LHS-PIONEER-${String(editionNum).padStart(3, "0")}`;
+        const normalizedAddress = typeof address === "string" && address.startsWith("0x") ? address.toLowerCase() : null;
 
         // On-chain broadcast via Relayer if signing key is configured
         let txHash = null;
@@ -63,7 +90,6 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
               transport: http(rpcUrl),
             });
 
-            // If contract is deployed on Celo, call mintPioneer with attribution suffix
             let txData = "0x" + CELO_ATTRIBUTION_HEX;
             let targetAddress = account.address;
 
@@ -99,16 +125,19 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
           }
         }
 
-        if (normalizedAddress) {
-          mintedCache.add(normalizedAddress);
+        if (identifier) {
+          mintedCache.add(identifier);
         }
 
         // Record in Supabase if available
-        if (supabaseAdmin && normalizedAddress) {
+        if (supabaseAdmin && (normalizedAddress || nullifierHash)) {
           try {
             await supabaseAdmin.from("pioneer_mints").upsert({
               address: normalizedAddress,
+              nullifier_hash: nullifierHash || null,
               serial: safeSerial,
+              edition_number: editionNum,
+              chain: isWorld ? "worldchain" : "celo",
               tx_hash: txHash,
               minted_at: new Date().toISOString(),
             });
@@ -117,14 +146,13 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
           }
         }
 
-        mockTokenCounter += 1;
-        const tokenId = mockTokenCounter;
-
         return res.json({
           ok: true,
           minted: true,
           serial: safeSerial,
-          tokenId,
+          editionNumber: editionNum,
+          totalEdition: 100,
+          chainAllocation: isWorld ? `${worldMintCount}/50 (World ID)` : `${celoMintCount}/50 (Celo/Self)`,
           txHash,
           explorerUrl,
           perks: {

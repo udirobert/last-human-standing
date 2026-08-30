@@ -150,9 +150,14 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
 
       {/* Perks List */}
       <div className="space-y-1.5 mb-4 relative z-10 text-xs font-mono">
-        <p className="text-[10px] text-bone/50 uppercase tracking-widest mb-1 font-semibold">
-          Optional perks for live cohort:
-        </p>
+        <div className="flex items-center justify-between mb-1">
+          <p className="text-[10px] text-bone/50 uppercase tracking-widest font-semibold">
+            Optional perks for live cohort:
+          </p>
+          <span className="text-[9px] text-amber/80 font-mono">
+            {isWorldApp ? "50 World ID slots" : "50 Celo/Self slots"}
+          </span>
+        </div>
         <div className="flex items-center gap-2 text-bone/85 bg-smoke/40 px-2.5 py-1.5 rounded-lg border border-ember/30">
           <span className="text-amber">🎟️</span>
           <span className="truncate">+1 Bonus Jury Ticket on Day 1</span>
@@ -165,6 +170,9 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
           <span className="text-amber">🛡️</span>
           <span className="truncate">&quot;Pioneer&quot; Aura on Personal Shelf</span>
         </div>
+        <p className="text-[9.5px] text-dim/60 font-mono text-center pt-1">
+          Soulbound: bound to your verified human identity
+        </p>
       </div>
 
       {/* Action Button */}
