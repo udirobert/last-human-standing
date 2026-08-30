@@ -2,8 +2,10 @@ import { Router } from "express";
 import { rateLimit } from "../rateLimit.js";
 
 const CELO_RPC = process.env.CELO_RPC || "https://forno.celo.org";
+const WORLD_RPC = process.env.WORLD_RPC || "https://worldchain-mainnet.g.alchemy.com/public";
 const CELO_SIGNING_KEY = process.env.CELO_SIGNING_KEY || process.env.CELO_PRIZE_POOL_KEY;
-const PIONEER_PASS_ADDRESS = process.env.PIONEER_PASS_ADDRESS;
+const PIONEER_PASS_ADDRESS_CELO = process.env.PIONEER_PASS_ADDRESS_CELO || process.env.PIONEER_PASS_ADDRESS || "0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44";
+const PIONEER_PASS_ADDRESS_WORLD = process.env.PIONEER_PASS_ADDRESS_WORLD || "0x5ae66f26ea17ff6499a9fad4bdb299e73cec59e1";
 const CELO_ATTRIBUTION_TAG = "celo_431e6208414d";
 const CELO_ATTRIBUTION_HEX = "63656c6f5f343331653632303834313464";
 
@@ -90,11 +92,12 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
               transport: http(rpcUrl),
             });
 
-            let txData = "0x" + CELO_ATTRIBUTION_HEX;
+            let txData = isWorld ? "0x" : "0x" + CELO_ATTRIBUTION_HEX;
             let targetAddress = account.address;
+            const contractAddr = isWorld ? PIONEER_PASS_ADDRESS_WORLD : PIONEER_PASS_ADDRESS_CELO;
 
-            if (!isWorld && PIONEER_PASS_ADDRESS && PIONEER_PASS_ADDRESS.startsWith("0x")) {
-              targetAddress = PIONEER_PASS_ADDRESS;
+            if (contractAddr && contractAddr.startsWith("0x")) {
+              targetAddress = contractAddr;
               const { readFileSync } = await import("fs");
               const { resolve, dirname } = await import("path");
               const { fileURLToPath } = await import("url");
@@ -107,7 +110,7 @@ export default function pioneerRoutes({ supabaseAdmin, rateLimitStorage }) {
                   functionName: "mintPioneer",
                   args: [normalizedAddress || account.address, safeSerial],
                 });
-                txData = baseData + CELO_ATTRIBUTION_HEX;
+                txData = isWorld ? baseData : baseData + CELO_ATTRIBUTION_HEX;
               } catch {
                 /* fallback to tagged transaction */
               }

@@ -45,6 +45,7 @@ To maximize quality feedback while minimizing friction, developers and community
 * **Submission ID**: `b01750d5-c554-4839-a12c-8b523df07469`
 * **Assigned Attribution Tag**: `celo_431e6208414d`
 * **PioneerPass Smart Contract (Celo Mainnet)**: `0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44` ([Celoscan ↗](https://celoscan.io/address/0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44))
+* **PioneerPass Smart Contract (World Chain Mainnet)**: `0x5ae66f26ea17ff6499a9fad4bdb299e73cec59e1` ([Worldscan ↗](https://worldscan.org/address/0x5ae66f26ea17ff6499a9fad4bdb299e73cec59e1))
 * **Live Leaderboard**: [Dune Dashboard](https://dune.com/celo/agents-at-work-hackathon)
 
 ---
