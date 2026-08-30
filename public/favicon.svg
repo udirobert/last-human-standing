@@ -1,3 +1,30 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <text y="28" font-size="28" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji">💀</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <radialGradient id="fav-bg" cx="50%" cy="45%" r="60%">
+      <stop offset="0%" stop-color="#2A2016"/>
+      <stop offset="70%" stop-color="#16120E"/>
+      <stop offset="100%" stop-color="#0B0908"/>
+    </radialGradient>
+    <linearGradient id="fav-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFE89E"/>
+      <stop offset="50%" stop-color="#FFB800"/>
+      <stop offset="100%" stop-color="#D98200"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background Coin -->
+  <circle cx="32" cy="32" r="30" fill="url(#fav-bg)" stroke="url(#fav-gold)" stroke-width="2.5"/>
+  <circle cx="32" cy="32" r="26" fill="none" stroke="#FFB800" stroke-width="0.75" stroke-dasharray="3 2" opacity="0.6"/>
+
+  <!-- Hearth Flame & Compass Needle -->
+  <path d="M 32 10 L 35 27 L 44 32 L 35 37 L 32 54 L 29 37 L 20 32 L 29 27 Z" fill="url(#fav-gold)" opacity="0.9"/>
+  <circle cx="32" cy="32" r="9" fill="#FF1A1A" opacity="0.85"/>
+  <circle cx="32" cy="32" r="6" fill="#FFB800"/>
+  <circle cx="32" cy="32" r="3" fill="#FFFFFF"/>
+
+  <!-- Mascot Eyes on Rim -->
+  <circle cx="28.5" cy="22" r="2" fill="#0B0908"/>
+  <circle cx="35.5" cy="22" r="2" fill="#0B0908"/>
+  <circle cx="28.5" cy="22" r="1" fill="#FFB800"/>
+  <circle cx="35.5" cy="22" r="1" fill="#FFB800"/>
 </svg>
