@@ -79,9 +79,9 @@ The collectible and identity infrastructure operates symmetrically across both s
 
 | Dimension | **Celo Mainnet Rail** | **World Chain / World ID Rail** |
 | :--- | :--- | :--- |
-| **Smart Contract** | `PioneerPass.sol` at `0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44` | `PioneerPass.sol` deployable via `CHAIN=worldchain scripts/deploy-pioneer-pass.js` |
+| **Smart Contract** | `PioneerPass.sol` at `0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44` | `PioneerPass.sol` at `0x5ae66f26ea17ff6499a9fad4bdb299e73cec59e1` |
 | **Identity / Sybil Proof** | **Self (`@selfxyz/core`)** ZK Passport / Selfie | **World ID** Orb / Device Zero-Knowledge Nullifiers |
-| **Gasless Model** | Server Relayer with `celo_431e6208414d` tag suffix | World App Native Paymaster / Server Relayer |
+| **Gasless Relayer** | Celo Relayer (~99.4 CELO funded · ~99,400 mint capacity) | World Chain Relayer (~0.001 ETH funded · ~500 mint capacity) |
 | **Edition Allocation** | **#051 to #100** (50 Celo / Self Playtesters) | **#001 to #050** (50 World ID Playtesters) |
 | **Visual Theme** | Antique Brass Compass & Sunlit Gold Hearth (`/motifs/pioneer-artifact-celo.jpg`) | Luminous Celestial Emerald Orb & Platinum Iris (`/motifs/pioneer-artifact-world.jpg`) |
 | **Explorer Verification** | [Celoscan ↗](https://celoscan.io/address/0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44) | [Worldscan ↗](https://worldscan.org) |
