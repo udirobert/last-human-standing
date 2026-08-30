@@ -83,6 +83,35 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
         {/* Background Card Paper */}
         <rect width="400" height="500" rx="24" fill={`url(#${filterId}-bg-grad)`} />
 
+        {/* Master Gouache Artwork Canvas */}
+        <g clipPath={`url(#${filterId}-card-clip)`}>
+          <clipPath id={`${filterId}-card-clip`}>
+            <rect x="14" y="14" width="372" height="472" rx="20" />
+          </clipPath>
+          <image
+            href="/motifs/pioneer-artifact-master.jpg"
+            x="14"
+            y="14"
+            width="372"
+            height="472"
+            preserveAspectRatio="xMidYMid slice"
+            opacity="0.92"
+          />
+          {/* Subtle Dark Vignette on Artwork */}
+          <rect
+            x="14"
+            y="14"
+            width="372"
+            height="472"
+            fill="url(#vignette-grad)"
+            opacity="0.65"
+          />
+          <radialGradient id="vignette-grad" cx="50%" cy="45%" r="60%">
+            <stop offset="35%" stopColor="transparent" />
+            <stop offset="100%" stopColor="#0B0908" />
+          </radialGradient>
+        </g>
+
         {/* Paper Grain Overlay */}
         <rect
           x="10"
@@ -91,10 +120,10 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           height="480"
           rx="18"
           fill="none"
-          stroke="rgba(255,184,0,0.25)"
+          stroke="rgba(255,184,0,0.3)"
           strokeWidth="1.5"
           filter={`url(#${filterId}-grain)`}
-          opacity="0.45"
+          opacity="0.35"
         />
 
         {/* Intricate Inner Border Frame */}
@@ -108,19 +137,20 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           stroke={`url(#${filterId}-gold)`}
           strokeWidth="1.2"
           strokeDasharray="6 3"
-          opacity="0.65"
+          opacity="0.75"
         />
 
         {/* Corner Flourishes */}
-        <path d="M 24 38 L 38 24 M 24 32 L 32 24" stroke="#FFB800" strokeWidth="1.5" opacity="0.6" />
-        <path d="M 376 38 L 362 24 M 376 32 L 368 24" stroke="#FFB800" strokeWidth="1.5" opacity="0.6" />
-        <path d="M 24 462 L 38 476 M 24 468 L 32 476" stroke="#FFB800" strokeWidth="1.5" opacity="0.6" />
-        <path d="M 376 462 L 362 476 M 376 468 L 368 476" stroke="#FFB800" strokeWidth="1.5" opacity="0.6" />
+        <path d="M 24 38 L 38 24 M 24 32 L 32 24" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
+        <path d="M 376 38 L 362 24 M 376 32 L 368 24" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
+        <path d="M 24 462 L 38 476 M 24 468 L 32 476" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
+        <path d="M 376 462 L 362 476 M 376 468 L 368 476" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
 
-        {/* Header Ribbon */}
+        {/* Header Ribbon with Dark Backing */}
+        <rect x="60" y="38" width="280" height="42" rx="12" fill="rgba(14,11,8,0.75)" stroke="rgba(255,184,0,0.4)" strokeWidth="0.8" backdropFilter="blur(4px)" />
         <text
           x="200"
-          y="58"
+          y="56"
           textAnchor="middle"
           fill="#FFB800"
           fontFamily="ui-monospace, monospace"
@@ -132,118 +162,45 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
         </text>
         <text
           x="200"
-          y="74"
+          y="70"
           textAnchor="middle"
           fill="#EDE4D0"
           fontFamily="ui-monospace, monospace"
           fontSize="7.5"
           letterSpacing="0.16em"
-          opacity="0.6"
+          opacity="0.7"
         >
           FOUNDING PIONEER · EDITION OF {totalEdition}
         </text>
 
-        {/* Main Artwork Group with Brush Wobble */}
-        <g filter={`url(#${filterId}-brush)`}>
-          {/* Outer Dial Rings */}
-          <circle cx="200" cy="225" r="105" fill="none" stroke="#2D2319" strokeWidth="12" />
-          <circle cx="200" cy="225" r="98" fill="#1C1611" stroke="#FFB800" strokeWidth="1" opacity="0.8" />
-          <circle cx="200" cy="225" r="82" fill="#120E0B" stroke="#4A341E" strokeWidth="1.5" />
-
-          {/* Compass Rose Starburst */}
-          <path
-            d="M 200 135 L 208 215 L 290 225 L 208 235 L 200 315 L 192 235 L 110 225 L 192 215 Z"
-            fill={`url(#${filterId}-gold)`}
-            opacity="0.85"
-          />
-          <path
-            d="M 200 160 L 205 220 L 265 225 L 205 230 L 200 290 L 195 230 L 135 225 L 195 220 Z"
-            fill="#FFF2CC"
-            opacity="0.9"
-          />
-
-          {/* Core Survivor Hearth (Gouache Flame) */}
-          <ellipse cx="200" cy="225" r="32" fill="#FF1A1A" opacity="0.85" />
-          <circle cx="200" cy="225" r="22" fill="#FFB800" />
-          <circle cx="200" cy="225" r="12" fill="#FFFFFF" />
-
-          {/* The 5 Master Ritual Motifs circling the Compass */}
-          {/* 1. Coffee Cup (Top) */}
-          <g transform="translate(186, 92) scale(0.24)">
-            <rect x="10" y="25" width="38" height="42" rx="10" fill={P.crema} />
-            <path d="M 48 35 C 58 35 58 55 48 55" fill="none" stroke={P.crema} strokeWidth="5" />
-            <ellipse cx="29" cy="25" rx="19" ry="6" fill={P.roast} />
-          </g>
-
-          {/* 2. Park Tree (Top Right) */}
-          <g transform="translate(290, 140) scale(0.24)">
-            <rect x="26" y="45" width="8" height="25" rx="3" fill={P.crema} />
-            <circle cx="30" cy="32" r="22" fill={P.leaf} />
-            <circle cx="16" cy="38" r="14" fill={P.leafShade} opacity="0.8" />
-          </g>
-
-          {/* 3. Gym Iron (Bottom Right) */}
-          <g transform="translate(285, 280) scale(0.22) rotate(-20 30 30)">
-            <rect x="10" y="26" width="44" height="8" rx="3" fill={P.ironLight} />
-            <rect x="6" y="18" width="8" height="24" rx="3" fill={P.iron} />
-            <rect x="50" y="18" width="8" height="24" rx="3" fill={P.iron} />
-          </g>
-
-          {/* 4. Transit Ticket/Window (Bottom Left) */}
-          <g transform="translate(80, 280) scale(0.24)">
-            <rect x="10" y="15" width="44" height="34" rx="6" fill={P.crema} stroke={P.iron} strokeWidth="2" />
-            <line x1="20" y1="15" x2="20" y2="49" stroke={P.ironLight} strokeWidth="2" strokeDasharray="3 3" />
-            <circle cx="35" cy="32" r="6" fill={P.amber} />
-          </g>
-
-          {/* 5. Sunrise Mountain Horizon (Top Left) */}
-          <g transform="translate(85, 140) scale(0.24)">
-            <circle cx="30" cy="40" r="18" fill="#FFB800" />
-            <polygon points="10,50 30,22 50,50" fill={P.iron} />
-            <polygon points="25,50 42,28 60,50" fill={P.ironLight} opacity="0.8" />
-          </g>
-
-          {/* Mascot Silhouette Standing on North Compass */}
-          <g transform="translate(187, 185) scale(0.28)">
-            {/* Body */}
-            <circle cx="45" cy="35" r="24" fill="#0B0908" />
-            <rect x="33" y="48" width="24" height="28" rx="8" fill="#0B0908" />
-            {/* Watchful Glowing Eyes */}
-            <circle cx="38" cy="33" r="4.5" fill="#FFB800" />
-            <circle cx="52" cy="33" r="4.5" fill="#FFB800" />
-            <circle cx="39.5" cy="32.5" r="2" fill="#FFFFFF" />
-            <circle cx="53.5" cy="32.5" r="2" fill="#FFFFFF" />
-          </g>
-        </g>
-
         {/* Card Footer: Metadata & Numbering */}
-        <rect x="35" y="375" width="330" height="85" rx="16" fill="#18130E" stroke="#38291A" strokeWidth="1" />
+        <rect x="30" y="385" width="340" height="78" rx="14" fill="rgba(14,11,8,0.85)" stroke="#38291A" strokeWidth="1" />
 
-        <text x="55" y="402" fill="#FFB800" fontFamily="ui-monospace, monospace" fontSize="8" letterSpacing="0.18em" uppercase="true">
+        <text x="48" y="408" fill="#FFB800" fontFamily="ui-monospace, monospace" fontSize="7.5" letterSpacing="0.18em" uppercase="true">
           PROVENANCE
         </text>
-        <text x="55" y="418" fill="#EDE4D0" fontFamily="ui-monospace, monospace" fontSize="10.5" fontWeight="600">
+        <text x="48" y="424" fill="#EDE4D0" fontFamily="ui-monospace, monospace" fontSize="10" fontWeight="600">
           CELO MAINNET · WORLD CHAIN
         </text>
-        <text x="55" y="438" fill="#888888" fontFamily="ui-monospace, monospace" fontSize="8" letterSpacing="0.08em">
+        <text x="48" y="442" fill="#888888" fontFamily="ui-monospace, monospace" fontSize="7.5" letterSpacing="0.08em">
           ZK PROOF OF PRESENCE · VERIFIED PLAYTESTER
         </text>
 
         {/* Stamped Number Pill */}
-        <rect x="260" y="392" width="90" height="36" rx="10" fill="#0E0B08" stroke="#FFB800" strokeWidth="1.2" />
+        <rect x="264" y="398" width="92" height="34" rx="8" fill="#0B0907" stroke="#FFB800" strokeWidth="1.2" />
         <text
-          x="305"
-          y="415"
+          x="310"
+          y="419"
           textAnchor="middle"
           fill="#FFB800"
           fontFamily="ui-monospace, monospace"
-          fontSize="14"
+          fontSize="13"
           fontWeight="bold"
           letterSpacing="0.06em"
         >
           #{formattedNum}
         </text>
-        <text x="305" y="424" textAnchor="middle" fill="#888888" fontFamily="ui-monospace, monospace" fontSize="6.5">
+        <text x="310" y="427" textAnchor="middle" fill="#888888" fontFamily="ui-monospace, monospace" fontSize="6">
           OF {totalEdition}
         </text>
       </svg>
