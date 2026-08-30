@@ -12,8 +12,15 @@ import { GOUACHE as P } from "./gouachePalette.js";
  * - Hand-painted paper grain & brush wobble filters
  * - Dynamic 3D gyro/mouse tilt reflection
  */
-function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = false, className = "" }) {
+function PioneerArtifactArt({
+  serialNumber = 42,
+  totalEdition = 100,
+  stamped = false,
+  ecosystem = "celo",
+  className = "",
+}) {
   const filterId = useId().replace(/:/g, "_");
+  const isWorld = ecosystem === "world" || ecosystem === "worldchain";
 
   // Interactive 3D tilt tracking
   const mouseX = useMotionValue(0);
@@ -38,6 +45,7 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
   };
 
   const formattedNum = String(serialNumber).padStart(3, "0");
+  const artworkSrc = isWorld ? "/motifs/pioneer-artifact-world.jpg" : "/motifs/pioneer-artifact-celo.jpg";
 
   return (
     <motion.div
@@ -48,13 +56,15 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
       }}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className={`relative w-full aspect-[4/5] rounded-3xl overflow-hidden border border-amber/40 shadow-[0_24px_60px_-16px_rgba(0,0,0,0.7)] bg-[#12100E] select-none ${className}`}
+      className={`relative w-full aspect-[4/5] rounded-3xl overflow-hidden border ${isWorld ? 'border-neon/40 shadow-[0_24px_60px_-16px_rgba(0,255,148,0.2)]' : 'border-amber/40 shadow-[0_24px_60px_-16px_rgba(255,184,0,0.25)]'} bg-[#12100E] select-none ${className}`}
     >
       {/* 3D Glare Sheen Overlay */}
       <motion.div
         className="absolute inset-0 pointer-events-none z-20 opacity-35 mix-blend-overlay"
         style={{
-          background: `radial-gradient(circle at ${glareX} ${glareY}, rgba(255,230,160,0.65) 0%, transparent 65%)`,
+          background: isWorld
+            ? `radial-gradient(circle at ${glareX} ${glareY}, rgba(0,255,148,0.5) 0%, transparent 65%)`
+            : `radial-gradient(circle at ${glareX} ${glareY}, rgba(255,230,160,0.65) 0%, transparent 65%)`,
         }}
       />
 
@@ -67,16 +77,16 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           <GouacheFilters id={filterId} />
           {/* Radial ambient background */}
           <radialGradient id={`${filterId}-bg-grad`} cx="50%" cy="45%" r="65%">
-            <stop offset="0%" stopColor="#2A2016" />
+            <stop offset="0%" stopColor={isWorld ? "#102318" : "#2A2016"} />
             <stop offset="60%" stopColor="#16120E" />
             <stop offset="100%" stopColor="#0B0908" />
           </radialGradient>
-          {/* Gold foil gradient */}
+          {/* Gold / Neon foil gradient */}
           <linearGradient id={`${filterId}-gold`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFE89E" />
-            <stop offset="45%" stopColor="#FFB800" />
-            <stop offset="85%" stopColor="#D98200" />
-            <stop offset="100%" stopColor="#8A4E00" />
+            <stop offset="0%" stopColor={isWorld ? "#A3FFD8" : "#FFE89E"} />
+            <stop offset="45%" stopColor={isWorld ? "#00FF94" : "#FFB800"} />
+            <stop offset="85%" stopColor={isWorld ? "#00B368" : "#D98200"} />
+            <stop offset="100%" stopColor={isWorld ? "#005E36" : "#8A4E00"} />
           </linearGradient>
         </defs>
 
@@ -89,13 +99,13 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
             <rect x="14" y="14" width="372" height="472" rx="20" />
           </clipPath>
           <image
-            href="/motifs/pioneer-artifact-master.jpg"
+            href={artworkSrc}
             x="14"
             y="14"
             width="372"
             height="472"
             preserveAspectRatio="xMidYMid slice"
-            opacity="0.92"
+            opacity="0.94"
           />
           {/* Subtle Dark Vignette on Artwork */}
           <rect
@@ -120,7 +130,7 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           height="480"
           rx="18"
           fill="none"
-          stroke="rgba(255,184,0,0.3)"
+          stroke={isWorld ? "rgba(0,255,148,0.3)" : "rgba(255,184,0,0.3)"}
           strokeWidth="1.5"
           filter={`url(#${filterId}-grain)`}
           opacity="0.35"
@@ -141,24 +151,24 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
         />
 
         {/* Corner Flourishes */}
-        <path d="M 24 38 L 38 24 M 24 32 L 32 24" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
-        <path d="M 376 38 L 362 24 M 376 32 L 368 24" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
-        <path d="M 24 462 L 38 476 M 24 468 L 32 476" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
-        <path d="M 376 462 L 362 476 M 376 468 L 368 476" stroke="#FFB800" strokeWidth="1.5" opacity="0.75" />
+        <path d="M 24 38 L 38 24 M 24 32 L 32 24" stroke={isWorld ? "#00FF94" : "#FFB800"} strokeWidth="1.5" opacity="0.75" />
+        <path d="M 376 38 L 362 24 M 376 32 L 368 24" stroke={isWorld ? "#00FF94" : "#FFB800"} strokeWidth="1.5" opacity="0.75" />
+        <path d="M 24 462 L 38 476 M 24 468 L 32 476" stroke={isWorld ? "#00FF94" : "#FFB800"} strokeWidth="1.5" opacity="0.75" />
+        <path d="M 376 462 L 362 476 M 376 468 L 368 476" stroke={isWorld ? "#00FF94" : "#FFB800"} strokeWidth="1.5" opacity="0.75" />
 
         {/* Header Ribbon with Dark Backing */}
-        <rect x="60" y="38" width="280" height="42" rx="12" fill="rgba(14,11,8,0.75)" stroke="rgba(255,184,0,0.4)" strokeWidth="0.8" backdropFilter="blur(4px)" />
+        <rect x="50" y="38" width="300" height="42" rx="12" fill="rgba(14,11,8,0.75)" stroke={isWorld ? "rgba(0,255,148,0.4)" : "rgba(255,184,0,0.4)"} strokeWidth="0.8" backdropFilter="blur(4px)" />
         <text
           x="200"
           y="56"
           textAnchor="middle"
-          fill="#FFB800"
+          fill={isWorld ? "#00FF94" : "#FFB800"}
           fontFamily="ui-monospace, monospace"
           fontSize="9.5"
-          letterSpacing="0.28em"
+          letterSpacing="0.26em"
           fontWeight="bold"
         >
-          LAST HUMAN STANDING
+          {isWorld ? "WORLD CHAIN · PIONEER" : "CELO MAINNET · PIONEER"}
         </text>
         <text
           x="200"
@@ -168,31 +178,31 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           fontFamily="ui-monospace, monospace"
           fontSize="7.5"
           letterSpacing="0.16em"
-          opacity="0.7"
+          opacity="0.75"
         >
-          FOUNDING PIONEER · EDITION OF {totalEdition}
+          {isWorld ? "WORLD ID ORB ALLOCATION · 1 OF 50" : "SELF ZK ALLOCATION · 1 OF 50"}
         </text>
 
         {/* Card Footer: Metadata & Numbering */}
         <rect x="30" y="385" width="340" height="78" rx="14" fill="rgba(14,11,8,0.85)" stroke="#38291A" strokeWidth="1" />
 
-        <text x="48" y="408" fill="#FFB800" fontFamily="ui-monospace, monospace" fontSize="7.5" letterSpacing="0.18em" uppercase="true">
+        <text x="48" y="408" fill={isWorld ? "#00FF94" : "#FFB800"} fontFamily="ui-monospace, monospace" fontSize="7.5" letterSpacing="0.18em" uppercase="true">
           PROVENANCE
         </text>
-        <text x="48" y="424" fill="#EDE4D0" fontFamily="ui-monospace, monospace" fontSize="10" fontWeight="600">
-          CELO MAINNET · WORLD CHAIN
+        <text x="48" y="424" fill="#EDE4D0" fontFamily="ui-monospace, monospace" fontSize="9.5" fontWeight="600">
+          {isWorld ? "WORLD CHAIN · WORLD ID NULLIFIER" : "CELO MAINNET · SELF ZK PASSPORT"}
         </text>
         <text x="48" y="442" fill="#888888" fontFamily="ui-monospace, monospace" fontSize="7.5" letterSpacing="0.08em">
-          ZK PROOF OF PRESENCE · VERIFIED PLAYTESTER
+          SOULBOUND PROOF OF HUMAN PRESENCE
         </text>
 
         {/* Stamped Number Pill */}
-        <rect x="264" y="398" width="92" height="34" rx="8" fill="#0B0907" stroke="#FFB800" strokeWidth="1.2" />
+        <rect x="264" y="398" width="92" height="34" rx="8" fill="#0B0907" stroke={isWorld ? "#00FF94" : "#FFB800"} strokeWidth="1.2" />
         <text
           x="310"
           y="419"
           textAnchor="middle"
-          fill="#FFB800"
+          fill={isWorld ? "#00FF94" : "#FFB800"}
           fontFamily="ui-monospace, monospace"
           fontSize="13"
           fontWeight="bold"
@@ -201,7 +211,7 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           #{formattedNum}
         </text>
         <text x="310" y="427" textAnchor="middle" fill="#888888" fontFamily="ui-monospace, monospace" fontSize="6">
-          OF {totalEdition}
+          OF 100
         </text>
       </svg>
 
@@ -213,13 +223,17 @@ function PioneerArtifactArt({ serialNumber = 42, totalEdition = 100, stamped = f
           transition={{ type: "spring", stiffness: 380, damping: 22, mass: 0.8 }}
           className="absolute right-6 bottom-24 z-30 pointer-events-none"
         >
-          <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blood via-[#9e1010] to-[#590808] border-2 border-amber shadow-[0_8px_25px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center text-center p-1 transform rotate-[-8deg]">
-            <span className="text-amber text-xs leading-none select-none">🎖️</span>
+          <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${
+            isWorld
+              ? 'from-[#003d22] via-[#006e3e] to-[#00aa5f] border-2 border-neon'
+              : 'from-blood via-[#9e1010] to-[#590808] border-2 border-amber'
+          } shadow-[0_8px_25px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center text-center p-1 transform rotate-[-8deg]`}>
+            <span className="text-xs leading-none select-none">{isWorld ? "👁️" : "🌿"}</span>
             <span className="font-mono text-[8px] font-black tracking-widest text-bone uppercase mt-0.5">
               SEALED
             </span>
-            <span className="font-mono text-[6.5px] text-amber/90 font-bold uppercase tracking-wider">
-              PIONEER
+            <span className={`font-mono text-[6.5px] ${isWorld ? 'text-neon' : 'text-amber'} font-bold uppercase tracking-wider`}>
+              {isWorld ? "WORLD ID" : "CELO/SELF"}
             </span>
           </div>
         </motion.div>

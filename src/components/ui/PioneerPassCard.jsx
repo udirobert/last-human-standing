@@ -145,6 +145,7 @@ function PioneerPassCard({ className = "", onClaimSuccess }) {
           serialNumber={parseSerialNumber(serial)}
           totalEdition={TOTAL_EDITION}
           stamped={claimed}
+          ecosystem={isWorldApp ? "world" : "celo"}
         />
       </div>
 
