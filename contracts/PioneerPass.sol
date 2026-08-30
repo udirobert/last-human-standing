@@ -71,4 +71,19 @@ contract PioneerPass {
     function hasPioneerPass(address player) external view returns (bool) {
         return balanceOf[player] > 0 || hasMinted[player];
     }
+
+    /**
+     * @notice Soulbound protection: Pioneer passes cannot be transferred or sold.
+     */
+    function transferFrom(address, address, uint256) external pure {
+        revert("Soulbound: non-transferable");
+    }
+
+    function safeTransferFrom(address, address, uint256) external pure {
+        revert("Soulbound: non-transferable");
+    }
+
+    function safeTransferFrom(address, address, uint256, bytes calldata) external pure {
+        revert("Soulbound: non-transferable");
+    }
 }
