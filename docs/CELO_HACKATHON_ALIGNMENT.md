@@ -69,3 +69,21 @@ Tag: celo_431e6208414d
 Hex Suffix: 63656c6f5f343331653632303834313464
 ```
 Transactions carry this suffix in their `data` payload so Dune queries automatically attribute volume, users, and transactions to the project on the live leaderboard.
+
+---
+
+## 6. Dual-Rail Architecture (World Chain & Celo Mainnet)
+
+The collectible and identity infrastructure operates symmetrically across both supported ecosystems:
+
+| Dimension | **Celo Mainnet Rail** | **World Chain / World ID Rail** |
+| :--- | :--- | :--- |
+| **Smart Contract** | `PioneerPass.sol` at `0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44` | `PioneerPass.sol` deployable via `CHAIN=worldchain scripts/deploy-pioneer-pass.js` |
+| **Identity / Sybil Proof** | **Self (`@selfxyz/core`)** ZK Passport / Selfie | **World ID** Orb / Device Zero-Knowledge Nullifiers |
+| **Gasless Model** | Server Relayer with `celo_431e6208414d` tag suffix | World App Native Paymaster / Server Relayer |
+| **Edition Allocation** | **#051 to #100** (50 Celo / Self Playtesters) | **#001 to #050** (50 World ID Playtesters) |
+| **Visual Theme** | Antique Brass Compass & Sunlit Gold Hearth (`/motifs/pioneer-artifact-celo.jpg`) | Luminous Celestial Emerald Orb & Platinum Iris (`/motifs/pioneer-artifact-world.jpg`) |
+| **Explorer Verification** | [Celoscan ↗](https://celoscan.io/address/0xc5883e6400d6a21ba380f91bb0a74cc54d7cfa44) | [Worldscan ↗](https://worldscan.org) |
+| **Token Standard** | **Soulbound ERC-721** (Non-transferable to prevent secondary exploitation) | **Soulbound ERC-721** / Verified Credential Receipt |
+| **In-Game Perks** | +1 Starting Jury Ticket on Day 1 · Guaranteed Priority Seat · Pioneer Shelf Aura | Same universal perks unlocked across all platforms |
+
