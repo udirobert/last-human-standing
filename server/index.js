@@ -34,6 +34,10 @@ import shareRoutes from "./routes/share.js";
 import agentRoutes from "./routes/agents.js";
 import pioneerRoutes from "./routes/pioneer.js";
 import adminRoutes from "./routes/admin.js";
+import regionRoutes from "./routes/regions.js";
+import crewRoutes from "./routes/crews.js";
+import cocircleRoutes from "./routes/cocircle.js";
+import marketRoutes from "./routes/market.js";
 import {
   ensureObjectBody, ensureString, ensureNumber, ensureBoolean,
   ensureEnum, ensureIsoDate, sendValidationError,
@@ -171,6 +175,13 @@ const MAX_AGENT_RATIO = Number(process.env.MAX_AGENT_RATIO || 0.25);
 const MIN_AGENT_COUNT = Number(process.env.MIN_AGENT_COUNT || 5);
 // Hide World ID / Self badges in gameplay UI; still verify in the background.
 const SILENT_VERIFICATION = process.env.SILENT_VERIFICATION === "true";
+
+// --- Token Rounds v3 (see docs/TOKEN_ROUNDS.md) ----------------------------
+// The v3 track: co-present tokens, regional sprints, crews, and a closed
+// credit economy. Off by default — v2 riddle rounds keep running untouched
+// until v3 earns a cohort. No existing route, table, or RPC is modified by
+// this track; everything new lives under /api/v3/* and is gated here.
+const GAME_V3_ENABLED = process.env.GAME_V3_ENABLED === "true";
 
 // --- Cohort 1 pilot containment (see docs/COHORT1_PILOT.md) ---------------
 // Paid entry is disabled for the free, closed, verified-human pilot.
@@ -4328,6 +4339,16 @@ app.use("/api", agentRoutes({
   getAgentSeatState, upsertPaidUser, COHORT_CONFIG, AGENTS_ENABLED,
 }));
 app.use("/api", pioneerRoutes({ supabaseAdmin, rateLimitStorage }));
+
+// --- Token Rounds v3 (docs/TOKEN_ROUNDS.md) -------------------------------
+// Parallel track, off by default. Mounted under /api/v3 so it can never
+// shadow or change a live v2 route; each module also self-gates on
+// GAME_V3_ENABLED and returns 404 when off.
+const v3Deps = { requireAuth, supabaseAdmin, log, rateLimitStorage, GAME_V3_ENABLED };
+app.use("/api/v3", regionRoutes(v3Deps));
+app.use("/api/v3", crewRoutes(v3Deps));
+app.use("/api/v3", cocircleRoutes(v3Deps));
+app.use("/api/v3", marketRoutes(v3Deps));
 
 // ─── Global error handlers ──────────────────────────────────────────────
 // 404 catch-all — any unmatched /api/* path returns JSON, not HTML.

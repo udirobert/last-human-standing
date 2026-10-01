@@ -7,6 +7,14 @@ A mobile-first World Mini App: **a daily real-world elimination game for verifie
 
 ## How it works
 
+> **v3 direction.** The Riddle Rounds loop below is the shipped game, but it is
+> being replaced. Cohort 1 showed players would not show up IRL — a
+> disinvestment bug, not a mechanics bug. v3 makes the primary resource a
+> token whose transfer *requires physical co-presence*, backed by an
+> always-on regional market. Design: [`TOKEN_ROUNDS.md`](./TOKEN_ROUNDS.md).
+> The v3 foundation (migrations 044–047, pure libs, `/api/v3` routes) is
+> built but **off by default** — set `GAME_V3_ENABLED=true` to expose it.
+
 A cohort of N players (default 50) competes over ~5 days. Each day is a
 24-hour cycle (Riddle Rounds — see [`RIDDLE_ROUNDS.md`](./RIDDLE_ROUNDS.md)):
 
@@ -140,6 +148,12 @@ CHECKIN_RADIUS_M=100                   # default GPS radius (meters, only used w
 
 # Admin tooling
 ADMIN_TOKEN=<random-long-secret>       # required header on /api/admin/* endpoints
+
+# Token Rounds v3 (docs/TOKEN_ROUNDS.md) — off by default. While false, every
+# /api/v3/* path returns 404 and v2 Riddle Rounds run unchanged.
+GAME_V3_ENABLED=false
+V3_MAX_FOUNDED_PER_SEASON=3            # crews one address may found per region/season
+V3_NEARBY_RADIUS_M=5000                # "who's near me" search radius (not an attestation radius)
 ```
 
 Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.env.example`.
@@ -178,6 +192,25 @@ Existing values (Supabase, World Dev Portal, World ID) are unchanged — see `.e
 | `pay_references` | payment references consumed on confirmation |
 | `rate_limits` | per-key request counters with TTL |
 | `submission_flags` | anti-cheat flags (GPS plausibility, vote ring, timing anomaly) |
+
+### v3 tables (Token Rounds — migrations 044–047)
+
+Off by default (`GAME_V3_ENABLED=false`). No v2 table is modified by them.
+
+| Table | Purpose |
+|---|---|
+| `regions` | geographic sprint scoping: id, centroid, radius, local-time cadence, timezone |
+| `sprints` | bounded region-scoped windows: brief → field → settled |
+| `sprint_flashes` | telegraphed scarcity windows with time + headcount capacity |
+| `crews` | founder-led, open-join regional crews |
+| `crew_members` | crew roster with `contribution` (the reciprocity ledger) |
+| `crew_founder_limits` | per-region/season cap on crews one address may found |
+| `handshakes` | mutual proximity attestation lifecycle; nonce, both coordinates, verdict |
+| `tokens` | digital tokens whose transfer requires co-presence |
+| `token_transfers` | immutable transfer history; `handshake_id` NOT NULL + attestation trigger |
+| `credit_ledger` | append-only signed credits — closed, non-withdrawable economy |
+| `market_listings` | open market for IRL-minted scarce goods; listings expire |
+| `season_standings` | per-region season board that replaced the daily cull |
 
 ## Admin operations
 

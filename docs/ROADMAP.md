@@ -72,6 +72,47 @@ Separate human/agent eligibility + prize pools; auditable escrow/multisig
 custody; idempotent, receipt-confirmed payout; settle whether an agent can
 legally/operationally receive a prize BEFORE advertising it.
 
+## Phase 7 — Token Rounds v3 foundation ✅ DONE 2026-10-01
+
+Spec: `docs/TOKEN_ROUNDS.md`. Parallel track replacing the Riddle Rounds loop,
+behind `GAME_V3_ENABLED=false`. Cohort 1's exit gate answered the question that
+matters: players did not show up IRL. That was a disinvestment bug — the game
+announced you would be ejected in 24h — so v3 makes the primary resource a
+token whose transfer *requires* physical co-presence, with an always-on
+regional market as the demand side.
+
+- [x] Migrations 044–047: regions/sprints/flashes, crews, handshakes/tokens/
+      transfers, credit ledger/market/standings — 12 tables, all apply clean on
+      a live Postgres 14 scratch cluster, RLS on with no policies
+- [x] Enforce co-presence in the DATABASE, not just the route: a plain FK only
+      proves a handshake row exists, so `trg_transfer_requires_attestation`
+      rejects any transfer whose handshake is not `attested` or does not bind
+      both parties (verified live)
+- [x] Pure libs: `coPresence.js` (attestation), `market.js` (escrow/expiry),
+      `creditLedger.js` (closed economy), `seasonScore.js` (standings/crews)
+- [x] Routes under `/api/v3`: `regions.js`, `crews.js`, `cocircle.js`,
+      `market.js` — DI-factories, self-gating, cannot shadow v2 paths
+- [x] 119 new tests: pure-logic coverage plus route gating (404 before auth
+      with the flag off); zero regressions
+
+Exit gate: **met** — migrations apply clean; 119 tests pass; v2 unchanged with
+the flag off; zero new lint errors. (The 68 failing `.jsx` tests are
+pre-existing — React 19 removed `React.act` — and fail identically on a clean
+tree.)
+
+### Phase 8 — v3 playable vertical (L)
+
+Not started. Deliberately excluded from Phase 7.
+
+- [ ] Seed regions + founder crews per region (operator work — budget for it)
+- [ ] Seed system sell-side market orders per region (liquidity cold start)
+- [ ] Sprint lifecycle: schedule, brief, field, settlement RPC
+- [ ] Sprint settlement: score → standings → crew contribution → payouts
+- [ ] UI: desktop war room + mobile field, /api/v3 clients
+- [ ] Sonar escalation for high-value transfers (TOKEN_ROUNDS.md §4.1)
+- [ ] Decide: does v3 replace v2 or run beside it? (A parallel game doubles
+      the operator surface)
+
 ## Deferred correctness work (schedule before Cohort 2 paid)
 
 - Admission state machine (`candidate|admitted|waitlisted|eliminated`) — L

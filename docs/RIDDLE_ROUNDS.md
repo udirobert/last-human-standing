@@ -9,6 +9,12 @@ simplistic" and unfair across time zones.
 This document is the source of truth for the redesign. It supersedes the
 literal-theme, first-come survival model for all cohorts from Sep 1 onward.
 
+> **Superseded as the strategic direction by [`TOKEN_ROUNDS.md`](./TOKEN_ROUNDS.md)
+> (v3), decided 2026-10-01.** This document remains the spec for the shipped
+> game; v3 is being built in parallel behind `GAME_V3_ENABLED=false`. If you
+> are picking up design work, read v3 first — v2's 24h daily cull is the root
+> of why players did not show up IRL.
+
 ---
 
 ## 1. The two complaints, one root cause
