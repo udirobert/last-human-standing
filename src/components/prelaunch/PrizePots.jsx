@@ -16,7 +16,7 @@ import { AnimatePresence, motion } from "framer-motion";
  */
 export default function PrizePots({ prizePool, className = "" }) {
   // Compute totals from prizePool (safe if null). Token amounts only — no
-  // synthetic USD conversion (docs/COHORT1_PILOT.md: "No conversion to a
+  // synthetic USD conversion (docs/COHORT1.md: "No conversion to a
   // synthetic USD total is performed").
   const wld = prizePool?.wld ?? {
     address: prizePool?.address,

@@ -9,7 +9,7 @@
  *   2. Set it as DATABASE_URL in the environment, or pass it as
  *      the first arg:  node scripts/migrate.mjs "$DB_URL"
  *   3. The script runs every supabase/migrations/*.sql file in
- *      order, then optionally runs docs/LAUNCH_RESET.md's
+ *      order, then optionally runs docs/LAUNCH.md's
  *      stale-data delete if --reset is passed.
  *
  * Idempotent — every migration file is wrapped in IF NOT EXISTS

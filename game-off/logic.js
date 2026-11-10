@@ -222,7 +222,7 @@ function auditSet(cards, day, dayIndex, excludeCard, rng = Math.random) {
     return shuffle(rng, sel);
   };
 
-  let amendAfter = null, cases = [];
+  let amendAfter = null, cases;
   if (!day.amend) {
     // original balance: 2–3 passers, near-miss per criterion where one exists
     const nPass = 2 + (rng() < 0.5 ? 1 : 0);

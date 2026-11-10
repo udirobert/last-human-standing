@@ -184,7 +184,7 @@ const SILENT_VERIFICATION = process.env.SILENT_VERIFICATION === "true";
 // this track; everything new lives under /api/v3/* and is gated here.
 const GAME_V3_ENABLED = process.env.GAME_V3_ENABLED === "true";
 
-// --- Cohort 1 pilot containment (see docs/COHORT1_PILOT.md) ---------------
+// --- Cohort 1 pilot containment (see docs/COHORT1.md) ---------------
 // Paid entry is disabled for the free, closed, verified-human pilot.
 // Enable only once settlement is idempotent, receipt-verified, and
 // escrow-grade. Read at request time in the payment routes.
@@ -669,7 +669,7 @@ async function notifyDayClosed(r) {
 
   // Everyone gets the verdict summary — the shared reveal moment.
   // Agent exhibition: include how many machines played today and how many
-  // the crowd caught (docs/COHORT1_AGENT_EXHIBITION.md). Individual labels
+  // the crowd caught (docs/COHORT1.md). Individual labels
   // are revealed per-submission in the feed for closed days.
   let agentRevealLine = "";
   try {
@@ -1786,7 +1786,7 @@ async function getDynamicVoteQuorum() {
  * @param {{roster?:number, normal?:number, ratio?:number, min?:number}} opts
  */
 /**
- * Agent exhibition (docs/COHORT1_AGENT_EXHIBITION.md): annotate submissions
+ * Agent exhibition (docs/COHORT1.md): annotate submissions
  * with machine labels ONLY after their day has closed. Returns a new array.
  * agentRevealed is true/false for closed days and null while the day is
  * still live or unknown, so open-day labels can never leak.
@@ -2265,7 +2265,7 @@ app.get("/api/feed", async (req, res) => {
     }));
 
     // Agent exhibition: machine labels are hidden while a day is open and
-    // revealed once it closes (docs/COHORT1_AGENT_EXHIBITION.md).
+    // revealed once it closes (docs/COHORT1.md).
     // agentRevealed is null for humans and for anything still live.
     try {
       const subAddrs = [...new Set(subs.map((s) => s.address?.toLowerCase()).filter(Boolean))];
@@ -3559,7 +3559,7 @@ app.get("/api/game/state", async (req, res) => {
       silentVerification: SILENT_VERIFICATION,
       // Pilot posture — server-authoritative feature flags so the client UI
       // can never drift from the runtime containment posture
-      // (docs/COHORT1_PILOT.md). The pilot defaults: free, verified-human,
+      // (docs/COHORT1.md). The pilot defaults: free, verified-human,
       // manually settled, with paid entry, lottery, infiltrator mode, and
       // revival disabled.
       pilot: {
@@ -4352,7 +4352,7 @@ async function handleWinnerPayout(day, winnerAddr) {
     const amountWld = Number(balanceCache?.value ?? 0) || 0;
 
     // Record a pending payout for the cUSD leg. The WLD leg on World Chain
-    // is settled separately (see docs/COHORT1_PILOT.md).
+    // is settled separately (see docs/COHORT1.md).
     const { data: payoutRow, error: insertErr } = await supabaseAdmin
       .from("payouts")
       .insert({ winner_address: winnerAddr, amount_usd: amountCusd, token: "cUSD", status: "pending", cohort: COHORT_CONFIG.cohort, day })

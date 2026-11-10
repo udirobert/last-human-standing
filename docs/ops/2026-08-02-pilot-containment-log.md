@@ -9,7 +9,7 @@ Launch review → containment patches → production rollout. All times UTC.
 - Rounds 1–5 scheduled 2026-08-03 → 2026-08-08.
 
 ## Changes applied (code)
-- Containment flags + hardening in `server/` (see `docs/COHORT1_PILOT.md`):
+- Containment flags + hardening in `server/` (see `docs/COHORT1.md`):
   `PAID_ENTRY_ENABLED=false`, `AUTO_PAYOUT_ENABLED=false`,
   `LOTTERY_ENABLED=false`, `MIN_LAUNCH_PARTICIPANTS=8`,
   `REQUIRE_HUMANITY_FOR_PLAY=true`, `INFILTRATOR_ENABLED=false`,
@@ -72,7 +72,7 @@ Launch review → containment patches → production rollout. All times UTC.
    last-human-standing --update-env`.
 3. T-24h dry run on prod: verify → free entry → check-in → vote →
    admin close-day → manual test payout (small amounts, both chains).
-4. At settlement: follow `docs/COHORT1_PILOT.md` § Manual settlement.
+4. At settlement: follow `docs/COHORT1.md` § Manual settlement.
 5. Communicate postponement publicly (site copy/landing still advertises
    the old timeline — landing countdown reads `GAME_LAUNCH_AT` from the
    API so it self-updates; check any baked copy).

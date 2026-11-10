@@ -256,7 +256,7 @@ export default function adminRoutes(deps) {
     if (process.env.AUTO_PAYOUT_ENABLED !== "true") {
       return res.status(403).json({
         error: "auto_payout_disabled",
-        message: "Cohort 1 settles manually — see docs/COHORT1_PILOT.md. Re-enable only with escrow-grade settlement.",
+        message: "Cohort 1 settles manually — see docs/COHORT1.md. Re-enable only with escrow-grade settlement.",
       });
     }
     const body = ensureObjectBody(req, res);

@@ -87,7 +87,7 @@ WHERE paid = true
   AND eliminated = true
   AND reserved_at < now() - interval '30 days';
 ```
-Document in `docs/LAUNCH_RESET.md`. Run before launch tomorrow.
+Document in `docs/LAUNCH.md`. Run before launch tomorrow.
 
 **0.3** Extend `/api/stats` to expose the Celo pot. Mirror the existing WLD fetch:
 ```js
@@ -200,7 +200,7 @@ Replace all 5+ inline copies in Onboarding / GameHome / PrelaunchPanel with refe
 - An external cron calling `POST /api/lottery/draw` (with admin auth), or
 - Lazy: any request to `/api/game/state` after `drawAt` triggers the draw if not already done.
 
-**3.2** `docs/LAUNCH_RUNBOOK.md` with the exact steps for tomorrow 14:00 UTC:
+**3.2** `docs/LAUNCH.md` with the exact steps for tomorrow 14:00 UTC:
 1. Confirm `/api/game/state` returns `phase: "live"`.
 2. Trigger the lottery draw (or confirm it ran lazy).
 3. Verify cohort roster has 25 paid + 25 free = 50.
@@ -220,8 +220,8 @@ Replace all 5+ inline copies in Onboarding / GameHome / PrelaunchPanel with refe
 | `src/components/Onboarding.jsx` | Step 2 wording, step 0 rules copy |
 | `src/wallet/BrowserWalletPay.jsx` | Token selector visible pre-connect |
 | `src/lib/copy.js` | New file — single source of truth for the "how to play" copy |
-| `docs/LAUNCH_RUNBOOK.md` | New — Phase 3 runbook |
-| `docs/LAUNCH_RESET.md` | New — Phase 0.2 SQL to clear stale data |
+| `docs/LAUNCH.md` | New — Phase 3 runbook |
+| `docs/LAUNCH.md` | New — Phase 0.2 SQL to clear stale data |
 
 ## Open questions
 

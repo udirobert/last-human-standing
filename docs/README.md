@@ -263,7 +263,7 @@ curl https://lasthumanstanding.thisyearnofear.com/api/game/state
 
 ## Pilot playbook (50-user test)
 
-See [BETA_ROADMAP.md](./BETA_ROADMAP.md) for the full pre-launch checklist and admin commands.
+See [ROADMAP.md](./ROADMAP.md) for the full pre-launch checklist and admin commands.
 
 1. Set `GAME_LAUNCH_AT` ~3 days out, `COHORT_SIZE=25`, `DAILY_SURVIVAL_CAP=12`
 2. Share the live URL → players reserve slots
@@ -271,7 +271,7 @@ See [BETA_ROADMAP.md](./BETA_ROADMAP.md) for the full pre-launch checklist and a
 4. After the window closes, run `/api/admin/close-day`
 5. Repeat with shrinking caps (12 → 6 → 3 → 1) until one survivor
 
-For post-beta feature plans, see [FUTURE_ROADMAP.md](./FUTURE_ROADMAP.md).
+For post-beta feature plans, see [ROADMAP.md](./ROADMAP.md).
 
 ## Hackathon submission
 

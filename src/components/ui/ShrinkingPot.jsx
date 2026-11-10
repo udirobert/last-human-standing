@@ -32,7 +32,7 @@ function funnelFor(cohortSize) {
   return rows;
 }
 
-/** Real token amounts only — no synthetic USD conversion (COHORT1_PILOT.md). */
+/** Real token amounts only — no synthetic USD conversion (COHORT1.md). */
 function potTotals(prizePool) {
   if (!prizePool) return null;
   const wld = prizePool.wld ?? { balance: prizePool.balanceWld };

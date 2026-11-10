@@ -31,7 +31,7 @@ const DEFAULT_AGENTS = {
   slotsRemaining: { humans: 50, agents: 0 },
 };
 
-// Server-authoritative pilot posture (docs/COHORT1_PILOT.md). Defaults are
+// Server-authoritative pilot posture (docs/COHORT1.md). Defaults are
 // the pilot's: free, verified-human, with paid entry / lottery / infiltrator /
 // revival all disabled. The server overrides these via /api/game/state.pilot.
 const DEFAULT_PILOT = {

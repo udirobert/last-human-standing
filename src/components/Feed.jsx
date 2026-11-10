@@ -75,7 +75,7 @@ function VerdictHour({ round }) {
 }
 
 function JuryStakes() {
-  // Matches award_streak_bonuses / BETA_ROADMAP: +1 correct vote, +1 at 3-day, +3 at 5-day.
+  // Matches award_streak_bonuses / ROADMAP: +1 correct vote, +1 at 3-day, +3 at 5-day.
   return (
     <div className="mx-1 mb-4 p-3 rounded-2xl bg-smoke/60 border border-ember/30">
       <p className="font-mono text-xs text-amber mb-2">Jury rewards</p>

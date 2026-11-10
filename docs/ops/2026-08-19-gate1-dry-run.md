@@ -32,7 +32,7 @@ Dry-run fixtures cleaned; prod restored to `prelaunch` / Aug 24 launch.
 
 ## Recruitment — READY TO START
 
-Kit: `docs/COHORT1_RECRUITMENT.md` (invite copy, participant brief, roster tracker).
+Kit: `docs/COHORT1.md` (invite copy, participant brief, roster tracker).
 
 **Operator action:** DM 10–12 humans by **Aug 23**; freeze roster `ENTRY_CLOSED=true` before Aug 24 18:00 UTC.
 

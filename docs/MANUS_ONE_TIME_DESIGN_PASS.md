@@ -27,7 +27,7 @@ player's ability to understand and complete the core journeys:
 - Current public product URL and representative screenshots.
 - `ART_DIRECTION.md` as the binding visual constraint.
 - `README.md` for mechanics and product context.
-- `BETA_ROADMAP.md` for current launch priorities and known limitations.
+- `ROADMAP.md` for current launch priorities and known limitations.
 - This brief, including the review rubric and prohibited directions.
 
 No production player photos, wallet-linked identities, precise locations,
@@ -130,7 +130,7 @@ It must also return:
 
 | Finding | Decision |
 | --- | --- |
-| Hide prelaunch theme names entirely | **Rejected.** Product rule hides day↔theme *mapping*, not the 10-theme vocabulary (`docs/README.md`, `LAUNCH_RUNBOOK.md`). |
+| Hide prelaunch theme names entirely | **Rejected.** Product rule hides day↔theme *mapping*, not the 10-theme vocabulary (`docs/README.md`, `LAUNCH.md`). |
 
 ### Follow-up (implemented after the credit pass)
 
