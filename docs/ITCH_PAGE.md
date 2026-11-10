@@ -99,6 +99,20 @@ explaining, it doesn't belong in the trailer.
 - Record with OBS/QuickTime → trim → export GIF (≤ a few MB), upload as
   the project cover image.
 
+## PWYW ladder (post-jam, in order — dashboard ops, not code)
+
+1. **Voting end:** flip secret playtest page public, enable tip jar
+   (Pricing → pay-what-you-want, minimum $0). Jam build stays free forever.
+2. **Case Files edition (PWYW, $3 suggested):** the print-and-play bonus —
+   a printable-HTML bonus docket ("THE ARCHIVE": 3 condensed days remixed
+   from the existing card pool, audited with `audit-deduction.mjs` before
+   release) + design-notes PDF (the three devlogs + audit numbers).
+   Spec only until the fresh-player session lands — new content ships on
+   proven-fair mechanics or not at all.
+3. **Deluxe ($5+):** Case Files + the Game Off postmortem + name-in-ledger
+   (backer filers appear on a bonus night docket). Never paywall the jam
+   build or the daily docket — the free game is the funnel, not the demo.
+
 ## Upload checklist (voting month)
 
 - [ ] Web build plays from the itch page with zero setup (test in a clean
