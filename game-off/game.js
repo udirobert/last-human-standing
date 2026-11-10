@@ -363,6 +363,19 @@ function hud() {
   prevStrikes = G.strikes;
 }
 
+/* the third strike is not a pip appearing — the room goes dark and the
+ * counter is stamped CUT, and only then does the dossier arrive. */
+function strikeOut() {
+  const st = $("hudStrikes");
+  st.classList.add("spent");
+  if (calmMotion()) return;
+  st.classList.remove("third");
+  void st.offsetWidth;
+  st.classList.add("third");
+  later(() => sfx.thud(), 500);   // the stamp biting down
+  later(() => st.classList.remove("third"), 1700);
+}
+
 /* the score rolls instead of jumping — money counting on the desk */
 let scoreAnim = null, scoreShown = 0, prevStrikes = 0;
 function renderScore(n) {
@@ -738,18 +751,21 @@ function finishVerdict() {
     else if (G.flagged) note += ` You flagged the wrong one.`;
     ll.innerHTML = note;
   }
+  const cut = G.strikes >= 3 && G.status === "player";
   hud();
+  if (cut) strikeOut();
 
   const actions = $("verdictActions");
   actions.innerHTML = "";
-  if (G.strikes >= 3 && G.status === "player") {
+  if (cut) {
     G.elimDay = G.day + 1;
     $("dossierDay").textContent = `${d.dayLabel} · ${d.theme}`;
     $("dossierArg").textContent = `“${c.argument}”`;
     $("dossierMeta").textContent =
       `${c.name} · failed: ${d.rule.filter((x) => !x.allow.includes(c.tags[x.key])).map((x) => x.text).join(", ")}`;
-    dossierEl.classList.remove("hidden");
     ariaSay(ARIA.eliminated, "alarm");
+    // the counter has the room first; the dossier lands after it
+    later(() => dossierEl.classList.remove("hidden"), calmMotion() ? 0 : 1900);
     $("dossierBtn").onclick = () => {
       dossierEl.classList.add("hidden");
       G.status = "juror";
