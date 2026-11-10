@@ -1,0 +1,111 @@
+# NIGHT SHIFT — itch page copy + trailer shot list
+
+Game Off 2026 entry. This doc is the shippable source for the itch page and
+the trailer. Copy sections verbatim; capture instructions at the bottom are
+for whoever has the game open in a browser (record locally, upload to itch).
+
+## Page title + tagline
+
+**NIGHT SHIFT** — *Deduce the rule by day. Enforce it by night. Catch the
+filer who isn't human.*
+
+(One sentence, verb + fantasy + twist. This line also opens the trailer.)
+
+## Short description (itch "short description" field)
+
+ARIA runs a secret rule. Read her rulings, file the card she'd pass — then
+work the night shift, stamping everyone else's filings until one filer turns
+out not to be human at all. A five-day deduction game about day shifts,
+night shifts, and the shift in between.
+
+## Full description
+
+**☀ DAY SHIFT.** ARIA, the auditor, holds a secret rule — one to three
+criteria over every filing's four facts (where · when · who · in/out). Her
+earlier rulings are on the docket: two she passed, a few she struck. Read
+them like a puzzle. File the one card she'd pass. A wrong filing is a
+strike; three strikes and you're cut to nights for good.
+
+**🌙 NIGHT SHIFT.** Now you're the auditor and the rule is in plain sight.
+Five filings a night, one at a time — stamp each HUMAN or SUS. Correct
+stamps build a ×1–×3 streak; from night 2 an 8-second clock pays speed
+bonuses. One filing a night is **contested**: call it right for double pay,
+wrong and it costs a strike. From day 3, head office **amends** the rule
+mid-shift — cases before the banner follow the old rule, cases after follow
+the new one, and trap filings flip their verdicts. Days 4–5 hide a
+**clerical error** on the docket: a SUS card stamped HUMAN. Find it.
+
+**✒ LAST CALL.** After night five, you write the rule yourself. One filer
+isn't human, and ARIA's rules can't catch it. Choose the criterion that
+cuts it — and only it.
+
+Everything is deterministic — no noise, no crowd votes, no luck. The same
+docket deals the same way every time. Today's docket is seeded by date
+(Wordle-style, one per day); share your grid and compare. `?seed=` replays
+any docket.
+
+## Controls (page section, keep short)
+
+- `1–4` select a card · `Enter` file / continue · `←`/`→` stamp SUS/HUMAN
+- `O` file under oath (pass clears a strike, miss costs two) · `M` music
+- Mobile: everything is tappable.
+
+## Feature bullets (for the page sidebar / trailer cards)
+
+- Five staged days: pay-for-clues, oaths, shift clocks, mid-night rule
+  amendments, a liar on the docket
+- Verdicts explained line by line — losses teach, never confuse
+- Daily seeded docket + share grid
+- Runs in the browser, no install; keyboard + touch
+
+## Credits (required on the page)
+
+Night music: "Bump in the Night" by Kevin MacLeod (incompetech.com),
+CC-BY 4.0. An unofficial fan-made vignette; all proceedings fictional.
+
+## Tags (itch)
+
+puzzle, mystery, deduction, detective, singleplayer, browser, atmospheric,
+story-rich, game-off-2026
+
+## Trailer — "Tell, Show, Repeat" (~50 seconds)
+
+Template: title card stating one idea → gameplay proving it → repeat.
+Music: the in-game loop. End on the amendment + stamp montage (the two
+trailer beats), then the end slate. No voiceover; let the stamp SFX punctuate.
+
+| # | Card (3s)                              | Footage (5–6s)                                              |
+|---|----------------------------------------|-------------------------------------------------------------|
+| 1 | ARIA HAS A SECRET RULE                 | Day 1: riddle + docket, cursor hovering precedent rows      |
+| 2 | READ HER RULINGS. FILE WHAT SHE'D PASS | Select card → file → staged fact-row reveal → SURVIVED stamp (with shake) |
+| 3 | AT NIGHT, YOU ARE THE AUDITOR          | Night stamping: SUS/HUMAN stamps, streak ×3 popping         |
+| 4 | THE RULE CAN CHANGE MID-SHIFT          | **Amendment banner firing**: klaxon, chips struck one by one, ghost line visible |
+| 5 | ONE FILER ISN'T HUMAN                  | Finale table, timestamps column, option select → rule sign  |
+| 6 | Montage (8s, quick cuts on the beat)   | contested ×2 stamp · clock under 3s · strike pip · COLLATERAL / LAST HUMAN STANDING titles |
+| 7 | End slate (4s)                         | NIGHT SHIFT · Game Off 2026 · play in your browser · [itch URL] |
+
+Capture notes: hide the cursor where possible, record at 1280×720+, cut on
+the stamp thud. Keep every shot legible in 2 seconds — if a shot needs
+explaining, it doesn't belong in the trailer.
+
+## Cover + GIF
+
+- **Cover:** 630×500-ish still — dark desk-lamp background, one stamped
+  SUS case card, tagline text. Must read at thumbnail size: big stamp,
+  three words max besides the title.
+- **Animated cover (preferred):** 2–4s GIF loop of the amendment banner
+  firing OR the SURVIVED stamp landing with shake. No strobing — itch
+  rejects seizure-inducing covers and ours is palette-safe anyway.
+- Record with OBS/QuickTime → trim → export GIF (≤ a few MB), upload as
+  the project cover image.
+
+## Upload checklist (voting month)
+
+- [ ] Web build plays from the itch page with zero setup (test in a clean
+      profile; the game runs from `file://`, so the browser build is safe)
+- [ ] Cover GIF uploaded, tagline in short description
+- [ ] Trailer embedded at top of description
+- [ ] Controls section states mobile-tappable
+- [ ] Music credit present (CC-BY requirement)
+- [ ] `?seed=` documented for replay/share threads
+- [ ] Play + rate other entries during voting (reciprocity drives ratings)

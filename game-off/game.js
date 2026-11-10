@@ -578,8 +578,8 @@ function finishVerdict() {
   const sb = $("stampBox");
   sb.innerHTML = `<div class="stamp ${stampCls}">${stampText}</div>`;
   sfx.stamp();
-  sfx.thud();
-  passed ? sfx.human() : sfx.sus();
+  // hitstop: the stamp hangs silent for one beat, then the desk answers
+  later(() => { sfx.thud(); passed ? sfx.human() : sfx.sus(); }, 120);
   frameEl.classList.remove("shake");
   void frameEl.offsetWidth;
   frameEl.classList.add("shake");
