@@ -44,6 +44,20 @@ docket deals the same way every time. Today's docket is seeded by date
 (Wordle-style, one per day); share your grid and compare. `?seed=` replays
 any docket.
 
+## Three games in one (no menu — just play)
+
+**📖 THE STORY.** Clock in and work all five nights: a curated rule curve
+from two-criterion tutorials to the liar, the amendments, and the filer
+who isn't human. One button, one arc, one ending. This is the game.
+
+**📅 THE DAILY.** Every date deals a fresh docket — same rules, new reads.
+Come back tomorrow, or race today's seed against a friend link-for-link.
+The share grid is the multiplayer: no lobby, no lobby wait, just grids.
+
+**🏆 THE READERS.** Compare verdicts, not scores. Post your grid in the jam
+thread with one question ("day 3's liar got me — did anyone spot it
+blind?"). Best conversations get collected into community collections.
+
 ## Controls (page section, keep short)
 
 - `1–4` select a card · `Enter` file / continue · `←`/`→` stamp SUS/HUMAN

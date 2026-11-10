@@ -82,7 +82,8 @@ Rule of thumb going forward: if a new player can't say what to do next within 3 
   3. ~~Enrichment~~ **done 2026-11-10**: all seven mechanics shipped — seeded dockets + share grid, suspense verdict, clue + oath, clerical error, amendments, streak + shift clock, VALE finale.
   4. **Balance + fresh playtest (next)**: verify a fresh player understands each feature on its introduction day; tune oath/clue/flag economics and streak/clock pressure.
   5. **Juice + submit (by ~Nov 30)**: cover art, itch.io page (cover, description, tags), extract to public repo, playtest on mobile + itch iframe.
-- **Explicit non-goals**: no multiplayer, no accounts, no backend, no Meshy/AI assets required.
+  6. **Endless Shift (post-jam ONLY, unlocked by finishing the story)**: procedurally generated nights past day 5 — criteria scale 3→4, liar frequency up, amendments stackable, strikes reset weekly, scoring continues. New menu button appears on the ending screen only; the title keeps its single CTA. Gate: `audit-deduction.mjs` extended to generated nights (ONE-WORD-HARMFUL must hold) before release. The daily seed + share grid already cover endless/multiplayer socially — this is the mastery grind for readers who finish.
+- **Explicit non-goals**: no multiplayer, no accounts, no backend, no Meshy/AI assets required, no in-jam mode select — single CTA by design (modes are framing: story / daily / readers, not menus).
 
 ## Submission checklist (Dec 1)
 
