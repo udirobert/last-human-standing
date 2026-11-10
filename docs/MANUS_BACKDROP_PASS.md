@@ -26,8 +26,8 @@ in `ART_DIRECTION.md`.
 
 | Artifact | Path |
 | --- | --- |
-| Task metadata | `docs/manus-backdrop-pass-task.json` |
-| Structured review | `docs/manus-backdrop-pass-review.json` |
+| Task metadata | `docs/archive/manus-backdrop-pass-task.json` |
+| Structured review | `docs/archive/manus-backdrop-pass-review.json` |
 
 ## Already shipped in-repo
 

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import EmberField from "./ui/EmberField.jsx";
 import AmbientMotifs from "./ui/AmbientMotifs.jsx";
@@ -90,6 +90,20 @@ const LIVE_DAY_PALETTES = {
 const TOPO_SEEDS = { prelaunch: 17, live: 42, ended: 89 };
 const DAY_TOPO_SEEDS = { 1: 42, 2: 51, 3: 63, 4: 74, 5: 88 };
 
+/**
+ * Generated daily key art (Meshy, docs/MESHY_PIPELINE.md). One gouache plate
+ * per riddle day, vendored under public/assets/meshy-days/<theme>/keyart.jpg.
+ * Rendered as a faint graded wash under the room gradient — mood, not picture.
+ * Absent file or load error → layer simply doesn't render (CSS room remains).
+ */
+const DAY_KEYART = {
+  1: "/assets/meshy-days/gathering/keyart.jpg",
+  2: "/assets/meshy-days/wild/keyart.jpg",
+  3: "/assets/meshy-days/bond/keyart.jpg",
+  4: "/assets/meshy-days/quiet/keyart.jpg",
+  5: "/assets/meshy-days/dawn/keyart.jpg",
+};
+
 export default function AmbientBackdrop({
   phase = "prelaunch",
   ember = true,
@@ -178,6 +192,9 @@ export default function AmbientBackdrop({
   // scaled by depth (0=far/least move → 1=near/most move); the
   // ParallaxProvider (mounted by AppShell) runs useParallaxDepth once and
   // feeds the MotionValues via context.
+  const [keyartFailed, setKeyartFailed] = useState(false);
+  const dayKeyart = phase === "live" && day ? DAY_KEYART[day] : null;
+
   const wrap = (depth, node) => (parallax ? <ParallaxLayer depth={depth}>{node}</ParallaxLayer> : node);
 
   const layers = (
@@ -204,6 +221,23 @@ export default function AmbientBackdrop({
             <div className="absolute inset-0" style={{ background: DAY_ROOM_TINTS[day] }} />
           )
         ),
+      )}
+
+      {/* 1b. Generated daily key art — faint graded wash. Hidden on error. */}
+      {dayKeyart && !keyartFailed && (
+        <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+          <img
+            src={dayKeyart}
+            alt=""
+            onError={() => setKeyartFailed(true)}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ opacity: 0.16, filter: "saturate(0.85) brightness(0.7)" }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(180deg, rgba(18,16,14,0.55) 0%, rgba(18,16,14,0.25) 45%, rgba(18,16,14,0.65) 100%)" }}
+          />
+        </div>
       )}
 
       {/* 2. Topographic contour texture — geographic identity + day markers */}

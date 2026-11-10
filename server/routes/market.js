@@ -11,12 +11,37 @@
  * Gated on GAME_V3_ENABLED; mounted at /api/v3.
  */
 import { Router } from "express";
+import crypto from "crypto";
 import { rateLimit } from "../rateLimit.js";
 import { ensureObjectBody, ensureNumber, ensureString, sendValidationError } from "../lib/validators.js";
 import { validateListing, fillListing, DEFAULT_LISTING_TTL_MS } from "../lib/market.js";
+import { meshyConfigured, createTextToImageTask, getTextToImageTask, downloadMeshyImage } from "../lib/meshy.js";
+
+const SUPABASE_BUCKET = process.env.SUPABASE_BUCKET || "checkins";
+
+// Catalog plates — one generated museum-specimen illustration per listing,
+// cached forever by content hash. Shared art (no faces), stored outside any
+// user's prefix; signed URLs are minted here, not via /api/media-url.
+const marketArtJobs = new Map(); // meshyTaskId -> { path, label, createdAt }
+const MARKET_ART_JOB_TTL_MS = 15 * 60_000;
+const MARKET_ART_MAX_PENDING = 3;
+const MARKET_ART_STYLE =
+  "Museum catalog plate for a mythic survival game's artifact auction. " +
+  "Bold gouache storybook illustration, deep navy background, warm amber accent light, " +
+  "engraved specimen-label aesthetic, dramatic rim lighting, subtle film grain, " +
+  "centered single object, no text, no letters, no watermark";
+
+function marketArtPrompt(label) {
+  return `${MARKET_ART_STYLE}. Subject: ${label}.`;
+}
 
 export default function marketRoutes({ supabaseAdmin, rateLimitStorage, requireAuth, GAME_V3_ENABLED }) {
   const router = Router();
+
+  async function marketArtSign(path, ttlSeconds = 300) {
+    const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(path, ttlSeconds);
+    return error ? null : data.signedUrl;
+  }
 
   router.use((req, res, next) => {
     if (!GAME_V3_ENABLED) return res.status(404).json({ error: "v3_not_enabled" });
@@ -195,6 +220,90 @@ export default function marketRoutes({ supabaseAdmin, rateLimitStorage, requireA
       if (!cancelled) return res.status(404).json({ error: "listing_not_found_or_not_open" });
 
       return res.json({ ok: true, listing: cancelled });
+    },
+  );
+
+  // ---------- POST /api/v3/market/art ----------
+  // Generate (or fetch cached) catalog-plate art for a listing's item.
+  router.post(
+    "/market/art",
+    requireAuth,
+    rateLimit({ keyFn: (req) => `v3mka:${req.user?.address || req.ip}`, limit: 20, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+    async (req, res) => {
+      if (!meshyConfigured()) return res.status(501).json({ error: "meshy_not_configured" });
+
+      const body = ensureObjectBody(req, res);
+      if (!body) return;
+
+      try {
+        const itemKind = ensureString(body.itemKind, { field: "itemKind", required: true, maxLength: 40 });
+        const itemRef = ensureString(body.itemRef, { field: "itemRef", required: false, maxLength: 120 }) || "";
+        const label = `${itemKind}${itemRef ? ` — ${itemRef}` : ""}`.slice(0, 140);
+
+        const hash = crypto.createHash("sha256").update(label.toLowerCase()).digest("hex").slice(0, 32);
+        const artPath = `_market/${hash}.png`;
+
+        const cached = await marketArtSign(artPath, 60);
+        if (cached) return res.json({ ok: true, cached: true, url: cached });
+
+        const now = Date.now();
+        for (const [id, job] of marketArtJobs) {
+          if (now - job.createdAt > MARKET_ART_JOB_TTL_MS) marketArtJobs.delete(id);
+        }
+        const pending = [...marketArtJobs.values()].filter(
+          (j) => j.address === req.user.address.toLowerCase(),
+        ).length;
+        if (pending >= MARKET_ART_MAX_PENDING) {
+          return res.status(429).json({ error: "too_many_pending" });
+        }
+
+        const taskId = await createTextToImageTask(marketArtPrompt(label));
+        marketArtJobs.set(taskId, { address: req.user.address.toLowerCase(), path: artPath, label, createdAt: now });
+        return res.json({ ok: true, taskId, status: "processing" });
+      } catch (error) {
+        if (error?.status === 402) return res.status(402).json({ error: "meshy_credits" });
+        console.warn("market-art create failed:", error?.message);
+        return res.status(502).json({ error: "meshy_failed" });
+      }
+    },
+  );
+
+  // ---------- GET /api/v3/market/art/:taskId ----------
+  router.get(
+    "/market/art/:taskId",
+    requireAuth,
+    async (req, res) => {
+      if (!meshyConfigured()) return res.status(501).json({ error: "meshy_not_configured" });
+
+      const job = marketArtJobs.get(req.params.taskId);
+      if (!job || job.address !== req.user.address.toLowerCase()) {
+        return res.status(404).json({ error: "job_not_found" });
+      }
+
+      try {
+        const { status, imageUrl } = await getTextToImageTask(req.params.taskId);
+
+        if (status === "SUCCEEDED" && imageUrl) {
+          const buf = await downloadMeshyImage(imageUrl);
+          const { error: upErr } = await supabaseAdmin.storage
+            .from(SUPABASE_BUCKET)
+            .upload(job.path, buf, { contentType: "image/png", upsert: true });
+          if (upErr) throw upErr;
+          marketArtJobs.delete(req.params.taskId);
+          const url = await marketArtSign(job.path, 60 * 5);
+          return res.json({ ok: true, status: "done", url });
+        }
+
+        if (["FAILED", "EXPIRED", "CANCELLED", "CANCELED"].includes(status)) {
+          marketArtJobs.delete(req.params.taskId);
+          return res.json({ ok: false, status: "failed" });
+        }
+
+        return res.json({ ok: true, status: "processing" });
+      } catch (error) {
+        console.warn("market-art poll failed:", error?.message);
+        return res.status(502).json({ error: "meshy_failed" });
+      }
     },
   );
 

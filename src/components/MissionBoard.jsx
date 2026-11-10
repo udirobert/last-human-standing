@@ -15,6 +15,7 @@ import { getDetectiveTitle } from "../lib/detective.js";
 import Countdown from "./Countdown.jsx";
 import TrustBadge from "./TrustBadge.jsx";
 import ThemeFairness from "./ThemeFairness.jsx";
+import RiddleArtifact from "./RiddleArtifact.jsx";
 import Cohort2Handoff from "./Cohort2Handoff.jsx";
 import VoteProgressCard from "./VoteProgressCard.jsx";
 import ThemeMotif from "./ui/ThemeMotif.jsx";
@@ -409,6 +410,9 @@ export default function MissionBoard({ onCheckIn, onViewFeed, user }) {
           <p className="text-dim text-xs font-mono mt-2 leading-relaxed">{round.prompt}</p>
         )}
         <ThemeFairness theme={themeData} className="mt-3" />
+        {isLive && currentDay != null && (
+          <RiddleArtifact day={currentDay} className="mt-3" />
+        )}
       </div>
 
       {/* Mid-day verdict moment: in the final hour, show a live banner */}

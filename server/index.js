@@ -43,6 +43,7 @@ import {
   ensureEnum, ensureIsoDate, sendValidationError,
 } from "./lib/validators.js";
 import { sendPushToAddress, broadcastPush } from "./lib/push.js";
+import { meshyConfigured, createSurvivorCardTask, getSurvivorCardTask, downloadMeshyImage } from "./lib/meshy.js";
 import { startVoteRelayer, enqueueVote } from "./lib/voteRelayer.js";
 import {
   COMMIT_REVEAL_VOTING_ENABLED,
@@ -1947,6 +1948,111 @@ app.post("/api/media-url", requireAuth, async (req, res) => {
     return res.json({ ok: true, url: data.signedUrl, kind: "signed" });
   } catch (error) {
     return sendValidationError(res, error);
+  }
+});
+
+// ─── Survivor cards — opt-in AI restyle of the player's own proof photo ──
+// Flow: POST image (downscaled data URL) → Meshy image-to-image task →
+// GET /:taskId polls until SUCCEEDED → derivative PNG stored in the same
+// private bucket under {address}/cards/{sha256}.png → client reuses
+// /api/media-url to sign it for the share-card canvas.
+const survivorCardJobs = new Map(); // meshyTaskId -> { address, path, createdAt }
+const SURVIVOR_CARD_JOB_TTL_MS = 15 * 60_000;
+const SURVIVOR_CARD_MAX_PENDING = 2;
+const SURVIVOR_CARD_DATA_URL_RE = /^data:image\/(?:jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=\s]+$/;
+
+function survivorCardMediaPath(address, hash) {
+  return `${address}/cards/${hash}.png`;
+}
+
+async function survivorCardExists(path) {
+  const { data, error } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(path, 60);
+  return error ? null : data.signedUrl;
+}
+
+app.post(
+  "/api/survivor-card",
+  requireAuth,
+  rateLimit({ keyFn: (req) => `survivor-card:${req.user?.address || req.ip}`, limit: 4, windowMs: 60 * 60_000, storage: rateLimitStorage }),
+  async (req, res) => {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    if (!meshyConfigured()) return res.status(501).json({ error: "meshy_not_configured" });
+
+    const body = ensureObjectBody(req, res);
+    if (!body) return;
+
+    try {
+      const image = ensureString(body.image, { field: "image", required: true, maxLength: 900_000 });
+      if (!SURVIVOR_CARD_DATA_URL_RE.test(image)) {
+        return res.status(400).json({ error: "invalid_image", message: "Expected a data:image/*;base64 URI." });
+      }
+      const buf = Buffer.from(image.slice(image.indexOf(",") + 1), "base64");
+      if (!buf.length || buf.length > 4 * 1024 * 1024) {
+        return res.status(400).json({ error: "image_too_large" });
+      }
+
+      // Reap stale jobs before counting this user's pending work.
+      const now = Date.now();
+      for (const [id, job] of survivorCardJobs) {
+        if (now - job.createdAt > SURVIVOR_CARD_JOB_TTL_MS) survivorCardJobs.delete(id);
+      }
+
+      const hash = crypto.createHash("sha256").update(buf).digest("hex").slice(0, 32);
+      const mediaPath = survivorCardMediaPath(req.user.address, hash);
+      if (await survivorCardExists(mediaPath)) {
+        return res.json({ ok: true, cached: true, mediaPath });
+      }
+
+      const pending = [...survivorCardJobs.values()].filter(
+        (j) => j.address.toLowerCase() === req.user.address.toLowerCase(),
+      ).length;
+      if (pending >= SURVIVOR_CARD_MAX_PENDING) {
+        return res.status(429).json({ error: "too_many_pending" });
+      }
+
+      const taskId = await createSurvivorCardTask(image);
+      survivorCardJobs.set(taskId, { address: req.user.address, path: mediaPath, createdAt: now });
+      return res.json({ ok: true, taskId, status: "processing" });
+    } catch (error) {
+      if (error?.status === 402) return res.status(402).json({ error: "meshy_credits" });
+      console.warn("survivor-card create failed:", error?.message);
+      return res.status(502).json({ error: "meshy_failed" });
+    }
+  },
+);
+
+app.get("/api/survivor-card/:taskId", requireAuth, async (req, res) => {
+  if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+  if (!meshyConfigured()) return res.status(501).json({ error: "meshy_not_configured" });
+
+  const job = survivorCardJobs.get(req.params.taskId);
+  if (!job || job.address.toLowerCase() !== req.user.address.toLowerCase()) {
+    return res.status(404).json({ error: "job_not_found" });
+  }
+
+  try {
+    const { status, imageUrl } = await getSurvivorCardTask(req.params.taskId);
+
+    if (status === "SUCCEEDED" && imageUrl) {
+      const buf = await downloadMeshyImage(imageUrl);
+      const { error: upErr } = await supabaseAdmin.storage
+        .from(SUPABASE_BUCKET)
+        .upload(job.path, buf, { contentType: "image/png", upsert: true });
+      if (upErr) throw upErr;
+      survivorCardJobs.delete(req.params.taskId);
+      const { data } = await supabaseAdmin.storage.from(SUPABASE_BUCKET).createSignedUrl(job.path, 60 * 5);
+      return res.json({ ok: true, status: "done", mediaPath: job.path, url: data?.signedUrl || null });
+    }
+
+    if (["FAILED", "EXPIRED", "CANCELLED", "CANCELED"].includes(status)) {
+      survivorCardJobs.delete(req.params.taskId);
+      return res.json({ ok: false, status: "failed" });
+    }
+
+    return res.json({ ok: true, status: "processing" });
+  } catch (error) {
+    console.warn("survivor-card poll failed:", error?.message);
+    return res.status(502).json({ error: "meshy_failed" });
   }
 });
 
@@ -4149,6 +4255,53 @@ app.get("/api/checkins/today", async (req, res) => {
     return res.json({ ok: true, day, checkins: data || [] });
   } catch (e) {
     res.status(400).json({ error: "checkins_today_failed", message: e instanceof Error ? e.message : "unknown_error" });
+  }
+});
+
+// The caller's own check-ins across all days — powers the Player History
+// dossier. Own data only (requireAuth + address-scoped), so captions and
+// media paths never leak to other players. Merges submissions (argument,
+// theme, proof) with checkins (rank, verdict) on day.
+app.get("/api/checkins/mine", requireAuth, async (req, res) => {
+  try {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    const address = req.user.address;
+    const [{ data: subs, error: subErr }, { data: results, error: resErr }] = await Promise.all([
+      supabaseAdmin
+        .from("submissions")
+        .select("id,day,theme,caption,media_path,status,created_at")
+        .ilike("address", address)
+        .order("day", { ascending: false })
+        .limit(100),
+      supabaseAdmin
+        .from("checkins")
+        .select("day,rank,survived,dq,distance_m,created_at")
+        .ilike("address", address)
+        .limit(100),
+    ]);
+    if (subErr || resErr) {
+      return res.status(400).json({ error: "db_read_failed", message: (subErr || resErr).message });
+    }
+    const resultByDay = new Map((results || []).map((r) => [r.day, r]));
+    const checkins = (subs || []).map((s) => {
+      const r = resultByDay.get(s.day) || {};
+      return {
+        id: s.id,
+        day: s.day,
+        theme: s.theme,
+        caption: s.caption,
+        media_path: s.media_path,
+        status: s.status,
+        rank: r.rank ?? null,
+        survived: r.survived ?? null,
+        dq: r.dq ?? null,
+        distance_m: r.distance_m ?? null,
+        created_at: s.created_at,
+      };
+    });
+    return res.json({ ok: true, checkins });
+  } catch (e) {
+    res.status(400).json({ error: "checkins_mine_failed", message: e instanceof Error ? e.message : "unknown_error" });
   }
 });
 

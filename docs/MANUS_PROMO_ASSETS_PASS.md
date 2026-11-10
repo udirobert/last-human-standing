@@ -62,8 +62,8 @@ upload to the World Developer Portal for Mini App Store review.
 
 | Artifact | Path |
 | --- | --- |
-| Task metadata | `docs/manus-promo-assets-pass-task.json` |
-| Structured review | `docs/manus-promo-assets-pass-review.json` (when complete) |
+| Task metadata | `docs/archive/manus-promo-assets-pass-task.json` |
+| Structured review | `docs/archive/manus-promo-assets-pass-review.json` (when complete) |
 
 ## World App note
 
@@ -77,6 +77,6 @@ presence** (show up, photo, survive the crowd audit) — never as lottery/raffle
 | --- | --- |
 | Status | **stopped / delivered** |
 | Credit usage | 377 |
-| Structured review | `docs/manus-promo-assets-pass-review.json` |
+| Structured review | `docs/archive/manus-promo-assets-pass-review.json` |
 | Local copy sheet | `docs/promo-assets/COPY.md` |
 | PNG download | Open task URL → download ZIP / `final_png/` (CDN is session-private) |

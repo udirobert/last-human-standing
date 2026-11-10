@@ -114,7 +114,7 @@ It must also return:
 | --- | --- |
 | Task ID | `WrhA39Cw6SpZCqctp5nJRZ` |
 | Task URL | https://manus.im/app/WrhA39Cw6SpZCqctp5nJRZ |
-| Structured review | `docs/manus-one-time-pass-review.json` |
+| Structured review | `docs/archive/manus-one-time-pass-review.json` |
 | Inputs | Public landing screenshots (mobile + desktop), art direction, README, beta roadmap, this brief |
 
 ### Accepted and implemented

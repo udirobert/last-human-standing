@@ -1,0 +1,206 @@
+{
+  "source": "meshy.ai API (MESHY_API_KEY in .env.local, key name: lasthumanstanding-assets)",
+  "generated": "2026-11-09",
+  "assets": [
+    {
+      "id": "aria-concept",
+      "file": "aria-concept-a-pose.png",
+      "task_id": "01a1c19a-c8b4-7583-a266-45a27031b32f",
+      "type": "text-to-image",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "ARIA mascot concept, a-pose, transparent background; input for image-to-3d"
+    },
+    {
+      "id": "aria-character",
+      "file": "aria-meshy-t2.5.glb",
+      "texture": "aria-meshy-t2.5_base_color.png",
+      "task_id": "01a1c19b-756a-73d6-a1a5-96d7a917e861",
+      "type": "image-to-3d",
+      "geometry_model": "meshy-t2.5",
+      "texture_model": "meshy-n1",
+      "target_polycount": 15000,
+      "pose_mode": "a-pose",
+      "triangles": 15786,
+      "credits": 15,
+      "note": "Textured character GLB derived from aria-concept; no rig/skin yet"
+    },
+    {
+      "id": "aria-rigged",
+      "files": [
+        "aria-rigged.glb",
+        "aria-walk.glb",
+        "aria-run.glb"
+      ],
+      "task_id": "01a1c1b2-4421-7030-bfea-274df52e5883",
+      "type": "rigging",
+      "source_task": "aria-character",
+      "joints": 24,
+      "animations": [
+        "baselayer (bind pose)",
+        "walking",
+        "running"
+      ],
+      "credits": 5,
+      "note": "Auto-rigged textured GLB + free walk/run clips; FBX also available from Meshy (URL expired)"
+    },
+    {
+      "id": "trophy-prop",
+      "file": "trophy-meshy-t2.glb",
+      "task_id": "01a1c19a-cd40-77bb-9035-18753f4cfd63",
+      "type": "text-to-3d",
+      "model": "meshy-t2",
+      "model_type": "smart-topology",
+      "target_polycount": 4000,
+      "triangles": 4304,
+      "credits": 5,
+      "note": "Untextured preview mesh; texture via refine/retexture if promoted"
+    },
+    {
+      "id": "demo-player-photo",
+      "file": "demo-player-photo.png",
+      "task_id": "01a1c1b3-0bfc-76ea-8a60-e18eda313473",
+      "type": "text-to-image",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "Synthetic 'player proof' photo standing in for a real check-in upload"
+    },
+    {
+      "id": "demo-survivor-card-art",
+      "file": "demo-survivor-card-art.png",
+      "task_id": "01a1c1b3-685f-7357-8a84-1f92b7ef6ada",
+      "type": "image-to-image",
+      "model": "nano-banana-2",
+      "credits": 6,
+      "reference": "demo-player-photo.png",
+      "note": "House-style restyle (gouache storybook, navy/amber). Feeds renderMomentCard as photoUrl"
+    },
+    {
+      "id": "demo-survivor-card",
+      "file": "demo-survivor-card.png",
+      "type": "local-composite",
+      "note": "PIL demo of momentCard layout; production path is src/lib/momentCard.js renderMomentCard()"
+    },
+    {
+      "id": "gathering-keyart",
+      "file": "public/assets/meshy-days/gathering/keyart.png",
+      "type": "text-to-image",
+      "task_id": "01a1c1d6-2033-7091-bcc1-70c36725fc6d",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "THE GATHERING riddle key visual"
+    },
+    {
+      "id": "bond-keyart",
+      "file": "public/assets/meshy-days/bond/keyart.png",
+      "type": "text-to-image",
+      "task_id": "01a1c1d6-20d5-74bf-b3ca-00dd59e4f9a0",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "THE BOND riddle key visual"
+    },
+    {
+      "id": "wild-keyart",
+      "file": "public/assets/meshy-days/wild/keyart.png",
+      "type": "text-to-image",
+      "task_id": "01a1c1d6-2078-748d-b2b4-087e1527bba8",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "THE WILD riddle key visual"
+    },
+    {
+      "id": "quiet-keyart",
+      "file": "public/assets/meshy-days/quiet/keyart.png",
+      "type": "text-to-image",
+      "task_id": "01a1c1d6-213c-7560-9f58-048504f6eaef",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "THE QUIET riddle key visual"
+    },
+    {
+      "id": "dawn-keyart",
+      "file": "public/assets/meshy-days/dawn/keyart.png",
+      "type": "text-to-image",
+      "task_id": "01a1c1d6-218d-702e-b418-b821907af40b",
+      "model": "nano-banana-2-lite",
+      "credits": 3,
+      "note": "THE DAWN riddle key visual"
+    },
+    {
+      "id": "gathering-artifact",
+      "file": "public/assets/meshy-days/gathering/artifact.glb",
+      "type": "text-to-3d",
+      "task_id": "01a1c1d7-a778-73c8-a55c-5278b946a3f8",
+      "model": "meshy-t2.5",
+      "credits": 5,
+      "note": "THE GATHERING riddle artifact prop"
+    },
+    {
+      "id": "wild-artifact",
+      "file": "public/assets/meshy-days/wild/artifact.glb",
+      "type": "text-to-3d",
+      "task_id": "01a1c1d7-a777-72d0-974d-e30ec1ff990c",
+      "model": "meshy-t2.5",
+      "credits": 5,
+      "note": "THE WILD riddle artifact prop"
+    },
+    {
+      "id": "quiet-artifact",
+      "file": "public/assets/meshy-days/quiet/artifact.glb",
+      "type": "text-to-3d",
+      "task_id": "01a1c1d7-a779-72cf-bd14-195c224a56be",
+      "model": "meshy-t2.5",
+      "credits": 5,
+      "note": "THE QUIET riddle artifact prop"
+    },
+    {
+      "id": "bond-artifact",
+      "file": "public/assets/meshy-days/bond/artifact.glb",
+      "type": "text-to-3d",
+      "task_id": "01a1c1d7-a77a-709b-929e-baadf4e3338d",
+      "model": "meshy-t2.5",
+      "credits": 5,
+      "note": "THE BOND riddle artifact prop"
+    },
+    {
+      "id": "dawn-artifact",
+      "file": "public/assets/meshy-days/dawn/artifact.glb",
+      "type": "text-to-3d",
+      "task_id": "01a1c1d7-a77a-7765-9983-4f7abc94a71c",
+      "model": "meshy-t2.5",
+      "credits": 5,
+      "note": "THE DAWN riddle artifact prop"
+    },
+    {
+      "id": "aria-emotions",
+      "file": "aria-emotions.glb",
+      "task_id": "01a1c1d2-3c63-7138-8f17-be624ef35e59",
+      "type": "animate",
+      "source": "aria-rigged.glb",
+      "clips": ["Idle", "Alert", "Angry_Stomp", "Formal_Bow", "Motivational_Cheer", "Victory_Cheer"],
+      "credits": 18,
+      "note": "Six ceremonial clips bundled on the rigged ARIA; map to briefing/reveal/reckoning/elimination/survival/endgame"
+    },
+    {
+      "id": "aria-keychain",
+      "file": "aria-keychain.glb",
+      "task_id": "01a1c1d6-a2c9-74af-8759-f8a01aa4b665",
+      "type": "creative-lab",
+      "product": "keychain",
+      "source": "aria-concept-a-pose.png",
+      "name_text": "ARIA",
+      "badge_shape": "shield",
+      "credits": 36,
+      "note": "Physical-product prototype (Creative Lab). 13.7MB GLB — prototype proof, not production-ready; fulfillment path not implemented"
+    },
+    {
+      "id": "survivor-card-rest-verify",
+      "type": "image-to-image",
+      "model": "nano-banana-2",
+      "credits": 6,
+      "note": "Live REST verification of server/lib/meshy.js code path (create→poll→download); output cached in Supabase, not vendored"
+    }
+  ],
+  "total_credits_spent": 143,
+  "account_note": "Meshy credit pool is account-wide and shared with other API keys (e.g. grunds-vendor). Per-asset credits above are task-reported; account balance deltas include unrelated usage. Meshy CDN URLs expire ~3 days after task completion — all durable outputs are vendored locally."
+}

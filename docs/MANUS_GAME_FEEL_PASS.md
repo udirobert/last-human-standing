@@ -49,8 +49,8 @@ world-class daily ritual game:
 | Task ID | `NxJFKwXta8jnceuTZomiyD` |
 | Task URL | https://manus.im/app/NxJFKwXta8jnceuTZomiyD |
 | Agent profile | `manus-1.6-max` |
-| Structured review | `docs/manus-game-feel-pass-review.json` |
-| Task metadata | `docs/manus-game-feel-pass-task.json` |
+| Structured review | `docs/archive/manus-game-feel-pass-review.json` |
+| Task metadata | `docs/archive/manus-game-feel-pass-task.json` |
 | Inputs | Mobile landing + speed-run beats (intro → theme → check-in → sealed proof → audit → survival), `ART_DIRECTION.md`, this brief, prior-pass review |
 
 ### Note on structured `top_five_changes`

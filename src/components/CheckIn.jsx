@@ -21,6 +21,7 @@ import OverlayPortal from './OverlayPortal.jsx';
 import { useDelight } from './DelightProvider.jsx';
 import { useMascotEvent } from '../hooks/useMascotEvent.js';
 import { shareMoment } from '../lib/shareMoment.js';
+import { getSurvivorCardPhotoUrl } from '../lib/survivorCard.js';
 import { getCheckInMascot, getProfiledMascotLines, FAQ_PUBLIC_PHOTO_INDEX } from '../lib/copy.js';
 import { ritualFeel } from '../lib/ritualFeel.js';
 import { CompactButton, HumanCta, GameCta } from './ui/CraftCta.jsx';
@@ -43,6 +44,11 @@ export default function CheckIn({ onBack, onSubmit }) {
   const [gpsEnabled, setGpsEnabled] = useState(false);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [photoFile, setPhotoFile] = useState(null);
+  // Opt-in: restyle the proof photo into house-style art for the share card.
+  // Off by default — faces are personal data, styling is a deliberate choice.
+  const [cardStyleOptIn, setCardStyleOptIn] = useState(
+    () => typeof localStorage !== "undefined" && localStorage.getItem("lhs.cardStyleOptIn") === "1",
+  );
   const [photoPreview, setPhotoPreview] = useState(null);
   const [caption, setCaption] = useState('');
   const [result, setResult] = useState(null);
@@ -160,6 +166,13 @@ export default function CheckIn({ onBack, onSubmit }) {
 
   const shareResult = async (survived) => {
     const { text, url, displayName, rank, cap } = buildShare(survived);
+    // Opted-in players get their photo restyled into house art for the card.
+    // Falls back to the raw photo on any failure — sharing never blocks.
+    let cardPhotoUrl = photoPreview;
+    if (cardStyleOptIn && photoFile) {
+      const styled = await getSurvivorCardPhotoUrl(photoFile);
+      if (styled) cardPhotoUrl = styled;
+    }
     const status = await shareMoment(survived ? "survive" : "jury", {
       name: displayName,
       day: currentDay,
@@ -167,7 +180,7 @@ export default function CheckIn({ onBack, onSubmit }) {
       cap,
       text,
       url,
-      photoUrl: photoPreview,
+      photoUrl: cardPhotoUrl,
       isFarcaster,
     });
     if (status === "copied") {
@@ -470,7 +483,28 @@ export default function CheckIn({ onBack, onSubmit }) {
                     Replace
                   </button>
                 </div>
-              ) : (
+              ) : null}
+              {photoPreview && (
+                <label className="mb-5 flex items-start gap-3 rounded-2xl border border-ember/20 bg-smoke/40 px-4 py-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={cardStyleOptIn}
+                    onChange={(e) => {
+                      const on = e.target.checked;
+                      setCardStyleOptIn(on);
+                      try { localStorage.setItem("lhs.cardStyleOptIn", on ? "1" : "0"); } catch { /* private mode */ }
+                    }}
+                    className="mt-0.5 accent-amber-400"
+                  />
+                  <span>
+                    <span className="block text-bone text-sm font-body">Style my share card</span>
+                    <span className="block text-dim text-xs font-body mt-0.5">
+                      Restyle this photo into game art for your survivor card. Your photo is only used for your own card.
+                    </span>
+                  </span>
+                </label>
+              )}
+              {!photoPreview && (
                 <motion.div
                   layout
                   transition={{ type: "spring", duration: 0.6, bounce: 0.2 }}

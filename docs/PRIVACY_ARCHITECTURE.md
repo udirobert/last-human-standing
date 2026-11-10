@@ -104,6 +104,23 @@ When the flag is on:
 
 Do **not** enable this in production until salts + reveal UX have been exercised on a test cohort.
 
+## AI-styled share cards (survivor cards)
+
+Opt-in feature (`lhs.cardStyleOptIn`, default off) that restyles a player's own check-in photo into house-style art for their share card.
+
+- **Data sent:** a downscaled (≤1024px, JPEG q0.85) copy of the photo the player just captured, sent once to `POST /api/survivor-card` and forwarded to Meshy (`api.meshy.ai`, `nano-banana-2` image-to-image). The photo is used only to produce that player's card art.
+- **Storage:** the styled derivative is written to the same private `checkins` bucket under `{address}/cards/{sha256}.png`, only readable via the existing owner-scoped `/api/media-url` signing. The original proof photo is unchanged.
+- **Third party:** Meshy processes the image transiently for generation; their retention terms apply — verify before broad rollout. Rate limits (4/hr, ≤2 pending) bound exposure.
+- **Consent:** off by default, per-device toggle, copy states the photo is only used for the player's own card. Before enabling for minors' cohorts or marketing use of styled faces, revisit consent wording and add a deletion path for derivatives.
+
+## Player history dossier
+
+`GET /api/checkins/mine` (requireAuth) returns the caller's own submissions joined with their check-in results, including `caption` (the player's argument) and `media_path`. It is address-scoped server-side — captions and proof paths are never exposed for other players. `DossierCard` renders this data plus a signed thumbnail of the player's own photo. No third-party processing is involved.
+
+## Market catalog plates (v3)
+
+`POST /api/v3/market/art` generates a shared, non-personal illustration per listing label (`itemKind`/`itemRef`) via Meshy text-to-image. No user data is sent — only the item label text. Output is cached at `_market/<hash>.png` in the private bucket and served via short-lived signed URLs. Gated behind `GAME_V3_ENABLED`.
+
 ## Semaphore prototype status
 
 The repository also contains a feature-flagged Semaphore prototype. It provides a verified-cohort enrollment route, browser-held identity helper, group-root validation, and atomic nullifier storage. It is disabled by default (`SEMAPHORE_AUDIT_ENABLED` must be `"true"`) and does not change the current vote endpoint. Migration `027_semaphore_audit.sql` is separate from commit–reveal and should only be applied for a deliberate Semaphore prototype cohort. See [Semaphore spike](./SEMAPHORE_SPIKE.md).

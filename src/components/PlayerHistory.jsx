@@ -3,6 +3,7 @@ import { useRound } from "../world/RoundProvider.jsx";
 import { usePolling } from "../hooks/usePolling.js";
 import AppShell, { SHELL_BOTTOM_PAD } from "./AppShell.jsx";
 import HistoryPreview from "./HistoryPreview.jsx";
+import DossierCard from "./DossierCard.jsx";
 import { MascotAvatar } from "./Mascot.jsx";
 import { CUE_PRESS } from "../lib/cuelume.js";
 import { CompactButton } from "./ui/CraftCta.jsx";
@@ -26,9 +27,17 @@ export default function PlayerHistory({ onBack }) {
     },
   );
 
+  // Own-history dossier (captions + verdicts) — authed, own data only.
+  const { data: mine } = usePolling(user?.address ? "/api/checkins/mine" : null, {
+    intervalMs: 60_000,
+    transform: (json) => json.checkins ?? [],
+    initial: [],
+  });
+
   const myCheckins = todayRes.filter(
     (c) => c.address?.toLowerCase() === user?.address?.toLowerCase(),
   );
+  const hasDossier = mine.length > 0;
 
   const accuracyPct = voterStats?.accuracy != null
     ? Math.round(voterStats.accuracy * 100)
@@ -72,10 +81,16 @@ export default function PlayerHistory({ onBack }) {
         )}
 
         <p className="font-mono text-dim text-[10px] uppercase tracking-wider pt-2">
-          Today&apos;s check-ins
+          {hasDossier ? "Your dossier" : "Today's check-ins"}
         </p>
-        {myCheckins.length === 0 ? (
+        {!hasDossier && myCheckins.length === 0 ? (
           <HistoryPreview />
+        ) : hasDossier ? (
+          <div className="space-y-2.5">
+            {mine.slice(0, 30).map((ck, i) => (
+              <DossierCard key={ck.id ?? i} checkin={ck} index={i} />
+            ))}
+          </div>
         ) : (
           <div className="space-y-3">
             {myCheckins.slice(0, 20).map((ck) => (
