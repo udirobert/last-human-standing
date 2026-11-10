@@ -77,6 +77,12 @@ const sfx = {
   shutter:() => { noiseBurst(.07, 900, .06); noiseBurst(.07, 1400, .05, .09); },
   click:  () => { tone(240, .025, "square", .05); noiseBurst(.05, 3000, .05, .03); },
   tickHi: (left) => tone(880 + (3 - left) * 160, .035, "square", .035),
+  // four cards coming off the deck, one at a time
+  riffle: () => [0, .09, .18, .27].forEach((w, i) => noiseBurst(.055, 1500 + i * 320, .038, w)),
+  // a file crossing the desk and landing in the tray
+  handover: () => { noiseBurst(.2, 1100, .05); thudDrop(.16); },
+  // a case file dropped onto the desk
+  drop:   () => { thudDrop(); noiseBurst(.09, 2400, .035, .03); },
 };
 
 /* filtered noise burst — paper slides, camera shutters. */
@@ -411,6 +417,7 @@ function startDay() {
   G.clueUsed = false;
   G.dayPay = 300;
   G.flagged = null;
+  G.filing = false;
   banner(`${d.dayLabel} · ${d.emoji} ${d.theme}`);
   showOnly("day");
   setInstr(G.day >= 3 ? "dayLiar" : "day");
@@ -457,6 +464,7 @@ function renderDay() {
     el.addEventListener("click", () => selectCard(card));
     handEl.appendChild(el);
   });
+  if (!calmMotion()) later(() => sfx.riffle(), 120);
   updateFileBtn();
 }
 
@@ -525,14 +533,57 @@ function updateFileBtn() {
     : "Pick a card — 1–4, then Enter";
 }
 
+/* the filed card leaves your hand, crosses the desk and drops into the
+   tray — the paperwork you can actually see moving. */
+function flyToTray(from) {
+  const tray = $("fileBtn");
+  if (!from || !tray || calmMotion() || !from.animate) return 0;
+  const a = from.getBoundingClientRect(), b = tray.getBoundingClientRect();
+  const ghost = from.cloneNode(true);
+  ghost.className = "evidence flying";
+  ghost.removeAttribute("id");
+  ghost.setAttribute("aria-hidden", "true");
+  Object.assign(ghost.style, {
+    position: "fixed", margin: "0", zIndex: "70",
+    left: a.left + "px", top: a.top + "px",
+    width: a.width + "px", height: a.height + "px",
+  });
+  document.body.appendChild(ghost);
+  from.style.visibility = "hidden";
+  const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+  const dy = b.top + b.height / 2 - (a.top + a.height / 2);
+  const dur = 560;
+  try {
+    ghost.animate([
+      { transform: "rotate(0deg) translate(0,0) scale(1)", opacity: 1, offset: 0 },
+      { transform: "rotate(-5deg) translate(0,-14px) scale(1.03)", opacity: 1, offset: .26 },
+      { transform: `rotate(-16deg) translate(${dx}px, ${dy}px) scale(.28)`, opacity: 0, offset: 1 },
+    ], { duration: dur, easing: "cubic-bezier(.5,0,.62,1)", fill: "forwards" });
+  } catch {
+    ghost.remove(); from.style.visibility = "";
+    return 0;
+  }
+  setTimeout(() => { ghost.remove(); from.style.visibility = ""; }, dur + 60);
+  setTimeout(() => sfx.handover(), dur - 170);
+  return dur;
+}
+
 function fileSelected() {
-  if (!G.selected || G.phase !== "day") return;
+  if (!G.selected || G.phase !== "day" || G.filing) return;
   G.filed = G.selected;
+  G.filing = true;
   sfx.slide();
-  sfx.file();
-  showOnly("verdict");
-  setInstr("verdict");
-  renderVerdict();
+  const cards = $("hand").querySelectorAll(".evidence");
+  const dur = flyToTray(cards[G.hand.indexOf(G.selected)]);
+  const btn = $("fileBtn");
+  btn.disabled = true;
+  btn.textContent = "Filed.";
+  later(() => {
+    G.filing = false;
+    showOnly("verdict");
+    setInstr("verdict");
+    renderVerdict();
+  }, dur ? 360 : 0);
 }
 
 // ---------- VERDICT (suspense reveal) ----------
@@ -638,7 +689,8 @@ function finishVerdict() {
     stampCls = "eliminated";
   }
   const sb = $("stampBox");
-  sb.innerHTML = `<div class="stamp ${stampCls}">${stampText}</div>`;
+  sb.innerHTML = `<span class="slip-no">EXHIBIT ${c.glyph} · ${d.dayLabel}</span>` +
+    `<div class="stamp ${stampCls}">${stampText}</div>`;
   // the ledger speaks: one ruling sentence, then the room washes past
   const keys = d.rule.filter((x) => !x.allow.includes(c.tags[x.key])).map((x) => x.text);
   $("ledgerLine").textContent = passed
@@ -831,7 +883,7 @@ function renderCase() {
       ${contested && !checked
         ? `<span class="contested-tag">\u2696 CONTESTED · right pays double · wrong costs a strike</span>` : ""}
       <span id="streakTag" class="${G.streak > 1 ? "pop" : ""}">STREAK ×${G.streak}${newTag("streak", 0)}</span></p>
-    <div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : ""}">
+    <div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · ${sub.filer} <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
@@ -843,7 +895,10 @@ function renderCase() {
       ${sub.pick && !sub.correct ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
   $("susBtn").disabled = $("humanBtn").disabled = checked;
-  if (!checked) caseClock();
+  if (!checked) {
+    caseClock();
+    if (!calmMotion()) later(() => sfx.drop(), 80);   // the next file hits the desk
+  }
 }
 
 function stamp(pickVal) {
