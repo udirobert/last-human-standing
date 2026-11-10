@@ -931,14 +931,68 @@ function stamp(pickVal) {
   }
   G.auditTotal++;
   hud();
-  sfx.slide();
-  sfx.stamp();
-  if (contested && sub.correct) { sfx.gavel(); sfx.human(); }
-  else sub.correct ? sfx.human() : sfx.sus();
-  if (contested && !sub.correct) { sfx.thud(); deskShake(); }
-  sub.correct ? sfx.human() : sfx.sus();
+  const arm = pickVal === "SUS" ? $("susBtn") : $("humanBtn");
+  $("susBtn").classList.remove("press");
+  $("humanBtn").classList.remove("press");
+  setTimeout(() => arm.classList.add("press"), 0);
+  setTimeout(() => arm.classList.remove("press"), 380);
+  sfx.slide();                     // the arm comes down through the air
   renderCase();
-  if (sub.correct) later(nextCase, 900);   // wrong stamps stay up until dismissed
+
+  // the stamp itself falls, bites the paper, and only then does the
+  // verdict answer — the sound and the flinch land on contact
+  const stampEl = $("caseCard").querySelector(".case-stamp");
+  const fall = stampSwing(stampEl);
+  const hit = fall ? Math.round(fall * 0.84) : 0;
+  if (fall) {
+    const cardEl = $("caseCard").querySelector(".case-card");
+    cardEl.classList.add("impact");
+    later(() => cardEl.classList.remove("impact"), 700);
+  }
+  later(() => sfx.stamp(), hit);
+  later(() => {
+    sub.correct ? sfx.human() : sfx.sus();
+    if (!contested) return;
+    if (sub.correct) sfx.gavel();
+    else { sfx.thud(); deskShake(); }
+  }, hit + 70);
+  if (sub.correct) later(nextCase, 900 + hit);  // wrong stamps stay up until dismissed
+}
+
+/* the hand stamp drops out of frame, lands off-square on the card, and
+   leaves ink. Swap it for a clone so nothing about the card has to wait. */
+const STAMP_FALL = 300;
+function stampSwing(el) {
+  if (!el || calmMotion() || !el.animate) return 0;
+  const r = el.getBoundingClientRect();
+  if (!r.width) return 0;
+  const ghost = el.cloneNode(true);
+  ghost.className = el.className + " swing";
+  ghost.setAttribute("aria-hidden", "true");
+  Object.assign(ghost.style, {
+    position: "fixed", margin: "0", zIndex: "70",
+    left: r.left + "px", top: r.top + "px",
+    width: r.width + "px", height: r.height + "px",
+  });
+  document.body.appendChild(ghost);
+  el.style.visibility = "hidden";
+  try {
+    ghost.animate([
+      { transform: "translateY(-170px) rotate(-26deg) scale(2.5)", opacity: 0, offset: 0 },
+      { opacity: 1, offset: .3 },
+      { transform: "translateY(6px) rotate(8deg) scale(.955)", opacity: 1, offset: .84 },
+      { transform: "translateY(0) rotate(6deg) scale(1)", opacity: 1, offset: 1 },
+    ], { duration: STAMP_FALL, easing: "cubic-bezier(.48,0,.82,.44)", fill: "forwards" });
+  } catch {
+    ghost.remove(); el.style.visibility = "";
+    return 0;
+  }
+  setTimeout(() => {
+    ghost.remove();
+    el.style.visibility = "";
+    el.classList.add("landed");
+  }, STAMP_FALL);
+  return STAMP_FALL;
 }
 
 function nextCase() {
