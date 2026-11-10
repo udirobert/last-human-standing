@@ -637,6 +637,40 @@ button.ghost:hover:not(:disabled) { transform: none; box-shadow: none; border-co
 
 /* tight viewports (itch iframe ~600px): squeeze the day phase so the
    hand's card names clear the sticky file bar */
+/* ---------- trailer-beat juice ---------- */
+/* verdict stamp lands with a desk-shake */
+#frame.shake { animation: frameshake .45s ease; }
+@keyframes frameshake {
+  15% { transform: translate(-5px, 2px); }
+  35% { transform: translate(4px, -3px); }
+  55% { transform: translate(-3px, -1px); }
+  75% { transform: translate(2px, 1px); }
+}
+/* desk-lamp flicker while the amendment lands */
+#frame.lamp-flicker { animation: lampflick .12s steps(2) 7; }
+@keyframes lampflick {
+  50% { filter: brightness(1.35) saturate(.6); }
+}
+/* shutter-sweep wipe on day/night shift changes */
+body.wiping::after {
+  content: ""; position: fixed; inset: 0; z-index: 40; pointer-events: none;
+  background: linear-gradient(100deg, transparent 20%, var(--ink) 50%, transparent 80%);
+  opacity: .8; transform: translateX(-100%);
+  animation: wipesweep .7s ease forwards;
+}
+@keyframes wipesweep { to { transform: translateX(100%); } }
+/* the ghost replay inside the amendment panel */
+#amendGhost {
+  color: #e8b34b; border-top: 1px dashed #6b531f;
+  padding-top: 12px; font-size: 12px;
+}
+/* contested nightly case tag */
+.contested-tag {
+  font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .14em;
+  color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 4px;
+  padding: 2px 8px; margin-left: 10px; white-space: nowrap;
+}
+
 @media (max-height: 640px) {
   #hud { padding-bottom: 8px; }
   #instr { margin: 6px 0 0; padding: 6px 12px; }

@@ -32,8 +32,10 @@ python3 -m http.server 8000
 - **Night shift**: the rule is pinned as text chips. Five filings, one at a
   time — stamp each **SUS** (`←`) or **HUMAN** (`→`). Instant feedback, and
   wrong stamps show the fact that failed. Correct stamps build a ×1–×3
-  streak; from night 2 an 8-second clock pays a speed bonus. A flawless
-  5/5 night clears a strike.
+  streak; from night 2 an 8-second clock pays a speed bonus (it ticks
+  faster under 3 seconds). One filing a night is **contested** — call it
+  right for double pay, wrong and it costs a strike. A flawless 5/5 night
+  clears a strike, and a ×3+ best streak can be banked to clear one too.
 - **From day 2**: you may *request one more ruling* per day (drops today's
   pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
   miss: two strikes — `O` toggles).

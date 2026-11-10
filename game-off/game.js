@@ -21,6 +21,7 @@ const LOGIC = window.NIGHT_SHIFT_LOGIC;
 
 const $ = (id) => document.getElementById(id);
 const titleEl = $("title"), gameEl = $("game"), dawnEl = $("dawn"), dossierEl = $("dossier");
+const frameEl = $("frame");
 const dayPhase = $("dayPhase"), verdictPhase = $("verdictPhase"), auditPhase = $("auditPhase");
 const finalePhase = $("finalePhase");
 
@@ -69,7 +70,46 @@ const sfx = {
   dawn:   () => [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, .2, "triangle", .05, i * .13)),
   alarm:  () => [660, 880, 660, 880].forEach((f, i) => tone(f, .12, "square", .05, i * .14)),
   rise:   (i) => tone(340 + i * 70, .06, "triangle", .035),
+  klaxon: () => [440, 330, 440, 330, 550, 330].forEach((f, i) => tone(f, .14, "square", .06, i * .17)),
+  thud:   () => { thudDrop(); tone(1400, .03, "square", .03, .02); },
+  slide:  () => noiseBurst(.16, 1800, .05),
+  shutter:() => { noiseBurst(.07, 900, .06); noiseBurst(.07, 1400, .05, .09); },
+  tickHi: (left) => tone(880 + (3 - left) * 160, .035, "square", .035),
 };
+
+/* filtered noise burst — paper slides, camera shutters. */
+function noiseBurst(dur = .15, freq = 1500, vol = .05, when = 0) {
+  try {
+    const ac = audio();
+    const t = ac.currentTime + when;
+    const len = Math.max(1, Math.floor(ac.sampleRate * dur));
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 1.1;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(ac.destination);
+    src.start(t);
+  } catch { /* no audio */ }
+}
+/* low sine drop — the stamp landing on the desk. */
+function thudDrop() {
+  try {
+    const ac = audio();
+    const t = ac.currentTime;
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(150, t);
+    o.frequency.exponentialRampToValueAtTime(42, t + .2);
+    g.gain.setValueAtTime(.14, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + .28);
+    o.connect(g); g.connect(ac.destination);
+    o.start(t); o.stop(t + .3);
+  } catch { /* no audio */ }
+}
 
 // ---------- night music ----------
 /* Vendored track ("Bump in the Night" — Kevin MacLeod, CC-BY-4.0, see
@@ -182,6 +222,10 @@ const ARIA = {
   ],
   survived: ["You lived.", "The ledger notes a survivor."],
   struck: ["A strike. The rule didn't bend for you.", "Filed under SUS. The ledger remembers."],
+  nearMiss: [
+    "One fact off. The rule doesn't bend for almost.",
+    "So close the ledger almost lied for you. Almost.",
+  ],
   eliminated: ["Three strikes. Cut — but not erased."],
   juror: ["You're on jury duty now."],
   auditOpen: [
@@ -238,6 +282,13 @@ const G = {
   amendAfter: null,
   amendShown: false,
   auditIdx: 0,
+  amending: false,
+  amendTimer: null,
+  contestedIdx: -1,
+  finaleRows: null,
+  finaleOpts: null,
+  finaleChoice: null,
+  clockTickLast: 4,
   auditHitsToday: 0,
   nightPoints: 0,
   streak: 1,
@@ -277,6 +328,16 @@ function hud() {
   $("hudScore").textContent = `SCORE ${G.score}`;
 }
 function setShift(shift) { document.body.dataset.shift = shift; }
+let wipeTimer = null;
+/* shutter-sweep on day/night shift changes — the trailer transition. */
+function wipeShift() {
+  sfx.shutter();
+  document.body.classList.remove("wiping");
+  void document.body.offsetWidth;
+  document.body.classList.add("wiping");
+  clearTimeout(wipeTimer);
+  wipeTimer = setTimeout(() => document.body.classList.remove("wiping"), 750);
+}
 function showOnly(which) {
   G.phase = which;
   dayPhase.classList.toggle("hidden", which !== "day");
@@ -285,6 +346,7 @@ function showOnly(which) {
   finalePhase.classList.toggle("hidden", which !== "finale");
   setShift(which === "audit" || which === "finale" ? "night" : "day");
   if (which === "day") musicStop();   // music plays nights + through the endings only
+  if (which !== "verdict") wipeShift();
   hud();
 }
 
@@ -409,6 +471,7 @@ function updateFileBtn() {
 function fileSelected() {
   if (!G.selected || G.phase !== "day") return;
   G.filed = G.selected;
+  sfx.slide();
   sfx.file();
   showOnly("verdict");
   setInstr("verdict");
@@ -448,7 +511,7 @@ function renderVerdict() {
 
   // staggered reveal: unchecked rows first (250ms apart), then checked
   // rows passes-first (550ms apart, rising tone), last checked row holds
-  // 800ms on a pulsing "…" before its mark lands
+  // 1200ms on a pulsing "…" before its mark lands — the trailer beat
   const rows = [...$("factRows").querySelectorAll(".fact")];
   const unchecked = rows.filter((r) => r.classList.contains("dim"));
   const seq = rows.filter((r) => !r.classList.contains("dim"))
@@ -467,7 +530,7 @@ function renderVerdict() {
         r.classList.remove("pre");
         if (mk) { mk.textContent = "…"; mk.classList.add("pulse"); }
       }, t);
-      t += 800;
+      t += 1200;
       later(() => {
         if (mk) { mk.innerHTML = orig; mk.classList.remove("pulse"); }
         sfx.rise(i);
@@ -515,7 +578,12 @@ function finishVerdict() {
   const sb = $("stampBox");
   sb.innerHTML = `<div class="stamp ${stampCls}">${stampText}</div>`;
   sfx.stamp();
+  sfx.thud();
   passed ? sfx.human() : sfx.sus();
+  frameEl.classList.remove("shake");
+  void frameEl.offsetWidth;
+  frameEl.classList.add("shake");
+  later(() => frameEl.classList.remove("shake"), 500);
 
   if (passed) {
     G.daysSurvived++;
@@ -529,7 +597,8 @@ function finishVerdict() {
   } else {
     G.strikes += G.oath ? 2 : 1;
     G.dayResults[G.day] = "struck";
-    ariaSay(ARIA.struck);
+    // off by exactly one fact — the near-miss gets its own line
+    ariaSay(LOGIC.nearMiss(c, d.rule) ? ARIA.nearMiss : ARIA.struck);
   }
 
   // liar day: reveal the clerical error, score the flag
@@ -577,6 +646,12 @@ function fmtFiled(mins) {
   const h = Math.floor(mins / 60), m = mins % 60;
   return `+${h}h${String(m).padStart(2, "0")}m`;
 }
+/* "MARA, OKO and JUN" — names the humans a bad rule cuts. */
+function joinNames(a) {
+  if (!a.length) return "no one";
+  if (a.length === 1) return a[0];
+  return a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
+}
 
 function startAudit() {
   banner("NIGHT SHIFT — now you judge");
@@ -610,6 +685,8 @@ function startAudit() {
     return { ...c, filer, filed, truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
   });
   G.auditIdx = 0;
+  // one filing a night is contested: right pays double, wrong costs a strike
+  G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
   G.auditHitsToday = 0;
   G.nightPoints = 0;
   G.streak = 1;
@@ -642,9 +719,16 @@ function caseClock() {
   fill.style.transition = "none";
   fill.style.width = "100%";
   G.clockStart = Date.now();
+  G.clockTickLast = 4;
   G.clockTimer = setInterval(() => {
     const frac = Math.max(0, 1 - (Date.now() - G.clockStart) / 8000);
     fill.style.width = frac * 100 + "%";
+    // last three seconds tick, rising — hurry without words
+    const secs = Math.ceil(frac * 8);
+    if (secs <= 3 && secs >= 1 && secs !== G.clockTickLast) {
+      G.clockTickLast = secs;
+      sfx.tickHi(secs);
+    }
     if (frac <= 0) {
       clearInterval(G.clockTimer);
       G.clockTimer = null;
@@ -663,20 +747,25 @@ function renderCase() {
   const sub = G.auditSubs[G.auditIdx];
   const el = $("caseCard");
   const checked = sub.pick !== null;
+  const contested = G.auditIdx === G.contestedIdx;
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
   const arg = sub.filer === "VALE" ? DAYS[G.day].valeLine : sub.card.argument;
+  const reason = !sub.pick ? "" : sub.correct
+    ? `+${sub.earned} pts${sub.bonus ? ` · +${sub.bonus} speed` : ""}${contested ? " · contested ×2" : ""}`
+    : (sub.truth ? "passes: meets every criterion"
+                 : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
+                     .map((k) => sub.rule.find((x) => x.key === k).text).join(", ")) +
+      (contested && G.status === "player" ? " · +1 STRIKE" : "");
   el.innerHTML = `<p class="case-num">CASE ${G.auditIdx + 1}/5
+      ${contested && !checked
+        ? `<span class="contested-tag">\u2696 CONTESTED · right pays double · wrong costs a strike</span>` : ""}
       <span id="streakTag" class="${G.streak > 1 ? "pop" : ""}">STREAK ×${G.streak}${newTag("streak", 0)}</span></p>
     <div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · ${sub.filer} <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
       ${sub.pick ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
-        <p class="case-reason">${sub.correct
-            ? `+${sub.earned} pts${sub.bonus ? ` · +${sub.bonus} speed` : ""}`
-            : (sub.truth ? "passes: meets every criterion"
-                         : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
-                             .map((k) => sub.rule.find((x) => x.key === k).text).join(", "))}</p>` : ""}
+        <p class="case-reason">${reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
       ${factRows(sub.card, verdicts)}
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}">${sub.pick}</div>` : ""}
@@ -695,11 +784,13 @@ function stamp(pickVal) {
   G.clockTimer = null;
   sub.pick = pickVal;
   sub.correct = (pickVal === "HUMAN") === sub.truth;
+  const contested = G.auditIdx === G.contestedIdx;
   if (sub.correct) {
     G.auditHitsToday++;
     G.auditHits++;
     sub.bonus = clockBonus();
     sub.earned = 20 * G.streak + sub.bonus;
+    if (contested) sub.earned *= 2;
     G.nightPoints += sub.earned;
     G.score += sub.earned;
     if (G.streak < 3) G.streak++;
@@ -707,8 +798,14 @@ function stamp(pickVal) {
   } else {
     sub.earned = 0; sub.bonus = 0;
     G.streak = 1;
+    if (contested && G.status === "player") {
+      G.strikes++;
+      ariaSay(ARIA.struck);
+    }
   }
   G.auditTotal++;
+  hud();
+  sfx.slide();
   sfx.stamp();
   sub.correct ? sfx.human() : sfx.sus();
   renderCase();
@@ -723,7 +820,7 @@ function nextCase() {
   // amendment interrupt lands between the last base-rule case and the
   // first amended case
   if (G.amendAfter !== null && !G.amendShown && next === G.amendAfter) {
-    showAmendment();
+    if (!G.amending) showAmendment();
     return;
   }
   G.auditIdx = next;
@@ -731,32 +828,84 @@ function nextCase() {
   renderCase();
 }
 
+/* duck the night music under an interruption, restore after. */
+function musicDuck(on) {
+  if (!MUSIC) return;
+  musicFadeTo(on ? 0.04 : 0.16, on ? 350 : 700);
+}
+
 function showAmendment() {
+  if (G.amending) return;
   const d = DAYS[G.day];
+  G.amending = true;
   G.auditLocked = true;
   const b = $("amendBanner");
   $("amendNote").textContent = d.amend.note;
+  // the gut-punch: the case just judged, replayed under the new rule
+  const prev = G.auditSubs[G.auditIdx - 1];
+  const ghost = $("amendGhost");
+  ghost.textContent = "";
+  ghost.classList.add("hidden");
+  if (prev) {
+    const nowPass = LOGIC.passes(prev.card, d.amend.rule);
+    if (nowPass !== prev.truth) {
+      ghost.textContent =
+        `\u26A0 ${prev.card.name} would now ${nowPass ? "PASS" : "FAIL"} — you stamped it ${prev.pick}.`;
+      ghost.classList.remove("hidden");
+    }
+  }
   b.classList.remove("hidden");
-  sfx.alarm();
-  // chips: strike removed criteria, flash new ones
+  b.onclick = () => finishAmend();
+  sfx.klaxon();
+  musicDuck(true);
+  frameEl.classList.add("lamp-flicker");
+  later(() => frameEl.classList.remove("lamp-flicker"), 900);
+  // chips: old criteria struck one by one, then the new ones stamp in
   const oldTexts = d.rule.map((c) => c.text);
   const newTexts = d.amend.rule.map((c) => c.text);
+  const removed = oldTexts.filter((t) => !newTexts.includes(t));
+  const added = newTexts.filter((t) => !oldTexts.includes(t));
   $("ruleChips").innerHTML =
     `<span class="rc-label">${ruleText(d)}</span>` +
-    oldTexts.filter((t) => !newTexts.includes(t))
-      .map((t) => `<span class="chip struck">${t}</span>`).join("") +
-    newTexts.filter((t) => !oldTexts.includes(t))
-      .map((t) => `<span class="chip flash">${t}</span>`).join("") +
-    newTexts.filter((t) => oldTexts.includes(t))
-      .map((t) => `<span class="chip">${t}</span>`).join("");
-  later(() => {
-    b.classList.add("hidden");
-    G.amendShown = true;
-    renderRuleChips(d.amend.rule, true);
-    G.auditLocked = false;
-    G.auditIdx++;
-    renderCase();
-  }, 1400);
+    oldTexts.map((t) =>
+      `<span class="chip${removed.includes(t) ? " doomed" : ""}">${t}</span>`).join("");
+  let t = 450;
+  removed.forEach(() => {
+    later(() => {
+      const el = $("ruleChips").querySelector(".chip.doomed:not(.struck)");
+      if (el) { el.classList.add("struck"); sfx.tick(); }
+    }, t);
+    t += 350;
+  });
+  added.forEach((txt) => {
+    const at = t;
+    later(() => {
+      const rc = $("ruleChips");
+      const s = document.createElement("span");
+      s.className = "chip flash";
+      s.textContent = txt;
+      rc.appendChild(s);
+      sfx.rise(2);
+    }, at);
+    t += 350;
+  });
+  G.amendTimer = later(finishAmend, t + 700);
+}
+
+function finishAmend() {
+  if (!G.amending) return;
+  G.amending = false;
+  clearTimeout(G.amendTimer);
+  const d = DAYS[G.day];
+  $("amendBanner").classList.add("hidden");
+  $("amendBanner").onclick = null;
+  frameEl.classList.remove("lamp-flicker");
+  musicDuck(false);
+  G.amendShown = true;
+  renderRuleChips(d.amend.rule, true);
+  G.auditLocked = false;
+  G.auditIdx++;
+  renderCase();
 }
 
 function auditSummary() {
@@ -791,6 +940,22 @@ function auditSummary() {
     <p class="sum-effect">best streak ×${G.bestStreak} · ${effect}</p>`;
   const actions = $("auditActions");
   actions.innerHTML = "";
+  // bank a hot streak: a ×3+ best streak buys back one strike, once a night
+  if (G.bestStreak >= 3 && G.status === "player" && G.strikes > 0) {
+    const bank = document.createElement("button");
+    bank.className = "ghost";
+    bank.textContent = `Bank ×${G.bestStreak} streak — clear a strike`;
+    bank.addEventListener("click", () => {
+      G.strikes--;
+      G.bestStreak = 1;
+      G.streak = 1;
+      sfx.human();
+      hud();
+      bank.disabled = true;
+      bank.textContent = "Strike cleared — the ledger forgets";
+    });
+    actions.appendChild(bank);
+  }
   const btn = document.createElement("button");
   btn.textContent = G.day >= DAYS.length - 1 ? "Last call →" : "Next day →";
   btn.addEventListener("click", nextDay);
@@ -811,13 +976,25 @@ function startFinale() {
   setInstr("finale");
   banner("LAST CALL — write the rule");
   G.finaleChoice = null;
+  // seeded shuffle — same puzzle, but VALE isn't always the last row and
+  // the winning rule isn't always option d. Spoilers stay spoiled.
+  const frng = stream("finale");
+  const shuf = (a) => {
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(frng() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  G.finaleRows = shuf([...FINALE]);
+  G.finaleOpts = shuf([...FINALE_RULES]);
   renderFinale();
 }
 
 function renderFinale() {
   const tb = $("finaleBody");
   tb.innerHTML = "";
-  for (const row of FINALE) {
+  for (const row of G.finaleRows || FINALE) {
     const cut = G.finaleChoice && !LOGIC.passes(row, G.finaleChoice.rule);
     const tr = document.createElement("tr");
     if (cut) tr.className = "cut";
@@ -830,7 +1007,7 @@ function renderFinale() {
   }
   const box = $("ruleChoices");
   box.innerHTML = "";
-  FINALE_RULES.forEach((opt, i) => {
+  (G.finaleOpts || FINALE_RULES).forEach((opt, i) => {
     const b = document.createElement("button");
     b.className = "rule-choice" + (G.finaleChoice === opt ? " on" : "");
     b.innerHTML = `<b>${"abcd"[i]}</b> ${opt.text}`;
@@ -861,7 +1038,8 @@ function signRule() {
     line = `VALE is gone. So are ${humanCut.join(", ")}. The rule didn't care who.`;
   } else {
     title = "THE DAY SHIFT IS AUTOMATED";
-    line = "VALE passed. It always passes. Tomorrow it argues your case.";
+    line = `You cut ${joinNames(humanCut)} — every human on the docket.` +
+      " VALE filed at +0.003s, as always. Tomorrow it argues your case.";
   }
   G.finaleTitle = title;
   G.finaleLine = line;
@@ -966,7 +1144,8 @@ document.addEventListener("keydown", (e) => {
     }
   } else if (G.phase === "audit") {
     if (G.auditLocked) {
-      if (!MODIFIER_KEYS.has(e.key)) nextCase();
+      // during the amendment the banner is skippable; otherwise advance
+      if (!MODIFIER_KEYS.has(e.key)) { if (G.amending) finishAmend(); else nextCase(); }
       return;
     }
     const sub = G.auditSubs[G.auditIdx];
@@ -978,9 +1157,10 @@ document.addEventListener("keydown", (e) => {
       const b = $("auditActions").querySelector("button"); if (b) b.click();
     }
   } else if (G.phase === "finale") {
+    const opts = G.finaleOpts || FINALE_RULES;
     const idx = "abcd".indexOf(e.key.toLowerCase());
-    if (idx >= 0 && FINALE_RULES[idx]) {
-      G.finaleChoice = FINALE_RULES[idx];
+    if (idx >= 0 && opts[idx]) {
+      G.finaleChoice = opts[idx];
       sfx.tick();
       renderFinale();
       $("signBtn").disabled = false;
@@ -993,11 +1173,15 @@ document.addEventListener("keydown", (e) => {
 });
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta", "Tab", "CapsLock", "Escape"]);
 // tap a resolved case (or the stamp buttons) to move on
-$("caseCard").addEventListener("click", () => { if (G.auditLocked) nextCase(); });
+$("caseCard").addEventListener("click", () => {
+  if (G.auditLocked) { if (G.amending) finishAmend(); else nextCase(); }
+});
 $("caseBtns").addEventListener("click", (e) => {
   // a click on an enabled stamp button is the stamp itself, not a dismiss;
   // once locked the buttons are disabled, so further clicks land here
-  if (G.auditLocked && !(e.target instanceof HTMLButtonElement)) nextCase();
+  if (G.auditLocked && !(e.target instanceof HTMLButtonElement)) {
+    if (G.amending) finishAmend(); else nextCase();
+  }
 });
 $("banner").addEventListener("click", () => $("banner").classList.add("hidden"));
 
