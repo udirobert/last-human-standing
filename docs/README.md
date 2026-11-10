@@ -284,7 +284,7 @@ See `submission.md`, `ONE_PAGER.md`, `DEMO.md`.
 See [TESTING.md](./TESTING.md) for the full testing guide. Quick start:
 
 ```bash
-npm run test:run      # 87 tests across 7 files
+npm run test:run      # 458 tests across 31 files
 npm run test:coverage # with line/function/branch thresholds
 ```
 
@@ -392,6 +392,6 @@ Web Push (VAPID) notifications are supported. When enabled:
 │   ├── schema.sql            # Full database schema (idempotent)
 │   └── migrations/           # Incremental migrations
 │       └── 003_push_subscriptions.sql
-├── tests/                    # Vitest test files (87 tests, 7 files)
+├── tests/                    # Vitest test files (458 tests, 31 files)
 └── docs/                     # Documentation
 ```

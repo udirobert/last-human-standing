@@ -35,6 +35,11 @@ the public page (spoilers). Record the screen + audio with consent.
 - [ ] Contested paraphrase after one night (their words): ______
 - [ ] Clock noticed without prompting? (y/n) Oath understood? (y/n)
 - [ ] Any tap-everything or random filing? When, and what preceded it?
+- [ ] Did any moment read as *physical* without being explained to them
+      (a card dealt, a filing flying, a stamp landing, the third-strike
+      CUT)? Quote the moment: ______
+- [ ] Third strike, if reached — reaction to the `CUT` beat (verbatim):
+      ______  → consequence, or just a dark screen?
 
 ## Debrief (10 min, exact questions)
 

@@ -13,8 +13,8 @@ on the beat in edit).
 1. **Day 1 docket** — slow cursor drift across the two HUMAN rows, rest
    on the riddle. 8s.
 2. **Filing → verdict** — select correct card, file, let the staged reveal
-   play untouched through the stamp + shake. 15s. (Do NOT skip — the hold
-   is the shot.)
+   play untouched through the stamp biting down + card recoil. 15s. (Do NOT
+   skip — the hold is the shot.)
 3. **Night stamping** — three stamps in rhythm, streak ×3 pop visible. 10s.
 4. **Amendment** — enter the amended night, let the full banner play:
    klaxon, lamp flicker, chips struck one by one, ghost line. 12s. This
@@ -22,12 +22,15 @@ on the beat in edit).
 5. **Finale** — slow scroll of the table, hover the timestamps column,
    select the winning rule, sign. 12s.
 6. **Montage pool** — contested ×2 stamp, sub-3s clock, one STRIKE stamp,
-   COLLATERAL or LAST HUMAN STANDING title. Grab whatever happens.
+   the third-strike `CUT` (room dimming to one lit counter — needs a
+   deliberate throwaway run, so give it its own take), COLLATERAL or LAST
+   HUMAN STANDING title. Grab whatever happens.
 
 ## Cover GIF (2–4s loop)
 
 Best source: take 4, trimmed to banner-in → chips struck (loop point on
-the flash frames — motion masks the cut). Or take 2's stamp landing.
+the flash frames — motion masks the cut). Or take 2's stamp landing, or
+the `CUT` beat if you can end the loop on the dark hold.
 
 ```sh
 # trim (example: seconds 3-6 of amendment.mp4)

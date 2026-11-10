@@ -91,11 +91,11 @@ trailer beats), then the end slate. No voiceover; let the stamp SFX punctuate.
 | # | Card (3s)                              | Footage (5–6s)                                              |
 |---|----------------------------------------|-------------------------------------------------------------|
 | 1 | ARIA HAS A SECRET RULE                 | Day 1: riddle + docket, cursor hovering precedent rows      |
-| 2 | READ HER RULINGS. FILE WHAT SHE'D PASS | Select card → file → staged fact-row reveal → SURVIVED stamp (with shake) |
+| 2 | READ HER RULINGS. FILE WHAT SHE'D PASS | Select card → file (flight to the tray) → staged fact-row reveal → SURVIVED stamp biting down, card recoil |
 | 3 | AT NIGHT, YOU ARE THE AUDITOR          | Night stamping: SUS/HUMAN stamps, streak ×3 popping         |
 | 4 | THE RULE CAN CHANGE MID-SHIFT          | **Amendment banner firing**: klaxon, chips struck one by one, ghost line visible |
 | 5 | ONE FILER ISN'T HUMAN                  | Finale table, timestamps column, option select → rule sign  |
-| 6 | Montage (8s, quick cuts on the beat)   | contested ×2 stamp · clock under 3s · strike pip · COLLATERAL / LAST HUMAN STANDING titles |
+| 6 | Montage (8s, quick cuts on the beat)   | contested ×2 stamp · clock under 3s · third-strike CUT (room goes dark) · COLLATERAL / LAST HUMAN STANDING titles |
 | 7 | End slate (4s)                         | NIGHT SHIFT · Game Off 2026 · play in your browser · [itch URL] |
 
 Capture notes: hide the cursor where possible, record at 1280×720+, cut on
@@ -108,8 +108,10 @@ explaining, it doesn't belong in the trailer.
   SUS case card, tagline text. Must read at thumbnail size: big stamp,
   three words max besides the title.
 - **Animated cover (preferred):** 2–4s GIF loop of the amendment banner
-  firing OR the SURVIVED stamp landing with shake. No strobing — itch
-  rejects seizure-inducing covers and ours is palette-safe anyway.
+  firing, the SURVIVED stamp biting down, or the third-strike `CUT`
+  (that one has the strongest thumbnail silhouette: dark desk, one red
+  stamp). No strobing — itch rejects seizure-inducing covers and ours is
+  palette-safe anyway.
 - Record with OBS/QuickTime → trim → export GIF (≤ a few MB), upload as
   the project cover image.
 

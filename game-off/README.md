@@ -51,7 +51,8 @@ python3 -m http.server 8000
 - **Finale**: after night five you write the last rule yourself. One filer
   isn't human. Choose the criterion that cuts it — and only it.
 - Still a player after day five (and the right finale) = LAST HUMAN
-  STANDING. Three strikes = dossier + jury duty.
+  STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
+  the dossier lands — then it's jury duty.
 - Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `O` oath ·
   `M` — music on/off.
 
@@ -76,7 +77,12 @@ could conclude — pinning rate, single-word harmful theories (wrong
 one-word rules with full docket support that could bait a strike:
 0% on all five days), and liar-day fog cover. Report-only; run
 `node audit-deduction.mjs` after touching `deal()`. The day/night shift
-is `body[data-shift]` + CSS variables; all "art" is typographic.
+is `body[data-shift]` + CSS variables; all art is inline SVG + CSS, and
+there are no image assets. State changes are physical on purpose — cards
+deal, filings fly to the tray, the night stamp swings and throws ink, the
+amendment is stapled on, the finale is a decree you fill in and sign — and
+`prefers-reduced-motion` skips every flight, leaving the state change
+visible and instant.
 The night music is a vendored MP3 (`audio/bump-in-the-night.mp3`, fetched
 via `scripts/vendor-patch.mjs` — see `audio/manifest.json`) played through
 a plain `<audio>` element so it also works on `file://`; full attribution
