@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { usePolling } from "../hooks/usePolling.js";
 import { useRound } from "../world/RoundProvider.jsx";
@@ -71,7 +71,10 @@ export default function FieldPulse({ maxLines = 2, className = "" }) {
     initial: { events: [], sealedToday: null },
   });
 
-  const events = data?.events || [];
+  // Memoized so the flash effect below only re-runs when the event list
+  // actually changes — a fresh `[]` literal every render would retrigger it.
+  const eventList = data?.events;
+  const events = useMemo(() => eventList || [], [eventList]);
   const sealedToday = data?.sealedToday;
   const lines = events.slice(0, maxLines);
 
