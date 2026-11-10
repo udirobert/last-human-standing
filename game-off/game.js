@@ -879,11 +879,11 @@ function renderCase() {
                  : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
                      .map((k) => sub.rule.find((x) => x.key === k).text).join(", ")) +
       (contested && G.status === "player" ? " · +1 STRIKE" : "");
-  el.innerHTML = `<p class="case-num">CASE ${G.auditIdx + 1}/5
-      ${contested && !checked
-        ? `<span class="contested-tag">\u2696 CONTESTED · right pays double · wrong costs a strike</span>` : ""}
+  el.innerHTML =    `<p class="case-num">CASE ${G.auditIdx + 1}/5
       <span id="streakTag" class="${G.streak > 1 ? "pop" : ""}">STREAK ×${G.streak}${newTag("streak", 0)}</span></p>
-    <div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}">
+    ${contested && !checked
+      ? `<span class="contested-tag"><b>\u2696 CONTESTED</b><i>right pays ×2 · wrong costs a strike</i></span>` : ""}
+    <div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${contested && !checked ? " contested" : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · ${sub.filer} <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
@@ -897,7 +897,10 @@ function renderCase() {
   $("susBtn").disabled = $("humanBtn").disabled = checked;
   if (!checked) {
     caseClock();
-    if (!calmMotion()) later(() => sfx.drop(), 80);   // the next file hits the desk
+    if (!calmMotion()) {
+      later(() => sfx.drop(), 80);          // the next file hits the desk
+      if (contested) later(() => sfx.gavel(), 320);   // and the contest slams on top
+    }
   }
 }
 
@@ -1025,6 +1028,7 @@ function musicDuck(on) {
   musicFadeTo(on ? 0.04 : 0.16, on ? 350 : 700);
 }
 
+const AMEND_CONTACT = 430;
 function showAmendment() {
   if (G.amending) return;
   const d = DAYS[G.day];
@@ -1046,8 +1050,23 @@ function showAmendment() {
     }
   }
   b.classList.remove("hidden");
+  // the alarm first, then the rider falls out of the ceiling and lands
+  b.classList.remove("falling");
+  void b.offsetWidth;
+  b.classList.add("falling");
   b.onclick = () => finishAmend();
   sfx.klaxon();
+  // the papers under it rattle — not the frame, whose transform would
+  // trap this fixed overlay for the length of the shake
+  later(() => {
+    sfx.thud();
+    for (const el of [$("ruleChips"), $("caseCard")]) {
+      if (!el) continue;
+      el.classList.remove("recoil");
+      void el.offsetWidth;
+      el.classList.add("recoil");
+    }
+  }, AMEND_CONTACT);
   musicDuck(true);
   frameEl.classList.add("lamp-flicker");
   later(() => frameEl.classList.remove("lamp-flicker"), 900);
@@ -1060,7 +1079,7 @@ function showAmendment() {
     `<span class="rc-label">${ruleText(d)}</span>` +
     oldTexts.map((t) =>
       `<span class="chip${removed.includes(t) ? " doomed" : ""}">${t}</span>`).join("");
-  let t = 450;
+  let t = AMEND_CONTACT + 180;
   removed.forEach(() => {
     later(() => {
       const el = $("ruleChips").querySelector(".chip.doomed:not(.struck)");

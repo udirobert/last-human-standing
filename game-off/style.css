@@ -846,7 +846,32 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
   background: #14161c; border: 2px solid #d96a5a; border-radius: 6px;
   box-shadow: 0 18px 60px rgba(0,0,0,.7);
   transform: rotate(-.5deg);
-  animation: amendin .3s cubic-bezier(.2,1.2,.4,1) backwards;
+}
+/* it does not fade in, it falls out of the ceiling and lands */
+#amendBanner.falling .amend-panel {
+  animation: amendslam .5s cubic-bezier(.52,0,.86,.42) both;
+}
+@keyframes amendslam {
+  0% { opacity: 0; transform: translateY(-72vh) rotate(-7deg) scale(1.16); }
+  10% { opacity: 1; }
+  86% { transform: translateY(7px) rotate(1.4deg) scale(.99); }
+  100% { transform: translateY(0) rotate(-.5deg) scale(1); }
+}
+/* the room flashes red where it hit */
+#amendBanner .amend-panel { z-index: 1; }
+#amendBanner.falling::after {
+  content: ""; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(circle at 50% 46%,
+    rgba(217,106,90,.45), rgba(217,106,90,.1) 42%, transparent 68%);
+  animation: amendflash .75s ease-out .34s both;
+}
+@keyframes amendflash { 0% { opacity: 0; } 18% { opacity: 1; } 100% { opacity: 0; } }
+/* everything on the desk shifts when the rider lands */
+.recoil { animation: recoil .34s cubic-bezier(.3,1.4,.4,1); }
+@keyframes recoil {
+  22% { transform: translateX(-4px); }
+  48% { transform: translateX(4px); }
+  72% { transform: translateX(-2px); }
 }
 /* the amendment is stapled over the old rule, not scrolled in */
 #amendBanner .amend-panel::after {
@@ -856,14 +881,27 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
   background: rgba(236,229,216,.08);
   transform: rotate(-16deg);
 }
-@keyframes amendin {
-  from { opacity: 0; transform: rotate(-3deg) scale(1.06); }
-}
+
 #amendBanner b {
   font-size: clamp(20px, 5vw, 32px); letter-spacing: .3em; color: #d96a5a;
 }
 #amendBanner span { font-size: 13px; letter-spacing: .08em; color: #ece5d8; max-width: 40ch; }
-.chip.struck { text-decoration: line-through; opacity: .5; }
+/* a criterion crossed off the rule, not greyed out */
+.chip.struck {
+  position: relative; opacity: .55;
+  animation: chipstrike .34s ease;
+}
+.chip.struck::after {
+  content: ""; position: absolute; left: -5px; right: -5px; top: 50%;
+  height: 2px; background: var(--red);
+  transform-origin: left center; transform: rotate(-2.5deg);
+  animation: slashin .22s ease-out both;
+}
+@keyframes slashin { from { transform: rotate(-2.5deg) scaleX(0); } }
+@keyframes chipstrike {
+  30% { transform: translateX(-2px); }
+  65% { transform: translateX(2px); }
+}
 .chip.flash { animation: chipflash .5s ease 2; }
 @keyframes chipflash { 50% { background: rgba(232,179,75,.35); } }
 .amended-tag { color: var(--red); font-size: 9px; letter-spacing: .15em; margin-left: 4px; }
@@ -1009,6 +1047,9 @@ body::before {
   #caseBtns .vb.press { animation: none; opacity: 1; }
   .case-card.stamped-human::after,
   .case-card.stamped-sus::after { animation: none; opacity: .3; }
+  .contested-tag, .chip.struck, .chip.struck::after,
+  #amendBanner.falling .amend-panel { animation: none; }
+  #amendBanner.falling::after { animation: none; opacity: 0; }
 }
 
 button.ghost {
@@ -1072,11 +1113,32 @@ body.wiping::after {
   color: #e8b34b; border-top: 1px dashed #6b531f;
   padding-top: 12px; font-size: 12px;
 }
-/* contested nightly case tag */
+/* contested nightly case — the tag lands on the card like a stamp */
 .contested-tag {
-  font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .14em;
-  color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 4px;
-  padding: 2px 8px; margin-left: 10px; white-space: nowrap;
+  display: inline-flex; flex-wrap: wrap; align-items: baseline;
+  justify-content: center; gap: 4px 10px;
+  font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .12em;
+  color: var(--red); border: 2px solid var(--red); border-radius: 3px;
+  background: rgba(217,106,90,.1);
+  padding: 4px 10px; margin: 0 auto 10px; width: max-content; max-width: 100%;
+  transform: rotate(-2deg);
+  animation: contestslam .44s cubic-bezier(.42,0,.82,.4) .16s backwards;
+}
+.contested-tag b { font-weight: 700; letter-spacing: .18em; }
+.contested-tag i { font-style: normal; color: var(--dim); font-size: 9.5px; letter-spacing: .1em; }
+@keyframes contestslam {
+  0% { opacity: 0; transform: rotate(-11deg) scale(2.7); }
+  74% { opacity: 1; transform: rotate(-1.2deg) scale(.93); }
+  100% { transform: rotate(-2deg) scale(1); }
+}
+/* hazard band along the top edge of a contested file */
+.case-card.contested { border-color: var(--accent-dim); }
+.case-card.contested::before {
+  content: ""; position: absolute; inset: -1px -1px auto; height: 5px; z-index: 3;
+  border-radius: 12px 4px 0 0;
+  background: repeating-linear-gradient(135deg,
+    var(--red) 0 5px, transparent 5px 11px);
+  opacity: .8;
 }
 
 @media (max-height: 640px) {
