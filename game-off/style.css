@@ -47,7 +47,47 @@ body {
   transition: background-color .5s ease, color .5s ease;
 }
 
-#frame { max-width: 760px; margin: 0 auto; min-height: 100%; padding: 18px 16px 40px; position: relative; }
+/* ---------- the room the desk sits in ---------- */
+body { background: #12141a; }
+body[data-shift="day"] { background: #e6dcc4; }
+#stage {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+}
+#stage > div { position: absolute; inset: 0; transition: opacity .65s ease; }
+#stage svg { display: block; width: 100%; height: 100%; }
+.stage-day { opacity: 1; }
+.stage-night { opacity: 0; }
+body[data-shift="night"] .stage-day { opacity: 0; }
+body[data-shift="night"] .stage-night { opacity: 1; }
+/* day: the blinds breathe as clouds cross the window */
+.stage-day .beams { animation: cloudpass 26s ease-in-out infinite; }
+@keyframes cloudpass { 50% { opacity: .55; } }
+.stage-night .cone { animation: conebreathe 9s ease-in-out infinite; transform-origin: 50% 0; }
+@keyframes conebreathe {
+  50% { opacity: .82; transform: scaleX(1.03); }
+}
+.stage-night .nightbulb { animation: bulbflicker 9s linear infinite; }
+.stage-night .dm { animation: motedrift 9s linear infinite; opacity: 0; }
+.stage-night .dm2 { animation-delay: 3s; }
+.stage-night .dm3 { animation-delay: 6s; }
+/* night: ARIA's surveillance sweep passes over everything, softly */
+.scanline {
+  position: fixed; left: 0; right: 0; top: 0; height: 200px; z-index: 55;
+  pointer-events: none; opacity: 0;
+  background: linear-gradient(180deg, transparent 0%, rgba(232,179,75,.05) 55%, rgba(232,179,75,.11) 82%, transparent 100%);
+}
+body[data-shift="night"] .scanline { animation: surveillance 13s linear infinite; }
+@keyframes surveillance {
+  0% { transform: translateY(-210px); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+#frame {
+  max-width: 760px; margin: 0 auto; min-height: 100%; padding: 18px 16px 40px;
+  position: relative; z-index: 1;
+}
 
 .hidden { display: none !important; }
 
@@ -203,7 +243,17 @@ button:disabled { opacity: .45; cursor: default; }
   border: 1px solid var(--faint);
 }
 #hudStrikes .pip.on { background: var(--red); border-color: var(--red); }
-#hudScore { margin-left: auto; color: var(--faint); }
+#hudStrikes .pip.gain { animation: pipgain .55s cubic-bezier(.2,2,.4,1); }
+@keyframes pipgain {
+  0% { transform: scale(1); }
+  40% { transform: scale(2.1); box-shadow: 0 0 0 4px rgba(176,48,40,.22); }
+  100% { transform: scale(1); }
+}
+#hudScore {
+  margin-left: auto; color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+#hudScore.rolling { color: var(--accent); }
 
 /* ---------- instruction line ---------- */
 #instr {
@@ -277,7 +327,26 @@ button:disabled { opacity: .45; cursor: default; }
 
 /* ---------- DAY phase ---------- */
 #dayPhase { display: flex; flex-direction: column; gap: 14px; padding-top: 4px; }
-#riddleWrap { text-align: center; padding: 4px 8px 0; }
+/* the riddle is a memo torn off a pad, sitting a hair crooked */
+#riddleWrap {
+  position: relative; text-align: center;
+  padding: 18px 18px 16px; margin-top: 6px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 2px;
+  transform: rotate(.35deg);
+  box-shadow: 0 1px 0 rgba(0,0,0,.05), 0 16px 34px -22px rgba(0,0,0,.55);
+  transition: background-color .5s, border-color .5s;
+}
+#riddleWrap::before {
+  content: ""; position: absolute; left: 16px; right: 16px; top: -6px; height: 7px;
+  background: repeating-linear-gradient(90deg, var(--line) 0 5px, transparent 5px 11px);
+  opacity: .9;
+}
+#riddleWrap::after {
+  content: ""; position: absolute; right: 12px; bottom: 10px; z-index: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 1px dashed var(--line); opacity: .35;
+}
+#riddleWrap > * { position: relative; z-index: 1; }
 .riddle-kicker {
   font-size: 10px; letter-spacing: .3em;
   color: var(--accent-dim); margin-bottom: 8px;
@@ -293,7 +362,19 @@ button:disabled { opacity: .45; cursor: default; }
 }
 
 /* the docket — precedent rulings as an aligned table */
-#docketWrap { overflow-x: auto; }
+#docketWrap {
+  overflow-x: auto; position: relative;
+  background: var(--card); border: 1px solid var(--line); border-radius: 2px;
+  padding: 12px 14px 4px; transform: rotate(-.3deg);
+  box-shadow: 0 1px 0 rgba(0,0,0,.05), 0 18px 36px -24px rgba(0,0,0,.55);
+  transition: background-color .5s, border-color .5s;
+}
+/* punched, filed */
+#docketWrap::before {
+  content: ""; position: absolute; left: 4px; top: 8px;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--paper); box-shadow: inset 0 1px 2px rgba(0,0,0,.5);
+}
 #docket {
   width: 100%; border-collapse: collapse;
   font-size: 11.5px; color: var(--ink);
@@ -449,6 +530,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 @keyframes vflash-p { 0% { background-color: rgba(46,107,52,.30); } }
 @keyframes vflash-f { 0% { background-color: rgba(176,48,40,.34); } }
 .stamp {
+  position: relative;
   font-family: "Iowan Old Style", Palatino, Georgia, serif;
   font-size: clamp(28px, 7vw, 44px); font-weight: 700; letter-spacing: .12em;
   padding: 6px 26px; border: 4px solid currentColor; border-radius: 6px;
@@ -462,6 +544,19 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   0% { opacity: 0; transform: rotate(-6deg) scale(2.4); }
   100% { opacity: 1; transform: rotate(-6deg) scale(1); }
 }
+/* the spatter the stamp leaves on the desk */
+.stamp::before {
+  content: ""; position: absolute; inset: -22% -14%; pointer-events: none;
+  opacity: .3; z-index: -1;
+  background:
+    radial-gradient(circle at 26% 52%, currentColor 0 5%, transparent 6%),
+    radial-gradient(circle at 74% 40%, currentColor 0 3.2%, transparent 4.2%),
+    radial-gradient(circle at 62% 78%, currentColor 0 2.4%, transparent 3.4%),
+    radial-gradient(circle at 14% 74%, currentColor 0 2%, transparent 3%),
+    radial-gradient(circle at 86% 68%, currentColor 0 1.6%, transparent 2.6%);
+  animation: spatter .5s ease-out backwards;
+}
+@keyframes spatter { from { opacity: 0; transform: scale(.5); } }
 
 /* ---------- NIGHT audit ---------- */
 #auditPhase { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
@@ -784,8 +879,10 @@ body::before {
 }
 
 /* ---------- dawn: the last shift ends, the sun does not care ---------- */
-.dawn-scene { width: min(400px, 84vw); animation: scenein 1s ease backwards; }
-.dawn-scene svg { display: block; width: 100%; height: auto; border-radius: 3px; overflow: hidden; }
+#dawn { overflow: hidden; background: #0b0d12; }
+.dawn-scene { position: absolute; inset: 0; width: 100%; z-index: 0; animation: none; }
+.dawn-scene svg { display: block; width: 100%; height: 100%; }
+#dawn > *:not(.dawn-scene) { position: relative; z-index: 1; }
 .dawn-scene .sun { transform-box: fill-box; transform-origin: center bottom; animation: sunup 2.6s cubic-bezier(.2,.8,.3,1) backwards; }
 @keyframes sunup { from { transform: translateY(34px) scale(.9); opacity: 0; } }
 .dawn-scene .dm { opacity: 0; animation: motedrift 6s linear infinite; }

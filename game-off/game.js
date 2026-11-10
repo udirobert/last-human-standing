@@ -75,6 +75,7 @@ const sfx = {
   thud:   () => { thudDrop(); tone(1400, .03, "square", .03, .02); },
   slide:  () => noiseBurst(.16, 1800, .05),
   shutter:() => { noiseBurst(.07, 900, .06); noiseBurst(.07, 1400, .05, .09); },
+  click:  () => { tone(240, .025, "square", .05); noiseBurst(.05, 3000, .05, .03); },
   tickHi: (left) => tone(880 + (3 - left) * 160, .035, "square", .035),
 };
 
@@ -345,15 +346,42 @@ function hud() {
   for (let i = 0; i < 3; i++) {
     const s = document.createElement("span");
     s.className = "pip" + (i < G.strikes ? " on" : "");
+    if (i < G.strikes && i >= prevStrikes) s.classList.add("gain");
     st.appendChild(s);
   }
-  $("hudScore").textContent = `SCORE ${G.score}`;
+  renderScore(G.score);
+  prevStrikes = G.strikes;
+}
+
+/* the score rolls instead of jumping — money counting on the desk */
+let scoreAnim = null, scoreShown = 0, prevStrikes = 0;
+function renderScore(n) {
+  const el = $("hudScore");
+  clearInterval(scoreAnim);
+  if (calmMotion() || Math.abs(n - scoreShown) < 2) {
+    scoreShown = n;
+    el.textContent = `SCORE ${n}`;
+    return;
+  }
+  const from = scoreShown, t0 = performance.now(), dur = 520;
+  el.classList.add("rolling");
+  scoreAnim = setInterval(() => {
+    const p = Math.min(1, (performance.now() - t0) / dur);
+    const v = Math.round(from + (n - from) * (1 - (1 - p) ** 3));
+    el.textContent = `SCORE ${v}`;
+    if (p >= 1) {
+      clearInterval(scoreAnim);
+      el.classList.remove("rolling");
+      scoreShown = n;
+    }
+  }, 40);
 }
 function setShift(shift) { document.body.dataset.shift = shift; }
 let wipeTimer = null;
 /* shutter-sweep on day/night shift changes — the trailer transition. */
 function wipeShift() {
   sfx.shutter();
+  later(() => sfx.click(), 380);   // the desk lamp clicks as the light changes
   document.body.classList.remove("wiping");
   void document.body.offsetWidth;
   document.body.classList.add("wiping");
