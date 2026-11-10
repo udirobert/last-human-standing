@@ -38,11 +38,7 @@ function docketLabel() {
   return `DOCKET #${n}`;
 }
 const stream = (p) => LOGIC.makeRng(`${SEED}|${G.day}|${p}`);
-const DEBUG = {
-  day: +(params.get("day") || 0),          // 1-based
-  strikes: +(params.get("strikes") || 0),
-  finale: params.get("finale") === "1",
-};
+// ?seed= is the only supported URL override (daily docket vs custom docket).
 
 // ---------- tiny synth ----------
 let AC = null;
@@ -1012,9 +1008,6 @@ function startGame(seed) {
   music();   // create the element inside the start click — autoplay unlocked
   titleEl.classList.add("hidden");
   gameEl.classList.remove("hidden");
-  if (DEBUG.finale) { G.day = DAYS.length; return startFinale(); }
-  if (DEBUG.day) G.day = Math.min(DEBUG.day - 1, DAYS.length - 1);
-  if (DEBUG.strikes) G.strikes = Math.min(DEBUG.strikes, 2);
   hud();
   if (G.status === "player") startDay();
   else startAudit();
