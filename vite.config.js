@@ -46,6 +46,10 @@ export default defineConfig({
   test: {
     // Default env: jsdom for component tests; server tests use // @vitest-environment node
     environment: "jsdom",
+    // jsdom only exposes window.localStorage for a non-opaque origin —
+    // without a url every localStorage touch throws (config, returnState,
+    // commitRevealVote tests).
+    environmentOptions: { jsdom: { url: "http://localhost/" } },
     setupFiles: ["./tests/setup.js"],
     coverage: {
       provider: "v8",
