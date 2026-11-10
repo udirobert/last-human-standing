@@ -27,8 +27,12 @@ python3 -m http.server 8000
   Every card shows four facts in fixed order: where · when · who · in/out.
 - **Verdict**: the rule is unsealed in plain words and your card's facts are
   marked line by line — ✓ meets the criterion, ✗ shows what was needed,
-  dimmed rows weren't checked. A passing filing survives; a failing one is a
-  strike. Tap anywhere to skip the ceremony.
+  dimmed rows weren't checked — then the ledger reads its ruling sentence.
+  The crowd tally is the room's honest mood (share of HUMAN stamps on
+  today's docket, so it believes the clerical error too); ARIA overrules
+  it. A passing filing survives; a failing one is a strike. Tap anywhere
+  to skip the ceremony. Miss a day and ARIA names what fooled you when
+  you clock in next.
 - **Night shift**: the rule is pinned as text chips. Five filings, one at a
   time — stamp each **SUS** (`←`) or **HUMAN** (`→`). Instant feedback, and
   wrong stamps show the fact that failed. Correct stamps build a ×1–×3
@@ -66,7 +70,12 @@ Vanilla JS + DOM + WebAudio, works from `file://`. Three plain scripts:
 deal/audit generation — no DOM), `game.js` (screens, input, sound).
 `test-logic.mjs` hammers `logic.js` with 2,000 seeded deals, audits and
 clues per day and asserts the invariants (determinism included) — run
-`node test-logic.mjs`. The day/night shift
+`node test-logic.mjs`. `audit-deduction.mjs` is the Golden Idol loop as
+code: for 300 seeded dockets per day it checks what a perfect logician
+could conclude — pinning rate, single-word harmful theories (wrong
+one-word rules with full docket support that could bait a strike:
+0% on all five days), and liar-day fog cover. Report-only; run
+`node audit-deduction.mjs` after touching `deal()`. The day/night shift
 is `body[data-shift]` + CSS variables; all "art" is typographic.
 The night music is a vendored MP3 (`audio/bump-in-the-night.mp3`, fetched
 via `scripts/vendor-patch.mjs` — see `audio/manifest.json`) played through

@@ -97,6 +97,16 @@ function deal(cards, day, dayIndex, rng = Math.random) {
   const docket = humans.map((card) => ({ card, verdict: "HUMAN", lie: false }));
   const sharedWithHumans = (c) =>
     ATTR_KEYS.filter((k) => humans.some((h) => h.tags[k] === c.tags[k])).length;
+  // incidental singletons both precedents share (non-rule keys) — one-word
+  // wrong theories the docket itself suggests. SUS picks prefer rows that
+  // carry those tags (a truth-failing row WITH the tag kills the theory).
+  const sharedSingletons = ATTR_KEYS
+    .filter((k) => !rule.some((c) => c.key === k))
+    .filter((k) => humans[0].tags[k] === humans[1].tags[k])
+    .map((k) => ({ key: k, value: humans[0].tags[k] }));
+  const kills = (c) =>
+    sharedSingletons.filter((s) => c.tags[s.key] === s.value).length;
+  const susScore = (c) => kills(c) * 10 + sharedWithHumans(c);
   const failsOnly = (c, key) =>
     failKeys(c, rule).length === 1 && failKeys(c, rule)[0] === key;
 
@@ -118,8 +128,8 @@ function deal(cards, day, dayIndex, rng = Math.random) {
     if (sus.length >= nSus) break;
     const cands = F.filter((c) => !used.has(c.id) && failsOnly(c, crit.key));
     if (!cands.length) continue;
-    const top = Math.max(...cands.map(sharedWithHumans));
-    const chosen = pick(rng, cands.filter((c) => sharedWithHumans(c) === top));
+    const top = Math.max(...cands.map(susScore));
+    const chosen = pick(rng, cands.filter((c) => susScore(c) === top));
     sus.push(chosen); used.add(chosen.id);
   }
   // --- liar-day extras: a second true SUS on X, then the liar itself ---
@@ -131,8 +141,11 @@ function deal(cards, day, dayIndex, rng = Math.random) {
     if (liarCard) used.add(liarCard.id);
     else liarCard = null;
   }
-  const fill = shuffle(rng, F.filter((c) => !used.has(c.id) && nearMiss(c, rule)))
-    .concat(shuffle(rng, F.filter((c) => !used.has(c.id) && !nearMiss(c, rule))));
+  // extras: near-misses first, killer rows (shared incidental tags) first
+  const byKills = (list) => shuffle(rng, list)
+    .sort((a, b) => susScore(b) - susScore(a));
+  const fill = byKills(F.filter((c) => !used.has(c.id) && nearMiss(c, rule)))
+    .concat(byKills(F.filter((c) => !used.has(c.id) && !nearMiss(c, rule))));
   for (const c of fill) {
     if (sus.length >= nSus + (liarX ? 1 : 0)) break;
     sus.push(c); used.add(c.id);

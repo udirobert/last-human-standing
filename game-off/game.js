@@ -69,6 +69,7 @@ const sfx = {
   audit:  () => [440, 554, 659].forEach((f, i) => tone(f, .1, "square", .035, i * .08)),
   dawn:   () => [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, .2, "triangle", .05, i * .13)),
   alarm:  () => [660, 880, 660, 880].forEach((f, i) => tone(f, .12, "square", .05, i * .14)),
+  gavel:  () => { thudDrop(0); tone(1400, .03, "square", .03, .02); thudDrop(.2); tone(1400, .03, "square", .03, .22); },
   rise:   (i) => tone(340 + i * 70, .06, "triangle", .035),
   klaxon: () => [440, 330, 440, 330, 550, 330].forEach((f, i) => tone(f, .14, "square", .06, i * .17)),
   thud:   () => { thudDrop(); tone(1400, .03, "square", .03, .02); },
@@ -96,10 +97,10 @@ function noiseBurst(dur = .15, freq = 1500, vol = .05, when = 0) {
   } catch { /* no audio */ }
 }
 /* low sine drop — the stamp landing on the desk. */
-function thudDrop() {
+function thudDrop(at = 0) {
   try {
     const ac = audio();
-    const t = ac.currentTime;
+    const t = ac.currentTime + at;
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = "sine";
     o.frequency.setValueAtTime(150, t);
@@ -107,7 +108,7 @@ function thudDrop() {
     g.gain.setValueAtTime(.14, t);
     g.gain.exponentialRampToValueAtTime(.0001, t + .28);
     o.connect(g); g.connect(ac.destination);
-    o.start(t); o.stop(t + .3);
+    o.start(t); o.stop(t + .32);
   } catch { /* no audio */ }
 }
 
@@ -242,7 +243,7 @@ const EXPLAIN = {
   timer: "There's a clock on the desk tonight. Fast stamps pay a little extra.",
   clue: "You may request one more ruling per day. It costs a hundred from today's pay.",
   oath: "File under oath and I'll hold you to it. Keep it and a strike vanishes; break it and you take two.",
-  amend: "Head office amends my rules mid-shift now. Watch the chips when it happens.",
+  amend: "Head office is restless tonight — they amend my rules mid-shift now. Watch the chips when it happens.",
   liar: "A clerical error slipped onto the docket. Find which ruling is wrong and I'll note it.",
 };
 let ariaTimer = null;
@@ -278,6 +279,7 @@ const G = {
   clueUsed: false,
   dayPay: 300,
   flagged: null,          // liar day: the docket row the player suspects
+  lastMissKeys: null,     // failKeys of yesterday's filing — ARIA's nudge names them
   auditSubs: [],
   amendAfter: null,
   amendShown: false,
@@ -377,7 +379,14 @@ function startDay() {
   $("docketHead").textContent = G.day >= 3
     ? "Already ruled today — tap the ruling you think is the error (optional, +100)"
     : "Already ruled today";
-  if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
+  // Golden-Idol nudge: name exactly what fooled them yesterday
+  if (G.day >= 1 && G.lastMissKeys && G.lastMissKeys.length) {
+    const labels = G.lastMissKeys
+      .map((k) => ({ place: "WHERE", time: "WHEN", people: "WHO", setting: "IN/OUT" }[k]))
+      .join(" and ");
+    ariaSay([`Yesterday the ${labels} fooled you. Read it twice today.`]);
+  }
+  else if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
   else ariaSay(ARIA.dayOpen);
   renderDay();
 }
@@ -501,7 +510,12 @@ function renderVerdict() {
   $("lieLine").classList.add("hidden");
   $("lieLine").innerHTML = "";
 
-  const pct = passed ? 62 + ri(33) : 8 + ri(37);
+  // the room's mood, honestly derived: share of HUMAN stamps on today's
+  // docket (the crowd believes the clerical error too). ARIA overrules it.
+  const stampedH = G.docket.filter((r) => r.verdict === "HUMAN").length;
+  const jitter = Math.round(stream("crowd")() * 6 - 3);
+  const pct = Math.min(98, Math.max(2,
+    Math.round((100 * stampedH) / Math.max(1, G.docket.length)) + jitter));
   G.verdictPct = pct;
   $("tallyFill").style.transition = "none";
   $("tallyFill").style.width = "0%";
@@ -577,16 +591,24 @@ function finishVerdict() {
   }
   const sb = $("stampBox");
   sb.innerHTML = `<div class="stamp ${stampCls}">${stampText}</div>`;
+  // the ledger speaks: one ruling sentence, then the room washes past
+  const keys = d.rule.filter((x) => !x.allow.includes(c.tags[x.key])).map((x) => x.text);
+  $("ledgerLine").textContent = passed
+    ? `${c.name} — meets every criterion. Filed.`
+    : `${c.name} — fails ${keys.join(", ")}. Struck.`;
+  const vp = verdictPhase;
+  vp.classList.remove("flash-pass", "flash-fail");
+  void vp.offsetWidth;
+  vp.classList.add(passed ? "flash-pass" : "flash-fail");
+  later(() => vp.classList.remove("flash-pass", "flash-fail"), 550);
   sfx.stamp();
   // hitstop: the stamp hangs silent for one beat, then the desk answers
   later(() => { sfx.thud(); passed ? sfx.human() : sfx.sus(); }, 120);
-  frameEl.classList.remove("shake");
-  void frameEl.offsetWidth;
-  frameEl.classList.add("shake");
-  later(() => frameEl.classList.remove("shake"), 500);
+  deskShake();
 
   if (passed) {
     G.daysSurvived++;
+    G.lastMissKeys = null;
     G.score += G.dayPay;
     if (G.oath) {
       if (G.strikes > 0) G.strikes--;
@@ -597,6 +619,7 @@ function finishVerdict() {
   } else {
     G.strikes += G.oath ? 2 : 1;
     G.dayResults[G.day] = "struck";
+    G.lastMissKeys = LOGIC.failKeys(c, d.rule);
     // off by exactly one fact — the near-miss gets its own line
     ariaSay(LOGIC.nearMiss(c, d.rule) ? ARIA.nearMiss : ARIA.struck);
   }
@@ -807,6 +830,9 @@ function stamp(pickVal) {
   hud();
   sfx.slide();
   sfx.stamp();
+  if (contested && sub.correct) { sfx.gavel(); sfx.human(); }
+  else sub.correct ? sfx.human() : sfx.sus();
+  if (contested && !sub.correct) { sfx.thud(); deskShake(); }
   sub.correct ? sfx.human() : sfx.sus();
   renderCase();
   if (sub.correct) later(nextCase, 900);   // wrong stamps stay up until dismissed
@@ -826,6 +852,14 @@ function nextCase() {
   G.auditIdx = next;
   if (G.auditIdx >= G.auditSubs.length) return auditSummary();
   renderCase();
+}
+
+/* the desk takes the hit so the fact rows don't have to. */
+function deskShake() {
+  frameEl.classList.remove("shake");
+  void frameEl.offsetWidth;
+  frameEl.classList.add("shake");
+  later(() => frameEl.classList.remove("shake"), 500);
 }
 
 /* duck the night music under an interruption, restore after. */

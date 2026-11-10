@@ -317,6 +317,15 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 
 /* verdict stamp — text only, never an emoji colour */
 #stampBox { min-height: 80px; display: flex; align-items: center; justify-content: center; }
+#ledgerLine {
+  font-family: ui-monospace, monospace; font-size: 11.5px; letter-spacing: .06em;
+  color: var(--dim); max-width: 46ch; text-align: center; min-height: 1em;
+}
+/* the room washes past the verdict — never over the fact rows' marks */
+#verdictPhase.flash-pass { animation: vflash-p .55s ease; }
+#verdictPhase.flash-fail { animation: vflash-f .55s ease; }
+@keyframes vflash-p { 0% { background-color: rgba(46,107,52,.30); } }
+@keyframes vflash-f { 0% { background-color: rgba(176,48,40,.34); } }
 .stamp {
   font-family: "Iowan Old Style", Palatino, Georgia, serif;
   font-size: clamp(28px, 7vw, 44px); font-weight: 700; letter-spacing: .12em;
