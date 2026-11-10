@@ -190,18 +190,60 @@ button:disabled { opacity: .45; cursor: default; }
   display: flex; gap: 12px; align-items: center;
   justify-content: center; flex-wrap: wrap;
 }
+/* ---------- clock in: a time card, punched ---------- */
 #title .stamp-btn {
-  font-family: ui-monospace, monospace; text-transform: uppercase;
-  letter-spacing: .1em; background: transparent; color: #e8b34b;
-  border: 3px solid #e8b34b; border-radius: 6px;
-  transform: rotate(-1.5deg); box-shadow: 0 3px 0 #6b531f;
-  padding: 14px 30px;
+  position: relative; display: flex; flex-direction: column; align-items: stretch;
+  gap: 2px; min-width: 246px; padding: 12px 24px 15px;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace; text-transform: uppercase;
+  color: #24201a; background: #efe3c8;
+  border: 1px solid #b9a883; border-radius: 3px;
+  box-shadow: 0 3px 0 #6b531f, 0 26px 40px -28px rgba(0,0,0,.95);
+  transform: rotate(-1.5deg);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+/* perforated top edge, like every other piece of paper here */
+#title .stamp-btn::before {
+  content: ""; position: absolute; left: 14px; right: 14px; top: 5px; height: 2px;
+  background: repeating-linear-gradient(90deg, #c9b894 0 4px, transparent 4px 9px);
+}
+.pc-top {
+  display: flex; justify-content: space-between; gap: 16px; margin-top: 3px;
+  font-size: 8px; letter-spacing: .18em; color: #8a7a5c;
+}
+.pc-main { font-size: 15px; font-weight: 700; letter-spacing: .2em; color: #1c1f27; }
+.pc-slots { display: flex; gap: 6px; margin-top: 4px; }
+.pc-slots i {
+  display: block; width: 9px; height: 9px; border-radius: 50%;
+  border: 1px dashed #c9b894;
 }
 #title .stamp-btn:hover:not(:disabled) {
-  transform: rotate(-1.5deg) translateY(-2px); box-shadow: 0 5px 0 #6b531f;
+  transform: rotate(-1.5deg) translateY(-2px);
+  box-shadow: 0 5px 0 #6b531f, 0 30px 44px -28px rgba(0,0,0,.95);
 }
 #title .stamp-btn:active:not(:disabled) {
-  transform: rotate(-1.5deg) translateY(1px); box-shadow: 0 1px 0 #6b531f;
+  transform: rotate(-.8deg) translateY(2px);
+  box-shadow: 0 1px 0 #6b531f;
+}
+/* the punch: a hole appears, then the card drops out of the frame */
+#title .stamp-btn.punching {
+  pointer-events: none;
+  animation: cardpunch .56s cubic-bezier(.5,0,.65,1) forwards;
+}
+#title .stamp-btn.punching .pc-slots i:first-child {
+  animation: punchhole .24s ease .13s both;
+}
+@keyframes punchhole {
+  0% { background: transparent; border-color: #c9b894; transform: scale(1); }
+  55% { transform: scale(1.3); }
+  100% {
+    background: #12141a; border-color: #12141a; transform: scale(1);
+    box-shadow: inset 0 1px 0 rgba(0,0,0,.9), 0 0 0 1px rgba(255,255,255,.1);
+  }
+}
+@keyframes cardpunch {
+  0% { transform: rotate(-1.5deg) translateY(0) scale(1); opacity: 1; }
+  24% { transform: rotate(-.4deg) translateY(4px) scale(.988); opacity: 1; }
+  100% { transform: rotate(-5deg) translateY(34px) scale(.94); opacity: 0; }
 }
 @media (max-width: 560px) {
   #title .steps { flex-direction: column; }

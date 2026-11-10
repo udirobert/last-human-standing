@@ -79,6 +79,8 @@ const sfx = {
   tickHi: (left) => tone(880 + (3 - left) * 160, .035, "square", .035),
   // a pen moving across paper
   pen:    () => [0, .12, .26, .4].forEach((w, i) => noiseBurst(.1, 2100 + i * 260, .026, w)),
+  // the time clock biting through the card
+  punch:  () => { thudDrop(); tone(1180, .03, "square", .045, .02); noiseBurst(.06, 2600, .055, .04); },
   // four cards coming off the deck, one at a time
   riffle: () => [0, .09, .18, .27].forEach((w, i) => noiseBurst(.055, 1500 + i * 320, .038, w)),
   // a file crossing the desk and landing in the tray
@@ -1441,8 +1443,25 @@ function startGame(seed) {
   hud();
   if (G.status === "player") startDay();
   else startAudit();
-}  $("startBtn").textContent = `Clock in — ${docketLabel()}`;
-$("startBtn").addEventListener("click", () => startGame(SEED));
+}
+
+// ---------- clocking in: the card goes into the punch ----------
+$("pcDocket").textContent = docketLabel();
+$("startBtn").setAttribute("aria-label", `Clock in — ${docketLabel()}`);
+let clockingIn = false;
+function clockIn(seed) {
+  if (clockingIn) return;
+  clockingIn = true;
+  // unlock audio on the gesture itself — the visual punch comes after
+  audio(); music();
+  const b = $("startBtn");
+  if (calmMotion()) { startGame(seed); return; }
+  b.classList.add("punching");
+  sfx.punch();
+  later(() => startGame(seed), 520);
+}
+$("startBtn").addEventListener("click", () => clockIn(SEED));
+// a random docket is still a clock-in — same card, same punch
 $("randomBtn").addEventListener("click", () =>
-  startGame("rnd-" + Math.random().toString(36).slice(2, 8)));
+  clockIn("rnd-" + Math.random().toString(36).slice(2, 8)));
 $("againBtn").addEventListener("click", () => location.reload());
