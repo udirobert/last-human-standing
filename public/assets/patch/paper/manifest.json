@@ -1,0 +1,79 @@
+{
+  "source": "patch.gg API",
+  "assets": [
+    {
+      "id": "ambientcg:Paper002",
+      "title": "Paper 002",
+      "source": {
+        "id": "ambientcg",
+        "name": "ambientCG",
+        "ref": "Paper002",
+        "rev": null,
+        "url": "https://ambientcg.com/a/Paper002"
+      },
+      "license": "CC0-1.0",
+      "credit": "\"Paper 002\" by ambientCG (ambientCG, https://ambientcg.com/a/Paper002), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected from the zip, credit added to each file.",
+      "variant": "web",
+      "files": [
+        {
+          "name": "paper002_baseColor.jpg",
+          "sha256": "3bc11ecdd4d5c56edc2927b7e4a887e111d35a533ffa1468a9f366ec91a356c8",
+          "size": 989135
+        },
+        {
+          "name": "paper002_normal.jpg",
+          "sha256": "f6f98d88a41bb5e82e7c68958342e9f063aa7659d7a7140cfc1d37163fbbddfb",
+          "size": 1225570
+        },
+        {
+          "name": "paper002_roughness.jpg",
+          "sha256": "0f925490690676e890a757cf7e5077be00e16301a059808d06d290c85015031f",
+          "size": 287535
+        },
+        {
+          "name": "paper002_displacement.jpg",
+          "sha256": "b4b6f27c44776aed1cff689bc3080495a42267e51bc54caa0f362766cb98f4f7",
+          "size": 519846
+        }
+      ],
+      "fetched_at": "2026-11-10T10:43:35.938Z"
+    },
+    {
+      "id": "ambientcg:Paper006",
+      "title": "Paper 006",
+      "source": {
+        "id": "ambientcg",
+        "name": "ambientCG",
+        "ref": "Paper006",
+        "rev": null,
+        "url": "https://ambientcg.com/a/Paper006"
+      },
+      "license": "CC0-1.0",
+      "credit": "\"Paper 006\" by ambientCG (ambientCG, https://ambientcg.com/a/Paper006), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: 1K JPEG maps selected from the zip, credit added to each file.",
+      "variant": "web",
+      "files": [
+        {
+          "name": "paper006_baseColor.jpg",
+          "sha256": "d21cf0d6d4bcb8ed7b68e9760d7aa508c6699ccde57cf27df4a013eb9022c8c8",
+          "size": 1244274
+        },
+        {
+          "name": "paper006_normal.jpg",
+          "sha256": "960a7ba99f1f605d7505d951cb4bb43c71415a4914eeef1f7c003a81a528969a",
+          "size": 424864
+        },
+        {
+          "name": "paper006_roughness.jpg",
+          "sha256": "07aeaa34271031e453a538fe238809c56dc7cb23f6dcc4ca3b2eb54a9672cf52",
+          "size": 612537
+        },
+        {
+          "name": "paper006_displacement.jpg",
+          "sha256": "a27de514bd47add2dd08fd5e2d9ba214e4c1ddf7f2e2250b40b91317137154e4",
+          "size": 658866
+        }
+      ],
+      "fetched_at": "2026-11-10T10:43:38.473Z"
+    }
+  ]
+}

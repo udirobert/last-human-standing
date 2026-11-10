@@ -75,7 +75,7 @@ Rule of thumb going forward: if a new player can't say what to do next within 3 
 
 ## Scope for ~3 weeks solo
 
-- **Tech**: vanilla JS + DOM + WebAudio, no build step, works from `file://`. `game-off/{index.html,style.css,game.js,logic.js,riddles.js,test-logic.mjs}` — extract to its own public repo before Dec 1. All "art" is typographic/icon-driven (hand-cut card corners, stamp animations, paper/desk-lamp shift themes). Case data lives in `riddles.js`, deal/verdict rules in `logic.js` (pure, node-testable) — adding days/cards/rules is data-only.
+- **Tech**: vanilla JS + DOM + WebAudio, no build step, works from `file://`. `game-off/{index.html,style.css,game.js,logic.js,riddles.js,test-logic.mjs}` — extract to its own public repo before Dec 1. All "art" is typographic/icon-driven (hand-cut card corners, stamp animations, paper/desk-lamp shift themes). Night music is one vendored CC-BY-4.0 MP3 (`game-off/audio/bump-in-the-night.mp3` via `scripts/vendor-patch.mjs`, credit in `game-off/LICENSE-CREDITS.txt`, `M` toggles) on a plain `<audio>` element so `file://` keeps working. Case data lives in `riddles.js`, deal/verdict rules in `logic.js` (pure, node-testable) — adding days/cards/rules is data-only.
 - **Milestones**:
   1. ~~Core~~ **done**: full loop playable — 5 days, docket → file → verdict → night audit, strikes, dossier, juror path.
   2. ~~UX pass~~ **done 2026-11-10 (pivot 3)**: rebuilt as a deduction game (see "Fixes shipped") — the spec-as-icons build was replaced.

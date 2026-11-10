@@ -46,6 +46,8 @@ python3 -m http.server 8000
   isn't human. Choose the criterion that cuts it — and only it.
 - Still a player after day five (and the right finale) = LAST HUMAN
   STANDING. Three strikes = dossier + jury duty.
+- Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `O` oath ·
+  `M` — music on/off.
 
 ## Seeds & sharing
 
@@ -64,6 +66,19 @@ deal/audit generation — no DOM), `game.js` (screens, input, sound).
 clues per day and asserts the invariants (determinism included) — run
 `node test-logic.mjs`. The day/night shift
 is `body[data-shift]` + CSS variables; all "art" is typographic.
+The night music is a vendored MP3 (`audio/bump-in-the-night.mp3`, fetched
+via `scripts/vendor-patch.mjs` — see `audio/manifest.json`) played through
+a plain `<audio>` element so it also works on `file://`; full attribution
+lives in `LICENSE-CREDITS.txt`.
+
+## Credits
+
+- Night music: "Bump in the Night" by Kevin MacLeod (incompetech.com,
+  https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100789),
+  licensed Creative Commons Attribution 4.0 International
+  (https://creativecommons.org/licenses/by/4.0/). Changed by Patch:
+  converted from MP3 to Ogg Vorbis, credit added to the Ogg comments.
+  (This game vendors the original MP3; `M` toggles it.)
 
 ## Status
 

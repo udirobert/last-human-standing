@@ -1,0 +1,27 @@
+{
+  "source": "patch.gg API",
+  "assets": [
+    {
+      "id": "polyhaven:marble_bust_01",
+      "title": "Marble Bust 01",
+      "source": {
+        "id": "polyhaven",
+        "name": "Poly Haven",
+        "ref": "marble_bust_01",
+        "rev": "7a118fddaa2d7823e16cf3647b9075d373a81164",
+        "url": "https://polyhaven.com/a/marble_bust_01"
+      },
+      "license": "CC0-1.0",
+      "credit": "\"Marble Bust 01\" by Rico Cilliers (Poly Haven, https://polyhaven.com/a/marble_bust_01), licensed CC0 1.0 Universal (https://creativecommons.org/publicdomain/zero/1.0/). Changed by Patch: packed the 1K glTF into one GLB, pivot moved to the bottom centre, credit added to the file, simplified LODs added.",
+      "variant": "web",
+      "files": [
+        {
+          "name": "marble_bust_01.glb",
+          "sha256": "1ba47734a9514cdd4dd895fdd7be07f1aa2f71cdc263d87cd409fd3613a56b5f",
+          "size": 897948
+        }
+      ],
+      "fetched_at": "2026-11-10T10:43:32.908Z"
+    }
+  ]
+}

@@ -75,6 +75,52 @@ const sfx = {
   rise:   (i) => tone(340 + i * 70, .06, "triangle", .035),
 };
 
+// ---------- night music ----------
+/* Vendored track ("Bump in the Night" — Kevin MacLeod, CC-BY-4.0, see
+ * LICENSE-CREDITS.txt). A plain <audio> element, not WebAudio:
+ * MediaElementAudioSourceNode is CORS-blocked on file:// in Chrome, and
+ * this game must run straight from disk. Volume ramps go through a small
+ * setInterval fade helper on .volume.
+ * "Bump in the Night" by Kevin MacLeod (incompetech.com), CC-BY-4.0. */
+let MUSIC = null;
+let musicFade = null;
+function music() {
+  if (!MUSIC) {
+    MUSIC = new Audio("audio/bump-in-the-night.mp3");
+    MUSIC.loop = true;
+    MUSIC.volume = 0;
+  }
+  return MUSIC;
+}
+function musicFadeTo(target, ms, thenPause) {
+  const m = music();
+  clearInterval(musicFade);
+  const from = m.volume;
+  const steps = Math.max(1, Math.round(ms / 50));
+  let i = 0;
+  musicFade = setInterval(() => {
+    i++;
+    m.volume = Math.min(1, Math.max(0, from + (target - from) * (i / steps)));
+    if (i >= steps) {
+      clearInterval(musicFade);
+      musicFade = null;
+      if (thenPause) m.pause();
+    }
+  }, ms / steps);
+}
+function musicStart() {
+  const m = music();
+  try {
+    const p = m.play();
+    if (p && p.catch) p.catch(() => { /* autoplay/file:// denials are fine */ });
+  } catch { /* no audio */ }
+  musicFadeTo(0.16, 800);
+}
+function musicStop() {
+  if (!MUSIC) return;
+  musicFadeTo(0, 400, true);
+}
+
 // ---------- skippable timers ----------
 let timers = [];
 function later(fn, ms) {
@@ -242,6 +288,7 @@ function showOnly(which) {
   auditPhase.classList.toggle("hidden", which !== "audit");
   finalePhase.classList.toggle("hidden", which !== "finale");
   setShift(which === "audit" || which === "finale" ? "night" : "day");
+  if (which === "day") musicStop();   // music plays nights + through the endings only
   hud();
 }
 
@@ -538,6 +585,7 @@ function fmtFiled(mins) {
 function startAudit() {
   banner("NIGHT SHIFT — now you judge");
   showOnly("audit");
+  musicStart();
   setInstr("night");
   ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
   if (G.day === 0) explain("streak");
@@ -907,6 +955,7 @@ document.addEventListener("keydown", (e) => {
   if (!dossierEl.classList.contains("hidden")) return;
   if (gameEl.classList.contains("hidden")) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key === "m" || e.key === "M") { if (MUSIC) MUSIC.muted = !MUSIC.muted; return; }
   if (G.phase === "day") {
     if (e.key >= "1" && e.key <= "4") {
       const c = G.hand[+e.key - 1];
@@ -960,9 +1009,10 @@ $("banner").addEventListener("click", () => $("banner").classList.add("hidden"))
 function startGame(seed) {
   SEED = seed;
   audio();
+  music();   // create the element inside the start click — autoplay unlocked
   titleEl.classList.add("hidden");
   gameEl.classList.remove("hidden");
-  if (DEBUG.finale) return startFinale();
+  if (DEBUG.finale) { G.day = DAYS.length; return startFinale(); }
   if (DEBUG.day) G.day = Math.min(DEBUG.day - 1, DAYS.length - 1);
   if (DEBUG.strikes) G.strikes = Math.min(DEBUG.strikes, 2);
   hud();
