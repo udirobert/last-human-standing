@@ -1229,8 +1229,7 @@ function startGame(seed) {
   hud();
   if (G.status === "player") startDay();
   else startAudit();
-}
-$("docketNum").textContent = docketLabel();
+}  $("startBtn").textContent = `Clock in — ${docketLabel()}`;
 $("startBtn").addEventListener("click", () => startGame(SEED));
 $("randomBtn").addEventListener("click", () =>
   startGame("rnd-" + Math.random().toString(36).slice(2, 8)));
