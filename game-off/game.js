@@ -77,6 +77,8 @@ const sfx = {
   shutter:() => { noiseBurst(.07, 900, .06); noiseBurst(.07, 1400, .05, .09); },
   click:  () => { tone(240, .025, "square", .05); noiseBurst(.05, 3000, .05, .03); },
   tickHi: (left) => tone(880 + (3 - left) * 160, .035, "square", .035),
+  // a pen moving across paper
+  pen:    () => [0, .12, .26, .4].forEach((w, i) => noiseBurst(.1, 2100 + i * 260, .026, w)),
   // four cards coming off the deck, one at a time
   riffle: () => [0, .09, .18, .27].forEach((w, i) => noiseBurst(.055, 1500 + i * 320, .038, w)),
   // a file crossing the desk and landing in the tray
@@ -1198,43 +1200,79 @@ function startFinale() {
   };
   G.finaleRows = shuf([...FINALE]);
   G.finaleOpts = shuf([...FINALE_RULES]);
-  renderFinale();
+  G.signing = false;
+  $("decree").classList.remove("signed");
+  buildFinale();
+  paintFinale();
 }
 
-function renderFinale() {
+/* the decree is set once — clauses are written into it, rows are struck
+   off it — so nothing is rebuilt while you are reading it */
+function buildFinale() {
   const tb = $("finaleBody");
   tb.innerHTML = "";
-  for (const row of G.finaleRows || FINALE) {
-    const cut = G.finaleChoice && !LOGIC.passes(row, G.finaleChoice.rule);
+  for (const row of G.finaleRows) {
     const tr = document.createElement("tr");
-    if (cut) tr.className = "cut";
     tr.innerHTML =
       `<td class="c-file"><span class="glyph">${row.glyph}</span><span class="name">${row.name}</span></td>` +
       ATTR_KEYS.map((k) => `<td class="c-fact">${factCell(k, row.tags[k])}</td>`).join("") +
       `<td class="c-filer">${row.filer}</td><td class="c-ts">${row.ts}</td>` +
-      `<td class="c-cut">${cut ? "CUT" : ""}</td>`;
+      `<td class="c-cut"></td>`;
     tb.appendChild(tr);
   }
   const box = $("ruleChoices");
   box.innerHTML = "";
-  (G.finaleOpts || FINALE_RULES).forEach((opt, i) => {
+  G.finaleOpts.forEach((opt, i) => {
     const b = document.createElement("button");
-    b.className = "rule-choice" + (G.finaleChoice === opt ? " on" : "");
-    b.innerHTML = `<b>${"abcd"[i]}</b> ${opt.text}`;
+    b.className = "rule-choice";
+    b.type = "button";
+    b.setAttribute("aria-pressed", "false");
+    b.innerHTML = `<b>(${"abcd"[i]})</b><span>${opt.text}</span><i class="tick">\u2713</i>`;
     b.addEventListener("click", () => {
+      if (G.signing) return;
       G.finaleChoice = opt;
-      sfx.tick();
-      renderFinale();
-      const s = $("signBtn");
-      s.disabled = false;
-      s.textContent = "Sign the rule →";
+      sfx.pen();
+      paintFinale();
     });
     box.appendChild(b);
   });
 }
 
+function paintFinale() {
+  const rows = [...$("finaleBody").children];
+  G.finaleRows.forEach((row, i) => {
+    const cut = !!G.finaleChoice && !LOGIC.passes(row, G.finaleChoice.rule);
+    rows[i].classList.toggle("cut", cut);
+    rows[i].querySelector(".c-cut").textContent = cut ? "CUT" : "";
+  });
+  [...$("ruleChoices").children].forEach((b, i) => {
+    const on = G.finaleChoice === G.finaleOpts[i];
+    b.classList.toggle("on", on);
+    b.setAttribute("aria-pressed", String(on));
+  });
+  const blank = $("decreeBlank");
+  const text = G.finaleChoice ? G.finaleChoice.text : "";
+  const shown = text || "_____________";
+  if (blank.textContent !== shown) {
+    blank.textContent = shown;
+    blank.classList.toggle("filled", !!text);
+    blank.classList.remove("written");
+    if (text) { void blank.offsetWidth; blank.classList.add("written"); }
+  }
+  const s = $("signBtn");
+  s.disabled = !G.finaleChoice || !!G.signing;
+  s.textContent = G.signing ? "Signed into record"
+    : G.finaleChoice ? "\u270E Sign here" : "Choose a clause";
+}
+
 function signRule() {
-  if (!G.finaleChoice) return;
+  if (!G.finaleChoice || G.signing) return;
+  // the pen goes down, the signature draws, the seal lands — then dawn
+  G.signing = true;
+  $("decree").classList.add("signed");
+  paintFinale();
+  sfx.pen();
+  later(() => sfx.stamp(), 560);
   const cut = FINALE.filter((r) => !LOGIC.passes(r, G.finaleChoice.rule));
   const cutNames = cut.map((r) => r.filer);
   const valeCut = cutNames.includes("VALE");
@@ -1253,7 +1291,7 @@ function signRule() {
   }
   G.finaleTitle = title;
   G.finaleLine = line;
-  endGame();
+  later(endGame, calmMotion() ? 0 : 1000);
 }
 
 // ---------- flow ----------
@@ -1369,12 +1407,10 @@ document.addEventListener("keydown", (e) => {
   } else if (G.phase === "finale") {
     const opts = G.finaleOpts || FINALE_RULES;
     const idx = "abcd".indexOf(e.key.toLowerCase());
-    if (idx >= 0 && opts[idx]) {
+    if (idx >= 0 && opts[idx] && !G.signing) {
       G.finaleChoice = opts[idx];
-      sfx.tick();
-      renderFinale();
-      $("signBtn").disabled = false;
-      $("signBtn").textContent = "Sign the rule →";
+      sfx.pen();
+      paintFinale();
     } else if (e.key === "Enter" && G.finaleChoice) {
       e.preventDefault();
       signRule();

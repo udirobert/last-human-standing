@@ -944,16 +944,105 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
 #finaleTable td.c-cut { color: var(--red); font-weight: 700; letter-spacing: .12em; }
 #finaleTable tr.cut td { opacity: .45; }
 #finaleTable tr.cut td.c-cut { opacity: 1; }
-#ruleChoices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 560px; align-self: center; width: 100%; }
-.rule-choice {
-  background: var(--card); color: var(--ink); border: 1px solid var(--line);
-  border-radius: 8px; padding: 14px 16px; text-align: left; font-size: 14px;
-  box-shadow: none; letter-spacing: .03em;
+/* ---------- the decree: a form you fill in and sign ---------- */
+#decree {
+  position: relative; align-self: center; width: 100%; max-width: 560px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 2px;
+  padding: 18px 22px 20px; text-align: left;
+  transform: rotate(-.35deg);
+  box-shadow: 0 1px 0 rgba(0,0,0,.05), 0 28px 50px -32px rgba(0,0,0,.75);
+  transition: background-color .5s, border-color .5s;
 }
-.rule-choice b { color: var(--accent); margin-right: 8px; font-family: ui-monospace, monospace; }
-.rule-choice.on { border-color: var(--accent); }
-.rule-choice:hover:not(:disabled) { transform: none; box-shadow: none; border-color: var(--accent-dim); }
-#signBtn { align-self: center; min-width: 260px; }
+/* the red margin rule of a legal pad */
+#decree::before {
+  content: ""; position: absolute; top: 12px; bottom: 12px; left: 9px;
+  border-left: 1px solid rgba(176,48,40,.22);
+}
+body[data-shift="night"] #decree::before { border-color: rgba(217,106,90,.26); }
+.decree-head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: ui-monospace, monospace; font-size: 9.5px; letter-spacing: .22em;
+  color: var(--faint); padding-right: 78px;
+  border-bottom: 1px solid var(--line); padding-bottom: 8px; margin-bottom: 14px;
+}
+.decree-no { letter-spacing: .12em; }
+.decree-op {
+  font-family: "Iowan Old Style", Palatino, Georgia, serif;
+  font-size: clamp(15px, 3vw, 18px); line-height: 1.55; color: var(--ink);
+  margin: 0 0 14px;
+}
+.decree-op b { letter-spacing: .1em; }
+/* the blank you fill in — ink, not a value */
+.blank {
+  display: inline-block; min-width: 9ch; padding: 0 4px 1px;
+  border-bottom: 1px dashed var(--accent-dim);
+  color: var(--accent); font-style: italic;
+}
+.blank.filled { border-bottom-style: solid; }
+.blank.written { animation: writein .34s ease backwards; }
+@keyframes writein { from { opacity: 0; transform: translateY(3px); } }
+
+#ruleChoices { display: flex; flex-direction: column; margin-bottom: 18px; }
+.rule-choice {
+  display: flex; align-items: baseline; gap: 10px;
+  background: transparent; color: var(--ink); border: 0;
+  border-bottom: 1px dotted var(--line); border-radius: 0;
+  padding: 9px 8px; text-align: left; box-shadow: none;
+  font-family: "Iowan Old Style", Palatino, Georgia, serif;
+  font-size: 13.5px; letter-spacing: .02em; opacity: .7;
+}
+.rule-choice b {
+  font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .1em;
+  color: var(--faint); flex-shrink: 0;
+}
+.rule-choice .tick {
+  margin-left: auto; font-style: normal; color: var(--accent);
+  opacity: 0; transform: scale(.4);
+  transition: opacity .15s ease, transform .22s cubic-bezier(.2,2,.4,1);
+}
+.rule-choice:hover:not(:disabled) {
+  opacity: 1; background: rgba(138,90,18,.06);
+  border-bottom-color: var(--accent-dim); box-shadow: none; transform: none;
+}
+.rule-choice.on { opacity: 1; border-bottom-color: var(--accent); }
+.rule-choice.on b { color: var(--accent); }
+.rule-choice.on .tick { opacity: 1; transform: scale(1); }
+
+/* the signature block */
+.sign-row { display: flex; align-items: flex-end; gap: 16px; justify-content: space-between; }
+.sign-slot { flex: 1; min-width: 0; }
+.sign-label {
+  display: block; font-family: ui-monospace, monospace; font-size: 8.5px;
+  letter-spacing: .26em; text-transform: uppercase; color: var(--faint);
+  border-bottom: 1px solid var(--line); padding-bottom: 3px;
+}
+#signature { display: block; width: 190px; max-width: 100%; height: 52px; opacity: 0; }
+#signature path {
+  fill: none; stroke: var(--ink); stroke-width: 2.4;
+  stroke-linecap: round; stroke-linejoin: round;
+  stroke-dasharray: 100; stroke-dashoffset: 100;
+}
+#decree.signed #signature { opacity: 1; }
+#decree.signed #signature path { animation: signdraw .8s cubic-bezier(.55,.05,.3,1) forwards; }
+@keyframes signdraw { to { stroke-dashoffset: 0; } }
+#signBtn {
+  flex-shrink: 0; min-width: 0; padding: 12px 20px;
+  font-family: ui-monospace, monospace; font-size: 12px; letter-spacing: .14em;
+}
+#signBtn:disabled { opacity: .45; }
+/* the seal does not fade in either */
+.decree-seal {
+  position: absolute; right: 16px; top: 9px;
+  font-family: ui-monospace, monospace; font-size: 14px; font-weight: 700;
+  letter-spacing: .2em; color: var(--red);
+  border: 2.5px solid var(--red); border-radius: 3px; padding: 3px 10px;
+  opacity: 0; transform: rotate(9deg) scale(1.7);
+}
+#decree.signed .decree-seal { animation: sealslam .42s cubic-bezier(.4,0,.82,.42) .55s forwards; }
+@keyframes sealslam {
+  82% { opacity: 1; transform: rotate(13deg) scale(.94); }
+  to { opacity: 1; transform: rotate(12deg) scale(1); }
+}
 
 /* share block */
 #shareBlock {
@@ -1049,6 +1138,9 @@ body::before {
   .case-card.stamped-sus::after { animation: none; opacity: .3; }
   .contested-tag, .chip.struck, .chip.struck::after,
   #amendBanner.falling .amend-panel { animation: none; }
+  #decree.signed #signature path { animation: none; stroke-dashoffset: 0; }
+  #decree.signed .decree-seal { animation: none; opacity: 1; transform: rotate(12deg); }
+  .blank.written { animation: none; }
   #amendBanner.falling::after { animation: none; opacity: 0; }
 }
 
@@ -1059,6 +1151,11 @@ button.ghost {
 button.ghost:hover:not(:disabled) { transform: none; box-shadow: none; border-color: #8a6a2f; }
 
 @media (max-width: 560px) {
+  #decree { padding: 16px 16px 18px; }
+  .decree-head { padding-right: 66px; }
+  .sign-row { flex-direction: column; align-items: stretch; }
+  #signature { width: 160px; }
+  #signBtn { width: 100%; }
   #fileBar { gap: 8px; padding: 8px 10px; }
   #oathBtn { font-size: 10px; padding: 0 8px; }
   #finaleTable, #finaleTable thead, #finaleTable tbody { display: block; }

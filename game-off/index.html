@@ -283,8 +283,26 @@
           <tbody id="finaleBody"></tbody>
         </table>
       </div>
-      <div id="ruleChoices"></div>
-      <button id="signBtn" disabled>Choose a rule first</button>
+      <div id="decree">
+        <div class="decree-head">
+          <span class="decree-h">ORDER OF ADMISSION</span>
+          <span class="decree-no">NO. 12&#8211;06</span>
+        </div>
+        <p class="decree-op">From this shift on, a filing is <b>HUMAN</b> only if it is
+          <span id="decreeBlank" class="blank">_____________</span>.</p>
+        <div id="ruleChoices"></div>
+        <div class="sign-row">
+          <div class="sign-slot">
+            <span class="sign-label">signed</span>
+            <svg id="signature" viewBox="0 0 220 60" aria-hidden="true">
+              <path pathLength="100"
+                d="M10 46 C 22 14, 30 14, 34 34 C 38 52, 46 46, 52 30 C 58 14, 68 22, 70 40 C 72 52, 84 44, 92 32 C 100 20, 110 44, 120 36 C 130 28, 138 42, 152 32 C 168 22, 190 40, 210 26" />
+            </svg>
+          </div>
+          <button id="signBtn" disabled>Choose a clause</button>
+        </div>
+        <span class="decree-seal" aria-hidden="true">FILED</span>
+      </div>
     </section>
 
     <!-- DOSSIER -->
@@ -348,8 +366,7 @@
     <button id="againBtn">Work another week</button>
     <textarea id="copySink" aria-hidden="true"></textarea>
   </div>
-</div>
-<script src="riddles.js"></script>
+</div>  <script src="riddles.js"></script>
 <script src="logic.js"></script>
 <script src="game.js"></script>
 </body>
