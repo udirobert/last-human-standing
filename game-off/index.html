@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>NIGHT SHIFT — a Game Off 2026 entry</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body data-shift="night">
+<div id="frame">
+
+  <div id="banner" class="hidden"><span id="bannerText"></span></div>
+
+  <!-- ===== TITLE ===== -->
+  <div id="title" class="overlay">
+    <p class="kicker">Game Off 2026 · theme: SHIFT · a Last Human Standing story</p>
+    <h1>NIGHT SHIFT</h1>
+    <p class="sub">ARIA runs a secret rule. Deduce it by day.<br/>Enforce it by night.</p>
+    <div class="steps">
+      <p><b>1</b> Study ARIA's rulings</p>
+      <p><b>2</b> File the card that fits her secret rule</p>
+      <p><b>3</b> At night, you stamp everyone else</p>
+    </div>
+    <p class="legend">Three strikes and you're cut.</p>
+    <p id="docketNum" class="docket-num"></p>
+    <button id="startBtn">Clock in — today's docket</button>
+    <button id="randomBtn" class="ghost">Random shift</button>
+    <p class="hint">an unofficial fan-made vignette · all proceedings fictional</p>
+  </div>
+
+  <!-- ===== GAME ===== -->
+  <main id="game" class="hidden">
+
+    <!-- HUD: shift badge · day pips · strikes · score -->
+    <header id="hud">
+      <span id="hudShift">☀ DAY SHIFT</span>
+      <div id="dayDots"></div>
+      <span id="hudStrikes"></span>
+      <span id="hudScore"></span>
+    </header>
+
+    <!-- the one instruction per screen — "what do I do right now" -->
+    <p id="instr"></p>
+
+    <!-- ARIA's quip: flavour only, never the instruction -->
+    <div id="ariaSay" class="hidden"><span id="ariaText"></span></div>
+
+    <!-- DAY: riddle → precedent docket → hand of four → file -->
+    <section id="dayPhase">
+      <div id="riddleWrap">
+        <p class="riddle-kicker" id="dayKicker">TODAY</p>
+        <p class="riddle-text" id="riddleText"></p>
+      </div>
+      <div id="docketWrap">
+        <h3 class="sec-head"><span id="docketHead">Already ruled today</span>
+          <button id="clueBtn" class="clue hidden">+ Request another ruling — today's pay 100 → 60</button>
+        </h3>
+        <table id="docket">
+          <thead><tr>
+            <th class="c-file">Filing</th><th>Where</th><th>When</th><th>Who</th><th>In/Out</th><th>Stamp</th>
+          </tr></thead>
+          <tbody id="docketBody"></tbody>
+        </table>
+      </div>
+      <div id="handWrap">
+        <h3 class="sec-head">Your evidence</h3>
+        <div id="hand"></div>
+      </div>
+      <p id="oathNote" class="hidden">pass: clears a strike (or +200 if you have none) · miss: 2 strikes</p>
+      <div id="fileBar">
+        <div id="oathWrap" class="hidden">
+          <button id="oathBtn" aria-pressed="false"
+            title="pass: clears a strike (or +200 if you have none) · miss: 2 strikes">⚖ Under oath</button>
+        </div>
+        <button id="fileBtn" disabled>Pick a card — 1–4, then Enter</button>
+      </div>
+    </section>
+
+    <!-- VERDICT: unsealed rule → fact check → crowd tally → stamp -->
+    <section id="verdictPhase" class="hidden">
+      <div id="pickMini"></div>
+      <p id="ruleLine"></p>
+      <p id="lieLine" class="hidden"></p>
+      <div id="factRows"></div>
+      <div id="crowdBox">
+        <div id="tallyBar"><div id="tallyFill"></div></div>
+        <div id="crowdPct"></div>
+      </div>
+      <div id="stampBox"></div>
+      <div id="verdictActions"></div>
+    </section>
+
+    <!-- NIGHT: rule chips pinned, five cases one at a time -->
+    <section id="auditPhase" class="hidden">
+      <div id="ruleChips"></div>
+      <div id="clockBar" class="hidden"><div id="clockFill"></div><span id="clockMsg" class="hidden">overtime — no speed bonus</span></div>
+      <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span></div></div>
+      <div id="caseCard"></div>
+      <div id="caseBtns">
+        <button id="susBtn" class="vb s">SUS <kbd>←</kbd></button>
+        <button id="humanBtn" class="vb h">HUMAN <kbd>→</kbd></button>
+      </div>
+      <div id="auditSummary" class="hidden"></div>
+      <div id="auditActions"></div>
+    </section>
+
+    <!-- FINALE: write the rule yourself -->
+    <section id="finalePhase" class="hidden">
+      <div id="finaleWrap">
+        <h3 class="sec-head">Last filings of the week</h3>
+        <table id="finaleTable">
+          <thead><tr>
+            <th class="c-file">Filing</th><th>Where</th><th>When</th><th>Who</th><th>In/Out</th><th class="c-filer">Filer</th><th class="c-ts">Filed</th><th class="c-cut"></th>
+          </tr></thead>
+          <tbody id="finaleBody"></tbody>
+        </table>
+      </div>
+      <div id="ruleChoices"></div>
+      <button id="signBtn" disabled>Choose a rule first</button>
+    </section>
+
+    <!-- DOSSIER -->
+    <div id="dossier" class="overlay hidden">
+      <div class="dossier-card">
+        <p class="dossier-head">ARIA DOSSIER · <span id="dossierDay"></span></p>
+        <p class="dossier-title">THREE STRIKES — ELIMINATED</p>
+        <p class="dossier-arg" id="dossierArg"></p>
+        <p class="dossier-meta" id="dossierMeta"></p>
+        <p class="dossier-note">You are not done. You take the night shift.</p>
+        <button id="dossierBtn">Take the night shift →</button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ===== ENDING ===== -->
+  <div id="dawn" class="overlay hidden">
+    <p class="kicker">05:59 — last shift ends</p>
+    <h1 id="endTitle">DAWN</h1>
+    <p class="sub" id="endStats"></p>
+    <p class="sub" id="endTitle2"></p>
+    <pre id="shareBlock"></pre>
+    <button id="copyBtn" class="ghost">Copy result</button>
+    <button id="againBtn">Work another week</button>
+    <textarea id="copySink" aria-hidden="true"></textarea>
+  </div>
+</div>
+<script src="riddles.js"></script>
+<script src="logic.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
