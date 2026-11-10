@@ -15,17 +15,81 @@
   <div id="title" class="overlay">
     <p class="kicker">Game Off 2026 · theme: SHIFT · a Last Human Standing story</p>
     <h1>NIGHT SHIFT</h1>
+    <div class="title-scene" aria-hidden="true">
+    <svg viewBox="0 0 640 300" role="img" aria-label="An auditor's night desk: lamp, docket folder, coffee">
+      <defs>
+        <radialGradient id="lampGlow" cx="50%" cy="0%" r="75%">
+          <stop offset="0%" stop-color="#e8b34b" stop-opacity=".55"/>
+          <stop offset="60%" stop-color="#e8b34b" stop-opacity=".12"/>
+          <stop offset="100%" stop-color="#e8b34b" stop-opacity="0"/>
+        </radialGradient>
+        <filter id="paperGrain">
+          <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" result="n"/>
+          <feColorMatrix in="n" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 .5 0"/>
+        </filter>
+      </defs>
+      <g fill="none" stroke="#2e3240" stroke-width="1.5" opacity=".7">
+        <path d="M-20,60 Q120,20 260,70 T640,50"/>
+        <path d="M-20,90 Q120,50 260,100 T640,80"/>
+        <path d="M-20,120 Q120,80 260,130 T640,110"/>
+      </g>
+      <rect x="0" y="216" width="640" height="84" fill="#1d130a"/>
+      <rect x="0" y="214" width="640" height="2" fill="#3a2a16"/>
+      <polygon class="lamp-glow" points="561,-10 400,232 640,232 602,-10" fill="url(#lampGlow)" opacity=".5"/>
+      <ellipse cx="516" cy="228" rx="122" ry="14" fill="#e8b34b" opacity=".14"/>
+      <rect x="556" y="26" width="10" height="120" fill="#0b0c10"/>
+      <polygon points="518,26 604,26 590,62 532,62" fill="#0b0c10" stroke="#8a6a2f" stroke-width="2"/>
+      <circle cx="561" cy="70" r="16" fill="#e8b34b" opacity=".22"/>
+      <circle cx="561" cy="70" r="7" fill="#e8b34b" opacity=".9"/>
+      <g transform="rotate(-10 76 168)">
+        <rect x="40" y="120" width="72" height="96" rx="8" fill="#1c1f27" stroke="#2e3240" stroke-width="2"/>
+        <text x="76" y="188" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="20" font-weight="bold" letter-spacing="2" fill="none" stroke="#d96a5a" stroke-width="1.4" transform="rotate(-8 76 180)">SUS</text>
+      </g>
+      <g transform="rotate(-5 230 175)">
+        <rect x="128" y="116" width="72" height="22" rx="4" fill="#b98f4e"/>
+        <text x="140" y="131" font-family="ui-monospace, Menlo, monospace" font-size="11" letter-spacing="2" fill="#4a3416">WEEK 12</text>
+        <rect x="128" y="130" width="204" height="112" rx="5" fill="#b98f4e"/>
+        <rect x="140" y="106" width="180" height="122" rx="2" fill="#efe3c8"/>
+        <g fill="#221c12" opacity=".6">
+          <rect x="152" y="122" width="120" height="7"/>
+          <rect x="152" y="136" width="148" height="7"/>
+          <rect x="152" y="150" width="100" height="7"/>
+          <rect x="152" y="164" width="132" height="7"/>
+        </g>
+        <text x="238" y="208" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="27" font-weight="bold" letter-spacing="5" fill="none" stroke="#2e6b34" stroke-width="2" opacity=".9" transform="rotate(-10 238 200)">HUMAN</text>
+        <text x="168" y="222" font-family="ui-monospace, Menlo, monospace" font-size="16" font-weight="bold" letter-spacing="3" fill="none" stroke="#b03028" stroke-width="1.4" opacity=".85" transform="rotate(-10 168 214)">SUS</text>
+      </g>
+      <g transform="rotate(22 130 250)">
+        <rect x="70" y="244" width="104" height="11" rx="2" fill="#b03028"/>
+        <polygon points="174,244 190,249.5 174,255" fill="#d8c49a"/>
+        <polygon points="184,247.4 190,249.5 184,251.6" fill="#221c12"/>
+        <rect x="62" y="244" width="10" height="11" fill="#8d8471"/>
+      </g>
+      <ellipse cx="452" cy="222" rx="46" ry="8" fill="#14161c" stroke="#3a2a16" stroke-width="1.5"/>
+      <rect x="420" y="160" width="64" height="58" rx="10" fill="#9c4a38"/>
+      <rect x="420" y="180" width="64" height="13" fill="#efe3c8" opacity=".92"/>
+      <ellipse cx="452" cy="160" rx="32" ry="7" fill="#241105"/>
+      <path d="M484,170 c20,2 20,38 0,38" fill="none" stroke="#9c4a38" stroke-width="9" stroke-linecap="round"/>
+      <path class="steam s1" d="M442,138 c-7,-12 7,-20 0,-32"/>
+      <path class="steam s2" d="M462,138 c-7,-12 7,-20 0,-32"/>
+      <rect x="0" y="0" width="640" height="300" filter="url(#paperGrain)" opacity=".06"/>
+    </svg>
+    </div>
     <p class="sub">ARIA runs a secret rule. Deduce it by day.<br/>Enforce it by night.</p>
     <div class="steps">
-      <p><b>1</b> Study ARIA's rulings</p>
-      <p><b>2</b> File the card that fits her secret rule</p>
-      <p><b>3</b> At night, you stamp everyone else</p>
+      <div class="step"><b>1 · READ</b><span>Study ARIA's rulings</span></div>
+      <div class="step-arrow" aria-hidden="true">→</div>
+      <div class="step"><b>2 · FILE</b><span>Play the card she'd pass</span></div>
+      <div class="step-arrow" aria-hidden="true">→</div>
+      <div class="step"><b>3 · STAMP</b><span>Judge the night shift</span></div>
     </div>
     <p class="legend">Three strikes and you're cut.</p>
-    <p id="docketNum" class="docket-num"></p>
-    <button id="startBtn">Clock in — today's docket</button>
-    <button id="randomBtn" class="ghost">Random shift</button>
-    <p class="hint">five nights, one story — then a fresh docket every day</p>
+    <p id="docketNum" class="docket-tag"></p>
+    <div class="title-btns">
+      <button id="startBtn" class="stamp-btn">Clock in — today's docket</button>
+      <button id="randomBtn" class="ghost">Random shift</button>
+    </div>
+    <p class="hint">five nights, one story — then a fresh docket every day · best with sound on</p>
     <p class="hint">an unofficial fan-made vignette · all proceedings fictional</p>
     <p class="hint">music · “Bump in the Night” — Kevin MacLeod (incompetech), CC-BY-4.0</p>
   </div>

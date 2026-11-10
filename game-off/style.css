@@ -114,6 +114,64 @@ button:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 3px 0 v
 button:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 1px 0 var(--btnshadow); }
 button:disabled { opacity: .45; cursor: default; }
 
+/* ---------- title: the night desk ---------- */
+#title { gap: 14px; }
+.title-scene { width: min(560px, 92vw); animation: scenein .9s ease backwards; }
+.title-scene svg { display: block; width: 100%; height: auto; }
+@keyframes scenein { from { opacity: 0; transform: translateY(14px); } }
+.title-scene .steam {
+  fill: none; stroke: #ece5d8; stroke-width: 3; stroke-linecap: round; opacity: 0;
+  animation: steamrise 3.4s ease-in-out infinite;
+}
+.title-scene .steam.s2 { animation-delay: 1.7s; }
+@keyframes steamrise {
+  0% { opacity: 0; transform: translateY(6px); }
+  35% { opacity: .5; }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+.title-scene .lamp-glow { animation: lampbreathe 6s ease-in-out infinite; }
+@keyframes lampbreathe { 50% { opacity: .32; } }
+#title .steps { flex-direction: row; align-items: stretch; gap: 8px; max-width: 640px; }
+#title .step {
+  flex: 1; display: flex; flex-direction: column; gap: 3px; text-align: left;
+  border: 1px solid #2e3240; border-radius: 8px; background: #191c22;
+  padding: 10px 14px;
+}
+#title .step b {
+  color: #e8b34b; margin: 0; font-size: 12px; letter-spacing: .18em;
+  font-family: ui-monospace, monospace;
+}
+#title .step span {
+  font-family: "Iowan Old Style", Palatino, Georgia, serif;
+  font-size: 13px; color: #c9c2b2;
+}
+#title .step-arrow { align-self: center; color: #5c5546; font-size: 16px; }
+#title .title-btns {
+  display: flex; gap: 12px; align-items: center;
+  justify-content: center; flex-wrap: wrap;
+}
+#title .stamp-btn {
+  font-family: ui-monospace, monospace; text-transform: uppercase;
+  letter-spacing: .1em; background: transparent; color: #e8b34b;
+  border: 3px solid #e8b34b; border-radius: 6px;
+  transform: rotate(-1.5deg); box-shadow: 0 3px 0 #6b531f;
+  padding: 14px 30px;
+}
+#title .stamp-btn:hover:not(:disabled) {
+  transform: rotate(-1.5deg) translateY(-2px); box-shadow: 0 5px 0 #6b531f;
+}
+#title .stamp-btn:active:not(:disabled) {
+  transform: rotate(-1.5deg) translateY(1px); box-shadow: 0 1px 0 #6b531f;
+}
+@media (max-width: 560px) {
+  #title .steps { flex-direction: column; }
+  #title .step-arrow { display: none; }
+}
+@media (max-height: 760px) {
+  #title { gap: 10px; }
+  .title-scene { width: min(400px, 86vw); }
+}
+
 /* ---------- HUD ---------- */
 #hud {
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
@@ -608,9 +666,16 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
 #copyBtn { min-height: 36px; padding: 8px 18px; font-size: 12px; }
 #copySink { position: fixed; left: -9999px; top: 0; }
 .endline { display: block; }
-.docket-num {
+.docket-tag {
+  position: relative;
   font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .25em;
-  color: #e8b34b;
+  color: #e8b34b; border: 1px dashed #6b531f; border-radius: 999px;
+  padding: 5px 16px 5px 22px;
+}
+.docket-tag::before {
+  content: ""; position: absolute; left: 10px; top: 50%;
+  width: 5px; height: 5px; margin-top: -3px; border-radius: 50%;
+  background: #6b531f;
 }
 button.ghost {
   background: transparent; color: inherit; border: 1px solid #2e3240;
