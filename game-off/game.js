@@ -246,13 +246,33 @@ const EXPLAIN = {
   amend: "Head office is restless tonight — they amend my rules mid-shift now. Watch the chips when it happens.",
   liar: "A clerical error slipped onto the docket. Find which ruling is wrong and I'll note it.",
 };
-let ariaTimer = null;
-function ariaSay(lines) {
+let ariaTimer = null, ariaTypeTimer = null;
+const calmMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+/* ARIA talks; the terminal types. mood: neutral | smug | alarm */
+function ariaSay(lines, mood = "neutral") {
   const el = $("ariaSay");
-  $("ariaText").textContent = pick(lines);
+  const out = $("ariaText");
+  const full = pick(lines);
+  el.dataset.mood = mood;
   el.classList.remove("hidden");
   clearTimeout(ariaTimer);
-  ariaTimer = setTimeout(() => el.classList.add("hidden"), 4200);
+  clearInterval(ariaTypeTimer);
+  let typed = 0;
+  if (calmMotion()) {
+    out.textContent = full;
+  } else {
+    out.textContent = "";
+    ariaTypeTimer = setInterval(() => {
+      typed += 1;
+      out.textContent = full.slice(0, typed);
+      if (typed >= full.length) clearInterval(ariaTypeTimer);
+    }, 16);
+  }
+  const hold = 4200 + (calmMotion() ? 0 : full.length * 16);
+  ariaTimer = setTimeout(() => {
+    clearInterval(ariaTypeTimer);
+    el.classList.add("hidden");
+  }, hold);
 }
 function explain(feature) {
   if (G.explained.has(feature)) return false;
@@ -423,8 +443,8 @@ function renderDocket(animRow) {
     tr.innerHTML =
       `<td class="c-file"><span class="glyph">${row.card.glyph}</span><span class="name">${row.card.name}</span></td>` +
       ATTR_KEYS.map((k) => `<td class="c-fact">${factCell(k, row.card.tags[k])}</td>`).join("") +
-      `<td class="c-stamp ${row.verdict === "HUMAN" ? "human" : "sus"}">${row.verdict}${
-        row === G.flagged ? " ⚑" : ""}</td>`;
+      `<td class="c-stamp ${row.verdict === "HUMAN" ? "human" : "sus"}">` +
+      `<span class="ink">${row.verdict}</span>${row === G.flagged ? " ⚑" : ""}</td>`;
     if (G.day >= 3) {
       tr.addEventListener("click", () => {
         G.flagged = G.flagged === row ? null : row;
@@ -615,7 +635,7 @@ function finishVerdict() {
       else G.score += 200;
     }
     G.dayResults[G.day] = "survived";
-    ariaSay(ARIA.survived);
+    ariaSay(ARIA.survived, "smug");
   } else {
     G.strikes += G.oath ? 2 : 1;
     G.dayResults[G.day] = "struck";
@@ -645,7 +665,7 @@ function finishVerdict() {
     $("dossierMeta").textContent =
       `${c.name} · failed: ${d.rule.filter((x) => !x.allow.includes(c.tags[x.key])).map((x) => x.text).join(", ")}`;
     dossierEl.classList.remove("hidden");
-    ariaSay(ARIA.eliminated);
+    ariaSay(ARIA.eliminated, "alarm");
     $("dossierBtn").onclick = () => {
       dossierEl.classList.add("hidden");
       G.status = "juror";
@@ -823,7 +843,7 @@ function stamp(pickVal) {
     G.streak = 1;
     if (contested && G.status === "player") {
       G.strikes++;
-      ariaSay(ARIA.struck);
+      ariaSay(ARIA.struck, "alarm");
     }
   }
   G.auditTotal++;

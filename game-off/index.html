@@ -113,8 +113,27 @@
     <!-- the one instruction per screen — "what do I do right now" -->
     <p id="instr"></p>
 
-    <!-- ARIA's quip: flavour only, never the instruction -->
-    <div id="ariaSay" class="hidden"><span id="ariaText"></span></div>
+    <!-- ARIA's quip: flavour only, never the instruction. She has a face. -->
+    <div id="ariaSay" class="hidden" data-mood="neutral">
+      <div class="aria-head" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <rect x="8" y="12" width="48" height="34" rx="5" fill="#0d0f14" stroke="currentColor" stroke-width="1.6"/>
+          <rect x="14" y="18" width="36" height="22" rx="2" fill="#171a22"/>
+          <g class="eye">
+            <path d="M20,29 Q32,21 44,29 Q32,37 20,29 Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+            <circle cx="32" cy="29" r="3.2" fill="currentColor"/>
+          </g>
+          <rect x="18" y="22" width="28" height="2" fill="#0d0f14" opacity=".9" class="scan"/>
+          <path d="M27,46 L27,52 L37,52 L37,46" fill="#0d0f14" stroke="currentColor" stroke-width="1.4"/>
+          <rect x="22" y="52" width="20" height="3" rx="1.5" fill="currentColor" opacity=".7"/>
+          <circle cx="54" cy="16" r="2" fill="currentColor" class="led"/>
+        </svg>
+      </div>
+      <div class="aria-body">
+        <span class="aria-who">ARIA <i>// ruling</i></span>
+        <span id="ariaText"></span>
+      </div>
+    </div>
 
     <!-- DAY: riddle → precedent docket → hand of four → file -->
     <section id="dayPhase">
@@ -206,11 +225,47 @@
 
   <!-- ===== ENDING ===== -->
   <div id="dawn" class="overlay hidden">
+    <div class="dawn-scene" aria-hidden="true">
+      <svg viewBox="0 0 400 110">
+        <defs>
+          <linearGradient id="dawnSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#14161c"/>
+            <stop offset="55%" stop-color="#1d2230"/>
+            <stop offset="100%" stop-color="#e8b34b" stop-opacity=".55"/>
+          </linearGradient>
+          <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#f6d58a" stop-opacity=".85"/>
+            <stop offset="100%" stop-color="#e8b34b" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <rect width="400" height="110" fill="url(#dawnSky)"/>
+        <g class="sun">
+          <circle cx="200" cy="86" r="42" fill="url(#sunGlow)"/>
+          <circle cx="200" cy="86" r="15" fill="#f6d58a"/>
+        </g>
+        <g class="horizon" fill="#0d0f14">
+          <rect x="0" y="94" width="400" height="16"/>
+          <rect x="18" y="80" width="52" height="14"/>
+          <rect x="40" y="70" width="12" height="10"/>
+          <rect x="96" y="86" width="70" height="8"/>
+          <rect x="300" y="82" width="84" height="12"/>
+          <rect x="342" y="68" width="10" height="14"/>
+        </g>
+        <g class="dawn-motes" fill="#e8b34b">
+          <circle class="dm dm1" cx="150" cy="70" r="1.6"/>
+          <circle class="dm dm2" cx="248" cy="60" r="1.3"/>
+          <circle class="dm dm3" cx="205" cy="50" r="1.1"/>
+        </g>
+      </svg>
+    </div>
     <p class="kicker">05:59 — last shift ends</p>
     <h1 id="endTitle">DAWN</h1>
     <p class="sub" id="endStats"></p>
     <p class="sub" id="endTitle2"></p>
-    <pre id="shareBlock"></pre>
+    <div class="share-wrap">
+      <pre id="shareBlock"></pre>
+      <span class="closed-stamp" aria-hidden="true">CASE CLOSED</span>
+    </div>
     <p class="hint">the week is closed — the docket never is. Replay this seed, or clock in tomorrow.</p>
     <button id="copyBtn" class="ghost">Copy result</button>
     <button id="againBtn">Work another week</button>
