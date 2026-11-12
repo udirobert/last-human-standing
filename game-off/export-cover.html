@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NIGHT SHIFT — 630x500 Cover Exporter</title>
+<style>
+  body {
+    background: #0a0b0f; color: #e5dec9;
+    font-family: ui-monospace, monospace;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 30px; gap: 20px;
+  }
+  .preview {
+    box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+    border: 1px solid #333;
+  }
+  button {
+    background: #e8b34b; color: #14161c;
+    border: none; padding: 12px 24px; font-weight: bold;
+    border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px;
+  }
+  button:hover { background: #ffd57a; }
+</style>
+</head>
+<body>
+  <h1>NIGHT SHIFT — Itch Cover (630 × 500)</h1>
+  <img id="svgImg" class="preview" src="cover-630x500.svg" width="630" height="500" alt="Cover Preview">
+  <canvas id="cv" width="630" height="500" style="display:none;"></canvas>
+  <button id="downloadBtn">Export cover-630x500.png</button>
+
+<script>
+document.getElementById('downloadBtn').addEventListener('click', () => {
+  const img = document.getElementById('svgImg');
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(img, 0, 0, 630, 500);
+  const a = document.createElement('a');
+  a.download = 'cover-630x500.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+});
+</script>
+</body>
+</html>

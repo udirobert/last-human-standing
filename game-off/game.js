@@ -123,50 +123,143 @@ function thudDrop(at = 0) {
   } catch { /* no audio */ }
 }
 
-// ---------- night music ----------
-/* Vendored track ("Bump in the Night" — Kevin MacLeod, CC-BY-4.0, see
- * LICENSE-CREDITS.txt). A plain <audio> element, not WebAudio:
- * MediaElementAudioSourceNode is CORS-blocked on file:// in Chrome, and
- * this game must run straight from disk. Volume ramps go through a small
- * setInterval fade helper on .volume.
- * "Bump in the Night" by Kevin MacLeod (incompetech.com), CC-BY-4.0. */
-let MUSIC = null;
-let musicFade = null;
-function music() {
-  if (!MUSIC) {
-    MUSIC = new Audio("audio/bump-in-the-night.mp3");
-    MUSIC.loop = true;
-    MUSIC.volume = 0;
-  }
-  return MUSIC;
-}
-function musicFadeTo(target, ms, thenPause) {
-  const m = music();
-  clearInterval(musicFade);
-  const from = m.volume;
-  const steps = Math.max(1, Math.round(ms / 50));
-  let i = 0;
-  musicFade = setInterval(() => {
-    i++;
-    m.volume = Math.min(1, Math.max(0, from + (target - from) * (i / steps)));
-    if (i >= steps) {
-      clearInterval(musicFade);
-      musicFade = null;
-      if (thenPause) m.pause();
-    }
-  }, ms / steps);
-}
-function musicStart() {
-  const m = music();
+// ---------- procedural atmospheric soundscape (WebAudio) ----------
+/* Zero external dependencies, 0 KB disk footprint, no CORS on file://.
+ * Synthesizes a warm late-night fluorescent tape-deck drone with subtle
+ * detuned harmonics and tape noise. Injects an eerie dissonance when
+ * filer VALE is on the desk.
+ */
+let AMBIENT = null;
+let ambientGain = null;
+let valeDissonanceGain = null;
+let audioMuted = false;
+
+function initAmbient() {
+  if (AMBIENT) return;
   try {
-    const p = m.play();
-    if (p && p.catch) p.catch(() => { /* autoplay/file:// denials are fine */ });
-  } catch { /* no audio */ }
-  musicFadeTo(0.16, 800);
+    const ac = audio();
+    const master = ac.createGain();
+    master.gain.setValueAtTime(0, ac.currentTime);
+    master.connect(ac.destination);
+    ambientGain = master;
+
+    // Sub-bass drone: A1 (55Hz) + fifth E2 (82.5Hz) with subtle LFO
+    const osc1 = ac.createOscillator();
+    const osc2 = ac.createOscillator();
+    const lfo = ac.createOscillator();
+    const lfoGain = ac.createGain();
+    const filter = ac.createBiquadFilter();
+
+    filter.type = "lowpass";
+    filter.frequency.value = 160;
+
+    osc1.type = "triangle";
+    osc1.frequency.value = 55.0;
+    osc2.type = "sine";
+    osc2.frequency.value = 82.4;
+
+    lfo.frequency.value = 0.15;
+    lfoGain.gain.value = 18;
+    lfo.connect(filter.frequency);
+
+    const droneGain = ac.createGain();
+    droneGain.gain.value = 0.08;
+
+    osc1.connect(filter);
+    osc2.connect(filter);
+    filter.connect(droneGain);
+    droneGain.connect(master);
+
+    // Warm tape hiss generator (filtered noise buffer)
+    const bufLen = ac.sampleRate * 2;
+    const noiseBuf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const data = noiseBuf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < bufLen; i++) {
+      const white = Math.random() * 2 - 1;
+      data[i] = (last + 0.02 * white) / 1.02; // soft pink noise
+      last = data[i];
+    }
+    const noiseSrc = ac.createBufferSource();
+    noiseSrc.buffer = noiseBuf;
+    noiseSrc.loop = true;
+
+    const noiseFilter = ac.createBiquadFilter();
+    noiseFilter.type = "bandpass";
+    noiseFilter.frequency.value = 1200;
+    noiseFilter.Q.value = 1.0;
+
+    const noiseGain = ac.createGain();
+    noiseGain.gain.value = 0.016;
+
+    noiseSrc.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(master);
+
+    // VALE eerie dissonance oscillator: detuned tritone (116.5Hz)
+    const valeOsc = ac.createOscillator();
+    valeOsc.type = "sawtooth";
+    valeOsc.frequency.value = 116.5;
+
+    const valeFilter = ac.createBiquadFilter();
+    valeFilter.type = "lowpass";
+    valeFilter.frequency.value = 340;
+
+    const vGain = ac.createGain();
+    vGain.gain.setValueAtTime(0, ac.currentTime);
+    valeDissonanceGain = vGain;
+
+    valeOsc.connect(valeFilter);
+    valeFilter.connect(vGain);
+    vGain.connect(master);
+
+    osc1.start();
+    osc2.start();
+    lfo.start();
+    noiseSrc.start();
+    valeOsc.start();
+
+    AMBIENT = { master, osc1, osc2, lfo, noiseSrc, valeOsc };
+  } catch (e) {
+    /* audio unavailable */
+  }
 }
+
+function musicStart() {
+  initAmbient();
+  if (!ambientGain || audioMuted) return;
+  try {
+    const ac = audio();
+    ambientGain.gain.cancelScheduledValues(ac.currentTime);
+    ambientGain.gain.linearRampToValueAtTime(0.35, ac.currentTime + 1.2);
+  } catch {}
+}
+
 function musicStop() {
-  if (!MUSIC) return;
-  musicFadeTo(0, 400, true);
+  if (!ambientGain) return;
+  try {
+    const ac = audio();
+    ambientGain.gain.cancelScheduledValues(ac.currentTime);
+    ambientGain.gain.linearRampToValueAtTime(0, ac.currentTime + 0.6);
+  } catch {}
+}
+
+function musicDuck(on) {
+  if (!ambientGain || audioMuted) return;
+  try {
+    const ac = audio();
+    ambientGain.gain.cancelScheduledValues(ac.currentTime);
+    ambientGain.gain.linearRampToValueAtTime(on ? 0.08 : 0.35, ac.currentTime + 0.4);
+  } catch {}
+}
+
+function setValeDissonance(on) {
+  if (!valeDissonanceGain || audioMuted) return;
+  try {
+    const ac = audio();
+    valeDissonanceGain.gain.cancelScheduledValues(ac.currentTime);
+    valeDissonanceGain.gain.linearRampToValueAtTime(on ? 0.045 : 0, ac.currentTime + 0.5);
+  } catch {}
 }
 
 // ---------- skippable timers ----------
@@ -207,6 +300,7 @@ function factRows(card, verdicts, pending) {
 // ---------- instruction lines ----------
 const INSTR = {
   day: "ARIA has a secret rule. Her rulings below are your clues — file the one card she'd pass.",
+  day1: "ARIA has a secret rule. Notice what her approved HUMAN precedents share — then file the matching card.",
   dayLiar: "ARIA has a secret rule. Her rulings below are your clues — file the one card she'd pass. ⚠ One ruling below is a clerical error.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Now you're the auditor. The rule is in plain sight — stamp each filing HUMAN or SUS.",
@@ -241,17 +335,19 @@ const ARIA = {
   eliminated: ["Three strikes. Cut — but not erased."],
   juror: ["You're on jury duty now."],
   auditOpen: [
-    "Night shift. The rule stays open — you just get to see it.",
-    "Night shift. The rule stays open — you just get to see it.",
+    "Night shift. The rule is pinned — but check the timestamps. Someone is filing unnaturally fast.",
+    "Night shift. Stamp each filing against the rule. Watch for anomalous response latency.",
     "Someone on this docket has never missed. Humans miss.",
     "Check the timestamps. I'm not allowed to.",
     "My rules only check facts. Whatever isn't a fact walks right through.",
   ],
+  valeAlert: [
+    "LATENCY ANOMALY: Filing arrived at +0.003s. No human reacts in under 150ms.",
+    "DIAGNOSTIC ALERT: Filer VALE response delay is 3 milliseconds. Investigate.",
+  ],
 };
 // one-line explainers shown the first time each mechanic appears
 const EXPLAIN = {
-  streak: "Chains of right answers pay better now. Miss once and the chain resets.",
-  timer: "There's a clock on the desk tonight. Fast stamps pay a little extra.",
   clue: "You may request one more ruling per day. It costs a hundred from today's pay.",
   oath: "File under oath and I'll hold you to it. Keep it and a strike vanishes; break it and you take two.",
   amend: "Head office is restless tonight — they amend my rules mid-shift now. Watch the chips when it happens.",
@@ -321,20 +417,16 @@ const G = {
   finaleRows: null,
   finaleOpts: null,
   finaleChoice: null,
-  clockTickLast: 4,
   auditHitsToday: 0,
   nightPoints: 0,
-  streak: 1,
-  bestStreak: 1,
   auditLocked: false,
   verdictDone: false,
   dayResults: [],        // "survived" | "struck" | "juror"
   nightResults: [],      // correct stamps per night
   phase: "day",
-  clockTimer: null,
-  clockStart: 0,
   explained: new Set(),
   elimDay: 0,
+  valeSeenTonight: false,
 };
 
 function hud() {
@@ -437,7 +529,7 @@ function startDay() {
   G.filing = false;
   banner(`${d.dayLabel} · ${d.emoji} ${d.theme}`);
   showOnly("day");
-  setInstr(G.day >= 3 ? "dayLiar" : "day");
+  setInstr(G.day >= 3 ? "dayLiar" : G.day === 0 ? "day1" : "day");
   // progressive features
   const clueBtn = $("clueBtn");
   clueBtn.classList.toggle("hidden", G.day < 1);
@@ -463,6 +555,19 @@ function startDay() {
   renderDay();
 }
 
+function highlightMatchingTags(tags) {
+  const cells = $("docket").querySelectorAll("td.c-fact");
+  cells.forEach((td) => {
+    if (!tags) {
+      td.classList.remove("tag-match");
+    } else {
+      const k = td.dataset.key;
+      const v = td.dataset.val;
+      td.classList.toggle("tag-match", tags[k] === v);
+    }
+  });
+}
+
 function renderDay() {
   const d = DAYS[G.day];
   $("dayKicker").textContent = `${d.dayLabel} · ${d.theme} · TODAY'S RIDDLE`;
@@ -478,7 +583,15 @@ function renderDay() {
         <span class="key">${i + 1}</span></div>
       <div class="name">${card.name}</div>
       ${factRows(card)}`;
-    el.addEventListener("click", () => selectCard(card));
+    el.addEventListener("mouseenter", () => highlightMatchingTags(card.tags));
+    el.addEventListener("mouseleave", () => {
+      if (G.selected) highlightMatchingTags(G.selected.tags);
+      else highlightMatchingTags(null);
+    });
+    el.addEventListener("click", () => {
+      selectCard(card);
+      highlightMatchingTags(card.tags);
+    });
     handEl.appendChild(el);
   });
   if (!calmMotion()) later(() => sfx.riffle(), 120);
@@ -488,14 +601,21 @@ function renderDay() {
 function renderDocket(animRow) {
   const tb = $("docketBody");
   tb.innerHTML = "";
-  for (const row of G.docket) {
+  // On Day 1, sort docket rows so HUMAN precedents are grouped at top, clearly showing the contrast!
+  const rows = G.day === 0
+    ? [...G.docket].sort((a, b) => (a.verdict === "HUMAN" ? -1 : 1))
+    : G.docket;
+
+  for (const row of rows) {
     const tr = document.createElement("tr");
     if (G.day >= 3) tr.className = "flaggable";
     if (row === animRow) tr.classList.add("new-row");
     if (row === G.flagged) tr.classList.add("flagged");
+    tr.dataset.verdict = row.verdict;
+    ATTR_KEYS.forEach((k) => { tr.dataset[k] = row.card.tags[k]; });
     tr.innerHTML =
       `<td class="c-file"><span class="glyph">${row.card.glyph}</span><span class="name">${row.card.name}</span></td>` +
-      ATTR_KEYS.map((k) => `<td class="c-fact">${factCell(k, row.card.tags[k])}</td>`).join("") +
+      ATTR_KEYS.map((k) => `<td class="c-fact" data-key="${k}" data-val="${row.card.tags[k]}">${factCell(k, row.card.tags[k])}</td>`).join("") +
       `<td class="c-stamp ${row.verdict === "HUMAN" ? "human" : "sus"}">` +
       `<span class="ink">${row.verdict}</span>${row === G.flagged ? " ⚑" : ""}</td>`;
     if (G.day >= 3) {
@@ -507,6 +627,7 @@ function renderDocket(animRow) {
     }
     tb.appendChild(tr);
   }
+  if (G.selected) highlightMatchingTags(G.selected.tags);
 }
 
 function requestClue() {
@@ -626,16 +747,6 @@ function renderVerdict() {
   $("lieLine").classList.add("hidden");
   $("lieLine").innerHTML = "";
 
-  // the room's mood, honestly derived: share of HUMAN stamps on today's
-  // docket (the crowd believes the clerical error too). ARIA overrules it.
-  const stampedH = G.docket.filter((r) => r.verdict === "HUMAN").length;
-  const jitter = Math.round(stream("crowd")() * 6 - 3);
-  const pct = Math.min(98, Math.max(2,
-    Math.round((100 * stampedH) / Math.max(1, G.docket.length)) + jitter));
-  G.verdictPct = pct;
-  $("tallyFill").style.transition = "none";
-  $("tallyFill").style.width = "0%";
-  $("crowdPct").innerHTML = "";
   $("stampBox").innerHTML = "";
   $("verdictActions").innerHTML = "";
 
@@ -671,31 +782,19 @@ function renderVerdict() {
     }
   });
 
-  later(() => {
-    $("tallyFill").style.transition = "width .6s ease";
-    $("tallyFill").style.width = pct + "%";
-    $("crowdPct").innerHTML =
-      `<b class="h">${pct}% HUMAN</b> · <b class="s">${100 - pct}% SUS</b>`;
-  }, t + 150);
-
-  later(() => finishVerdict(), t + 900);
+  later(() => finishVerdict(), t + 300);
 }
 
 function finishVerdict() {
   if (G.verdictDone) return;
   G.verdictDone = true;
   clearLater();
-  const d = DAYS[G.day], c = G.filed, pct = G.verdictPct;
+  const d = DAYS[G.day], c = G.filed;
   const passed = G.verdictPassed;
 
   // restore full rows instantly on skip
   $("factRows").innerHTML = G.factHTML;
   $("factRows").querySelectorAll(".pre").forEach((r) => r.classList.remove("pre"));
-
-  $("tallyFill").style.transition = "none";
-  $("tallyFill").style.width = pct + "%";
-  $("crowdPct").innerHTML =
-    `<b class="h">${pct}% HUMAN</b> · <b class="s">${100 - pct}% SUS</b>`;
 
   let stampText, stampCls;
   if (passed) {
@@ -802,9 +901,8 @@ function startAudit() {
   musicStart();
   setInstr("night");
   ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
-  if (G.day === 0) explain("streak");
-  else if (G.day === 1) explain("timer");
-  else if (G.day === 2) explain("amend");
+  if (G.day === 2) explain("amend");
+  G.valeSeenTonight = false;
   const d = DAYS[G.day];
 
   renderRuleChips(d.rule, false);
@@ -849,43 +947,6 @@ function renderRuleChips(rule, amended) {
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
 
-function caseClock() {
-  // 8-second per-case clock, night 2 onward (day index ≥ 1)
-  const bar = $("clockBar");
-  clearInterval(G.clockTimer);
-  G.clockTimer = null;
-  if (G.day < 1) { bar.classList.add("hidden"); return; }
-  bar.classList.remove("hidden");
-  bar.classList.remove("overtime");
-  $("clockMsg").classList.add("hidden");
-  const fill = $("clockFill");
-  fill.style.transition = "none";
-  fill.style.width = "100%";
-  G.clockStart = Date.now();
-  G.clockTickLast = 4;
-  G.clockTimer = setInterval(() => {
-    const frac = Math.max(0, 1 - (Date.now() - G.clockStart) / 8000);
-    fill.style.width = frac * 100 + "%";
-    // last three seconds tick, rising — hurry without words
-    const secs = Math.ceil(frac * 8);
-    if (secs <= 3 && secs >= 1 && secs !== G.clockTickLast) {
-      G.clockTickLast = secs;
-      sfx.tickHi(secs);
-    }
-    if (frac <= 0) {
-      clearInterval(G.clockTimer);
-      G.clockTimer = null;
-      bar.classList.add("overtime");
-      $("clockMsg").classList.remove("hidden");
-    }
-  }, 100);
-}
-function clockBonus() {
-  if (G.day < 1 || !G.clockStart) return 0;
-  const frac = Math.max(0, 1 - (Date.now() - G.clockStart) / 8000);
-  return Math.round(10 * frac);
-}
-
 function renderCase() {
   const sub = G.auditSubs[G.auditIdx];
   const el = $("caseCard");
@@ -894,18 +955,25 @@ function renderCase() {
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
   const arg = sub.filer === "VALE" ? DAYS[G.day].valeLine : sub.card.argument;
   const reason = !sub.pick ? "" : sub.correct
-    ? `+${sub.earned} pts${sub.bonus ? ` · +${sub.bonus} speed` : ""}${contested ? " · contested ×2" : ""}`
+    ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}`
     : (sub.truth ? "passes: meets every criterion"
                  : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
                      .map((k) => sub.rule.find((x) => x.key === k).text).join(", ")) +
       (contested && G.status === "player" ? " · +1 STRIKE" : "");
-  el.innerHTML =    `<p class="case-num">CASE ${G.auditIdx + 1}/5
-      <span id="streakTag" class="${G.streak > 1 ? "pop" : ""}">STREAK ×${G.streak}${newTag("streak", 0)}</span></p>
-    ${contested && !checked
-      ? `<span class="contested-tag"><b>\u2696 CONTESTED</b><i>right pays ×2 · wrong costs a strike</i></span>` : ""}
-    <div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${contested && !checked ? " contested" : ""}">
+
+  // Anomaly reactivity
+  const isVale = sub.filer === "VALE";
+  setValeDissonance(isVale);
+  if (isVale && !checked && !G.valeSeenTonight) {
+    G.valeSeenTonight = true;
+    ariaSay(ARIA.valeAlert, "alarm");
+  }
+
+  el.innerHTML =
+    `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED</b></span>' : ""}</p>` +
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${isVale ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
-        <span class="filer">FILER · ${sub.filer} <i>filed ${sub.filed}</i></span></div>
+        <span class="filer">FILER · <b>${sub.filer}</b> ${isVale ? `<i class="anomaly-ts">⚡ FILED ${sub.filed} (0ms DELAY)</i>` : `<i>filed ${sub.filed}</i>`}</span></div>
       <div class="name">${sub.card.name}</div>
       ${sub.pick ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
         <p class="case-reason">${reason}</p>` : ""}
@@ -916,10 +984,9 @@ function renderCase() {
     </div>`;
   $("susBtn").disabled = $("humanBtn").disabled = checked;
   if (!checked) {
-    caseClock();
     if (!calmMotion()) {
-      later(() => sfx.drop(), 80);          // the next file hits the desk
-      if (contested) later(() => sfx.gavel(), 320);   // and the contest slams on top
+      later(() => sfx.drop(), 80);
+      if (contested) later(() => sfx.gavel(), 320);
     }
   }
 }
@@ -929,24 +996,17 @@ function stamp(pickVal) {
   const sub = G.auditSubs[G.auditIdx];
   if (!sub || sub.pick) return;
   G.auditLocked = true;
-  clearInterval(G.clockTimer);
-  G.clockTimer = null;
   sub.pick = pickVal;
   sub.correct = (pickVal === "HUMAN") === sub.truth;
   const contested = G.auditIdx === G.contestedIdx;
   if (sub.correct) {
     G.auditHitsToday++;
     G.auditHits++;
-    sub.bonus = clockBonus();
-    sub.earned = 20 * G.streak + sub.bonus;
-    if (contested) sub.earned *= 2;
+    sub.earned = contested ? 100 : 50;
     G.nightPoints += sub.earned;
     G.score += sub.earned;
-    if (G.streak < 3) G.streak++;
-    if (G.streak > G.bestStreak) G.bestStreak = G.streak;
   } else {
-    sub.earned = 0; sub.bonus = 0;
-    G.streak = 1;
+    sub.earned = 0;
     if (contested && G.status === "player") {
       G.strikes++;
       ariaSay(ARIA.struck, "alarm");
@@ -1042,12 +1102,6 @@ function deskShake() {
   later(() => frameEl.classList.remove("shake"), 500);
 }
 
-/* duck the night music under an interruption, restore after. */
-function musicDuck(on) {
-  if (!MUSIC) return;
-  musicFadeTo(on ? 0.04 : 0.16, on ? 350 : 700);
-}
-
 const AMEND_CONTACT = 430;
 function showAmendment() {
   if (G.amending) return;
@@ -1139,9 +1193,6 @@ function finishAmend() {
 }
 
 function auditSummary() {
-  clearInterval(G.clockTimer);
-  G.clockTimer = null;
-  $("clockBar").classList.add("hidden");
   const hits = G.auditHitsToday;
   G.nightResults[G.day] = hits;
   let pts = G.nightPoints;
@@ -1395,7 +1446,15 @@ document.addEventListener("keydown", (e) => {
   if (!dossierEl.classList.contains("hidden")) return;
   if (gameEl.classList.contains("hidden")) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
-  if (e.key === "m" || e.key === "M") { if (MUSIC) MUSIC.muted = !MUSIC.muted; return; }
+  if (e.key === "m" || e.key === "M") {
+    audioMuted = !audioMuted;
+    if (ambientGain) {
+      const ac = audio();
+      ambientGain.gain.cancelScheduledValues(ac.currentTime);
+      ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.35, ac.currentTime);
+    }
+    return;
+  }
   if (G.phase === "day") {
     if (e.key >= "1" && e.key <= "4") {
       const c = G.hand[+e.key - 1];
@@ -1453,7 +1512,7 @@ $("banner").addEventListener("click", () => $("banner").classList.add("hidden"))
 function startGame(seed) {
   SEED = seed;
   audio();
-  music();   // create the element inside the start click — autoplay unlocked
+  initAmbient();
   titleEl.classList.add("hidden");
   gameEl.classList.remove("hidden");
   hud();
@@ -1469,7 +1528,8 @@ function clockIn(seed) {
   if (clockingIn) return;
   clockingIn = true;
   // unlock audio on the gesture itself — the visual punch comes after
-  audio(); music();
+  audio();
+  initAmbient();
   const b = $("startBtn");
   if (calmMotion()) { startGame(seed); return; }
   b.classList.add("punching");

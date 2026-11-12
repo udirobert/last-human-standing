@@ -1313,6 +1313,63 @@ body.wiping::after {
   opacity: .8;
 }
 
+/* cross-tag inspection highlight */
+#docket td.c-fact.tag-match {
+  background: rgba(232, 179, 75, 0.28) !important;
+  outline: 1.5px solid var(--accent);
+  outline-offset: -1px;
+  border-radius: 3px;
+  transition: background-color .15s ease;
+}
+body[data-shift="night"] #docket td.c-fact.tag-match {
+  background: rgba(232, 179, 75, 0.35) !important;
+}
+
+/* VALE anomaly card styling */
+.case-card.anomaly {
+  border-color: #d96a5a;
+  box-shadow: 0 0 20px rgba(217, 106, 90, 0.25), inset 0 0 12px rgba(217, 106, 90, 0.08);
+}
+.case-card.anomaly .filer {
+  color: #ff7b72 !important;
+  font-weight: 700;
+}
+.case-card .filer .anomaly-ts {
+  display: inline-block;
+  color: #fff;
+  background: #b03028;
+  padding: 1px 6px;
+  border-radius: 3px;
+  margin-left: 6px;
+  font-size: 8.5px;
+  letter-spacing: .12em;
+  font-weight: bold;
+  animation: anomalyGlow 1.4s ease-in-out infinite alternate;
+}
+@keyframes anomalyGlow {
+  from { box-shadow: 0 0 4px #b03028; }
+  to { box-shadow: 0 0 12px rgba(255, 82, 82, 0.8); }
+}
+
+/* Day 1 Precedent Grouping */
+.docket-sec-header {
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  font-weight: bold;
+  padding: 6px 8px 3px;
+}
+.docket-sec-header.human {
+  color: var(--green);
+  background: rgba(46, 107, 52, 0.12);
+  border-left: 3px solid var(--green);
+}
+.docket-sec-header.sus {
+  color: var(--red);
+  background: rgba(176, 48, 40, 0.1);
+  border-left: 3px solid var(--red);
+}
+
 @media (max-height: 640px) {
   #hud { padding-bottom: 8px; }
   #instr { margin: 6px 0 0; padding: 6px 12px; }

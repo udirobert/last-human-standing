@@ -36,6 +36,21 @@ fun? do eliminated players return? does the reveal generate conversation?
 is the global window workable? PLUS (if exhibition): first real
 agent-detection precision/recall data.
 
+## Phase 1.5 — Spectator-first pivot 📋 PLANNED (design only)
+
+Strategy doc: `docs/PIVOT_SPECTATOR_FIRST.md`. Two launches died on IRL
+friction; v3 makes the crowd the player (backer stakes, jury promotion,
+IRL-as-bonus, riddle UGC). Test cheaply first — spectator v0 with no
+payout — before any contract work. See doc for KPIs and kill criteria.
+
+## Parallel Track — GitHub Game Off 2026: NIGHT SHIFT 🎮 IN PROGRESS
+
+Spec & overhaul plan: `docs/GAME_OFF_2026.md`. Standalone 5-day deduction
+browser thriller for GitHub Game Off 2026 (theme: SHIFT). Built with vanilla
+JS, procedural WebAudio, and SVG (zero dependencies, 208KB). Standalone
+packager in `scripts/package-game-off.sh` outputs `dist/night-shift-itch.zip`
+and standalone repo `dist/night-shift`. Submission deadline: Dec 1, 2026 13:37 PST.
+
 ## Phase 2 — Correct agent claims and schemas (S)
 
 - [ ] `entry_kind` / `entry_token` constraints admit agent rows

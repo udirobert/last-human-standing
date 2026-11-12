@@ -93,35 +93,35 @@ Third read of the build: the deduction was fair, but the game still *looked* lik
 
 The rule of thumb now applies one layer up: if a player can't *see* what just happened without reading the line under it, the moment is wrong.
 
-## Scope for ~3 weeks solo
+## Scope & Architecture
 
-- **Tech**: vanilla JS + DOM + WebAudio, no build step, works from `file://`. `game-off/{index.html,style.css,game.js,logic.js,riddles.js,test-logic.mjs}` — extract to its own public repo before Dec 1. All art is inline SVG + CSS — the night desk on the title, the room behind the stage, ARIA's terminal head, paper grain, stamps and seals — so the jam build ships with zero image assets and still works from `file://`. Night music is one vendored CC-BY-4.0 MP3 (`game-off/audio/bump-in-the-night.mp3` via `scripts/vendor-patch.mjs`, credit in `game-off/LICENSE-CREDITS.txt`, `M` toggles) on a plain `<audio>` element so `file://` keeps working. Case data lives in `riddles.js`, deal/verdict rules in `logic.js` (pure, node-testable) — adding days/cards/rules is data-only.
-- **Milestones**:
-  1. ~~Core~~ **done**: full loop playable — 5 days, docket → file → verdict → night audit, strikes, dossier, juror path.
-  2. ~~UX pass~~ **done 2026-11-10 (pivot 3)**: rebuilt as a deduction game (see "Fixes shipped") — the spec-as-icons build was replaced.
-  3. ~~Enrichment~~ **done 2026-11-10**: all seven mechanics shipped — seeded dockets + share grid, suspense verdict, clue + oath, clerical error, amendments, streak + shift clock, VALE finale.
-  4. ~~Presentation~~ **done 2026-11-10**: ten passes making every state change physical (title desk, ARIA head, paper grain, room, deal/flight/slip day shift, stamp swing, contest + amendment impacts, signed decree, punched time card, CUT beat) — see "Presentation passes".
-  5. **Balance + fresh playtest (next)**: protocol is ready in [`PLAYTEST.md`](./PLAYTEST.md); verify a fresh player understands each feature on its introduction day, then tune oath/clue/flag economics and streak/clock pressure.
-  6. **Submit (by ~Nov 30)**: cover art + trailer capture, itch.io page upload (copy in [`ITCH_PAGE.md`](./ITCH_PAGE.md)), extract `game-off/` to its public repo, then a device + itch-iframe pass.
-  7. **Endless Shift (post-jam ONLY, unlocked by finishing the story)**: procedurally generated nights past day 5 — criteria scale 3→4, liar frequency up, amendments stackable, strikes reset weekly, scoring continues. New menu button appears on the ending screen only; the title keeps its single CTA. Gate: `audit-deduction.mjs` extended to generated nights (ONE-WORD-HARMFUL must hold) before release. The daily seed + share grid already cover endless/multiplayer socially — this is the mastery grind for readers who finish.
-- **Explicit non-goals**: no multiplayer, no accounts, no backend, no Meshy/AI assets required, no in-jam mode select — single CTA by design (modes are framing: story / daily / readers, not menus).
+- **Tech**: vanilla JS + DOM + WebAudio, no build step, works from `file://`. `game-off/{index.html,style.css,game.js,logic.js,riddles.js,test-logic.mjs}` — extracted to standalone public repo via `scripts/package-game-off.sh`. All art is inline SVG + CSS — night desk title, stage room, ARIA's terminal head, paper grain, rubber stamps, and seals.
+- **Audio**: Procedural WebAudio atmospheric soundscape synthesized at runtime (low-pass sub-bass drone, warm analog tape hiss, physical foley, and reactive VALE tritone dissonance). Zero external audio dependencies, 208KB total directory size. `M` toggles mute.
+- **Data & Verification**: Case data lives in `riddles.js`, deal/verdict rules in `logic.js` (pure, node-testable). `test-logic.mjs` verifies 2,000 seeds per day with 100% determinism.
 
-## Submission checklist (Dec 1)
+## Milestones (Updated 2026-11-12 — Jam-Winning Overhaul)
 
-- [ ] Public GitHub repo, source pushed
-- [ ] itch.io project created under GitHub login, HTML5 embed or downloadable build
-- [ ] Cover image + description mentioning SHIFT interpretation
-- [ ] Tested in a clean browser, mobile viewport, and itch iframe
-- [ ] README with controls + how to run
+1. ~~Core~~ **done**: full loop playable — 5 days, docket → file → verdict → night audit, strikes, dossier, juror path.
+2. ~~UX pass~~ **done 2026-11-10 (pivot 3)**: rebuilt as a deduction game.
+3. ~~Enrichment pass~~ **done 2026-11-10**: seeded dockets, share grid, clerical error, amendments, finale decree.
+4. ~~Pivot 4: Readability & Jam Overhaul~~ **done 2026-11-12**:
+   - Fixed Day 1 spreadsheet bounce: grouped approved HUMAN precedents at top; added interactive cross-tag amber hover inspection; direct instruction line.
+   - Front-loaded VALE anomaly: styled case badge on Night 1 (`⚡ FILED +0.003s`), ARIA diagnostic alarm ping, and reactive auditory dissonance.
+   - De-arcaded the night shift: stripped 8s timer, streak multiplier, and cosmetic crowd tally; focused on forensic accuracy (50 pts / 100 pts contested).
+   - Swapped audio: removed 4.46MB MacLeod loop for procedural WebAudio synthesizer.
+   - Itch cover art: authored 630×500 vector cover (`cover-630x500.svg`) and HTML exporter (`export-cover.html`).
+   - Standalone extraction: created `scripts/package-game-off.sh` producing 52KB `night-shift-itch.zip` and clean standalone repo at `dist/night-shift`.
+5. **Fresh-Player Playtesting (Nov 15–20)**: Run fresh-player protocol in [`PLAYTEST.md`](./PLAYTEST.md) to confirm 100% Day 1 comprehension and Night 1 anomaly discovery.
+6. **Submission & Itch Launch (by Nov 30)**: Deploy to itch.io, configure 630x500 thumbnail, push standalone repo to GitHub before Dec 1 13:37 PST.
 
 ## Status log
 
 - **2026-11-09** — Doc created; concept locked as **NIGHT SHIFT**.
-- **2026-11-09 (pivot 1)** — First build (spot-the-difference) rejected as too generic: LHS skin on a non-LHS mechanic. Rebuilt as a **distillation of the actual LHS loop**: 5 days mirroring the riddle cycle, evidence cards with hidden committed specs, crowd HUMAN/SUS verdicts, elimination → dossier → **jury duty** (the game's own spectator path). Player role: *both shifts* — argue by day, audit by night. Files: `game-off/{index.html,style.css,game.js,riddles.js}`, vanilla JS/DOM, works from `file://`.
-- **2026-11-09 (pivot 2 — UX)** — Playtest feedback: "stages unclear, lost with no rhyme or reason." Researched itch.io onboarding/juice best practices (see UX research section), then rebuilt presentation: spec revealed as icon rows matching card glyphs, crowd as 24 verdict figures, stamp + per-icon pass/fail explanations, skippable ceremony, phase-labeled HUD, explicit HUMAN/SUS audit buttons. `riddles.js` chips removed — spec rows now generate from `requires`/`forbid` so display can't lie. Next: content depth pass → cover art → public repo + itch.io.
-- **2026-11-10 (pivot 3 — deduction)** — Second playtest, same complaint ("lost immediately, so confusing"). Root causes: blind filing, one-miss elimination, noisy verdicts, emoji-colour verdict signalling that doesn't render. Rebuilt as a **deduction game**: secret 1–3-criterion rule per day, precedent docket (2 HUMAN + per-criterion SUS near-misses) as the day's clues, deterministic `passes()` verdict with per-fact ✓/✗ rows, strikes (3 = cut), one-at-a-time night audit with instant feedback, day/night theme shift, always-visible instruction line, labeled facts everywhere. New `logic.js` holds pure deal/verdict logic; `test-logic.mjs` fuzzes it 2,000 deals/day. Next: content depth → cover art → public repo + itch.io.
-- **2026-11-10 (enrichment)** — Seven additions staged across the week so day 1 stays simple: seeded dockets + share grid (daily seed, `?seed=`), suspense fact-row verdict, clue-for-pay + filing under oath (day 2), clerical-error docket row (days 4–5), mid-night rule amendments (days 3–5), streak ×3 + 8s shift clock (nights 1–2), and a finale where you author the last rule to cut VALE — the filer who always passes and always files +0.003s. `test-logic.mjs` now fuzzes seeds/determinism, liar invariants, amended audit segments and the finale cut map.
-- **2026-11-10 (presentation)** — Third read: fair on paper, still reads as a slideshow. Ten presentation-only passes, no mechanics touched: night-desk title + time-card clock-in, ARIA's terminal head, paper grain, the room behind the desk, a physical day shift (dealt cards, filing flight, verdict slip, stapled amendment), the night stamp swinging and throwing ink, contested case + amendment slam, the finale as a decree you fill in and sign, and a third-strike `CUT` beat that dims the room and holds the dossier back. Motion is skippable everywhere via `prefers-reduced-motion`. Remaining: cover art, itch upload, repo extraction, fresh-player playtest.
+- **2026-11-09 (pivot 1)** — First build rejected as too generic. Rebuilt as 5-day deduction/audit cycle.
+- **2026-11-09 (pivot 2 — UX)** — Playtest feedback: "stages unclear". Rebuilt icon presentation.
+- **2026-11-10 (pivot 3 — deduction)** — Playtest feedback: "lost immediately". Added precedent docket, deterministic verdict, strikes.
+- **2026-11-10 (enrichment & presentation)** — Added seed dockets, share grid, amendments, physical desk passes, and finale decree.
+- **2026-11-12 (pivot 4 — Jam-Winning Overhaul)** — Addressed fatal critique: Day 1 spreadsheet bounce, prompt-literal theme interpretation, arcade clock mismatch, gated VALE twist, stock audio, and monorepo baggage. Shifting to visual evidence contrast, front-loaded VALE on Night 1, forensic pace, bespoke WebAudio soundscape, and standalone repo extraction.
 
 ## Open questions
 

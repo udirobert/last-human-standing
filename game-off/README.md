@@ -1,12 +1,13 @@
 # NIGHT SHIFT
 
-A Last Human Standing vignette. **Game Off 2026** entry — theme: *SHIFT*.
+A five-day deduction thriller. **Game Off 2026** entry — theme: *SHIFT*.
 
 Five days. Each day ARIA holds a **secret rule** — one to three criteria over
 a card's four facts (where · when · who · in-or-out). By day you deduce the
-rule from her earlier rulings and file one card she'd pass. By night the rule
-is in plain sight and you stamp everyone else's filings. Three strikes and
-you're cut to the night shift for good — jury duty until dawn.
+rule from her earlier rulings and file the one card she'd pass. By night the rule
+is in plain sight and you take the desk, stamping everyone else's filings. But
+something is wrong: one filer's filings are arriving at +0.003s. Catch the machine.
+Three strikes and you're cut to the night shift for good.
 
 ## Run it
 
@@ -24,22 +25,15 @@ python3 -m http.server 8000
 - **Day shift**: read the riddle, then study the docket — ARIA's already
   stamped two filings HUMAN and a few SUS. Those precedents *are* the clue.
   Tap a card to select it (keys `1`–`4`), then **File →** (or `Enter`).
-  Every card shows four facts in fixed order: where · when · who · in/out.
+  Every card shows four facts: where · when · who · in/out.
 - **Verdict**: the rule is unsealed in plain words and your card's facts are
-  marked line by line — ✓ meets the criterion, ✗ shows what was needed,
-  dimmed rows weren't checked — then the ledger reads its ruling sentence.
-  The crowd tally is the room's honest mood (share of HUMAN stamps on
-  today's docket, so it believes the clerical error too); ARIA overrules
-  it. A passing filing survives; a failing one is a strike. Tap anywhere
-  to skip the ceremony. Miss a day and ARIA names what fooled you when
-  you clock in next.
-- **Night shift**: the rule is pinned as text chips. Five filings, one at a
+  marked line by line — ✓ meets the criterion, ✗ shows what was needed.
+  A passing filing survives; a failing one is a strike. Tap anywhere to skip.
+- **Night shift**: the rule is pinned on your desk. Five filings, one at a
   time — stamp each **SUS** (`←`) or **HUMAN** (`→`). Instant feedback, and
-  wrong stamps show the fact that failed. Correct stamps build a ×1–×3
-  streak; from night 2 an 8-second clock pays a speed bonus (it ticks
-  faster under 3 seconds). One filing a night is **contested** — call it
-  right for double pay, wrong and it costs a strike. A flawless 5/5 night
-  clears a strike, and a ×3+ best streak can be banked to clear one too.
+  wrong stamps show the fact that failed. One filing a night is **contested** —
+  call it right for double pay, wrong and it costs a strike. A flawless 5/5 night
+  clears a strike.
 - **From day 2**: you may *request one more ruling* per day (drops today's
   pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
   miss: two strikes — `O` toggles).
@@ -54,7 +48,7 @@ python3 -m http.server 8000
   STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
   the dossier lands — then it's jury duty.
 - Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `O` oath ·
-  `M` — music on/off.
+  `M` — audio on/off.
 
 ## Seeds & sharing
 
@@ -83,19 +77,14 @@ deal, filings fly to the tray, the night stamp swings and throws ink, the
 amendment is stapled on, the finale is a decree you fill in and sign — and
 `prefers-reduced-motion` skips every flight, leaving the state change
 visible and instant.
-The night music is a vendored MP3 (`audio/bump-in-the-night.mp3`, fetched
-via `scripts/vendor-patch.mjs` — see `audio/manifest.json`) played through
-a plain `<audio>` element so it also works on `file://`; full attribution
-lives in `LICENSE-CREDITS.txt`.
+The game features a procedural WebAudio soundscape synthesized entirely at runtime
+(sub-bass drone, warm analog tape noise, tactile stamp clunks, and reactive VALE
+dissonance) with zero external media files and zero CORS issues on `file://`.
+`M` toggles audio on/off.
 
 ## Credits
 
-- Night music: "Bump in the Night" by Kevin MacLeod (incompetech.com,
-  https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100789),
-  licensed Creative Commons Attribution 4.0 International
-  (https://creativecommons.org/licenses/by/4.0/). Changed by Patch:
-  converted from MP3 to Ogg Vorbis, credit added to the Ogg comments.
-  (This game vendors the original MP3; `M` toggles it.)
+Bespoke WebAudio sound design and SVG artwork. All proceedings fictional.
 
 ## Status
 

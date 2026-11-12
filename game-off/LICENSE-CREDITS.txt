@@ -1,18 +1,7 @@
-NIGHT SHIFT — third-party asset credits
+NIGHT SHIFT — credits & license
 ========================================
 
-audio/bump-in-the-night.mp3
----------------------------
-"Bump in the Night" by Kevin MacLeod (incompetech.com,
-https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1100789),
-licensed Creative Commons Attribution 4.0 International
-(https://creativecommons.org/licenses/by/4.0/). Changed by Patch:
-converted from MP3 to Ogg Vorbis, credit added to the Ogg comments.
-
-License:  CC-BY-4.0
-URL:      https://creativecommons.org/licenses/by/4.0/
-Asset:    incompetech:bump_in_the_night (patch.gg, variant "src")
-SHA-256:  99b88bec0277f1397203852c8f1cb092ed461fd80990ffa4c04c3b4a68afbdb6
-
-Note: this repo vendors the original MP3 (variant "src") — see
-audio/manifest.json for the vendored-file record.
+Original submission for GitHub Game Off 2026 (theme: SHIFT).
+- Code, procedural WebAudio soundscape, and vector art: MIT License.
+- Zero external assets or audio files required; runs standalone from file:// or any static web server.
+- All proceedings and characters depicted are fictional.

@@ -27,13 +27,13 @@ them like a puzzle. File the one card she'd pass. A wrong filing is a
 strike; three strikes and you're cut to nights for good.
 
 **🌙 NIGHT SHIFT.** Now you're the auditor and the rule is in plain sight.
-Five filings a night, one at a time — stamp each HUMAN or SUS. Correct
-stamps build a ×1–×3 streak; from night 2 an 8-second clock pays speed
-bonuses. One filing a night is **contested**: call it right for double pay,
-wrong and it costs a strike. From day 3, head office **amends** the rule
-mid-shift — cases before the banner follow the old rule, cases after follow
-the new one, and trap filings flip their verdicts. Days 4–5 hide a
-**clerical error** on the docket: a SUS card stamped HUMAN. Find it.
+Five filings a night, one at a time — stamp each HUMAN or SUS. But on your
+first shift, something is wrong: filer VALE's packet arrived at +0.003s.
+One filing a night is **contested**: call it right for double pay, wrong and it
+costs a strike. From day 3, head office **amends** the rule mid-shift — cases
+before the banner follow the old rule, cases after follow the new one, and trap
+filings flip their verdicts. Days 4–5 hide a **clerical error** on the docket:
+a SUS card stamped HUMAN. Find it.
 
 **✒ LAST CALL.** After night five, you write the rule yourself. One filer
 isn't human, and ARIA's rules can't catch it. Choose the criterion that
@@ -61,21 +61,21 @@ blind?"). Best conversations get collected into community collections.
 ## Controls (page section, keep short)
 
 - `1–4` select a card · `Enter` file / continue · `←`/`→` stamp SUS/HUMAN
-- `O` file under oath (pass clears a strike, miss costs two) · `M` music
+- `O` file under oath (pass clears a strike, miss costs two) · `M` sound
 - Mobile: everything is tappable.
 
 ## Feature bullets (for the page sidebar / trailer cards)
 
-- Five staged days: pay-for-clues, oaths, shift clocks, mid-night rule
-  amendments, a liar on the docket
+- Five staged days: pay-for-clues, oaths, mid-night rule amendments, a liar on the docket
+- An escalating Turing mystery: catch the automated filer before dawn
 - Verdicts explained line by line — losses teach, never confuse
 - Daily seeded docket + share grid
 - Runs in the browser, no install; keyboard + touch
+- Zero dependencies, responsive HTML5 canvas & SVG
 
-## Credits (required on the page)
+## Credits
 
-Night music: "Bump in the Night" by Kevin MacLeod (incompetech.com),
-CC-BY 4.0. An unofficial fan-made vignette; all proceedings fictional.
+Bespoke WebAudio soundscape & tactile foley. All proceedings fictional.
 
 ## Tags (itch)
 
