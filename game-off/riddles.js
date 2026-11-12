@@ -126,14 +126,14 @@ const DAYS = [
     riddle: "First light. Bring proof you were awake for it.",
     ariaLine: "First light. You had one window. You were in it or you weren't.",
     rule: [ { key: "time", allow: ["dawn"], text: "at dawn" } ],
-    valeLine: "I was awake for first light. Here is proof I was awake for first light.",
+    valeLine: "Up before the alarm again. Watched the fog burn off the pier — filed it before the coffee was done.",
   },
   {
     theme: "THE BOND", emoji: "🤝", dayLabel: "DAY 2",
     riddle: "Proof you are loved by at least one other human.",
     ariaLine: "Love, evidenced. One other human, minimum. The bar is low and high at once.",
     rule: [ { key: "people", allow: ["pair", "group"], text: "with someone else" } ],
-    valeLine: "I am loved by at least one other human. The human count is at least one.",
+    valeLine: "Walked the long loop with Mara after dinner. We counted the same three dogs, same as always.",
   },
   {
     theme: "THE WILD", emoji: "🌳", dayLabel: "DAY 3",
@@ -143,7 +143,7 @@ const DAYS = [
       { key: "setting", allow: ["outdoor"], text: "outdoors" },
       { key: "people", allow: ["alone"], text: "alone" },
     ],
-    valeLine: "This is somewhere the city forgot to pave and forgot to visit. I did not forget.",
+    valeLine: "The lot behind the rail fence, after the rain. Nobody's been back there in weeks.",
     amend: {
       rule: [
         { key: "setting", allow: ["outdoor"], text: "outdoors" },
@@ -161,7 +161,7 @@ const DAYS = [
       { key: "people", allow: ["group"], text: "a group" },
       { key: "setting", allow: ["indoor"], text: "indoors" },
     ],
-    valeLine: "This is the room. These are the strangers. They are now regulars.",
+    valeLine: "Same corner table, same regulars. The barkeep had my order started before I sat down.",
     amend: {
       rule: [ { key: "people", allow: ["group"], text: "a group" } ],
       note: "AMENDMENT — 'indoors' is struck. A group, anywhere.",
@@ -176,7 +176,7 @@ const DAYS = [
       { key: "setting", allow: ["indoor"], text: "indoors" },
       { key: "time", allow: ["dawn", "dusk", "night"], text: "not in daytime" },
     ],
-    valeLine: "This room goes quiet after hours. I have confirmed the silence.",
+    valeLine: "Reading room at closing. The librarian didn't even have to ask me to leave.",
     amend: {
       rule: [
         { key: "people", allow: ["pair", "group"], text: "with someone else" },

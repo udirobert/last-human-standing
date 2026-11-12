@@ -350,11 +350,11 @@ function factRows(card, verdicts, pending) {
 
 // ---------- instruction lines ----------
 const INSTR = {
-  day: "Deduce ARIA's secret rule from her rulings. SHIFT narrows the desk to one column — find the one that splits cleanly.",
-  day1: "What do ARIA's approvals share that her rejections lack? SHIFT cycles the column you're comparing. File the card she'd pass.",
+  day: "Deduce ARIA's secret rule from her rulings. SHIFT narrows the desk to one column.",
+  day1: "What do ARIA's approvals share that her rejections lack? SHIFT narrows the desk to one column.",
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
-  night: "Stamp each filing against the rule (S: SUS · H: HUMAN). HOLD SHIFT to read the filer's packet wire.",
+  night: "Stamp each filing against the rule — S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -386,10 +386,10 @@ const ARIA = {
   eliminated: ["Three strikes. Cut — but not erased."],
   juror: ["You're on jury duty now."],
   auditOpen: [
-    "Night shift. The rule checks the paper — the wire checks the filer. Hold SHIFT; the packet log is yours too.",
-    "Night shift. Five filings on the desk. Paper first, then the wire.",
-    "The night shift doesn't sleep. Check every detail — even the ones off the page.",
     "My rules only check facts. Whatever isn't a fact walks right through.",
+    "Night shift. The rule is pinned. Five cases tonight — stamp each one.",
+    "The night shift doesn't sleep. Check every detail.",
+    "Someone on this docket has never missed. Humans miss.",
     "The ledger is watching tonight. Stamp cleanly.",
   ],
 };
@@ -451,7 +451,7 @@ const G = {
   filed: null,
   focusAttr: "all",
   telemetry: false,       // night: the packet wire is pulled up (hold SHIFT)
-  valeTaught: false,      // has the player been shown the wire exists?
+  wireSeen: false,        // the desk wire has been opened at least once
   valeCaught: 0,          // nights VALE was stamped SUS
   valeEscapes: 0,         // nights VALE was waved through as HUMAN
   oath: false,
@@ -583,11 +583,11 @@ function startDay() {
   setInstr(G.day >= 3 ? "dayLiar" : G.day === 0 ? "day1" : "day");
   // progressive features
   const clueBtn = $("clueBtn");
-  clueBtn.classList.remove("hidden");
+  clueBtn.classList.toggle("hidden", G.day < 1);
   clueBtn.disabled = false;
-  clueBtn.innerHTML = `+ Request another ruling — today's pay 300 → 200${newTag("clue", 0)}`;
-  $("oathWrap").classList.remove("hidden");
-  $("oathBtn").innerHTML = `⚖ Under oath${newTag("oath", 0)}`;
+  clueBtn.innerHTML = `+ Request another ruling — today's pay 300 → 200${newTag("clue", 1)}`;
+  $("oathWrap").classList.toggle("hidden", G.day < 1);
+  $("oathBtn").innerHTML = `⚖ Under oath${newTag("oath", 1)}`;
   $("oathBtn").classList.remove("on");
   $("oathBtn").setAttribute("aria-pressed", "false");
   $("oathNote").classList.add("hidden");
@@ -737,7 +737,7 @@ function renderDocket(animRow) {
 }
 
 function requestClue() {
-  if (G.clueUsed) return;
+  if (G.clueUsed || G.day < 1) return;
   const d = DAYS[G.day];
   const row = LOGIC.extraRuling(CARDS, d, { docket: G.docket, hand: G.hand }, stream("clue"));
   if (!row) return;
@@ -752,7 +752,7 @@ function requestClue() {
 }
 
 function toggleOath() {
-  if (G.phase !== "day") return;
+  if (G.day < 1 || G.phase !== "day") return;
   G.oath = !G.oath;
   $("oathBtn").classList.toggle("on", G.oath);
   $("oathBtn").setAttribute("aria-pressed", String(G.oath));
@@ -1065,9 +1065,9 @@ function renderRuleChips(rule, amended) {
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
 
-/* SHIFT at night pulls the packet wire: latency, origin, hops, receipt.
- * The paper never carries the machine's tell — the wire does. Works on
- * a resolved case too, so a missed anomaly can be verified post-stamp. */
+/* SHIFT at night pulls the desk wire: latency, origin, hops, receipt —
+ * the same columns for every filer, nothing flagged. What reads wrong
+ * is for the auditor to notice. Works on a resolved case too. */
 function setTelemetry(on) {
   if (G.phase !== "audit") on = false;
   if (G.telemetry === on) return;
@@ -1075,7 +1075,14 @@ function setTelemetry(on) {
   document.body.classList.toggle("telemetry-active", on);
   const b = $("telemetryBtn");
   if (b) b.classList.toggle("active", on);
-  if (on) sfx.lensHum();
+  if (on) {
+    G.wireSeen = true;
+    sfx.lensHum();
+    const sub = G.auditSubs[G.auditIdx];
+    setValeDissonance(!!(sub && sub.filer === "VALE"));
+  } else {
+    setValeDissonance(false);
+  }
 }
 
 function renderCase() {
@@ -1091,9 +1098,9 @@ function renderCase() {
   if (sub.pick) {
     if (isVale) {
       if (sub.pick === "SUS") {
-        reason = `⚡ ANOMALY QUARANTINED — the wire logged 0.003s out of an internal loopback. No human files that fast. +100 bounty`;
+        reason = `⚡ ANOMALY QUARANTINED — 0.003s out of an internal loopback. No human files that fast. +100 bounty`;
       } else if (sub.correct) {
-        reason = `✔ Meets ARIA's criteria. (Audit note: the wire logged a 3ms internal packet — check TELEMETRY before you stamp next time.)`;
+        reason = `✔ Meets every criterion.`;
       } else {
         reason = `✗ The wire was right there: 0.003s, internal loopback, zero hops. You let the machine through.`;
       }
@@ -1106,8 +1113,8 @@ function renderCase() {
     }
   }
 
-  // Anomaly reactivity: subtle audio tone, but NO spoiler neon prompt or pre-stamp alert!
-  setValeDissonance(isVale);
+  // the wire's hum carries the dissonance — the paper itself stays quiet
+  setValeDissonance(isVale && G.telemetry);
   setInstr("night");
 
   el.innerHTML =
@@ -1121,10 +1128,10 @@ function renderCase() {
       <p class="arg">“${arg}”</p>
       ${factRows(sub.card, verdicts)}
       <div class="case-telemetry">
-        <div class="tel-row"><span>PKT LATENCY</span><span class="tel-val${sub.tel.anomaly ? " anomaly" : ""}">${sub.tel.latency}</span></div>
-        <div class="tel-row"><span>ORIGIN</span><span class="tel-val${sub.tel.anomaly ? " anomaly" : ""}">${sub.tel.origin}</span></div>
+        <div class="tel-row"><span>PKT LATENCY</span><span class="tel-val">${sub.tel.latency}</span></div>
+        <div class="tel-row"><span>ORIGIN</span><span class="tel-val">${sub.tel.origin}</span></div>
         <div class="tel-row"><span>HOPS</span><span class="tel-val">${sub.tel.hops}</span></div>
-        <div class="tel-row"><span>RECEIPT</span><span class="tel-val${sub.tel.anomaly ? " anomaly" : ""}">${sub.tel.receipt}</span></div>
+        <div class="tel-row"><span>RECEIPT</span><span class="tel-val">${sub.tel.receipt}</span></div>
       </div>
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}">${sub.pick}</div>` : ""}
       ${sub.pick && !sub.correct ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
@@ -1157,33 +1164,34 @@ function stamp(pickVal) {
       G.nightPoints += 100;
       G.score += 100;
       G.valeCaught++;
-      G.valeTaught = true;
+      G.wireSeen = true;
       ariaSay([
         "Wait. You stamped SUS? The facts met my criteria... but you read the wire: 0.003s, internal loopback. You caught something my code couldn't see.",
         "ANOMALY QUARANTINED. You read the wire, not just the paper. Well done."
       ], "smug");
-    } else if (!G.valeTaught) {
-      // First wave-through: the paper genuinely passed, so the stamp stands —
-      // but the ledger logs the wire, and now you know it exists.
+    } else if (!G.wireSeen) {
+      // The paper genuinely passed — the stamp stands. One faint whisper on
+      // the first escape, pointing at the desk, never at the answer.
       sub.correct = true;
       sub.earned = contested ? 100 : 50;
       G.auditHitsToday++;
       G.auditHits++;
       G.nightPoints += sub.earned;
       G.score += sub.earned;
-      G.valeTaught = true;
       G.valeEscapes++;
-      ariaSay([
-        "Approved under criteria — the paper was clean. The wire wasn't: a 3ms packet out of internal loopback. Hold SHIFT. Read the wire before the next one.",
-        "Passed. Off the record, the packet log says 0.003s from inside the building. Next time, hold SHIFT before you stamp."
-      ]);
+      if (G.valeEscapes === 1) {
+        ariaSay([
+          "Approved. …The desk terminal stuttered on that one. Probably nothing.",
+          "Passed. For a moment the wire monitor flickered. Ignore it — or don't."
+        ]);
+      }
     } else {
-      // Shown the wire once — an unread wire is now a wrong answer.
+      // You've read the wire before — an unread wire is a wrong stamp now.
       sub.correct = false;
       sub.earned = 0;
       G.valeEscapes++;
       ariaSay([
-        "You were shown the wire once. That stamp just let the machine through.",
+        "You've read that wire before. That stamp just let the machine through.",
         "0.003 seconds, internal loopback, zero hops — and you approved it."
       ], "alarm");
     }

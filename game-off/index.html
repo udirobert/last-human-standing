@@ -270,12 +270,14 @@
 
     <!-- NIGHT: rule chips pinned, five cases one at a time -->
     <section id="auditPhase" class="hidden">
-      <div id="ruleChips"></div>
+      <div id="deskBar">
+        <div id="ruleChips"></div>
+        <button id="telemetryBtn" class="telemetry-btn" title="The desk wire"><span class="tel-icon">📡</span> WIRE <kbd>Shift</kbd></button>
+      </div>
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
         <button id="susBtn" class="vb s shift-paddle-left" title="Stamp Suspicious (S or Left Arrow)"><span class="shift-arrow">⇦</span> SUS <kbd>S / ←</kbd></button>
-        <button id="telemetryBtn" class="vb telemetry-btn" title="Inspect packet telemetry and timestamps (Hold Shift)"><span class="tel-icon">📡</span> TELEMETRY <kbd>Hold Shift</kbd></button>
         <button id="humanBtn" class="vb h shift-paddle-right" title="Stamp Human (H or Right Arrow)">HUMAN <span class="shift-arrow">⇨</span> <kbd>H / →</kbd></button>
       </div>
       <div id="auditSummary" class="hidden"></div>

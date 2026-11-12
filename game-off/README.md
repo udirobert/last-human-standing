@@ -35,13 +35,13 @@ python3 -m http.server 8000
   time — stamp each **SUS** or **HUMAN** (`S` / `H` / `←` / `→` / buttons).
   Wrong stamps explain the needed criterion. One filing a night is **contested** —
   call it right for double pay (+100). A flawless 5/5 night clears a strike.
-  The paper checks facts — **hold `Shift`** (or tap `📡 TELEMETRY`) to read
-  the packet wire: latency, origin, hops, receipt. One filer's wire doesn't
-  read human. Stamp it SUS for the bounty; wave it through once and you'll
-  be taught the wire — wave it through again and it's a wrong stamp.
-- **Tools of the desk**: you may *request one more ruling* per day (drops
-  today's pay 300 → 200) and file *under oath* (pass: clears a strike or
-  pays +200; miss: two strikes — `O` toggles).
+  The paper checks facts. The desk has a wire (`Shift`, or the little
+  monitor by the pinned rule) — what it shows is unlabelled, same columns
+  for every filer. Whatever reads wrong is yours to catch: SUS pays the
+  bounty, and once you've read the wire, waving it through is a wrong stamp.
+- **From day 2**: you may *request one more ruling* per day (drops today's
+  pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
+  miss: two strikes — `O` toggles).
 - **From day 3**: head office **amends** the rule mid-night — cases before
   the banner follow the old rule, cases after follow the new one. Watch
   for trap filings that flip verdicts.
