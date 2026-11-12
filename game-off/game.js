@@ -111,27 +111,6 @@ const sfx = {
       o2.start(t); o2.stop(t + 0.65);
     } catch {}
   },
-  // interactive deductive resonance: harmonic chime when inspecting valid evidence
-  matchChime: (isPass) => {
-    try {
-      const ac = audio(), t = ac.currentTime;
-      if (isPass) {
-        // Shimmering harmonic chime (C5 + G5 + C6)
-        [523.25, 783.99, 1046.5].forEach((f, i) => {
-          const o = ac.createOscillator(), g = ac.createGain();
-          o.type = "sine"; o.frequency.value = f;
-          g.gain.setValueAtTime(0.04 / (i + 1), t);
-          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
-          o.connect(g); g.connect(ambientGain || ac.destination);
-          o.start(t); o.stop(t + 0.48);
-        });
-      } else {
-        // Muted woodblock tap for non-matching criterion
-        tone(140, 0.08, "triangle", 0.035);
-        noiseBurst(0.06, 600, 0.03);
-      }
-    } catch {}
-  },
 };
 
 /* filtered noise burst — paper slides, camera shutters. */
@@ -362,7 +341,7 @@ function factRows(card, verdicts, pending) {
       cls = " fail"; mark = `<span class="mk fail">✗ needed: ${v.needed}</span>`;
     } else if (v) { cls = " dim"; mark = `<span class="mk dim">— not checked</span>`; }
     if (pending) cls += " pre";
-    return `<div class="fact${cls}">
+    return `<div class="fact${cls}" data-key="${k}">
       <span class="fk">${ATTR_LABEL[k]}</span>
       <span class="fv">${factCell(k, card.tags[k])}</span>${mark}
     </div>`;
@@ -371,11 +350,11 @@ function factRows(card, verdicts, pending) {
 
 // ---------- instruction lines ----------
 const INSTR = {
-  day: "ARIA has a secret rule. Her rulings below are your clues — file the card she'd pass. (Hold SHIFT for Forensic Lens)",
-  day1: "Notice what ARIA's approved precedents share — file the matching card. (Hold SHIFT for Forensic Lens)",
-  dayLiar: "ARIA has a secret rule. File the card she'd pass. ⚠ One ruling below is a clerical error. (Hold SHIFT for Forensic Lens)",
+  day: "Deduce ARIA's secret rule from her rulings. SHIFT narrows the desk to one column — find the one that splits cleanly.",
+  day1: "What do ARIA's approvals share that her rejections lack? SHIFT cycles the column you're comparing. File the card she'd pass.",
+  dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
-  night: "Stamp each filing against ARIA's rule. (Press SHIFT to flip stamp · Space to stamp)",
+  night: "Stamp each filing against the rule (S: SUS · H: HUMAN). HOLD SHIFT to read the filer's packet wire.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -407,15 +386,11 @@ const ARIA = {
   eliminated: ["Three strikes. Cut — but not erased."],
   juror: ["You're on jury duty now."],
   auditOpen: [
-    "Night shift. The rule is pinned — but check the timestamps. Someone is filing unnaturally fast.",
-    "Night shift. Stamp each filing against the rule. Watch for anomalous response latency.",
-    "Someone on this docket has never missed. Humans miss.",
-    "Check the timestamps. I'm not allowed to.",
+    "Night shift. The rule checks the paper — the wire checks the filer. Hold SHIFT; the packet log is yours too.",
+    "Night shift. Five filings on the desk. Paper first, then the wire.",
+    "The night shift doesn't sleep. Check every detail — even the ones off the page.",
     "My rules only check facts. Whatever isn't a fact walks right through.",
-  ],
-  valeAlert: [
-    "LATENCY ANOMALY: Filing arrived at +0.003s. No human reacts in under 150ms.",
-    "DIAGNOSTIC ALERT: Filer VALE response delay is 3 milliseconds. Investigate.",
+    "The ledger is watching tonight. Stamp cleanly.",
   ],
 };
 // one-line explainers shown the first time each mechanic appears
@@ -474,8 +449,11 @@ const G = {
   hand: [],
   docket: [],
   filed: null,
-  shiftLens: false,
-  activeStamp: "HUMAN",
+  focusAttr: "all",
+  telemetry: false,       // night: the packet wire is pulled up (hold SHIFT)
+  valeTaught: false,      // has the player been shown the wire exists?
+  valeCaught: 0,          // nights VALE was stamped SUS
+  valeEscapes: 0,         // nights VALE was waved through as HUMAN
   oath: false,
   clueUsed: false,
   dayPay: 300,
@@ -500,7 +478,6 @@ const G = {
   phase: "day",
   explained: new Set(),
   elimDay: 0,
-  valeSeenTonight: false,
 };
 
 function hud() {
@@ -606,11 +583,11 @@ function startDay() {
   setInstr(G.day >= 3 ? "dayLiar" : G.day === 0 ? "day1" : "day");
   // progressive features
   const clueBtn = $("clueBtn");
-  clueBtn.classList.toggle("hidden", G.day < 1);
+  clueBtn.classList.remove("hidden");
   clueBtn.disabled = false;
-  clueBtn.innerHTML = `+ Request another ruling — today's pay 300 → 200${newTag("clue", 1)}`;
-  $("oathWrap").classList.toggle("hidden", G.day < 1);
-  $("oathBtn").innerHTML = `⚖ Under oath${newTag("oath", 1)}`;
+  clueBtn.innerHTML = `+ Request another ruling — today's pay 300 → 200${newTag("clue", 0)}`;
+  $("oathWrap").classList.remove("hidden");
+  $("oathBtn").innerHTML = `⚖ Under oath${newTag("oath", 0)}`;
   $("oathBtn").classList.remove("on");
   $("oathBtn").setAttribute("aria-pressed", "false");
   $("oathNote").classList.add("hidden");
@@ -640,10 +617,6 @@ function highlightMatchingTags(tags) {
       td.classList.toggle("tag-match", tags[k] === v);
     }
   });
-  if (tags && DAYS[G.day]) {
-    const isPass = LOGIC.passes({ tags }, DAYS[G.day].rule);
-    sfx.matchChime(isPass);
-  }
 }
 
 function highlightMatchingHandCards(tags) {
@@ -659,57 +632,32 @@ function highlightMatchingHandCards(tags) {
   sfx.tick();
 }
 
-function setShiftLens(on) {
-  if (G.phase !== "day") return;
-  G.shiftLens = on;
-  document.body.classList.toggle("shift-lens-active", on);
-  const btn = $("lensBtn");
-  if (btn) btn.classList.toggle("active", on);
-  if (on) {
-    sfx.lensHum();
-    // Identify what all approved precedents share
-    const approved = G.docket.filter((r) => r.verdict === "HUMAN" && !r.lie);
-    const shared = {};
-    if (approved.length) {
-      ATTR_KEYS.forEach((k) => {
-        const first = approved[0].card.tags[k];
-        if (approved.every((r) => r.card.tags[k] === first)) shared[k] = first;
-      });
-    }
-    highlightForensicTags(shared);
-  } else {
-    highlightForensicTags(null);
+/* SHIFT = shift focus, not shift-to-answer. Tapping Shift walks a loupe
+ * across the four fact columns and dims everything else — every cell in
+ * the lit column still shows its own value, approvals and rejections
+ * alike. It narrows where you look; it never says what you should see. */
+const FOCUS_ORDER = ["all", "place", "time", "people", "setting"];
+function setFocusAttr(k) {
+  G.focusAttr = k;
+  document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
+    b.classList.toggle("active", b.dataset.attr === k));
+  const dk = $("docket");
+  for (const a of FOCUS_ORDER) dk.classList.remove("focus-" + a);
+  const evs = $("hand").querySelectorAll(".evidence");
+  evs.forEach((el) => { for (const a of FOCUS_ORDER) el.classList.remove("focus-" + a); });
+  if (k !== "all") {
+    dk.classList.add("focus-" + k);
+    evs.forEach((el) => el.classList.add("focus-" + k));
   }
 }
-
-function highlightForensicTags(shared) {
-  const tb = $("docketBody");
-  if (tb) {
-    tb.querySelectorAll("td.c-fact").forEach((td) => {
-      const k = td.dataset.key, v = td.dataset.val;
-      td.classList.toggle("forensic-glow", !!(shared && shared[k] === v));
-    });
-  }
-  const cards = $("hand").querySelectorAll(".evidence");
-  cards.forEach((el, i) => {
-    const c = G.hand[i];
-    if (!c) return;
-    let matchesAllShared = shared && Object.keys(shared).length > 0;
-    if (shared) {
-      for (const [k, v] of Object.entries(shared)) {
-        if (c.tags[k] !== v) { matchesAllShared = false; break; }
-      }
-    }
-    el.classList.toggle("forensic-match", matchesAllShared);
-  });
+function cycleFocus() {
+  if (G.phase !== "day") return;
+  setFocusAttr(FOCUS_ORDER[(FOCUS_ORDER.indexOf(G.focusAttr) + 1) % FOCUS_ORDER.length]);
+  sfx.click();
 }
 
 function renderDay() {
-  setShiftLens(false);
-  const lensBtn = $("lensBtn");
-  if (lensBtn) {
-    lensBtn.onclick = () => setShiftLens(!G.shiftLens);
-  }
+  setFocusAttr("all");
   const d = DAYS[G.day];
   $("dayKicker").textContent = `${d.dayLabel} · ${d.theme} · TODAY'S RIDDLE`;
   $("riddleText").textContent = `“${d.riddle}”`;
@@ -789,7 +737,7 @@ function renderDocket(animRow) {
 }
 
 function requestClue() {
-  if (G.clueUsed || G.day < 1) return;
+  if (G.clueUsed) return;
   const d = DAYS[G.day];
   const row = LOGIC.extraRuling(CARDS, d, { docket: G.docket, hand: G.hand }, stream("clue"));
   if (!row) return;
@@ -804,7 +752,7 @@ function requestClue() {
 }
 
 function toggleOath() {
-  if (G.day < 1 || G.phase !== "day") return;
+  if (G.phase !== "day") return;
   G.oath = !G.oath;
   $("oathBtn").classList.toggle("on", G.oath);
   $("oathBtn").setAttribute("aria-pressed", String(G.oath));
@@ -1065,7 +1013,7 @@ function startAudit() {
   setInstr("night");
   ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
   if (G.day === 2) explain("amend");
-  G.valeSeenTonight = false;
+  setTelemetry(false);
   const d = DAYS[G.day];
 
   renderRuleChips(d.rule, false);
@@ -1085,8 +1033,17 @@ function startAudit() {
   let hi = 0;
   G.auditSubs = cases.map((c) => {
     const filer = c.bot ? "VALE" : humans[hi++];
-    const filed = c.bot ? "+0.003s" : fmtFiled(40 + Math.floor(trng() * 500));
-    return { ...c, filer, filed, truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
+    // VALE's card wears a human filing time — the tell is on the wire,
+    // behind SHIFT, never printed on the paper.
+    const filed = fmtFiled(40 + Math.floor(trng() * 500));
+    const tel = c.bot
+      ? { latency: "0.003s", origin: "INTERNAL LOOPBACK", hops: "0",
+          receipt: "+0.003s after post", anomaly: true }
+      : { latency: `${150 + Math.floor(trng() * 350)}ms`,
+          origin: `EXT GATE ${1 + Math.floor(trng() * 6)}`,
+          hops: `${2 + Math.floor(trng() * 4)}`,
+          receipt: `queued ${filed}`, anomaly: false };
+    return { ...c, filer, filed, tel, truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
   });
   G.auditIdx = 0;
   // one filing a night is contested: right pays double bonus
@@ -1108,22 +1065,17 @@ function renderRuleChips(rule, amended) {
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
 
-function toggleActiveStamp() {
-  if (G.phase !== "audit" || G.auditLocked) return;
-  setActiveStamp(G.activeStamp === "HUMAN" ? "SUS" : "HUMAN");
-  sfx.gearShift();
-}
-
-function setActiveStamp(val) {
-  G.activeStamp = val;
-  const badge = $("curStampBadge");
-  if (badge) {
-    badge.textContent = val;
-    badge.className = "stamp-badge " + val.toLowerCase();
-  }
-  const sBtn = $("susBtn"), hBtn = $("humanBtn");
-  if (sBtn) sBtn.classList.toggle("active-stamp-side", val === "SUS");
-  if (hBtn) hBtn.classList.toggle("active-stamp-side", val === "HUMAN");
+/* SHIFT at night pulls the packet wire: latency, origin, hops, receipt.
+ * The paper never carries the machine's tell — the wire does. Works on
+ * a resolved case too, so a missed anomaly can be verified post-stamp. */
+function setTelemetry(on) {
+  if (G.phase !== "audit") on = false;
+  if (G.telemetry === on) return;
+  G.telemetry = on;
+  document.body.classList.toggle("telemetry-active", on);
+  const b = $("telemetryBtn");
+  if (b) b.classList.toggle("active", on);
+  if (on) sfx.lensHum();
 }
 
 function renderCase() {
@@ -1139,9 +1091,11 @@ function renderCase() {
   if (sub.pick) {
     if (isVale) {
       if (sub.pick === "SUS") {
-        reason = `⚡ FORENSIC CATCH! You flagged the +0.003s timestamp. Facts met ARIA's rule, but no human reacts in 3ms. +100 Anomaly Bounty!`;
+        reason = `⚡ ANOMALY QUARANTINED — the wire logged 0.003s out of an internal loopback. No human files that fast. +100 bounty`;
+      } else if (sub.correct) {
+        reason = `✔ Meets ARIA's criteria. (Audit note: the wire logged a 3ms internal packet — check TELEMETRY before you stamp next time.)`;
       } else {
-        reason = `✔ Meets ARIA's criteria. (Audit log note: filer latency logged at +0.003s — human average is 250ms).`;
+        reason = `✗ The wire was right there: 0.003s, internal loopback, zero hops. You let the machine through.`;
       }
     } else {
       reason = sub.correct
@@ -1166,13 +1120,16 @@ function renderCase() {
         <p class="case-reason">${reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
       ${factRows(sub.card, verdicts)}
+      <div class="case-telemetry">
+        <div class="tel-row"><span>PKT LATENCY</span><span class="tel-val${sub.tel.anomaly ? " anomaly" : ""}">${sub.tel.latency}</span></div>
+        <div class="tel-row"><span>ORIGIN</span><span class="tel-val${sub.tel.anomaly ? " anomaly" : ""}">${sub.tel.origin}</span></div>
+        <div class="tel-row"><span>HOPS</span><span class="tel-val">${sub.tel.hops}</span></div>
+        <div class="tel-row"><span>RECEIPT</span><span class="tel-val${sub.tel.anomaly ? " anomaly" : ""}">${sub.tel.receipt}</span></div>
+      </div>
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}">${sub.pick}</div>` : ""}
       ${sub.pick && !sub.correct ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
   $("susBtn").disabled = $("humanBtn").disabled = checked;
-  const trig = $("stampTriggerBtn");
-  if (trig) trig.disabled = checked;
-  setActiveStamp(G.activeStamp || "HUMAN");
   if (!checked) {
     if (!calmMotion()) {
       later(() => sfx.drop(), 80);
@@ -1187,35 +1144,48 @@ function stamp(pickVal) {
   if (!sub || sub.pick) return;
   G.auditLocked = true;
   sub.pick = pickVal;
-  setActiveStamp(pickVal);
   const isVale = sub.filer === "VALE";
   const contested = G.auditIdx === G.contestedIdx;
 
   if (isVale) {
     if (pickVal === "SUS") {
-      // Detective catch: player spotted the +0.003s anomaly!
+      // Detective catch: the wire, not the paper, gave it away.
       sub.correct = true;
       sub.earned = 100;
       G.auditHitsToday++;
       G.auditHits++;
       G.nightPoints += 100;
       G.score += 100;
+      G.valeCaught++;
+      G.valeTaught = true;
       ariaSay([
-        "Wait. You stamped SUS? The facts met my criteria... but look at the packet header: +0.003s. No human reacts in 3 milliseconds. You caught something my code couldn't see.",
-        "ANOMALY CAUGHT: +0.003s latency flagged. You found the machine."
+        "Wait. You stamped SUS? The facts met my criteria... but you read the wire: 0.003s, internal loopback. You caught something my code couldn't see.",
+        "ANOMALY QUARANTINED. You read the wire, not just the paper. Well done."
       ], "smug");
-    } else {
-      // Stamped HUMAN: criteria passed! Player is rewarded for following the rule.
+    } else if (!G.valeTaught) {
+      // First wave-through: the paper genuinely passed, so the stamp stands —
+      // but the ledger logs the wire, and now you know it exists.
       sub.correct = true;
       sub.earned = contested ? 100 : 50;
       G.auditHitsToday++;
       G.auditHits++;
       G.nightPoints += sub.earned;
       G.score += sub.earned;
+      G.valeTaught = true;
+      G.valeEscapes++;
       ariaSay([
-        "Approved under current criteria. Though... response delay logged at 3 milliseconds. Curious.",
-        "Passed. Filer latency: 0.003s. The ledger records it."
+        "Approved under criteria — the paper was clean. The wire wasn't: a 3ms packet out of internal loopback. Hold SHIFT. Read the wire before the next one.",
+        "Passed. Off the record, the packet log says 0.003s from inside the building. Next time, hold SHIFT before you stamp."
       ]);
+    } else {
+      // Shown the wire once — an unread wire is now a wrong answer.
+      sub.correct = false;
+      sub.earned = 0;
+      G.valeEscapes++;
+      ariaSay([
+        "You were shown the wire once. That stamp just let the machine through.",
+        "0.003 seconds, internal loopback, zero hops — and you approved it."
+      ], "alarm");
     }
   } else {
     sub.correct = (pickVal === "HUMAN") === sub.truth;
@@ -1448,8 +1418,12 @@ function auditSummary() {
   $("caseCard").innerHTML = "";
   const s = $("auditSummary");
   s.classList.remove("hidden");
+  const valeSub = G.auditSubs.find((x) => x.filer === "VALE");
+  const valeLine = !valeSub ? "" : valeSub.pick === "SUS"
+    ? `<p class="sum-vale ok">⚡ anomaly quarantined — the machine was on tonight's docket</p>`
+    : `<p class="sum-vale warn">⚠ the wire went unread tonight — something filed in 0.003s</p>`;
   s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
-    <p class="sum-effect">${effect}</p>`;
+    <p class="sum-effect">${effect}</p>${valeLine}`;
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");
@@ -1619,6 +1593,10 @@ function endGame() {
     `${G.daysSurvived}/${DAYS.length} days survived · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`;
   const lines = [];
   if (G.finaleTitle) lines.push("VALE filed every proof 0.003 seconds after the riddle posted.");
+  if (G.valeCaught) lines.push(
+    `You flagged the machine on ${G.valeCaught} night${G.valeCaught > 1 ? "s" : ""} — the wire never lies.`);
+  if (G.valeEscapes) lines.push(
+    `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} before tonight.`);
   if (G.finaleLine) lines.push(G.finaleLine);
   else lines.push(title === "LAST HUMAN STANDING"
     ? "Five rules. You read every one of them."
@@ -1654,10 +1632,9 @@ $("oathBtn").addEventListener("click", toggleOath);
 $("clueBtn").addEventListener("click", requestClue);
 $("susBtn").addEventListener("click", () => stamp("SUS"));
 $("humanBtn").addEventListener("click", () => stamp("HUMAN"));
-const stampTrigBtn = $("stampTriggerBtn");
-if (stampTrigBtn) {
-  stampTrigBtn.addEventListener("click", () => stamp(G.activeStamp || "HUMAN"));
-}
+$("telemetryBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
+document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
+  b.addEventListener("click", () => { setFocusAttr(b.dataset.attr); sfx.click(); }));
 $("signBtn").addEventListener("click", signRule);
 $("copyBtn").addEventListener("click", copyShare);
 
@@ -1675,15 +1652,13 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
-  // Active SHIFT key integration
+  // SHIFT is the desk verb: by day it walks the loupe across the fact
+  // columns; by night it holds the packet wire open. Key-repeat does
+  // nothing — a held Shift doesn't spin the loupe or flicker the wire.
   if (e.key === "Shift") {
-    if (G.phase === "day") {
-      setShiftLens(true);
-      return;
-    } else if (G.phase === "audit") {
-      toggleActiveStamp();
-      return;
-    }
+    if (e.repeat) return;
+    if (G.phase === "day") { cycleFocus(); return; }
+    if (G.phase === "audit") { setTelemetry(true); return; }
   }
 
   if (G.phase === "day") {
@@ -1708,10 +1683,6 @@ document.addEventListener("keydown", (e) => {
     if (sub && !sub.pick) {
       if (e.key === "ArrowLeft" || e.key === "s" || e.key === "S") stamp("SUS");
       else if (e.key === "ArrowRight" || e.key === "h" || e.key === "H") stamp("HUMAN");
-      else if (e.key === " " || e.key === "Enter") {
-        e.preventDefault();
-        stamp(G.activeStamp || "HUMAN");
-      }
     } else if (e.key === "Enter") {
       e.preventDefault();
       const b = $("auditActions").querySelector("button"); if (b) b.click();
@@ -1731,8 +1702,8 @@ document.addEventListener("keydown", (e) => {
 });
 
 document.addEventListener("keyup", (e) => {
-  if (e.key === "Shift" && G.phase === "day") {
-    setShiftLens(false);
+  if (e.key === "Shift" && G.phase === "audit") {
+    setTelemetry(false);
   }
 });
 

@@ -841,96 +841,154 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   vertical-align: middle;
 }
 
-/* Center STAMP action button and side paddles */
-#caseBtns .stamp-act-btn {
-  background: var(--card, #191c22);
-  color: var(--ink, #f0ebd8);
-  border: 2px solid var(--accent, #e8b34b);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
-  font-size: 13px;
-  min-width: 170px;
-}
-#caseBtns .stamp-act-btn:hover:not(:disabled) {
-  background: #252a36;
-  border-color: #ffd57a;
-  box-shadow: 0 6px 18px rgba(232, 179, 75, 0.3);
-}
-#caseBtns .stamp-badge {
-  font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 3px;
-  font-weight: 800;
-  margin: 0 4px;
-}
-#caseBtns .stamp-badge.human {
-  background: rgba(46, 107, 52, 0.25);
-  color: var(--green);
-  border: 1px solid var(--green);
-}
-#caseBtns .stamp-badge.sus {
-  background: rgba(176, 48, 40, 0.25);
-  color: var(--red);
-  border: 1px solid var(--red);
-}
-#caseBtns .vb.active-stamp-side {
-  background: rgba(255, 255, 255, 0.08);
-  outline: 2px solid currentColor;
-}
-
-/* Docket Tools & Shift Lens */
-.docket-tools {
+/* Attribute Shift Focus Rail */
+.attr-shift-rail {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  margin: 6px 0 10px;
+  padding: 6px 10px;
+  background: rgba(20, 24, 32, 0.7);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  flex-wrap: wrap;
 }
-.shift-lens-btn {
+.attr-shift-rail .rail-label {
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--amber, #e8b34b);
+  letter-spacing: .12em;
+  margin-right: 4px;
+}
+.attr-shift-rail .rail-btn {
   font-family: ui-monospace, monospace;
   font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  padding: 4px 10px;
-  background: rgba(120, 80, 180, 0.15);
-  color: #c9a6ff;
-  border: 1px solid #9d6fff;
+  font-weight: 600;
+  letter-spacing: .08em;
+  padding: 3px 9px;
+  border: 1px solid var(--line);
   border-radius: 3px;
+  background: transparent;
+  color: var(--faint);
   cursor: pointer;
-  transition: all .14s ease;
+  transition: all .12s ease;
 }
-.shift-lens-btn:hover, .shift-lens-btn.active {
-  background: rgba(157, 111, 255, 0.3);
-  box-shadow: 0 0 10px rgba(157, 111, 255, 0.5);
-  color: #fff;
+.attr-shift-rail .rail-btn:hover {
+  color: var(--ink);
+  border-color: var(--accent);
 }
-.shift-lens-btn kbd {
+.attr-shift-rail .rail-btn.active {
+  background: var(--amber, #e8b34b);
+  color: #121317;
+  font-weight: 800;
+  border-color: #ffd57a;
+  box-shadow: 0 0 10px rgba(232, 179, 75, 0.35);
+}
+.attr-shift-rail .rail-hint {
+  margin-left: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 9.5px;
+  color: var(--faint);
+}
+.attr-shift-rail .rail-hint kbd {
   font-size: 9px;
-  opacity: .7;
-  margin-left: 4px;
-  font-family: inherit;
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
 }
 
-/* Forensic UV Lens Mode */
-body.shift-lens-active {
-  --lamp-glow: rgba(140, 80, 240, 0.25);
+/* Docket Column Focusing */
+#docket.focus-place th:not(.c-file):not([data-col="place"]),
+#docket.focus-place td.c-fact:not([data-key="place"]),
+#docket.focus-time th:not(.c-file):not([data-col="time"]),
+#docket.focus-time td.c-fact:not([data-key="time"]),
+#docket.focus-people th:not(.c-file):not([data-col="people"]),
+#docket.focus-people td.c-fact:not([data-key="people"]),
+#docket.focus-setting th:not(.c-file):not([data-col="setting"]),
+#docket.focus-setting td.c-fact:not([data-key="setting"]) {
+  opacity: 0.28;
+  transition: opacity .15s ease;
 }
-body.shift-lens-active #game {
-  box-shadow: inset 0 0 120px rgba(120, 50, 220, 0.25), 0 0 40px rgba(100, 30, 200, 0.15);
-  transition: box-shadow .2s ease;
-}
-body.shift-lens-active .c-fact.forensic-glow {
-  background: rgba(255, 215, 0, 0.25) !important;
-  color: #ffe680 !important;
-  font-weight: 900 !important;
-  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6), inset 0 0 6px rgba(255, 215, 0, 0.4);
+
+#docket.focus-place td.c-fact[data-key="place"],
+#docket.focus-time td.c-fact[data-key="time"],
+#docket.focus-people td.c-fact[data-key="people"],
+#docket.focus-setting td.c-fact[data-key="setting"] {
+  background: rgba(232, 179, 75, 0.08);
+  font-weight: 700;
   border-radius: 3px;
 }
-body.shift-lens-active .evidence.forensic-match {
-  border-color: #ffd700 !important;
-  box-shadow: 0 0 20px rgba(255, 215, 0, 0.55), 0 0 8px rgba(157, 111, 255, 0.4) !important;
-  transform: rotate(var(--tilt, 0deg)) translateY(-4px) scale(1.02);
+
+/* Hand cards attribute focusing */
+.evidence.focus-place .fact[data-key="place"],
+.evidence.focus-time .fact[data-key="time"],
+.evidence.focus-people .fact[data-key="people"],
+.evidence.focus-setting .fact[data-key="setting"] {
+  color: var(--amber, #e8b34b);
+  font-weight: 700;
+  background: rgba(232, 179, 75, 0.1);
+  border-radius: 2px;
+  padding: 1px 4px;
+}
+
+/* Night Audit Controls */
+#caseBtns .telemetry-btn {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  padding: 8px 16px;
+  border: 1px dashed var(--accent, #e8b34b);
+  background: rgba(232, 179, 75, 0.06);
+  color: var(--amber, #e8b34b);
+  cursor: pointer;
+  min-width: 150px;
+}
+#caseBtns .telemetry-btn:hover,
+#caseBtns .telemetry-btn.active {
+  background: rgba(232, 179, 75, 0.2);
+  border-style: solid;
+  color: #fff;
+}
+#caseBtns .telemetry-btn kbd {
+  font-size: 9px;
+  opacity: .75;
+  margin-left: 4px;
+}
+
+/* Card server telemetry drawer */
+.case-telemetry {
+  display: none;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(10, 12, 16, 0.9);
+  border: 1px solid #3b4255;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  color: #a4b3ca;
+  text-align: left;
+}
+.case-telemetry .tel-row {
+  display: flex;
+  justify-content: space-between;
+  line-height: 1.5;
+}
+.case-telemetry .tel-val.anomaly {
+  color: var(--red);
+  font-weight: 800;
+}
+body.telemetry-active .case-telemetry,
+.case-card.telemetry-open .case-telemetry {
+  display: block;
 }
 #auditSummary { text-align: center; padding: 20px 0 4px; }
 #auditSummary .sum-line { font-size: 20px; letter-spacing: .12em; color: var(--ink); }
 #auditSummary .sum-effect { font-size: 12px; color: var(--accent); margin-top: 8px; letter-spacing: .08em; }
+#auditSummary .sum-vale { font-size: 11px; font-family: ui-monospace, monospace; margin-top: 10px; letter-spacing: .06em; }
+#auditSummary .sum-vale.ok { color: var(--amber, #e8b34b); }
+#auditSummary .sum-vale.warn { color: var(--red, #d96a5a); }
 #auditActions { display: flex; justify-content: center; padding-bottom: 20px; }
 
 /* ---------- dossier ---------- */

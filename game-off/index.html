@@ -225,14 +225,20 @@
       <div id="docketWrap">
         <div class="sec-head">
           <span id="docketHead">Already ruled today</span>
-          <div class="docket-tools">
-            <button id="lensBtn" class="shift-lens-btn" title="Toggle UV Forensic Lens (or hold SHIFT)"><span class="lens-icon">💡</span> SHIFT LENS <kbd>Hold Shift</kbd></button>
-            <button id="clueBtn" class="clue hidden">+ Request another ruling — today's pay 100 → 60</button>
-          </div>
+          <button id="clueBtn" class="clue hidden">+ Request another ruling — today's pay 100 → 60</button>
+        </div>
+        <div id="attrShiftRail" class="attr-shift-rail">
+          <span class="rail-label">SHIFT FOCUS:</span>
+          <button class="rail-btn active" data-attr="all">ALL</button>
+          <button class="rail-btn" data-attr="place">WHERE</button>
+          <button class="rail-btn" data-attr="time">WHEN</button>
+          <button class="rail-btn" data-attr="people">WHO</button>
+          <button class="rail-btn" data-attr="setting">IN/OUT</button>
+          <span class="rail-hint"><kbd>Shift</kbd> to cycle</span>
         </div>
         <table id="docket">
           <thead><tr>
-            <th class="c-file">Filing</th><th>Where</th><th>When</th><th>Who</th><th>In/Out</th><th>Stamp</th>
+            <th class="c-file">Filing</th><th data-col="place">Where</th><th data-col="time">When</th><th data-col="people">Who</th><th data-col="setting">In/Out</th><th>Stamp</th>
           </tr></thead>
           <tbody id="docketBody"></tbody>
         </table>
@@ -268,9 +274,9 @@
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
-        <button id="susBtn" class="vb s shift-paddle-left" title="Shift stamp to SUS (or press S / Left Arrow)"><span class="shift-arrow">⇦</span> SHIFT TO SUS <kbd>S</kbd></button>
-        <button id="stampTriggerBtn" class="vb stamp-act-btn" title="Stamp card with current verdict (or press Space / Enter)"><span class="stamp-icon">🔨</span> STAMP <span id="curStampBadge" class="stamp-badge human">HUMAN</span> <kbd>Space</kbd></button>
-        <button id="humanBtn" class="vb h shift-paddle-right" title="Shift stamp to HUMAN (or press H / Right Arrow)">SHIFT TO HUMAN <span class="shift-arrow">⇨</span> <kbd>H</kbd></button>
+        <button id="susBtn" class="vb s shift-paddle-left" title="Stamp Suspicious (S or Left Arrow)"><span class="shift-arrow">⇦</span> SUS <kbd>S / ←</kbd></button>
+        <button id="telemetryBtn" class="vb telemetry-btn" title="Inspect packet telemetry and timestamps (Hold Shift)"><span class="tel-icon">📡</span> TELEMETRY <kbd>Hold Shift</kbd></button>
+        <button id="humanBtn" class="vb h shift-paddle-right" title="Stamp Human (H or Right Arrow)">HUMAN <span class="shift-arrow">⇨</span> <kbd>H / →</kbd></button>
       </div>
       <div id="auditSummary" class="hidden"></div>
       <div id="auditActions"></div>

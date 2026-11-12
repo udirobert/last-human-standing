@@ -6,7 +6,7 @@ Five days. Each day ARIA holds a **secret rule** — one to three criteria over
 a card's four facts (where · when · who · in-or-out). By day you deduce the
 rule from her earlier rulings and file the one card she'd pass. By night the rule
 is in plain sight and you take the desk, stamping everyone else's filings. But
-something is wrong: one filer's filings are arriving at +0.003s. Catch the machine.
+something is wrong: one filer's packets don't read human. Catch the machine.
 Three strikes and you're cut to the night shift for good.
 
 ## Run it
@@ -24,21 +24,24 @@ python3 -m http.server 8000
 
 - **Day shift**: read the riddle, then study the docket — ARIA's already
   stamped two filings HUMAN and a few SUS. Those precedents *are* the clue.
-  Hold `Shift` (or click `💡 SHIFT LENS`) to illuminate shared criteria under
-  forensic UV light. Tap a card to select it (keys `1`–`4`), then **File →** (or `Enter`).
+  Tap `Shift` to walk a loupe across the fact columns (where → when → who →
+  in/out) and dim the rest — it narrows where you look, never what you see.
+  Tap a card to select it (keys `1`–`4`), then **File →** (or `Enter`).
   Every card shows four facts: where · when · who · in/out.
 - **Verdict**: the rule is unsealed in plain words and your card's facts are
   marked line by line — ✓ meets the criterion, ✗ shows what was needed.
   A passing filing survives; a failing one is a strike. Tap anywhere to skip.
 - **Night shift**: the rule is pinned on your desk. Five filings, one at a
-  time — stamp each **SUS** or **HUMAN**. Press `Shift` to flip the rotary stamp
-  in hand, then `Space`/`Enter` to stamp (or use `S` / `H` / directional arrows).
+  time — stamp each **SUS** or **HUMAN** (`S` / `H` / `←` / `→` / buttons).
   Wrong stamps explain the needed criterion. One filing a night is **contested** —
-  call it right for double pay (+100). Filer VALE logs responses in +0.003s — spot
-  the synthetic latency for a forensic bonus. A flawless 5/5 night clears a strike.
-- **From day 2**: you may *request one more ruling* per day (drops today's
-  pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
-  miss: two strikes — `O` toggles).
+  call it right for double pay (+100). A flawless 5/5 night clears a strike.
+  The paper checks facts — **hold `Shift`** (or tap `📡 TELEMETRY`) to read
+  the packet wire: latency, origin, hops, receipt. One filer's wire doesn't
+  read human. Stamp it SUS for the bounty; wave it through once and you'll
+  be taught the wire — wave it through again and it's a wrong stamp.
+- **Tools of the desk**: you may *request one more ruling* per day (drops
+  today's pay 300 → 200) and file *under oath* (pass: clears a strike or
+  pays +200; miss: two strikes — `O` toggles).
 - **From day 3**: head office **amends** the rule mid-night — cases before
   the banner follow the old rule, cases after follow the new one. Watch
   for trap filings that flip verdicts.
@@ -49,8 +52,8 @@ python3 -m http.server 8000
 - Still a player after day five (and the right finale) = LAST HUMAN
   STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
   the dossier lands — then it's jury duty.
-- Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `O` oath ·
-  `M` — audio on/off.
+- Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `Shift`
+  focus loupe by day, packet wire by night · `O` oath · `M` audio.
 
 ## Seeds & sharing
 
