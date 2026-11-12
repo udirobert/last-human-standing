@@ -24,16 +24,18 @@ python3 -m http.server 8000
 
 - **Day shift**: read the riddle, then study the docket — ARIA's already
   stamped two filings HUMAN and a few SUS. Those precedents *are* the clue.
-  Tap a card to select it (keys `1`–`4`), then **File →** (or `Enter`).
+  Hold `Shift` (or click `💡 SHIFT LENS`) to illuminate shared criteria under
+  forensic UV light. Tap a card to select it (keys `1`–`4`), then **File →** (or `Enter`).
   Every card shows four facts: where · when · who · in/out.
 - **Verdict**: the rule is unsealed in plain words and your card's facts are
   marked line by line — ✓ meets the criterion, ✗ shows what was needed.
   A passing filing survives; a failing one is a strike. Tap anywhere to skip.
 - **Night shift**: the rule is pinned on your desk. Five filings, one at a
-  time — stamp each **SUS** (`←`) or **HUMAN** (`→`). Instant feedback, and
-  wrong stamps show the fact that failed. One filing a night is **contested** —
-  call it right for double pay, wrong and it costs a strike. A flawless 5/5 night
-  clears a strike.
+  time — stamp each **SUS** or **HUMAN**. Press `Shift` to flip the rotary stamp
+  in hand, then `Space`/`Enter` to stamp (or use `S` / `H` / directional arrows).
+  Wrong stamps explain the needed criterion. One filing a night is **contested** —
+  call it right for double pay (+100). Filer VALE logs responses in +0.003s — spot
+  the synthetic latency for a forensic bonus. A flawless 5/5 night clears a strike.
 - **From day 2**: you may *request one more ruling* per day (drops today's
   pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
   miss: two strikes — `O` toggles).

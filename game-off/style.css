@@ -840,6 +840,94 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   font-size: 18px;
   vertical-align: middle;
 }
+
+/* Center STAMP action button and side paddles */
+#caseBtns .stamp-act-btn {
+  background: var(--card, #191c22);
+  color: var(--ink, #f0ebd8);
+  border: 2px solid var(--accent, #e8b34b);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+  font-size: 13px;
+  min-width: 170px;
+}
+#caseBtns .stamp-act-btn:hover:not(:disabled) {
+  background: #252a36;
+  border-color: #ffd57a;
+  box-shadow: 0 6px 18px rgba(232, 179, 75, 0.3);
+}
+#caseBtns .stamp-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-weight: 800;
+  margin: 0 4px;
+}
+#caseBtns .stamp-badge.human {
+  background: rgba(46, 107, 52, 0.25);
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+#caseBtns .stamp-badge.sus {
+  background: rgba(176, 48, 40, 0.25);
+  color: var(--red);
+  border: 1px solid var(--red);
+}
+#caseBtns .vb.active-stamp-side {
+  background: rgba(255, 255, 255, 0.08);
+  outline: 2px solid currentColor;
+}
+
+/* Docket Tools & Shift Lens */
+.docket-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.shift-lens-btn {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  padding: 4px 10px;
+  background: rgba(120, 80, 180, 0.15);
+  color: #c9a6ff;
+  border: 1px solid #9d6fff;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all .14s ease;
+}
+.shift-lens-btn:hover, .shift-lens-btn.active {
+  background: rgba(157, 111, 255, 0.3);
+  box-shadow: 0 0 10px rgba(157, 111, 255, 0.5);
+  color: #fff;
+}
+.shift-lens-btn kbd {
+  font-size: 9px;
+  opacity: .7;
+  margin-left: 4px;
+  font-family: inherit;
+}
+
+/* Forensic UV Lens Mode */
+body.shift-lens-active {
+  --lamp-glow: rgba(140, 80, 240, 0.25);
+}
+body.shift-lens-active #game {
+  box-shadow: inset 0 0 120px rgba(120, 50, 220, 0.25), 0 0 40px rgba(100, 30, 200, 0.15);
+  transition: box-shadow .2s ease;
+}
+body.shift-lens-active .c-fact.forensic-glow {
+  background: rgba(255, 215, 0, 0.25) !important;
+  color: #ffe680 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 12px rgba(255, 215, 0, 0.6), inset 0 0 6px rgba(255, 215, 0, 0.4);
+  border-radius: 3px;
+}
+body.shift-lens-active .evidence.forensic-match {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.55), 0 0 8px rgba(157, 111, 255, 0.4) !important;
+  transform: rotate(var(--tilt, 0deg)) translateY(-4px) scale(1.02);
+}
 #auditSummary { text-align: center; padding: 20px 0 4px; }
 #auditSummary .sum-line { font-size: 20px; letter-spacing: .12em; color: var(--ink); }
 #auditSummary .sum-effect { font-size: 12px; color: var(--accent); margin-top: 8px; letter-spacing: .08em; }

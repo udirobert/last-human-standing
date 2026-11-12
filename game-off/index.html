@@ -223,9 +223,13 @@
         <p class="riddle-text" id="riddleText"></p>
       </div>
       <div id="docketWrap">
-        <h3 class="sec-head"><span id="docketHead">Already ruled today</span>
-          <button id="clueBtn" class="clue hidden">+ Request another ruling — today's pay 100 → 60</button>
-        </h3>
+        <div class="sec-head">
+          <span id="docketHead">Already ruled today</span>
+          <div class="docket-tools">
+            <button id="lensBtn" class="shift-lens-btn" title="Toggle UV Forensic Lens (or hold SHIFT)"><span class="lens-icon">💡</span> SHIFT LENS <kbd>Hold Shift</kbd></button>
+            <button id="clueBtn" class="clue hidden">+ Request another ruling — today's pay 100 → 60</button>
+          </div>
+        </div>
         <table id="docket">
           <thead><tr>
             <th class="c-file">Filing</th><th>Where</th><th>When</th><th>Who</th><th>In/Out</th><th>Stamp</th>
@@ -264,8 +268,9 @@
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
-        <button id="susBtn" class="vb s shift-paddle-left" title="Shift left to mark Suspicious"><span class="shift-arrow">⇦</span> SHIFT TO SUS <kbd>←</kbd></button>
-        <button id="humanBtn" class="vb h shift-paddle-right" title="Shift right to mark Human">SHIFT TO HUMAN <span class="shift-arrow">⇨</span> <kbd>→</kbd></button>
+        <button id="susBtn" class="vb s shift-paddle-left" title="Shift stamp to SUS (or press S / Left Arrow)"><span class="shift-arrow">⇦</span> SHIFT TO SUS <kbd>S</kbd></button>
+        <button id="stampTriggerBtn" class="vb stamp-act-btn" title="Stamp card with current verdict (or press Space / Enter)"><span class="stamp-icon">🔨</span> STAMP <span id="curStampBadge" class="stamp-badge human">HUMAN</span> <kbd>Space</kbd></button>
+        <button id="humanBtn" class="vb h shift-paddle-right" title="Shift stamp to HUMAN (or press H / Right Arrow)">SHIFT TO HUMAN <span class="shift-arrow">⇨</span> <kbd>H</kbd></button>
       </div>
       <div id="auditSummary" class="hidden"></div>
       <div id="auditActions"></div>

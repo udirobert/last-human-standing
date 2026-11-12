@@ -96,6 +96,21 @@ const sfx = {
       thudDrop(.08);
     } catch {}
   },
+  // UV forensic lens transformer hum
+  lensHum: () => {
+    try {
+      const ac = audio(), t = ac.currentTime;
+      const o1 = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain();
+      o1.type = "sine"; o1.frequency.setValueAtTime(60, t);
+      o2.type = "sawtooth"; o2.frequency.setValueAtTime(120, t);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(0.035, t + 0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
+      o1.connect(g); o2.connect(g); g.connect(ambientGain || ac.destination);
+      o1.start(t); o1.stop(t + 0.65);
+      o2.start(t); o2.stop(t + 0.65);
+    } catch {}
+  },
   // interactive deductive resonance: harmonic chime when inspecting valid evidence
   matchChime: (isPass) => {
     try {
@@ -356,12 +371,11 @@ function factRows(card, verdicts, pending) {
 
 // ---------- instruction lines ----------
 const INSTR = {
-  day: "ARIA has a secret rule. Her rulings below are your clues — file the one card she'd pass.",
-  day1: "ARIA has a secret rule. Notice what her approved HUMAN precedents share — then file the matching card.",
-  dayLiar: "ARIA has a secret rule. Her rulings below are your clues — file the one card she'd pass. ⚠ One ruling below is a clerical error.",
+  day: "ARIA has a secret rule. Her rulings below are your clues — file the card she'd pass. (Hold SHIFT for Forensic Lens)",
+  day1: "Notice what ARIA's approved precedents share — file the matching card. (Hold SHIFT for Forensic Lens)",
+  dayLiar: "ARIA has a secret rule. File the card she'd pass. ⚠ One ruling below is a clerical error. (Hold SHIFT for Forensic Lens)",
   verdict: "The rule is unsealed. Here's how your card did.",
-  night: "Now you're the auditor. The rule is in plain sight — stamp each filing HUMAN or SUS.",
-  vale: "⚠ LATENCY ANOMALY: Filing matches rule criteria, but arrived in 0.003s. No human reacts in 3ms — SHIFT TO SUS to quarantine!",
+  night: "Stamp each filing against ARIA's rule. (Press SHIFT to flip stamp · Space to stamp)",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -460,6 +474,8 @@ const G = {
   hand: [],
   docket: [],
   filed: null,
+  shiftLens: false,
+  activeStamp: "HUMAN",
   oath: false,
   clueUsed: false,
   dayPay: 300,
@@ -643,7 +659,57 @@ function highlightMatchingHandCards(tags) {
   sfx.tick();
 }
 
+function setShiftLens(on) {
+  if (G.phase !== "day") return;
+  G.shiftLens = on;
+  document.body.classList.toggle("shift-lens-active", on);
+  const btn = $("lensBtn");
+  if (btn) btn.classList.toggle("active", on);
+  if (on) {
+    sfx.lensHum();
+    // Identify what all approved precedents share
+    const approved = G.docket.filter((r) => r.verdict === "HUMAN" && !r.lie);
+    const shared = {};
+    if (approved.length) {
+      ATTR_KEYS.forEach((k) => {
+        const first = approved[0].card.tags[k];
+        if (approved.every((r) => r.card.tags[k] === first)) shared[k] = first;
+      });
+    }
+    highlightForensicTags(shared);
+  } else {
+    highlightForensicTags(null);
+  }
+}
+
+function highlightForensicTags(shared) {
+  const tb = $("docketBody");
+  if (tb) {
+    tb.querySelectorAll("td.c-fact").forEach((td) => {
+      const k = td.dataset.key, v = td.dataset.val;
+      td.classList.toggle("forensic-glow", !!(shared && shared[k] === v));
+    });
+  }
+  const cards = $("hand").querySelectorAll(".evidence");
+  cards.forEach((el, i) => {
+    const c = G.hand[i];
+    if (!c) return;
+    let matchesAllShared = shared && Object.keys(shared).length > 0;
+    if (shared) {
+      for (const [k, v] of Object.entries(shared)) {
+        if (c.tags[k] !== v) { matchesAllShared = false; break; }
+      }
+    }
+    el.classList.toggle("forensic-match", matchesAllShared);
+  });
+}
+
 function renderDay() {
+  setShiftLens(false);
+  const lensBtn = $("lensBtn");
+  if (lensBtn) {
+    lensBtn.onclick = () => setShiftLens(!G.shiftLens);
+  }
   const d = DAYS[G.day];
   $("dayKicker").textContent = `${d.dayLabel} · ${d.theme} · TODAY'S RIDDLE`;
   $("riddleText").textContent = `“${d.riddle}”`;
@@ -1042,6 +1108,24 @@ function renderRuleChips(rule, amended) {
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
 
+function toggleActiveStamp() {
+  if (G.phase !== "audit" || G.auditLocked) return;
+  setActiveStamp(G.activeStamp === "HUMAN" ? "SUS" : "HUMAN");
+  sfx.gearShift();
+}
+
+function setActiveStamp(val) {
+  G.activeStamp = val;
+  const badge = $("curStampBadge");
+  if (badge) {
+    badge.textContent = val;
+    badge.className = "stamp-badge " + val.toLowerCase();
+  }
+  const sBtn = $("susBtn"), hBtn = $("humanBtn");
+  if (sBtn) sBtn.classList.toggle("active-stamp-side", val === "SUS");
+  if (hBtn) hBtn.classList.toggle("active-stamp-side", val === "HUMAN");
+}
+
 function renderCase() {
   const sub = G.auditSubs[G.auditIdx];
   const el = $("caseCard");
@@ -1055,9 +1139,9 @@ function renderCase() {
   if (sub.pick) {
     if (isVale) {
       if (sub.pick === "SUS") {
-        reason = `⚡ MACHINE CAUGHT! +0.003s timestamp flagged. Criteria met, but filer is synthetic. +100 anomaly bounty!`;
+        reason = `⚡ FORENSIC CATCH! You flagged the +0.003s timestamp. Facts met ARIA's rule, but no human reacts in 3ms. +100 Anomaly Bounty!`;
       } else {
-        reason = `⚠ MACHINE MISSED! VALE's packet arrived in 0.003s. No human reacts in 3ms. You stamped HUMAN on a bot!`;
+        reason = `✔ Meets ARIA's criteria. (Audit log note: filer latency logged at +0.003s — human average is 250ms).`;
       }
     } else {
       reason = sub.correct
@@ -1068,23 +1152,15 @@ function renderCase() {
     }
   }
 
-  // Anomaly reactivity
+  // Anomaly reactivity: subtle audio tone, but NO spoiler neon prompt or pre-stamp alert!
   setValeDissonance(isVale);
-  if (isVale && !checked) {
-    setInstr("vale");
-    if (!G.valeSeenTonight) {
-      G.valeSeenTonight = true;
-      ariaSay(ARIA.valeAlert, "alarm");
-    }
-  } else {
-    setInstr("night");
-  }
+  setInstr("night");
 
   el.innerHTML =
     `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
-    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${isVale ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
-        <span class="filer">FILER · <b>${sub.filer}</b> ${isVale ? `<i class="anomaly-ts">⚡ FILED ${sub.filed} (0ms DELAY)</i>` : `<i>filed ${sub.filed}</i>`}</span></div>
+        <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
       ${sub.pick ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
         <p class="case-reason">${reason}</p>` : ""}
@@ -1094,6 +1170,9 @@ function renderCase() {
       ${sub.pick && !sub.correct ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
   $("susBtn").disabled = $("humanBtn").disabled = checked;
+  const trig = $("stampTriggerBtn");
+  if (trig) trig.disabled = checked;
+  setActiveStamp(G.activeStamp || "HUMAN");
   if (!checked) {
     if (!calmMotion()) {
       later(() => sfx.drop(), 80);
@@ -1108,32 +1187,46 @@ function stamp(pickVal) {
   if (!sub || sub.pick) return;
   G.auditLocked = true;
   sub.pick = pickVal;
+  setActiveStamp(pickVal);
   const isVale = sub.filer === "VALE";
-  if (isVale) {
-    // Catching VALE with SUS is the ultimate forensic detective catch!
-    sub.correct = (pickVal === "SUS");
-  } else {
-    sub.correct = (pickVal === "HUMAN") === sub.truth;
-  }
   const contested = G.auditIdx === G.contestedIdx;
-  if (sub.correct) {
-    G.auditHitsToday++;
-    G.auditHits++;
-    sub.earned = isVale ? 100 : (contested ? 100 : 50);
-    G.nightPoints += sub.earned;
-    G.score += sub.earned;
-    if (isVale) {
+
+  if (isVale) {
+    if (pickVal === "SUS") {
+      // Detective catch: player spotted the +0.003s anomaly!
+      sub.correct = true;
+      sub.earned = 100;
+      G.auditHitsToday++;
+      G.auditHits++;
+      G.nightPoints += 100;
+      G.score += 100;
       ariaSay([
-        "ANOMALY CONFIRMED: You caught the machine. ARIA's rule passed it, but your forensic read caught it.",
-        "EXCELLENT AUDIT: 3ms latency flagged. Synthetic filing quarantined."
-      ], "neutral");
+        "Wait. You stamped SUS? The facts met my criteria... but look at the packet header: +0.003s. No human reacts in 3 milliseconds. You caught something my code couldn't see.",
+        "ANOMALY CAUGHT: +0.003s latency flagged. You found the machine."
+      ], "smug");
+    } else {
+      // Stamped HUMAN: criteria passed! Player is rewarded for following the rule.
+      sub.correct = true;
+      sub.earned = contested ? 100 : 50;
+      G.auditHitsToday++;
+      G.auditHits++;
+      G.nightPoints += sub.earned;
+      G.score += sub.earned;
+      ariaSay([
+        "Approved under current criteria. Though... response delay logged at 3 milliseconds. Curious.",
+        "Passed. Filer latency: 0.003s. The ledger records it."
+      ]);
     }
   } else {
-    sub.earned = 0;
-    if (isVale) {
-      ariaSay([
-        "You stamped HUMAN on a machine. Look at the timestamp — no human clicks in 3 milliseconds."
-      ], "alarm");
+    sub.correct = (pickVal === "HUMAN") === sub.truth;
+    if (sub.correct) {
+      G.auditHitsToday++;
+      G.auditHits++;
+      sub.earned = contested ? 100 : 50;
+      G.nightPoints += sub.earned;
+      G.score += sub.earned;
+    } else {
+      sub.earned = 0;
     }
   }
   G.auditTotal++;
@@ -1561,6 +1654,10 @@ $("oathBtn").addEventListener("click", toggleOath);
 $("clueBtn").addEventListener("click", requestClue);
 $("susBtn").addEventListener("click", () => stamp("SUS"));
 $("humanBtn").addEventListener("click", () => stamp("HUMAN"));
+const stampTrigBtn = $("stampTriggerBtn");
+if (stampTrigBtn) {
+  stampTrigBtn.addEventListener("click", () => stamp(G.activeStamp || "HUMAN"));
+}
 $("signBtn").addEventListener("click", signRule);
 $("copyBtn").addEventListener("click", copyShare);
 
@@ -1577,6 +1674,18 @@ document.addEventListener("keydown", (e) => {
     }
     return;
   }
+
+  // Active SHIFT key integration
+  if (e.key === "Shift") {
+    if (G.phase === "day") {
+      setShiftLens(true);
+      return;
+    } else if (G.phase === "audit") {
+      toggleActiveStamp();
+      return;
+    }
+  }
+
   if (G.phase === "day") {
     if (e.key >= "1" && e.key <= "4") {
       const c = G.hand[+e.key - 1];
@@ -1597,8 +1706,12 @@ document.addEventListener("keydown", (e) => {
     }
     const sub = G.auditSubs[G.auditIdx];
     if (sub && !sub.pick) {
-      if (e.key === "ArrowLeft") stamp("SUS");
-      else if (e.key === "ArrowRight") stamp("HUMAN");
+      if (e.key === "ArrowLeft" || e.key === "s" || e.key === "S") stamp("SUS");
+      else if (e.key === "ArrowRight" || e.key === "h" || e.key === "H") stamp("HUMAN");
+      else if (e.key === " " || e.key === "Enter") {
+        e.preventDefault();
+        stamp(G.activeStamp || "HUMAN");
+      }
     } else if (e.key === "Enter") {
       e.preventDefault();
       const b = $("auditActions").querySelector("button"); if (b) b.click();
@@ -1616,7 +1729,14 @@ document.addEventListener("keydown", (e) => {
     }
   }
 });
-const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "Meta", "Tab", "CapsLock", "Escape"]);
+
+document.addEventListener("keyup", (e) => {
+  if (e.key === "Shift" && G.phase === "day") {
+    setShiftLens(false);
+  }
+});
+
+const MODIFIER_KEYS = new Set(["Control", "Alt", "Meta", "Tab", "CapsLock", "Escape"]);
 // tap a resolved case (or the stamp buttons) to move on
 $("caseCard").addEventListener("click", () => {
   if (G.auditLocked) { if (G.amending) finishAmend(); else nextCase(); }

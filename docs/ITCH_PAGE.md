@@ -60,9 +60,13 @@ blind?"). Best conversations get collected into community collections.
 
 ## Controls (page section, keep short)
 
-- `1–4` select a card · `Enter` file / continue · `←`/`→` stamp SUS/HUMAN
-- `O` file under oath (pass clears a strike, miss costs two) · `M` sound
-- Mobile: everything is tappable.
+- **Shift**:
+  - *Day Shift*: Hold `Shift` (or click `💡 SHIFT LENS`) for Forensic UV Light — reveals shared criteria across approved precedents and your hand.
+  - *Night Shift*: Press `Shift` to flip the rotary stamp between `HUMAN` and `SUS`.
+- `1–4`: select a card · `Enter` / `Space`: file card (Day) / slam stamp (Night) / advance
+- `S` / `←`: stamp SUS · `H` / `→`: stamp HUMAN
+- `O`: file under oath (pass clears a strike, miss costs two) · `M`: mute audio
+- Mobile: everything is 100% touch-operable with tactile paddles and switches.
 
 ## Feature bullets (for the page sidebar / trailer cards)
 
