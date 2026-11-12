@@ -27,13 +27,13 @@ them like a puzzle. File the one card she'd pass. A wrong filing is a
 strike; three strikes and you're cut to nights for good.
 
 **🌙 NIGHT SHIFT.** Now you're the auditor and the rule is in plain sight.
-Five filings a night, one at a time — stamp each HUMAN or SUS. But on your
-first shift, something is wrong: filer VALE's packet arrived at +0.003s.
-One filing a night is **contested**: call it right for double pay, wrong and it
-costs a strike. From day 3, head office **amends** the rule mid-shift — cases
-before the banner follow the old rule, cases after follow the new one, and trap
-filings flip their verdicts. Days 4–5 hide a **clerical error** on the docket:
-a SUS card stamped HUMAN. Find it.
+Five filings a night, one at a time — use the physical shift paddles to dispatch
+each filing (`⇦ SHIFT TO SUS` / `SHIFT TO HUMAN ⇨`). But something is wrong: filer
+VALE's packet arrived at +0.003s. Catch the machine with a forensic SUS stamp for
+an anomaly bounty. One filing a night is **contested**: call it right for double pay (+100).
+From day 3, head office **amends** the rule mid-shift — cases before the banner follow
+the old rule, cases after follow the new one, and trap filings flip their verdicts.
+Days 4–5 hide a **clerical error** on the docket: a SUS card stamped HUMAN. Find it.
 
 **✒ LAST CALL.** After night five, you write the rule yourself. One filer
 isn't human, and ARIA's rules can't catch it. Choose the criterion that

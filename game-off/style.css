@@ -537,6 +537,12 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   transform: rotate(0deg) translateY(-3px);
   box-shadow: 0 6px 18px rgba(138,90,18,.18);
 }
+.evidence.tag-match-hand {
+  border-color: var(--accent) !important;
+  background: rgba(232, 179, 75, 0.12) !important;
+  transform: rotate(var(--tilt, 0deg)) translateY(-4px);
+  box-shadow: 0 0 16px rgba(232, 179, 75, 0.45);
+}
 .evidence .e-head { display: flex; justify-content: space-between; align-items: center; }
 .evidence .e-head .glyph {
   font-size: 20px; line-height: 1;
@@ -775,6 +781,65 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 #caseBtns .vb:disabled { opacity: .28; transition: opacity .25s ease .18s; }
 #caseBtns .vb.s:hover:not(:disabled) { background: rgba(217,106,90,.12); }
 #caseBtns .vb.h:hover:not(:disabled) { background: rgba(127,176,105,.12); }
+
+#caseBtns .shift-paddle-left, #caseBtns .shift-paddle-right {
+  display: inline-flex; align-items: center; justify-content: center;
+}
+#caseBtns .shift-paddle-left .shift-arrow {
+  margin-right: 8px; font-size: 16px; display: inline-block;
+  transition: transform .15s ease;
+}
+#caseBtns .shift-paddle-right .shift-arrow {
+  margin-left: 8px; font-size: 16px; display: inline-block;
+  transition: transform .15s ease;
+}
+#caseBtns .shift-paddle-left:hover:not(:disabled) .shift-arrow {
+  transform: translateX(-4px);
+}
+#caseBtns .shift-paddle-right:hover:not(:disabled) .shift-arrow {
+  transform: translateX(4px);
+}
+
+.case-card.shifting.shift-left {
+  animation: shiftLeft .24s cubic-bezier(.2, 0, .2, 1) forwards;
+}
+.case-card.shifting.shift-right {
+  animation: shiftRight .24s cubic-bezier(.2, 0, .2, 1) forwards;
+}
+@keyframes shiftLeft {
+  0% { transform: none; opacity: 1; }
+  100% { transform: translateX(-140%) rotate(-10deg); opacity: 0; }
+}
+@keyframes shiftRight {
+  0% { transform: none; opacity: 1; }
+  100% { transform: translateX(140%) rotate(10deg); opacity: 0; }
+}
+
+.shift-lever-btn {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .15em;
+  padding: 14px 26px;
+  background: #e8b34b;
+  color: #121317;
+  border: 2px solid #ffd57a;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(232, 179, 75, 0.4);
+  cursor: pointer;
+  transition: all .16s ease;
+}
+.shift-lever-btn:hover {
+  background: #ffd57a;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 26px rgba(232, 179, 75, 0.6);
+}
+.shift-lever-btn .lever-icon {
+  display: inline-block;
+  margin-right: 8px;
+  font-size: 18px;
+  vertical-align: middle;
+}
 #auditSummary { text-align: center; padding: 20px 0 4px; }
 #auditSummary .sum-line { font-size: 20px; letter-spacing: .12em; color: var(--ink); }
 #auditSummary .sum-effect { font-size: 12px; color: var(--accent); margin-top: 8px; letter-spacing: .08em; }

@@ -87,6 +87,36 @@ const sfx = {
   handover: () => { noiseBurst(.2, 1100, .05); thudDrop(.16); },
   // a case file dropped onto the desk
   drop:   () => { thudDrop(); noiseBurst(.09, 2400, .035, .03); },
+  // mechanical gear shift / perspective lever
+  gearShift: () => {
+    try {
+      tone(170, .14, "sawtooth", .06);
+      noiseBurst(.15, 850, .07, .02);
+      tone(85, .28, "square", .09, .06);
+      thudDrop(.08);
+    } catch {}
+  },
+  // interactive deductive resonance: harmonic chime when inspecting valid evidence
+  matchChime: (isPass) => {
+    try {
+      const ac = audio(), t = ac.currentTime;
+      if (isPass) {
+        // Shimmering harmonic chime (C5 + G5 + C6)
+        [523.25, 783.99, 1046.5].forEach((f, i) => {
+          const o = ac.createOscillator(), g = ac.createGain();
+          o.type = "sine"; o.frequency.value = f;
+          g.gain.setValueAtTime(0.04 / (i + 1), t);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+          o.connect(g); g.connect(ambientGain || ac.destination);
+          o.start(t); o.stop(t + 0.48);
+        });
+      } else {
+        // Muted woodblock tap for non-matching criterion
+        tone(140, 0.08, "triangle", 0.035);
+        noiseBurst(0.06, 600, 0.03);
+      }
+    } catch {}
+  },
 };
 
 /* filtered noise burst — paper slides, camera shutters. */
@@ -126,13 +156,14 @@ function thudDrop(at = 0) {
 // ---------- procedural atmospheric soundscape (WebAudio) ----------
 /* Zero external dependencies, 0 KB disk footprint, no CORS on file://.
  * Synthesizes a warm late-night fluorescent tape-deck drone with subtle
- * detuned harmonics and tape noise. Injects an eerie dissonance when
- * filer VALE is on the desk.
+ * detuned harmonics, rhythmic lo-fi 72 BPM pulse, and tape noise.
+ * Injects an eerie dissonance and radar ping when filer VALE is on the desk.
  */
 let AMBIENT = null;
 let ambientGain = null;
 let valeDissonanceGain = null;
 let audioMuted = false;
+let rhythmTimer = null;
 
 function initAmbient() {
   if (AMBIENT) return;
@@ -219,6 +250,32 @@ function initAmbient() {
     noiseSrc.start();
     valeOsc.start();
 
+    // Rhythmic 72 BPM subtle clockwork pulse (kick on 1 & 3, typewriter click on 2 & 4)
+    let beat = 0;
+    const tempoMs = (60 / 72) * 1000;
+    clearInterval(rhythmTimer);
+    rhythmTimer = setInterval(() => {
+      if (!ambientGain || audioMuted || G.phase === "day") return;
+      try {
+        const curAc = audio(), ct = curAc.currentTime;
+        if (beat % 2 === 0) {
+          // Soft subterranean pulse
+          const k = curAc.createOscillator(), kg = curAc.createGain();
+          k.type = "sine";
+          k.frequency.setValueAtTime(76, ct);
+          k.frequency.exponentialRampToValueAtTime(32, ct + 0.12);
+          kg.gain.setValueAtTime(0.045, ct);
+          kg.gain.exponentialRampToValueAtTime(0.0001, ct + 0.14);
+          k.connect(kg); kg.connect(master);
+          k.start(ct); k.stop(ct + 0.16);
+        } else {
+          // Subtle mechanical clockwork/teletype tick
+          noiseBurst(0.035, 1900, 0.012);
+        }
+        beat = (beat + 1) % 4;
+      } catch {}
+    }, tempoMs);
+
     AMBIENT = { master, osc1, osc2, lfo, noiseSrc, valeOsc };
   } catch (e) {
     /* audio unavailable */
@@ -304,6 +361,7 @@ const INSTR = {
   dayLiar: "ARIA has a secret rule. Her rulings below are your clues — file the one card she'd pass. ⚠ One ruling below is a clerical error.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Now you're the auditor. The rule is in plain sight — stamp each filing HUMAN or SUS.",
+  vale: "⚠ LATENCY ANOMALY: Filing matches rule criteria, but arrived in 0.003s. No human reacts in 3ms — SHIFT TO SUS to quarantine!",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -566,6 +624,23 @@ function highlightMatchingTags(tags) {
       td.classList.toggle("tag-match", tags[k] === v);
     }
   });
+  if (tags && DAYS[G.day]) {
+    const isPass = LOGIC.passes({ tags }, DAYS[G.day].rule);
+    sfx.matchChime(isPass);
+  }
+}
+
+function highlightMatchingHandCards(tags) {
+  const cards = $("hand").querySelectorAll(".evidence");
+  cards.forEach((el, i) => {
+    const c = G.hand[i];
+    let match = false;
+    for (const k of ATTR_KEYS) {
+      if (tags[k] === c.tags[k]) { match = true; break; }
+    }
+    el.classList.toggle("tag-match-hand", match);
+  });
+  sfx.tick();
 }
 
 function renderDay() {
@@ -588,6 +663,10 @@ function renderDay() {
       if (G.selected) highlightMatchingTags(G.selected.tags);
       else highlightMatchingTags(null);
     });
+    el.addEventListener("touchstart", () => {
+      selectCard(card);
+      highlightMatchingTags(card.tags);
+    }, { passive: true });
     el.addEventListener("click", () => {
       selectCard(card);
       highlightMatchingTags(card.tags);
@@ -606,7 +685,18 @@ function renderDocket(animRow) {
     ? [...G.docket].sort((a, b) => (a.verdict === "HUMAN" ? -1 : 1))
     : G.docket;
 
+  let lastVerdict = null;
   for (const row of rows) {
+    if (G.day === 0 && row.verdict !== lastVerdict) {
+      lastVerdict = row.verdict;
+      const htr = document.createElement("tr");
+      htr.className = "docket-hdr-tr";
+      const isH = row.verdict === "HUMAN";
+      htr.innerHTML = `<td colspan="6" class="docket-sec-header ${isH ? "human" : "sus"}">
+        ${isH ? "✔ ARIA'S APPROVED PRECEDENTS (HUMAN)" : "✖ ARIA'S REJECTIONS (SUS)"}
+      </td>`;
+      tb.appendChild(htr);
+    }
     const tr = document.createElement("tr");
     if (G.day >= 3) tr.className = "flaggable";
     if (row === animRow) tr.classList.add("new-row");
@@ -618,13 +708,15 @@ function renderDocket(animRow) {
       ATTR_KEYS.map((k) => `<td class="c-fact" data-key="${k}" data-val="${row.card.tags[k]}">${factCell(k, row.card.tags[k])}</td>`).join("") +
       `<td class="c-stamp ${row.verdict === "HUMAN" ? "human" : "sus"}">` +
       `<span class="ink">${row.verdict}</span>${row === G.flagged ? " ⚑" : ""}</td>`;
-    if (G.day >= 3) {
-      tr.addEventListener("click", () => {
+    tr.addEventListener("click", () => {
+      if (G.day >= 3) {
         G.flagged = G.flagged === row ? null : row;
         sfx.tick();
         renderDocket();
-      });
-    }
+      } else {
+        highlightMatchingHandCards(row.card.tags);
+      }
+    });
     tb.appendChild(tr);
   }
   if (G.selected) highlightMatchingTags(G.selected.tags);
@@ -869,12 +961,17 @@ function finishVerdict() {
       dossierEl.classList.add("hidden");
       G.status = "juror";
       ariaSay(ARIA.juror);
+      sfx.gearShift();
       startAudit();
     };
   } else {
     const btn = document.createElement("button");
-    btn.textContent = "Start the night shift →";
-    btn.addEventListener("click", startAudit);
+    btn.className = "shift-lever-btn";
+    btn.innerHTML = `<span class="lever-icon">⚙</span> PULL SHIFT LEVER — WORK THE NIGHT SHIFT ↷`;
+    btn.addEventListener("click", () => {
+      sfx.gearShift();
+      startAudit();
+    });
     actions.appendChild(btn);
     btn.focus();
   }
@@ -926,12 +1023,10 @@ function startAudit() {
     return { ...c, filer, filed, truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
   });
   G.auditIdx = 0;
-  // one filing a night is contested: right pays double, wrong costs a strike
+  // one filing a night is contested: right pays double bonus
   G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
   G.auditHitsToday = 0;
   G.nightPoints = 0;
-  G.streak = 1;
-  G.bestStreak = 1;
   G.auditLocked = false;
   $("auditSummary").classList.add("hidden");
   $("auditActions").innerHTML = "";
@@ -954,23 +1049,39 @@ function renderCase() {
   const contested = G.auditIdx === G.contestedIdx;
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
   const arg = sub.filer === "VALE" ? DAYS[G.day].valeLine : sub.card.argument;
-  const reason = !sub.pick ? "" : sub.correct
-    ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}`
-    : (sub.truth ? "passes: meets every criterion"
-                 : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
-                     .map((k) => sub.rule.find((x) => x.key === k).text).join(", ")) +
-      (contested && G.status === "player" ? " · +1 STRIKE" : "");
+  const isVale = sub.filer === "VALE";
+
+  let reason = "";
+  if (sub.pick) {
+    if (isVale) {
+      if (sub.pick === "SUS") {
+        reason = `⚡ MACHINE CAUGHT! +0.003s timestamp flagged. Criteria met, but filer is synthetic. +100 anomaly bounty!`;
+      } else {
+        reason = `⚠ MACHINE MISSED! VALE's packet arrived in 0.003s. No human reacts in 3ms. You stamped HUMAN on a bot!`;
+      }
+    } else {
+      reason = sub.correct
+        ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}`
+        : (sub.truth ? "passes: meets every criterion"
+                     : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
+                         .map((k) => sub.rule.find((x) => x.key === k).text).join(", "));
+    }
+  }
 
   // Anomaly reactivity
-  const isVale = sub.filer === "VALE";
   setValeDissonance(isVale);
-  if (isVale && !checked && !G.valeSeenTonight) {
-    G.valeSeenTonight = true;
-    ariaSay(ARIA.valeAlert, "alarm");
+  if (isVale && !checked) {
+    setInstr("vale");
+    if (!G.valeSeenTonight) {
+      G.valeSeenTonight = true;
+      ariaSay(ARIA.valeAlert, "alarm");
+    }
+  } else {
+    setInstr("night");
   }
 
   el.innerHTML =
-    `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED</b></span>' : ""}</p>` +
+    `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
     `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${isVale ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> ${isVale ? `<i class="anomaly-ts">⚡ FILED ${sub.filed} (0ms DELAY)</i>` : `<i>filed ${sub.filed}</i>`}</span></div>
@@ -997,19 +1108,32 @@ function stamp(pickVal) {
   if (!sub || sub.pick) return;
   G.auditLocked = true;
   sub.pick = pickVal;
-  sub.correct = (pickVal === "HUMAN") === sub.truth;
+  const isVale = sub.filer === "VALE";
+  if (isVale) {
+    // Catching VALE with SUS is the ultimate forensic detective catch!
+    sub.correct = (pickVal === "SUS");
+  } else {
+    sub.correct = (pickVal === "HUMAN") === sub.truth;
+  }
   const contested = G.auditIdx === G.contestedIdx;
   if (sub.correct) {
     G.auditHitsToday++;
     G.auditHits++;
-    sub.earned = contested ? 100 : 50;
+    sub.earned = isVale ? 100 : (contested ? 100 : 50);
     G.nightPoints += sub.earned;
     G.score += sub.earned;
+    if (isVale) {
+      ariaSay([
+        "ANOMALY CONFIRMED: You caught the machine. ARIA's rule passed it, but your forensic read caught it.",
+        "EXCELLENT AUDIT: 3ms latency flagged. Synthetic filing quarantined."
+      ], "neutral");
+    }
   } else {
     sub.earned = 0;
-    if (contested && G.status === "player") {
-      G.strikes++;
-      ariaSay(ARIA.struck, "alarm");
+    if (isVale) {
+      ariaSay([
+        "You stamped HUMAN on a machine. Look at the timestamp — no human clicks in 3 milliseconds."
+      ], "alarm");
     }
   }
   G.auditTotal++;
@@ -1019,7 +1143,8 @@ function stamp(pickVal) {
   $("humanBtn").classList.remove("press");
   setTimeout(() => arm.classList.add("press"), 0);
   setTimeout(() => arm.classList.remove("press"), 380);
-  sfx.slide();                     // the arm comes down through the air
+
+  sfx.slide();
   renderCase();
 
   // the stamp itself falls, bites the paper, and only then does the
@@ -1081,6 +1206,19 @@ function stampSwing(el) {
 function nextCase() {
   if (G.phase !== "audit") return;
   clearLater();
+  const cardEl = $("caseCard").querySelector(".case-card");
+  const sub = G.auditSubs[G.auditIdx];
+  const shiftDir = sub && sub.pick === "SUS" ? "shift-left" : "shift-right";
+  if (cardEl && !calmMotion() && !cardEl.classList.contains("shifting")) {
+    cardEl.classList.add("shifting", shiftDir);
+    sfx.slide();
+    later(advanceCase, 220);
+    return;
+  }
+  advanceCase();
+}
+
+function advanceCase() {
   G.auditLocked = false;
   const next = G.auditIdx + 1;
   // amendment interrupt lands between the last base-rule case and the
@@ -1217,26 +1355,10 @@ function auditSummary() {
   $("caseCard").innerHTML = "";
   const s = $("auditSummary");
   s.classList.remove("hidden");
-  s.innerHTML = `<p class="sum-line">${hits}/5 correct</p>
-    <p class="sum-effect">best streak ×${G.bestStreak} · ${effect}</p>`;
+  s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
+    <p class="sum-effect">${effect}</p>`;
   const actions = $("auditActions");
   actions.innerHTML = "";
-  // bank a hot streak: a ×3+ best streak buys back one strike, once a night
-  if (G.bestStreak >= 3 && G.status === "player" && G.strikes > 0) {
-    const bank = document.createElement("button");
-    bank.className = "ghost";
-    bank.textContent = `Bank ×${G.bestStreak} streak — clear a strike`;
-    bank.addEventListener("click", () => {
-      G.strikes--;
-      G.bestStreak = 1;
-      G.streak = 1;
-      sfx.human();
-      hud();
-      bank.disabled = true;
-      bank.textContent = "Strike cleared — the ledger forgets";
-    });
-    actions.appendChild(bank);
-  }
   const btn = document.createElement("button");
   btn.textContent = G.day >= DAYS.length - 1 ? "Last call →" : "Next day →";
   btn.addEventListener("click", nextDay);
