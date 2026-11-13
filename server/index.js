@@ -2280,15 +2280,17 @@ app.get("/api/feed", async (req, res) => {
       const geoByKey = new Map();
       const countByKey = new Map();
       const flagsById = new Map();
+      const checkinFlagsByKey = new Map();
       if (subAddrs.length && subDays.length) {
         const [{ data: ckRows }, { data: sameDaySubs }, { data: flagRows }] = await Promise.all([
-          supabaseAdmin.from("checkins").select("address,day,lat").in("day", subDays),
+          supabaseAdmin.from("checkins").select("address,day,lat,flags").in("day", subDays),
           supabaseAdmin.from("submissions").select("address,day").in("day", subDays),
           supabaseAdmin.from("submission_flags").select("submission_id,reason").in("submission_id", ids),
         ]);
         for (const c of ckRows || []) {
           const key = `${c.address?.toLowerCase()}:${c.day}`;
           geoByKey.set(key, c.lat != null);
+          if (Array.isArray(c.flags) && c.flags.length) checkinFlagsByKey.set(key, c.flags);
         }
         for (const s of sameDaySubs || []) {
           const key = `${s.address?.toLowerCase()}:${s.day}`;
@@ -2308,7 +2310,10 @@ app.get("/api/feed", async (req, res) => {
           opensAtMs: Date.parse(round?.opens_at),
           hasGeo: geoByKey.has(key) ? geoByKey.get(key) : null,
           subCount: countByKey.get(key) || 1,
-          flagReasons: flagsById.get(item.id) || [],
+          flagReasons: [
+            ...(flagsById.get(item.id) || []),
+            ...(checkinFlagsByKey.get(key) || []),
+          ],
         });
         item.packet = { ...packet, tells: packetTell(packet) };
       }
@@ -3745,10 +3750,16 @@ app.post(
         distance = haversineMeters(lat, lng, Number(round.lat), Number(round.lng));
       }
 
+      // Anti-cheat reasons are collected into checkinFlags and persisted on
+      // the checkin row — the feed packet reads them into RCPT so jurors see
+      // what the counters noticed, not just the ops log.
+      const checkinFlags = [];
+
       // Anti-cheat: GPS plausibility
       const radiusM = round.radius_m ?? CHECKIN_RADIUS_M;
       const gpsReason = checkGpsPlausibility(distance, typeof accuracy === "number" ? accuracy : null, radiusM);
       if (gpsReason) {
+        checkinFlags.push(gpsReason);
         log("anticheat_flag", { reason: gpsReason, address: req.user.address, day, distanceM: distance != null ? Math.round(distance) : null });
       }
 
@@ -3777,7 +3788,10 @@ app.post(
       if (supabaseAdmin) {
         const { data: recent } = await supabaseAdmin.from("checkins").select("address,day,created_at").eq("day", day).order("created_at", { ascending: false }).limit(50);
         timingReason = checkTimingAnomaly(req.user.address, day, recent || []);
-        if (timingReason) log("anticheat_flag", { reason: timingReason, address: req.user.address, day });
+        if (timingReason) {
+          checkinFlags.push(timingReason);
+          log("anticheat_flag", { reason: timingReason, address: req.user.address, day });
+        }
       }
 
       // Anti-cheat: velocity spoof — compare with previous check-in GPS
@@ -3795,6 +3809,7 @@ app.post(
             lat, lng, Date.now(),
           );
           if (velocityReason) {
+            checkinFlags.push(velocityReason);
             log("anticheat_flag", { reason: velocityReason, address: req.user.address, day, prevDay: prevCheckin.day });
           }
         }
@@ -3852,6 +3867,16 @@ app.post(
           .order("created_at", { ascending: false })
           .limit(1)
           .maybeSingle();
+
+        // Persist the collected anticheat reasons on the checkin row — they
+        // surface as the filing's RCPT field in the audit feed packet.
+        if (ckId?.id && checkinFlags.length) {
+          const { error: flagErr } = await supabaseAdmin
+            .from("checkins")
+            .update({ flags: checkinFlags })
+            .eq("id", ckId.id);
+          if (flagErr) log("checkin_flags_persist_error", { day, message: flagErr.message });
+        }
 
         return res.json({ ok: true, rank: data.rank, survived: data.survived, distanceM: data.distance_m != null ? Math.round(data.distance_m) : null, survivalCap: cap, gpsShared: hasUserGps, checkinId: ckId?.id ?? null });
       }

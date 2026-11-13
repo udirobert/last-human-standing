@@ -641,8 +641,13 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
                   )}
 
                   {/* The postmark rides the paper — same four fields on
-                      every filing, values are the testimony. */}
-                  <PacketStrip packet={sub.packet} />
+                      every filing. Tells stay muted until you commit
+                      (or the filing resolves), so the strip can't anchor
+                      a vote you haven't cast. */}
+                  <PacketStrip
+                    packet={sub.packet}
+                    revealed={Boolean(myVote) || sub.status !== "pending"}
+                  />
 
                   <LiveTally
                     real={sub.votes.real}

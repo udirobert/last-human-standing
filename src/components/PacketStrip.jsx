@@ -4,10 +4,13 @@
  * NIGHT SHIFT crossover: the paper is what jurors judge; the packet is
  * what the filing *is*. Same four fields on every card — PKT (latency
  * after open), ORIGIN (ground fix), HOPS (same-day attempts), RCPT
- * (counter flags). Values outside the human distribution render "hot".
+ * (counter flags).
  *
- * The strip never tells you the verdict — it just refuses to hide the
- * number. Stamp responsibly.
+ * Anchoring guard: until the juror commits a vote (or the filing is
+ * already resolved), out-of-distribution values render in the same muted
+ * type as everything else — the evidence is on the card, but nothing
+ * pre-highlights it. After the stamp lands, the tells light — same
+ * pedagogy as the night desk: you commit, then you see what you read.
  */
 const FIELDS = [
   ["pkt", "PKT"],
@@ -16,9 +19,9 @@ const FIELDS = [
   ["rcpt", "RCPT"],
 ];
 
-export default function PacketStrip({ packet }) {
+export default function PacketStrip({ packet, revealed = false }) {
   if (!packet) return null;
-  const tells = new Set(packet.tells || []);
+  const tells = revealed ? new Set(packet.tells || []) : new Set();
   return (
     <div className="mt-2 rounded-lg border border-ember/40 bg-ash/60 px-2.5 py-1.5">
       <div className="flex items-center justify-between gap-2 flex-wrap">
