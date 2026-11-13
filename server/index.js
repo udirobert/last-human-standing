@@ -2688,6 +2688,10 @@ app.post(
           await flagSubmission(supabaseAdmin, submissionId, ringReason, { voter: req.user.address });
         }
 
+        // Measurement: does the vote track the packet's out-of-distribution
+        // fields? Answers the groupthink question with data.
+        await logPacketVoteCorrelation({ submissionId, voter: req.user.address, vote });
+
         // Reciprocity: notify the submission owner that someone voted on their photo.
         // This creates a social obligation to return the favor — "they voted on mine,
         // I should vote on theirs." Only fires once per submission (first vote only)
@@ -2931,6 +2935,7 @@ app.post(
       });
 
       const settled = await settleSubmissionVotes(submissionId);
+      await logPacketVoteCorrelation({ submissionId, voter, vote });
       return res.json({
         ok: true,
         votes: settled.countedVotes,
@@ -2943,6 +2948,45 @@ app.post(
     }
   },
 );
+
+/**
+ * Packet correlation measurement — does a vote track the filing's
+ * out-of-distribution fields? Logged per vote so the groupthink question
+ * ("does the strip steer jurors?") has data behind it. Measurement only —
+ * a failure here never blocks a vote.
+ */
+async function logPacketVoteCorrelation({ submissionId, voter, vote }) {
+  if (!supabaseAdmin) return;
+  try {
+    const { data: sub } = await supabaseAdmin
+      .from("submissions")
+      .select("id,address,day,created_at")
+      .eq("id", submissionId)
+      .maybeSingle();
+    if (!sub) return;
+    const round = sub.day != null ? await loadRound(sub.day) : null;
+    const [{ data: ck }, { count: sameDayCount }, { data: flagRows }] = await Promise.all([
+      supabaseAdmin.from("checkins").select("lat,flags").eq("address", sub.address).eq("day", sub.day).maybeSingle(),
+      supabaseAdmin.from("submissions").select("id", { count: "exact", head: true }).eq("address", sub.address).eq("day", sub.day),
+      supabaseAdmin.from("submission_flags").select("reason").eq("submission_id", submissionId),
+    ]);
+    const packet = buildPacket({
+      createdAtMs: Date.parse(sub.created_at),
+      opensAtMs: Date.parse(round?.opens_at),
+      hasGeo: ck ? ck.lat != null : null,
+      subCount: sameDayCount || 1,
+      flagReasons: [
+        ...(flagRows || []).map((f) => f.reason),
+        ...(Array.isArray(ck?.flags) ? ck.flags : []),
+      ],
+    });
+    const tells = packetTell(packet);
+    // Every vote logs — hasTells is the denominator for the correlation.
+    log("packet_vote_corr", { submissionId, vote, tells, hasTells: tells.length > 0, voter });
+  } catch {
+    /* measurement only */
+  }
+}
 
 // Single source of truth for a voter's accuracy record — used by the
 // /api/voter-stats route and by the jury-weight computation in /api/vote.
