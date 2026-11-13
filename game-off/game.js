@@ -408,7 +408,7 @@ const INSTR = {
   day1: "What do ARIA's approvals share that her rejections lack? SHIFT narrows the desk to one column.",
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
-  night: "Stamp each filing against the rule — S: SUS · H: HUMAN.",
+  night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -1126,26 +1126,30 @@ function humanTel(rng, filed) {
   };
 }
 function valeTel(day, rng) {
-  if (day < 2) {
-    return { latency: "3ms", origin: "GATE 0", hops: "0",
-             receipt: "+0.003s after post",
-             tells: [...TEL_KEYS] };
-  }
-  const resid = [
-    { key: "receipt", val: "+0.000s after post" },
-    { key: "receipt", val: "rcvd before post" },
-    { key: "hops", val: "0" },
-    { key: "latency", val: "0.0ms" },
-  ];
-  const t = resid[Math.floor(rng() * resid.length)];
-  const tel = {
+  const human = {
     latency: `${140 + Math.floor(rng() * 320)}ms`,
     origin: `EXT GATE ${1 + Math.floor(rng() * 6)}`,
     hops: `${1 + Math.floor(rng() * 4)}`,
     receipt: `+${(rng() * 0.6 + 0.15).toFixed(2)}s after post`,
-    tells: [t.key],
   };
-  tel[t.key] = t.val;
+  // how many fields betray it: two early, one later — and the rest wear
+  // human values, so a flag pointed at a clean field is still a hunch
+  const keys = [...TEL_KEYS];
+  for (let i = keys.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1)); [keys[i], keys[j]] = [keys[j], keys[i]];
+  }
+  const tells = keys.slice(0, day < 2 ? 2 : 1);
+  const tel = { ...human, tells };
+  const odd = {
+    latency: "3ms", origin: "GATE 0", hops: "0", receipt: "+0.003s after post",
+  };
+  // later nights: the residual tell is impossible, not slow — a receipt
+  // stamped before the post, a zero-time packet, zero hops
+  const resid = {
+    latency: "0.0ms", origin: "GATE 0", hops: "0",
+    receipt: rng() < 0.5 ? "+0.000s after post" : "rcvd before post",
+  };
+  for (const k of tells) tel[k] = day < 2 ? odd[k] : resid[k];
   return tel;
 }
 
@@ -1218,6 +1222,9 @@ function flagField(k) {
     G.nightPoints += 100;
     G.score += 100;
     G.valeCaught++;
+    // the dissonance is the sting after the catch — never a tell before it
+    setValeDissonance(true);
+    later(() => setValeDissonance(false), 1600);
     ariaSay([
       `Wait — you stamped SUS on paper that passed, on grounds of ${TEL_LABEL[k]} ${sub.tel[k]}. You caught something my code couldn't see.`,
       "ANOMALY QUARANTINED. You read the postmark, not just the paper. Well done."
@@ -1258,7 +1265,9 @@ function renderCase() {
         // a hunch reads like any wrong quarantine — clean paper, bad stamp
         reason = "passes: meets every criterion";
       } else {
-        reason = `✗ You'd flagged that postmark before — and you stamped it through.`;
+        reason = G.valeCaught > 0
+          ? `✗ You'd flagged that postmark before — and you stamped it through.`
+          : `✗ the paper passed — the postmark didn't: ${sub.tel.tells.map((k) => `${TEL_LABEL[k]} ${sub.tel[k]}`).join(" · ")}`;
       }
     } else {
       reason = sub.correct
@@ -1269,8 +1278,6 @@ function renderCase() {
     }
   }
 
-  // the accusation hum — dissonance only sounds while grounds are asked
-  setValeDissonance(isVale && !!sub.pendingFlag);
   setInstr("night");
 
   el.innerHTML =
@@ -1321,6 +1328,7 @@ function stamp(pickVal) {
     sub.pendingFlag = true;
     G.flagAttempts++;
     sfx.slide();
+    sfx.lensHum(); // the desk leans in — on every clean-paper SUS, not just hers
     renderCase();
     stampSwing($("caseCard").querySelector(".case-stamp"));
     later(() => sfx.stamp(), 200);
@@ -1328,32 +1336,17 @@ function stamp(pickVal) {
   }
 
   if (isVale) {
-    // only HUMAN stamps reach here — SUS on clean paper asks for grounds
+    // only HUMAN stamps reach here — SUS on clean paper asks for grounds.
+    // The postmark is part of the judgment: a wave-through is a wrong
+    // stamp, and the verdict names the evidence that sat on the card.
+    sub.correct = false;
+    sub.earned = 0;
+    G.valeEscapes++;
     if (G.valeCaught > 0) {
-      // you quarantined this postmark already — and stamped it through
-      sub.correct = false;
-      sub.earned = 0;
-      G.valeEscapes++;
       ariaSay([
         "You'd seen that postmark before — and you stamped it through.",
         "Nothing human receipts before it posts. You let the machine through."
       ], "alarm");
-    } else {
-      // The paper genuinely passed — the stamp stands. Nothing names the
-      // machine; only the whisper and the summary's quiet lines hint.
-      sub.correct = true;
-      sub.earned = contested ? 100 : 50;
-      G.auditHitsToday++;
-      G.auditHits++;
-      G.nightPoints += sub.earned;
-      G.score += sub.earned;
-      G.valeEscapes++;
-      if (G.valeEscapes === 1) {
-        ariaSay([
-          "Approved — the criteria said so, anyway.",
-          "Passed. My rules say that's all that matters."
-        ]);
-      }
     }
   } else {
     sub.correct = (pickVal === "HUMAN") === sub.truth;
