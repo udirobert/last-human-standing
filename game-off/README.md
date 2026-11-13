@@ -37,12 +37,12 @@ python3 -m http.server 8000
   time — stamp each **SUS** or **HUMAN** (`S` / `H` / `←` / `→` / buttons).
   Wrong stamps explain the needed criterion. One filing a night is **contested** —
   call it right for double pay (+100). A flawless 5/5 night clears a strike.
-  The paper checks facts. The desk has a wire (`Shift`, or the little
-  log terminal by the pinned rule): latency, origin, hops, receipt — same
-  muted columns for every filer, nothing flagged. A wire-checked stamp pays +15
-  diligence. Whatever reads wrong is yours to catch, but a catch needs the
-  packet on the desk: blind SUS on clean paper is just a wrong stamp, and
-  once you've seen *that* packet, waving it through is a wrong stamp too.
+  The paper checks facts — and every filing carries its packet postmark at
+  the foot of the card: latency, origin, hops, receipt. Same muted strip
+  for every filer, nothing flagged. Stamp **SUS** on paper that passes and
+  the desk asks what flagged it — point at the field that read wrong. A
+  field that holds is the catch (+100 bounty); anything else is a hunch,
+  and a hunch is just a wrong stamp.
 - **From day 2**: you may *request one more ruling* per day (drops today's
   pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
   miss: two strikes — `O` toggles).
@@ -52,14 +52,13 @@ python3 -m http.server 8000
 - **Days 4–5**: one docket ruling is a **clerical error** — a SUS card
   stamped HUMAN. Tap the row you suspect (optional, +100 if right).
 - **Finale**: after night five you write the last rule yourself. One filer
-  isn't human. The ledger shows every filing as filed — and the desk wire
-  works at last call too, listing all five packets. Choose the criterion
-  that cuts it — and only it.
+  isn't human. The ledger lists every filing as filed — postmarks and all.
+  Choose the criterion that cuts it — and only it.
 - Still a player after day five (and the right finale) = LAST HUMAN
   STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
   the dossier lands — then it's jury duty.
 - Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `Shift`
-  focus loupe by day, packet wire by night · `O` oath · `M` audio.
+  focus loupe by day · `O` oath · `M` audio.
 
 ## Seeds & sharing
 

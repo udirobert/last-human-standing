@@ -504,9 +504,8 @@ const G = {
   docket: [],
   filed: null,
   focusAttr: "all",
-  telemetry: false,       // night: the packet wire is pulled up (hold SHIFT)
-  wireSeen: false,        // the desk wire has been opened at least once
-  valeWireSeen: false,    // VALE's own packet has been on the wire
+  flagAttempts: 0,        // nights where a passing-paper SUS was backed by a pointed field
+  flagHits: 0,            // pointed fields that held
   valeCaught: 0,          // nights VALE was stamped SUS
   valeEscapes: 0,         // nights VALE was waved through as HUMAN
   oath: false,
@@ -1109,13 +1108,53 @@ function joinNames(a) {
   return a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
 }
 
+/* The packet stub rides on every filing: latency, origin, hops, receipt,
+ * printed at the foot of the card like a postmark. Human stubs carry
+ * human noise — resends, delays, queues. The machine's carries a field no
+ * human could file — and after night two it wears human clothing, with
+ * one residual tell. Nothing is hidden, nothing is flagged for you. */
+const TEL_KEYS = ["latency", "origin", "hops", "receipt"];
+const TEL_LABEL = { latency: "PKT", origin: "ORIGIN", hops: "HOPS", receipt: "RCPT" };
+function humanTel(rng, filed) {
+  const n = rng();
+  return {
+    latency: `${150 + Math.floor(rng() * 350)}ms`,
+    origin: `EXT GATE ${1 + Math.floor(rng() * 6)}`,
+    hops: `${2 + Math.floor(rng() * 4)}`,
+    receipt: n < 0.2 ? "resent ×2" : n < 0.45 ? `rcpt delayed ${20 + Math.floor(rng() * 50)}s` : `queued ${filed}`,
+    tells: [],
+  };
+}
+function valeTel(day, rng) {
+  if (day < 2) {
+    return { latency: "3ms", origin: "GATE 0", hops: "0",
+             receipt: "+0.003s after post",
+             tells: [...TEL_KEYS] };
+  }
+  const resid = [
+    { key: "receipt", val: "+0.000s after post" },
+    { key: "receipt", val: "rcvd before post" },
+    { key: "hops", val: "0" },
+    { key: "latency", val: "0.0ms" },
+  ];
+  const t = resid[Math.floor(rng() * resid.length)];
+  const tel = {
+    latency: `${140 + Math.floor(rng() * 320)}ms`,
+    origin: `EXT GATE ${1 + Math.floor(rng() * 6)}`,
+    hops: `${1 + Math.floor(rng() * 4)}`,
+    receipt: `+${(rng() * 0.6 + 0.15).toFixed(2)}s after post`,
+    tells: [t.key],
+  };
+  tel[t.key] = t.val;
+  return tel;
+}
+
 function startAudit() {
   banner("NIGHT SHIFT — now you judge");
   showOnly("audit");
   setInstr("night");
   ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
   if (G.day === 2) explain("amend");
-  setTelemetry(false);
   const d = DAYS[G.day];
 
   renderRuleChips(d.rule, false);
@@ -1135,16 +1174,8 @@ function startAudit() {
   let hi = 0;
   G.auditSubs = cases.map((c) => {
     const filer = c.bot ? "VALE" : humans[hi++];
-    // VALE's card wears a human filing time — the tell is on the wire,
-    // behind SHIFT, never printed on the paper.
     const filed = fmtFiled(40 + Math.floor(trng() * 500));
-    const tel = c.bot
-      ? { latency: "3ms", origin: "GATE 0", hops: "0",
-          receipt: "+0.003s after post", anomaly: true }
-      : { latency: `${150 + Math.floor(trng() * 350)}ms`,
-          origin: `EXT GATE ${1 + Math.floor(trng() * 6)}`,
-          hops: `${2 + Math.floor(trng() * 4)}`,
-          receipt: `queued ${filed}`, anomaly: false };
+    const tel = c.bot ? valeTel(G.day, trng) : humanTel(trng, filed);
     return { ...c, filer, filed, tel, truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
   });
   G.auditIdx = 0;
@@ -1167,42 +1198,44 @@ function renderRuleChips(rule, amended) {
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
 
-/* SHIFT at night pulls the desk wire: latency, origin, hops, receipt —
- * the same columns for every filer, nothing flagged. What reads wrong
- * is for the auditor to notice. Works on a resolved case too. */
-function setTelemetry(on) {
-  if (G.phase !== "audit" && G.phase !== "finale") on = false;
-  if (G.telemetry === on) return;
-  G.telemetry = on;
-  document.body.classList.toggle("telemetry-active", on);
-  for (const id of ["telemetryBtn", "finaleWireBtn"]) {
-    const b = $(id);
-    if (b) b.classList.toggle("active", on);
-  }
-  if (on) {
-    G.wireSeen = true;
-    sfx.lensHum();
-    if (G.phase === "audit") {
-      const sub = G.auditSubs[G.auditIdx];
-      if (sub) {
-        sub.wireOpened = true;
-        // you only know the machine if its packet was the one on the desk
-        if (sub.filer === "VALE") G.valeWireSeen = true;
-      }
-      setValeDissonance(!!(sub && sub.filer === "VALE"));
-      // the reveal lands when you look: a stamped VALE card only glows
-      // once its own packet has been on the wire
-      if (sub && sub.filer === "VALE" && sub.pick) {
-        const card = $("caseCard").querySelector(".case-card");
-        if (card) card.classList.add("anomaly");
-      }
-    } else {
-      G.valeWireSeen = true; // the ledger lists all five packets at once
-      setValeDissonance(true);
-    }
+/* Stamping SUS on paper that passes needs grounds: the flag row asks which
+ * field on the packet read wrong. A pointed field that holds is the catch;
+ * a wrong field — or no grounds — is a hunch, and a hunch is a wrong stamp. */
+function flagField(k) {
+  const sub = G.auditSubs[G.auditIdx];
+  if (!sub || !sub.pendingFlag) return;
+  sub.pendingFlag = false;
+  sub.flagTried = true;
+  sub.flagKey = k || null;
+  const caught = sub.filer === "VALE" && !!k && sub.tel.tells.includes(k);
+  setValeDissonance(false);
+  if (caught) {
+    sub.correct = true;
+    sub.earned = 100;
+    G.flagHits++;
+    G.auditHitsToday++;
+    G.auditHits++;
+    G.nightPoints += 100;
+    G.score += 100;
+    G.valeCaught++;
+    ariaSay([
+      `Wait — you stamped SUS on paper that passed, on grounds of ${TEL_LABEL[k]} ${sub.tel[k]}. You caught something my code couldn't see.`,
+      "ANOMALY QUARANTINED. You read the postmark, not just the paper. Well done."
+    ], "smug");
   } else {
-    setValeDissonance(false);
+    sub.correct = false;
+    sub.earned = 0;
   }
+  G.auditTotal++;
+  hud();
+  renderCase();
+  const cardEl = $("caseCard").querySelector(".case-card");
+  if (cardEl) {
+    cardEl.classList.add("impact");
+    later(() => cardEl.classList.remove("impact"), 700);
+  }
+  later(() => { sub.correct ? sfx.human() : sfx.sus(); }, 200);
+  if (sub.correct) later(nextCase, 1200);
 }
 
 function renderCase() {
@@ -1215,50 +1248,55 @@ function renderCase() {
   const isVale = sub.filer === "VALE";
 
   let reason = "";
-  if (sub.pick) {
+  if (sub.pick && !sub.pendingFlag) {
     if (isVale) {
       if (sub.pick === "SUS" && sub.correct) {
-        reason = `⚡ ANOMALY QUARANTINED — 3ms, gate zero, no hops. No human files that fast. +100 bounty`;
+        reason = `⚡ ANOMALY QUARANTINED — ${TEL_LABEL[sub.flagKey]} ${sub.tel[sub.flagKey]}. No human files that. +100 bounty`;
       } else if (sub.correct) {
         reason = `✔ Meets every criterion.`;
       } else if (sub.pick === "SUS") {
-        // a blind hunch reads like any wrong quarantine — clean paper, bad stamp
+        // a hunch reads like any wrong quarantine — clean paper, bad stamp
         reason = "passes: meets every criterion";
       } else {
-        reason = `✗ The wire was right there: 3ms, gate zero, no hops. You let the machine through.`;
+        reason = `✗ You'd flagged that postmark before — and you stamped it through.`;
       }
     } else {
       reason = sub.correct
-        ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}${sub.wireOpened ? " · wire ✓" : ""}`
+        ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}`
         : (sub.truth ? "passes: meets every criterion"
                      : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
                          .map((k) => sub.rule.find((x) => x.key === k).text).join(", "));
     }
   }
 
-  // the wire's hum carries the dissonance — the paper itself stays quiet
-  setValeDissonance(isVale && G.telemetry);
+  // the accusation hum — dissonance only sounds while grounds are asked
+  setValeDissonance(isVale && !!sub.pendingFlag);
   setInstr("night");
 
   el.innerHTML =
     `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
-    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && G.valeWireSeen ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
-      ${sub.pick ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
+      ${sub.pick && !sub.pendingFlag ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
         <p class="case-reason">${reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
       ${factRows(sub.card, verdicts)}
-      <div class="case-telemetry">
-        <div class="tel-row"><span>PKT LATENCY</span><span class="tel-val">${sub.tel.latency}</span></div>
-        <div class="tel-row"><span>ORIGIN</span><span class="tel-val">${sub.tel.origin}</span></div>
-        <div class="tel-row"><span>HOPS</span><span class="tel-val">${sub.tel.hops}</span></div>
-        <div class="tel-row"><span>RECEIPT</span><span class="tel-val">${sub.tel.receipt}</span></div>
+      <div class="case-stub">
+        ${TEL_KEYS.map((k) =>
+          `<div class="tel-row"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
       </div>
+      ${sub.pendingFlag ? `<div class="flag-row">
+        <span class="flag-q">the paper passed — what flagged it?</span>
+        ${TEL_KEYS.map((k) => `<button class="flag-f" type="button" data-k="${k}">${TEL_LABEL[k]}</button>`).join("")}
+        <button class="flag-f none" type="button" data-k="">no grounds</button>
+      </div>` : ""}
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}">${sub.pick}</div>` : ""}
-      ${sub.pick && !sub.correct ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
+      ${sub.pick && !sub.correct && !sub.pendingFlag ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
+  el.querySelectorAll(".flag-f").forEach((b) =>
+    b.addEventListener("click", (e) => { e.stopPropagation(); flagField(b.dataset.k); }));
   $("susBtn").disabled = $("humanBtn").disabled = checked;
   if (!checked) {
     if (!calmMotion()) {
@@ -1277,28 +1315,32 @@ function stamp(pickVal) {
   const isVale = sub.filer === "VALE";
   const contested = G.auditIdx === G.contestedIdx;
 
+  if (pickVal === "SUS" && sub.truth) {
+    // the paper passed — a SUS stamp needs grounds. The flag row asks
+    // which packet field read wrong; flagField() resolves the stamp.
+    sub.pendingFlag = true;
+    G.flagAttempts++;
+    sfx.slide();
+    renderCase();
+    stampSwing($("caseCard").querySelector(".case-stamp"));
+    later(() => sfx.stamp(), 200);
+    return;
+  }
+
   if (isVale) {
-    if (pickVal === "SUS" && G.valeWireSeen) {
-      // Detective catch — the packet was on the wire when you stamped.
-      sub.correct = true;
-      sub.earned = 100;
-      G.auditHitsToday++;
-      G.auditHits++;
-      G.nightPoints += 100;
-      G.score += 100;
-      G.valeCaught++;
-      ariaSay([
-        "Wait. You stamped SUS? The facts met my criteria... but you read the wire: 3ms, gate zero, no hops. You caught something my code couldn't see.",
-        "ANOMALY QUARANTINED. You read the wire, not just the paper. Well done."
-      ], "smug");
-    } else if (pickVal === "SUS") {
-      // A blind hunch quarantines clean paper — a wrong stamp like any other.
-      // No bounty, no reveal: the ledger keeps its secret.
+    // only HUMAN stamps reach here — SUS on clean paper asks for grounds
+    if (G.valeCaught > 0) {
+      // you quarantined this postmark already — and stamped it through
       sub.correct = false;
       sub.earned = 0;
-    } else if (!G.valeWireSeen) {
-      // The paper genuinely passed — the stamp stands. No whisper names the
-      // prop; only the summary's wire-check count hints a verb went unused.
+      G.valeEscapes++;
+      ariaSay([
+        "You'd seen that postmark before — and you stamped it through.",
+        "Nothing human receipts before it posts. You let the machine through."
+      ], "alarm");
+    } else {
+      // The paper genuinely passed — the stamp stands. Nothing names the
+      // machine; only the whisper and the summary's quiet lines hint.
       sub.correct = true;
       sub.earned = contested ? 100 : 50;
       G.auditHitsToday++;
@@ -1312,22 +1354,13 @@ function stamp(pickVal) {
           "Passed. My rules say that's all that matters."
         ]);
       }
-    } else {
-      // The packet was on this desk and you approved it anyway.
-      sub.correct = false;
-      sub.earned = 0;
-      G.valeEscapes++;
-      ariaSay([
-        "You read that packet and stamped it through. That filing was the machine.",
-        "3ms, gate zero, no hops — and you approved it."
-      ], "alarm");
     }
   } else {
     sub.correct = (pickVal === "HUMAN") === sub.truth;
     if (sub.correct) {
       G.auditHitsToday++;
       G.auditHits++;
-      sub.earned = (contested ? 100 : 50) + (sub.wireOpened ? 15 : 0);
+      sub.earned = contested ? 100 : 50;
       G.nightPoints += sub.earned;
       G.score += sub.earned;
     } else {
@@ -1565,15 +1598,15 @@ function auditSummary() {
     : (valeSub.pick === "SUS" && valeSub.correct)
       ? `<p class="sum-vale ok">⚡ anomaly quarantined — the machine was on tonight's docket</p>`
       : (valeSub.pick === "SUS" && !valeSub.correct)
-        ? ""   // a blind hunch earns no postscript
-        : G.valeWireSeen
-          ? `<p class="sum-vale warn">⚠ you read the wire and stamped it through</p>`
+        ? ""   // a hunch earns no postscript
+        : G.valeCaught > 0
+          ? `<p class="sum-vale warn">⚠ you'd flagged that postmark — and stamped it through</p>`
           : `<p class="sum-vale quiet">· ${QUIET[G.day % QUIET.length]}</p>`;
-  const wireChecks = G.auditSubs.filter((x) => x.wireOpened).length;
-  const wireLine = wireChecks
-    ? `<p class="sum-wire">wire checks ${wireChecks}/5 · +${wireChecks * 15} diligence</p>` : "";
+  const flags = G.auditSubs.filter((x) => x.flagTried).length;
+  const flagLine = flags
+    ? `<p class="sum-wire">flags raised ${flags} · ${flags && G.auditSubs.some((x) => x.flagTried && x.correct) ? "bounty held" : "nothing held"}</p>` : "";
   s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
-    <p class="sum-effect">${effect}</p>${wireLine}${valeLine}`;
+    <p class="sum-effect">${effect}</p>${flagLine}${valeLine}`;
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");
@@ -1608,28 +1641,18 @@ function startFinale() {
   };
   G.finaleRows = shuf([...FINALE]);
   G.finaleOpts = shuf([...FINALE_RULES]);
-  // the same wire, one last time — every filer gets a packet row
+  // every filer carries its packet stub onto the ledger
   const trng = stream("finale-tel");
   G.finaleRows.forEach((row) => {
-    row.tel = row.filer === "VALE"
-      ? { latency: "3ms", origin: "GATE 0", hops: "0",
-          receipt: "+0.003s after post" }
-      : { latency: `${150 + Math.floor(trng() * 350)}ms`,
-          origin: `EXT GATE ${1 + Math.floor(trng() * 6)}`,
-          hops: `${2 + Math.floor(trng() * 4)}`,
-          receipt: `queued ${row.ts}` };
+    row.tel = row.filer === "VALE" ? valeTel(4, trng) : humanTel(trng, row.ts);
   });
   G.signing = false;
   $("decree").classList.remove("signed");
-  setTelemetry(false);
   buildFinale();
   paintFinale();
-  // the last line she says depends on whether you ever read the wire —
-  // a nudge toward the ledger, never a name
+  // the last line she says depends on whether you ever flagged the postmark
   if (G.valeCaught > 0) {
-    ariaSay(["You flagged her once on the wire. Now write the clause only she can't file."], "smug");
-  } else if (G.wireSeen) {
-    ariaSay(["You've read the wire. Whatever isn't a fact is sitting somewhere on that ledger."]);
+    ariaSay(["You flagged her once on the postmark. Now write the clause only she can't file."], "smug");
   } else {
     ariaSay(["My rules only check facts. Read the ledger the way it was filed — not the way it was argued."]);
   }
@@ -1646,14 +1669,10 @@ function buildFinale() {
       `<td class="c-file"><span class="glyph">${row.glyph}</span><span class="name">${row.name}</span></td>` +
       ATTR_KEYS.map((k) => `<td class="c-fact">${factCell(k, row.tags[k])}</td>`).join("") +
       `<td class="c-filer">${row.filer}</td><td class="c-ts">${row.ts}</td>` +
+      `<td class="c-pkt">${row.tel.latency} · ${row.tel.origin} · ${row.tel.hops}h · ${row.tel.receipt}</td>` +
       `<td class="c-cut"></td>`;
     tb.appendChild(tr);
   }
-  // the wire drawer — same muted columns for every filer, nothing flagged
-  $("finaleWire").innerHTML = G.finaleRows.map((row) =>
-    `<div class="tel-row"><span>${row.filer}</span>` +
-    `<span class="tel-val">${row.tel.latency} · ${row.tel.origin} · ${row.tel.hops} hops · ${row.tel.receipt}</span></div>`
-  ).join("");
   const box = $("ruleChoices");
   box.innerHTML = "";
   G.finaleOpts.forEach((opt, i) => {
@@ -1715,10 +1734,8 @@ function signRule() {
   if (valeCut && humanCut.length === 0) {
     title = G.status === "player" ? "LAST HUMAN STANDING" : "DAWN";
     line = G.valeCaught > 0
-      ? "You wrote the one rule she couldn't. You'd been reading the wire all week — the docket is human again."
-      : G.valeWireSeen
-        ? "You wrote the one rule she couldn't. The wire said what the paper never could — the docket is human again."
-        : "You wrote the one rule she couldn't. +0.003s never did read human — the docket is human again.";
+      ? "You wrote the one rule she couldn't. You'd been reading postmarks all week — the docket is human again."
+      : "You wrote the one rule she couldn't. The packet said what the paper never could — the docket is human again.";
   } else if (valeCut) {
     title = "COLLATERAL";
     line = `VALE is gone. So are ${humanCut.join(", ")}. The rule didn't care who.`;
@@ -1757,7 +1774,7 @@ function shareText(title) {
 }
 
 function endGame() {
-  setTelemetry(false);
+  setValeDissonance(false);
   dayPhase.classList.add("hidden");
   verdictPhase.classList.add("hidden");
   auditPhase.classList.add("hidden");
@@ -1776,7 +1793,7 @@ function endGame() {
   const lines = [];
   if (G.finaleTitle) lines.push("VALE filed every proof 0.003 seconds after the riddle posted.");
   if (G.valeCaught) lines.push(
-    `You flagged the machine on ${G.valeCaught} night${G.valeCaught > 1 ? "s" : ""} — the wire never lies.`);
+    `You flagged the machine on ${G.valeCaught} night${G.valeCaught > 1 ? "s" : ""} — the postmark never lies.`);
   if (G.valeEscapes) lines.push(
     `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} before tonight.`);
   if (G.finaleLine) lines.push(G.finaleLine);
@@ -1814,8 +1831,6 @@ $("oathBtn").addEventListener("click", toggleOath);
 $("clueBtn").addEventListener("click", requestClue);
 $("susBtn").addEventListener("click", () => stamp("SUS"));
 $("humanBtn").addEventListener("click", () => stamp("HUMAN"));
-$("telemetryBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
-$("finaleWireBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
 $("shiftBrief").addEventListener("click", endBrief);
 document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
   b.addEventListener("click", () => { setFocusAttr(b.dataset.attr); sfx.click(); }));
@@ -1840,13 +1855,11 @@ document.addEventListener("keydown", (e) => {
   // a live brief swallows every key — it dismisses, nothing else fires
   if (briefOpen) { endBrief(); return; }
 
-  // SHIFT is the desk verb: by day it walks the loupe across the fact
-  // columns; by night it holds the packet wire open. Key-repeat does
-  // nothing — a held Shift doesn't spin the loupe or flicker the wire.
+  // SHIFT is the day verb: it walks the loupe across the fact columns.
+  // Key-repeat does nothing — a held Shift doesn't spin the loupe.
   if (e.key === "Shift") {
     if (e.repeat) return;
     if (G.phase === "day") { cycleFocus(); return; }
-    if (G.phase === "audit" || G.phase === "finale") { setTelemetry(true); return; }
   }
 
   if (G.phase === "day") {
@@ -1863,8 +1876,14 @@ document.addEventListener("keydown", (e) => {
     }
   } else if (G.phase === "audit") {
     if (G.auditLocked) {
-      // during the amendment the banner is skippable; otherwise advance
-      if (!MODIFIER_KEYS.has(e.key)) { if (G.amending) finishAmend(); else nextCase(); }
+      // grounds pending → resolve as a hunch; amending → skip the banner;
+      // otherwise advance
+      if (!MODIFIER_KEYS.has(e.key)) {
+        const s2 = G.auditSubs[G.auditIdx];
+        if (s2 && s2.pendingFlag) flagField(null);
+        else if (G.amending) finishAmend();
+        else nextCase();
+      }
       return;
     }
     const sub = G.auditSubs[G.auditIdx];
@@ -1889,16 +1908,14 @@ document.addEventListener("keydown", (e) => {
   }
 });
 
-document.addEventListener("keyup", (e) => {
-  if (e.key === "Shift" && (G.phase === "audit" || G.phase === "finale")) {
-    setTelemetry(false);
-  }
-});
-
 const MODIFIER_KEYS = new Set(["Control", "Alt", "Meta", "Tab", "CapsLock", "Escape"]);
 // tap a resolved case (or the stamp buttons) to move on
 $("caseCard").addEventListener("click", () => {
-  if (G.auditLocked) { if (G.amending) finishAmend(); else nextCase(); }
+  if (!G.auditLocked) return;
+  const sub = G.auditSubs[G.auditIdx];
+  if (sub && sub.pendingFlag) flagField(null);
+  else if (G.amending) finishAmend();
+  else nextCase();
 });
 $("caseBtns").addEventListener("click", (e) => {
   // a click on an enabled stamp button is the stamp itself, not a dismiss;

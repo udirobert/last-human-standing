@@ -62,9 +62,8 @@ blind?"). Best conversations get collected into community collections.
 
 ## Controls (page section, keep short)
 
-- **Shift**:
-  - *Day Shift*: Tap `Shift` to walk a loupe across the fact columns (where → when → who → in/out) — it dims the rest, never hides them.
-  - *Night Shift*: Hold `Shift` to pull the desk terminal's log — the same muted columns for every filer.
+- **Shift** *(Day)*: tap to walk a loupe across the fact columns (where → when → who → in/out) — it dims the rest, never hides them.
+- Every night filing carries its packet postmark (latency · origin · hops · receipt) on the card. Stamp `SUS` on paper that passes and the desk asks which field flagged it — a pointed catch pays +100, a hunch is a wrong stamp.
 - `1–4`: select a card · `Enter` / `Space`: file card (Day) / advance · `S`/`H` or `←`/`→`: stamp (Night)
 - `O`: file under oath (pass clears a strike, miss costs two) · `M`: mute audio
 - Mobile: everything is 100% touch-operable.
