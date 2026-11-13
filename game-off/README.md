@@ -22,8 +22,10 @@ python3 -m http.server 8000
 
 ## How to play
 
-- **Day shift**: read the riddle, then study the docket — ARIA's already
-  stamped two filings HUMAN and a few SUS. Those precedents *are* the clue.
+- **Day shift**: each morning opens with a **shift brief** — a memo card
+  naming the day and typing out the riddle — then the desk deals in row by
+  row. Study the docket: ARIA's already stamped two filings HUMAN and a
+  few SUS. Those precedents *are* the clue.
   Tap `Shift` to walk a loupe across the fact columns (where → when → who →
   in/out) and dim the rest — it narrows where you look, never what you see.
   Tap a card to select it (keys `1`–`4`), then **File →** (or `Enter`).
@@ -50,7 +52,9 @@ python3 -m http.server 8000
 - **Days 4–5**: one docket ruling is a **clerical error** — a SUS card
   stamped HUMAN. Tap the row you suspect (optional, +100 if right).
 - **Finale**: after night five you write the last rule yourself. One filer
-  isn't human. Choose the criterion that cuts it — and only it.
+  isn't human. The ledger shows every filing as filed — and the desk wire
+  works at last call too, listing all five packets. Choose the criterion
+  that cuts it — and only it.
 - Still a player after day five (and the right finale) = LAST HUMAN
   STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
   the dossier lands — then it's jury duty.
@@ -80,18 +84,21 @@ one-word rules with full docket support that could bait a strike:
 `node audit-deduction.mjs` after touching `deal()`. The day/night shift
 is `body[data-shift]` + CSS variables; all art is inline SVG + CSS, and
 there are no image assets. State changes are physical on purpose — cards
-deal, filings fly to the tray, the night stamp swings and throws ink, the
-amendment is stapled on, the finale is a decree you fill in and sign — and
-`prefers-reduced-motion` skips every flight, leaving the state change
-visible and instant.
-The game features a procedural WebAudio soundscape synthesized entirely at runtime
-(sub-bass drone, warm analog tape noise, tactile stamp clunks, and reactive VALE
-dissonance) with zero external media files and zero CORS issues on `file://`.
-`M` toggles audio on/off.
+deal, docket rows cascade in, filings fly to the tray, the night stamp
+swings and throws ink, the amendment is stapled on, the finale is a decree
+you fill in and sign — and `prefers-reduced-motion` skips every flight,
+leaving the state change visible and instant.
+The score is four pre-rendered tracks in `audio/` (main-title noir, day
+ambience, night tension, dawn resolve — generated with ElevenLabs Music),
+crossfaded per phase by a small `score` module. If a file can't load —
+`file://`, offline — it silently falls back to the procedural WebAudio
+soundscape (sub-bass drone, tape noise, stamp clunks, reactive VALE
+dissonance), so the game never depends on a network. `M` toggles audio.
 
 ## Credits
 
-Bespoke WebAudio sound design and SVG artwork. All proceedings fictional.
+ElevenLabs Music (generated tracks), bespoke WebAudio sound design and
+SVG artwork. All proceedings fictional.
 
 ## Status
 
