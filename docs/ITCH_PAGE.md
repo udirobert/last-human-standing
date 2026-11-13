@@ -115,7 +115,7 @@ explaining, it doesn't belong in the trailer.
 
 ## Cover + GIF
 
-Assets in `dist/itch-assets/` — produced by scripted Chrome runs against
+Assets in `docs/itch-assets/ — produced by scripted Chrome runs against
 `?seed=capture` (deterministic frames via `--virtual-time-budget`):
 
 - **Cover still:** `game-off/cover-630x500.png` — the desk, the anomaly
