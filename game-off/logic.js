@@ -156,8 +156,23 @@ function deal(cards, day, dayIndex, rng = Math.random) {
   // --- hand: 4 cards outside the docket; day 1 deals two passers so the
   // first deduction can't brick a new player; afterwards exactly one ---
   const pool = cards.filter((c) => !used.has(c.id));
-  const wantPass = dayIndex === 0 ? 2 : 1;
-  const hand = shuffle(rng, pool.filter((c) => passes(c, rule))).slice(0, wantPass);
+  let hand;
+  if (dayIndex === 0) {
+    // the two safe picks shouldn't be the same card twice — take the
+    // passer pair that differs most on non-rule facts, like the docket
+    const P = pool.filter((c) => passes(c, rule));
+    let bp = [], bd = -1;
+    for (let i = 0; i < P.length; i++) {
+      for (let j = i + 1; j < P.length; j++) {
+        const d = nonRuleKeys.filter((k) => P[i].tags[k] !== P[j].tags[k]).length;
+        if (d > bd) { bd = d; bp = [[P[i], P[j]]]; }
+        else if (d === bd) bp.push([P[i], P[j]]);
+      }
+    }
+    hand = bp.length ? pick(rng, bp) : P.slice(0, 2);
+  } else {
+    hand = shuffle(rng, pool.filter((c) => passes(c, rule))).slice(0, 1);
+  }
   const fPool = shuffle(rng, pool.filter((c) => !passes(c, rule)));
   const near = fPool.filter((c) => nearMiss(c, rule));
   const rest = fPool.filter((c) => !nearMiss(c, rule));

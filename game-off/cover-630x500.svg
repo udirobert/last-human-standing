@@ -143,6 +143,10 @@
 
     <text x="14" y="48" font-family="ui-monospace, monospace" font-size="9.5" fill="#44321e">FILER:     <b>VALE</b></text>
     <text x="14" y="65" font-family="ui-monospace, monospace" font-size="9.5" font-weight="bold" fill="#b8281d">FILED:     +0.003s (3ms DELAY)</text>
+    <!-- the clerk's red grease circle — the catch, drawn on the evidence -->
+    <ellipse cx="112" cy="61" rx="104" ry="14" fill="none" stroke="#c0392b"
+      stroke-width="2.8" opacity="0.85" transform="rotate(-2 112 61)"
+      filter="url(#stampRough)"/>
     <text x="14" y="82" font-family="ui-monospace, monospace" font-size="9.5" fill="#44321e">CRITERIA:  ALL 4 PASSED (100%)</text>
     
     <line x1="14" y1="94" x2="226" y2="94" stroke="#d5c6a5" stroke-width="1"/>

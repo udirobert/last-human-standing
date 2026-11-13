@@ -475,7 +475,7 @@ const INSTR = {
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
-  cold: "The outgoing clerk left a tray — stamp each filing. S: SUS · H: HUMAN.",
+  cold: "The outgoing clerk left a tray — stamp each filing. No strikes tonight. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -1634,7 +1634,8 @@ function nextCase() {
   if (cardEl && !calmMotion() && !cardEl.classList.contains("shifting")) {
     cardEl.classList.add("shifting", shiftDir);
     sfx.slide();
-    later(advanceCase, 220);
+    // the last case slides out as the ledger slides in — no empty-desk beat
+    later(advanceCase, G.auditIdx === G.auditSubs.length - 1 ? 120 : 220);
     return;
   }
   advanceCase();

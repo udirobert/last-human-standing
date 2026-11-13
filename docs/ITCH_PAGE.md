@@ -115,16 +115,20 @@ explaining, it doesn't belong in the trailer.
 
 ## Cover + GIF
 
-- **Cover:** 630×500-ish still — dark desk-lamp background, one stamped
-  SUS case card, tagline text. Must read at thumbnail size: big stamp,
-  three words max besides the title.
-- **Animated cover (preferred):** 2–4s GIF loop of the amendment banner
-  firing, the SURVIVED stamp biting down, or the third-strike `CUT`
-  (that one has the strongest thumbnail silhouette: dark desk, one red
-  stamp). No strobing — itch rejects seizure-inducing covers and ours is
-  palette-safe anyway.
-- Record with OBS/QuickTime → trim → export GIF (≤ a few MB), upload as
-  the project cover image.
+Assets in `dist/itch-assets/` — produced by scripted Chrome runs against
+`?seed=capture` (deterministic frames via `--virtual-time-budget`):
+
+- **Cover still:** `game-off/cover-630x500.png` — the desk, the anomaly
+  packet, the red grease circle on `+0.003s`. Regenerate from the SVG:
+  `rsvg-convert cover-630x500.svg -o cover-630x500.png`.
+- **Animated cover (preferred):** `catch.gif` (~190KB, ~3s) — the SUS
+  stamp, the accusation row, the grease circle drawing on the RCPT field,
+  TRAY CLEARED. The game's signature moment, no strobing.
+- **Screenshots:** `tray.png` (the cold-open desk + postmark stub),
+  `flag.png` (the accusation row open), `day.png` (the deduction docket),
+  `verdict.png` (a strike with the needed criterion named),
+  `amend.png` (the amendment banner mid-hold), `finale.png` (the ledger +
+  rule-writing decree).
 
 ## PWYW ladder (post-jam, in order — dashboard ops, not code)
 
