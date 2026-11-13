@@ -111,8 +111,8 @@ The rule of thumb now applies one layer up: if a player can't *see* what just ha
    - Swapped audio: removed 4.46MB MacLeod loop for procedural WebAudio synthesizer.
    - Itch cover art: authored 630×500 vector cover (`cover-630x500.svg`) and HTML exporter (`export-cover.html`).
    - Standalone extraction: created `scripts/package-game-off.sh` producing 52KB `night-shift-itch.zip` and clean standalone repo at `dist/night-shift`.
-5. **Fresh-Player Playtesting (Nov 15–20)**: Run fresh-player protocol in [`PLAYTEST.md`](./PLAYTEST.md) to confirm 100% Day 1 comprehension and Night 1 anomaly discovery.
-6. **Submission & Itch Launch (by Nov 30)**: Deploy to itch.io, configure 630x500 thumbnail, push standalone repo to GitHub before Dec 1 13:37 PST.
+5. ~~Fresh-Player Playtesting~~ **done (agent-side)**: persona harness + three blind fresh-context playtests — see "Playtest program" below. Human-stranger session still open.
+6. **Submission & Itch Launch (by Nov 30)**: media kit ready (`docs/itch-assets/`); deploy to itch.io and configure the page — see `ITCH_PAGE.md` checklist. Push standalone repo before Dec 1 13:37 PST.
 
 ## Status log
 
@@ -130,3 +130,24 @@ The rule of thumb now applies one layer up: if a player can't *see* what just ha
 - Liar fairness: is the clerical error actually *findable* (two outvoting SUS rows) for a first-time player, or does it read as noise? Playtest.
 - Mobile: night stamp buttons are full-width and the hand is 2×2; verify the docket stays legible at 390px, and that the third-strike vignette reads as "the room went dark" rather than "the screen broke".
 - Presentation: does the paperwork read as *physical* on first sight, or does it merely animate? The one beat most likely to be tuned is the 82%-black third-strike vignette.
+
+## Final design — shipped November pass (supersedes the pivot-4 VALE badge)
+
+The pivot-4 plan front-loaded VALE with a styled `⚡ FILED +0.003s` badge — a banner telling the player the answer. The shipped design deleted the badge and made the anomaly *load-bearing evidence* instead:
+
+- **Cold-open tray.** Clock-in lands on the night desk, not the day grid: two filings the outgoing clerk left, judged under last week's standing order — a clean human pass, then a VALE filing. Stamp, verdict, flag row, and catch-or-miss all happen in the first ~90 seconds; then the day crew signs in. A rater's first minute is the game's identity.
+- **The postmark stub rides on every filing.** PKT · ORIGIN · HOPS · RCPT printed at the foot of every case card, same muted strip for every filer. Human stubs carry human noise (`resent ×2`, `rcpt delayed 40s`, `queued +2h10m`).
+- **SUS on clean paper demands grounds.** The flag row asks which field read wrong; a pointed field that holds is the catch (+100, red grease circle drawn on the evidence), a clean field or no grounds is a hunch — a wrong stamp like any other, with the named field struck through in pencil.
+- **The disguise is honest.** VALE's clean fields come from the same generator as humans (a flag pointed at one is a hunch, not a boundary case). Nights 1–2 leak two of four fields (seeded); nights 3+ carry one residual impossible field in human clothing.
+- **No machine fingerprints.** The servo chirp and the VALE-only "no wet signature" note are gone — all filers draw the shared note pool, and straight landings/clean drops are seeded human variance. The verdict names one missed field, not the whole key. The postmark is the only testimony.
+- **Consequence teaches, not text.** HUMAN on VALE is a wrong stamp; the verdict names the evidence skipped. Persona playtests confirmed a literal player adapts the next night after one punished wave-through.
+- **The amendment is acknowledged, not glimpsed** — it holds for a key/tap with a grace window, chips striking and restamping while it waits.
+- **Weather.** Procedural rain under every night (wetter each night), far-off thunder at the audit desk — routed beside the score so it plays under the generated tracks.
+
+## Playtest program — shipped evidence
+
+- **Persona harness** (`/tmp` drivers + real Chrome): four rater archetypes run the full week per design pass. Results: literal instruction-follower eliminated on day-phase strikes only (paper-stamping never kills); careful reader wins with a 5/5 catch night; adaptive player learns the postmark from one wrong stamp; button-masher's hunches never hold.
+- **Blind raters** (fresh-context agents, real browser, no design knowledge): three full playtests — 4/5, 4/5, 4/5 (opening-focused). All finished the week; all named the postmark layer the soul of the game. Real defects found and fixed: stale verdict line, disguise outside the human distribution, phantom-looking flawless bonus, amendment auto-dismiss gaslight, score-tween residue.
+- **Itch media kit**: `docs/itch-assets/` — six deterministic screenshots + `catch.gif` animated cover (grease-circle catch), captured headless at staged virtual-time budgets. Cover still regenerated with the grease circle on `+0.003s`.
+- **Bridge to the live game**: the dawn screen carries a quiet post-credits link to `lasthumanstanding.thisyearnofear.com` — one-way funnel, zero dependency; the jam build works entirely alone.
+- **Remaining gate**: itch.io upload + page setup (checklist in `ITCH_PAGE.md`) and one human-stranger playtest — both outside the repo.

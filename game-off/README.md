@@ -1,6 +1,8 @@
 # NIGHT SHIFT
 
 A five-day deduction thriller. **Game Off 2026** entry — theme: *SHIFT*.
+Standalone spin-off of [Last Human Standing](https://lasthumanstanding.thisyearnofear.com) —
+same ARIA, same rulings, no account needed.
 
 Five days. Each day ARIA holds a **secret rule** — one to three criteria over
 a card's four facts (where · when · who · in-or-out). By day you deduce the
