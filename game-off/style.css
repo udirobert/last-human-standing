@@ -941,7 +941,17 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 #deskBar #ruleChips { flex: 1; }
 
 /* the wire monitor — a quiet desk prop, not a third stamp */
-#telemetryBtn {
+.finale-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.finale-bar .sec-head { margin-bottom: 0; }
+#finaleWire { margin: 6px 0 10px; }
+#finaleWire .tel-row { justify-content: space-between; }
+#finaleWire .tel-row > span:first-child { min-width: 4.5em; }
+.telemetry-btn {
   font-family: ui-monospace, monospace;
   font-size: 10px;
   font-weight: 600;
@@ -954,13 +964,13 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   cursor: pointer;
   flex-shrink: 0;
 }
-#telemetryBtn:hover,
-#telemetryBtn.active {
+.telemetry-btn:hover,
+.telemetry-btn.active {
   color: var(--amber, #e8b34b);
   border-color: var(--amber, #e8b34b);
   background: rgba(232, 179, 75, 0.08);
 }
-#telemetryBtn kbd {
+.telemetry-btn kbd {
   font-size: 8.5px;
   opacity: .7;
   margin-left: 3px;
@@ -995,6 +1005,7 @@ body.telemetry-active .case-telemetry,
 #auditSummary { text-align: center; padding: 20px 0 4px; }
 #auditSummary .sum-line { font-size: 20px; letter-spacing: .12em; color: var(--ink); }
 #auditSummary .sum-effect { font-size: 12px; color: var(--accent); margin-top: 8px; letter-spacing: .08em; }
+#auditSummary .sum-wire { font-size: 10.5px; font-family: ui-monospace, monospace; color: var(--faint, #899bb5); margin-top: 6px; letter-spacing: .08em; }
 #auditSummary .sum-vale { font-size: 11px; font-family: ui-monospace, monospace; margin-top: 10px; letter-spacing: .06em; }
 #auditSummary .sum-vale.ok { color: var(--amber, #e8b34b); }
 #auditSummary .sum-vale.warn { color: var(--red, #d96a5a); }

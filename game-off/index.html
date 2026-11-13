@@ -90,7 +90,7 @@
 
   <!-- ===== TITLE ===== -->
   <div id="title" class="overlay">
-    <p class="kicker">Game Off 2026 · theme: SHIFT</p>
+    <p class="kicker">a deduction thriller in five night shifts</p>
     <h1>NIGHT SHIFT</h1>
     <div class="title-scene" aria-hidden="true">
     <svg viewBox="0 0 640 300" role="img" aria-label="An auditor's night desk: lamp, docket folder, coffee">
@@ -287,7 +287,11 @@
     <!-- FINALE: write the rule yourself -->
     <section id="finalePhase" class="hidden">
       <div id="finaleWrap">
-        <h3 class="sec-head">Last filings of the week</h3>
+        <div class="finale-bar">
+          <h3 class="sec-head">Last filings of the week</h3>
+          <button id="finaleWireBtn" class="telemetry-btn" type="button" title="The desk wire"><span class="tel-icon">📡</span> WIRE <kbd>Shift</kbd></button>
+        </div>
+        <div id="finaleWire" class="case-telemetry"></div>
         <table id="finaleTable">
           <thead><tr>
             <th class="c-file">Filing</th><th>Where</th><th>When</th><th>Who</th><th>In/Out</th><th class="c-filer">Filer</th><th class="c-ts">Filed</th><th class="c-cut"></th>

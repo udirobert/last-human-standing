@@ -452,6 +452,7 @@ const G = {
   focusAttr: "all",
   telemetry: false,       // night: the packet wire is pulled up (hold SHIFT)
   wireSeen: false,        // the desk wire has been opened at least once
+  valeWireSeen: false,    // VALE's own packet has been on the wire
   valeCaught: 0,          // nights VALE was stamped SUS
   valeEscapes: 0,         // nights VALE was waved through as HUMAN
   oath: false,
@@ -1037,7 +1038,7 @@ function startAudit() {
     // behind SHIFT, never printed on the paper.
     const filed = fmtFiled(40 + Math.floor(trng() * 500));
     const tel = c.bot
-      ? { latency: "0.003s", origin: "INTERNAL LOOPBACK", hops: "0",
+      ? { latency: "3ms", origin: "GATE 0", hops: "0",
           receipt: "+0.003s after post", anomaly: true }
       : { latency: `${150 + Math.floor(trng() * 350)}ms`,
           origin: `EXT GATE ${1 + Math.floor(trng() * 6)}`,
@@ -1069,17 +1070,35 @@ function dayHasAmend() { return !!DAYS[G.day].amend; }
  * the same columns for every filer, nothing flagged. What reads wrong
  * is for the auditor to notice. Works on a resolved case too. */
 function setTelemetry(on) {
-  if (G.phase !== "audit") on = false;
+  if (G.phase !== "audit" && G.phase !== "finale") on = false;
   if (G.telemetry === on) return;
   G.telemetry = on;
   document.body.classList.toggle("telemetry-active", on);
-  const b = $("telemetryBtn");
-  if (b) b.classList.toggle("active", on);
+  for (const id of ["telemetryBtn", "finaleWireBtn"]) {
+    const b = $(id);
+    if (b) b.classList.toggle("active", on);
+  }
   if (on) {
     G.wireSeen = true;
     sfx.lensHum();
-    const sub = G.auditSubs[G.auditIdx];
-    setValeDissonance(!!(sub && sub.filer === "VALE"));
+    if (G.phase === "audit") {
+      const sub = G.auditSubs[G.auditIdx];
+      if (sub) {
+        sub.wireOpened = true;
+        // you only know the machine if its packet was the one on the desk
+        if (sub.filer === "VALE") G.valeWireSeen = true;
+      }
+      setValeDissonance(!!(sub && sub.filer === "VALE"));
+      // the reveal lands when you look: a stamped VALE card only glows
+      // once its own packet has been on the wire
+      if (sub && sub.filer === "VALE" && sub.pick) {
+        const card = $("caseCard").querySelector(".case-card");
+        if (card) card.classList.add("anomaly");
+      }
+    } else {
+      G.valeWireSeen = true; // the ledger lists all five packets at once
+      setValeDissonance(true);
+    }
   } else {
     setValeDissonance(false);
   }
@@ -1097,16 +1116,19 @@ function renderCase() {
   let reason = "";
   if (sub.pick) {
     if (isVale) {
-      if (sub.pick === "SUS") {
-        reason = `⚡ ANOMALY QUARANTINED — 0.003s out of an internal loopback. No human files that fast. +100 bounty`;
+      if (sub.pick === "SUS" && sub.correct) {
+        reason = `⚡ ANOMALY QUARANTINED — 3ms, gate zero, no hops. No human files that fast. +100 bounty`;
       } else if (sub.correct) {
         reason = `✔ Meets every criterion.`;
+      } else if (sub.pick === "SUS") {
+        // a blind hunch reads like any wrong quarantine — clean paper, bad stamp
+        reason = "passes: meets every criterion";
       } else {
-        reason = `✗ The wire was right there: 0.003s, internal loopback, zero hops. You let the machine through.`;
+        reason = `✗ The wire was right there: 3ms, gate zero, no hops. You let the machine through.`;
       }
     } else {
       reason = sub.correct
-        ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}`
+        ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}${sub.wireOpened ? " · wire ✓" : ""}`
         : (sub.truth ? "passes: meets every criterion"
                      : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
                          .map((k) => sub.rule.find((x) => x.key === k).text).join(", "));
@@ -1119,7 +1141,7 @@ function renderCase() {
 
   el.innerHTML =
     `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
-    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && G.valeWireSeen ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
@@ -1155,8 +1177,8 @@ function stamp(pickVal) {
   const contested = G.auditIdx === G.contestedIdx;
 
   if (isVale) {
-    if (pickVal === "SUS") {
-      // Detective catch: the wire, not the paper, gave it away.
+    if (pickVal === "SUS" && G.valeWireSeen) {
+      // Detective catch — the packet was on the wire when you stamped.
       sub.correct = true;
       sub.earned = 100;
       G.auditHitsToday++;
@@ -1164,14 +1186,18 @@ function stamp(pickVal) {
       G.nightPoints += 100;
       G.score += 100;
       G.valeCaught++;
-      G.wireSeen = true;
       ariaSay([
-        "Wait. You stamped SUS? The facts met my criteria... but you read the wire: 0.003s, internal loopback. You caught something my code couldn't see.",
+        "Wait. You stamped SUS? The facts met my criteria... but you read the wire: 3ms, gate zero, no hops. You caught something my code couldn't see.",
         "ANOMALY QUARANTINED. You read the wire, not just the paper. Well done."
       ], "smug");
-    } else if (!G.wireSeen) {
-      // The paper genuinely passed — the stamp stands. One faint whisper on
-      // the first escape, pointing at the desk, never at the answer.
+    } else if (pickVal === "SUS") {
+      // A blind hunch quarantines clean paper — a wrong stamp like any other.
+      // No bounty, no reveal: the ledger keeps its secret.
+      sub.correct = false;
+      sub.earned = 0;
+    } else if (!G.valeWireSeen) {
+      // The paper genuinely passed — the stamp stands. No whisper names the
+      // prop; only the summary's wire-check count hints a verb went unused.
       sub.correct = true;
       sub.earned = contested ? 100 : 50;
       G.auditHitsToday++;
@@ -1181,18 +1207,18 @@ function stamp(pickVal) {
       G.valeEscapes++;
       if (G.valeEscapes === 1) {
         ariaSay([
-          "Approved. …The desk terminal stuttered on that one. Probably nothing.",
-          "Passed. For a moment the wire monitor flickered. Ignore it — or don't."
+          "Approved — the criteria said so, anyway.",
+          "Passed. My rules say that's all that matters."
         ]);
       }
     } else {
-      // You've read the wire before — an unread wire is a wrong stamp now.
+      // The packet was on this desk and you approved it anyway.
       sub.correct = false;
       sub.earned = 0;
       G.valeEscapes++;
       ariaSay([
-        "You've read that wire before. That stamp just let the machine through.",
-        "0.003 seconds, internal loopback, zero hops — and you approved it."
+        "You read that packet and stamped it through. That filing was the machine.",
+        "3ms, gate zero, no hops — and you approved it."
       ], "alarm");
     }
   } else {
@@ -1200,7 +1226,7 @@ function stamp(pickVal) {
     if (sub.correct) {
       G.auditHitsToday++;
       G.auditHits++;
-      sub.earned = contested ? 100 : 50;
+      sub.earned = (contested ? 100 : 50) + (sub.wireOpened ? 15 : 0);
       G.nightPoints += sub.earned;
       G.score += sub.earned;
     } else {
@@ -1427,11 +1453,18 @@ function auditSummary() {
   const s = $("auditSummary");
   s.classList.remove("hidden");
   const valeSub = G.auditSubs.find((x) => x.filer === "VALE");
-  const valeLine = !valeSub ? "" : valeSub.pick === "SUS"
-    ? `<p class="sum-vale ok">⚡ anomaly quarantined — the machine was on tonight's docket</p>`
-    : `<p class="sum-vale warn">⚠ the wire went unread tonight — something filed in 0.003s</p>`;
+  const valeLine = !valeSub ? ""
+    : (valeSub.pick === "SUS" && valeSub.correct)
+      ? `<p class="sum-vale ok">⚡ anomaly quarantined — the machine was on tonight's docket</p>`
+      : (valeSub.pick === "SUS" && !valeSub.correct)
+        ? ""   // a blind hunch earns no postscript
+        : G.valeWireSeen
+          ? `<p class="sum-vale warn">⚠ you read the wire and stamped it through</p>`
+          : `<p class="sum-vale warn">⚠ the wire went unread tonight — something filed in 3ms</p>`;
+  const wireChecks = G.auditSubs.filter((x) => x.wireOpened).length;
   s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
-    <p class="sum-effect">${effect}</p>${valeLine}`;
+    <p class="sum-effect">${effect}</p>
+    <p class="sum-wire">wire checks ${wireChecks}/5 · +15 each</p>${valeLine}`;
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");
@@ -1466,10 +1499,31 @@ function startFinale() {
   };
   G.finaleRows = shuf([...FINALE]);
   G.finaleOpts = shuf([...FINALE_RULES]);
+  // the same wire, one last time — every filer gets a packet row
+  const trng = stream("finale-tel");
+  G.finaleRows.forEach((row) => {
+    row.tel = row.filer === "VALE"
+      ? { latency: "3ms", origin: "GATE 0", hops: "0",
+          receipt: "+0.003s after post" }
+      : { latency: `${150 + Math.floor(trng() * 350)}ms`,
+          origin: `EXT GATE ${1 + Math.floor(trng() * 6)}`,
+          hops: `${2 + Math.floor(trng() * 4)}`,
+          receipt: `queued ${row.ts}` };
+  });
   G.signing = false;
   $("decree").classList.remove("signed");
+  setTelemetry(false);
   buildFinale();
   paintFinale();
+  // the last line she says depends on whether you ever read the wire —
+  // a nudge toward the ledger, never a name
+  if (G.valeCaught > 0) {
+    ariaSay(["You flagged her once on the wire. Now write the clause only she can't file."], "smug");
+  } else if (G.wireSeen) {
+    ariaSay(["You've read the wire. Whatever isn't a fact is sitting somewhere on that ledger."]);
+  } else {
+    ariaSay(["My rules only check facts. Read the ledger the way it was filed — not the way it was argued."]);
+  }
 }
 
 /* the decree is set once — clauses are written into it, rows are struck
@@ -1486,6 +1540,11 @@ function buildFinale() {
       `<td class="c-cut"></td>`;
     tb.appendChild(tr);
   }
+  // the wire drawer — same muted columns for every filer, nothing flagged
+  $("finaleWire").innerHTML = G.finaleRows.map((row) =>
+    `<div class="tel-row"><span>${row.filer}</span>` +
+    `<span class="tel-val">${row.tel.latency} · ${row.tel.origin} · ${row.tel.hops} hops · ${row.tel.receipt}</span></div>`
+  ).join("");
   const box = $("ruleChoices");
   box.innerHTML = "";
   G.finaleOpts.forEach((opt, i) => {
@@ -1546,7 +1605,11 @@ function signRule() {
   let title, line;
   if (valeCut && humanCut.length === 0) {
     title = G.status === "player" ? "LAST HUMAN STANDING" : "DAWN";
-    line = "You wrote the one rule she couldn't. The docket is human again.";
+    line = G.valeCaught > 0
+      ? "You wrote the one rule she couldn't. You'd been reading the wire all week — the docket is human again."
+      : G.valeWireSeen
+        ? "You wrote the one rule she couldn't. The wire said what the paper never could — the docket is human again."
+        : "You wrote the one rule she couldn't. +0.003s never did read human — the docket is human again.";
   } else if (valeCut) {
     title = "COLLATERAL";
     line = `VALE is gone. So are ${humanCut.join(", ")}. The rule didn't care who.`;
@@ -1585,6 +1648,7 @@ function shareText(title) {
 }
 
 function endGame() {
+  setTelemetry(false);
   dayPhase.classList.add("hidden");
   verdictPhase.classList.add("hidden");
   auditPhase.classList.add("hidden");
@@ -1641,6 +1705,7 @@ $("clueBtn").addEventListener("click", requestClue);
 $("susBtn").addEventListener("click", () => stamp("SUS"));
 $("humanBtn").addEventListener("click", () => stamp("HUMAN"));
 $("telemetryBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
+$("finaleWireBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
 document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
   b.addEventListener("click", () => { setFocusAttr(b.dataset.attr); sfx.click(); }));
 $("signBtn").addEventListener("click", signRule);
@@ -1666,7 +1731,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Shift") {
     if (e.repeat) return;
     if (G.phase === "day") { cycleFocus(); return; }
-    if (G.phase === "audit") { setTelemetry(true); return; }
+    if (G.phase === "audit" || G.phase === "finale") { setTelemetry(true); return; }
   }
 
   if (G.phase === "day") {
@@ -1710,7 +1775,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 document.addEventListener("keyup", (e) => {
-  if (e.key === "Shift" && G.phase === "audit") {
+  if (e.key === "Shift" && (G.phase === "audit" || G.phase === "finale")) {
     setTelemetry(false);
   }
 });
