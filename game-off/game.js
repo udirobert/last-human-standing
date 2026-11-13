@@ -87,6 +87,25 @@ const sfx = {
   handover: () => { noiseBurst(.2, 1100, .05); thudDrop(.16); },
   // a case file dropped onto the desk
   drop:   () => { thudDrop(); noiseBurst(.09, 2400, .035, .03); },
+  // the filing that arrives too cleanly — a servo chirp, not a paper drop
+  servo: () => {
+    try {
+      const ac = audio(), t = ac.currentTime;
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = "square";
+      o.frequency.setValueAtTime(1420, t);
+      o.frequency.exponentialRampToValueAtTime(680, t + .1);
+      g.gain.setValueAtTime(.026, t);
+      g.gain.exponentialRampToValueAtTime(.0001, t + .15);
+      o.connect(g).connect(ac.destination);
+      o.start(t); o.stop(t + .17);
+      noiseBurst(.11, 3400, .025, .03);
+    } catch { /* audio may be unavailable */ }
+  },
+  // red grease pencil circling the evidence
+  ring:   () => [0, .1, .19].forEach((w, i) => noiseBurst(.07, 2600 + i * 500, .04, w)),
+  // a pencil strike across a field that didn't hold
+  strike: () => noiseBurst(.14, 1900, .045),
   // mechanical gear shift / perspective lever
   gearShift: () => {
     try {
@@ -158,6 +177,9 @@ let ambientGain = null;
 let valeDissonanceGain = null;
 let audioMuted = false;
 let rhythmTimer = null;
+let rainGain = null;
+let rainOn = false;
+let thunderTimer = null;
 
 function initAmbient() {
   if (AMBIENT) return;
@@ -220,6 +242,32 @@ function initAmbient() {
     noiseSrc.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
     noiseGain.connect(master);
+
+    // Rain on the office window — two filtered noise layers, patter + wash.
+    // Routed to destination, not `master`: the drone only runs as the mp3
+    // fallback, but the weather should be there under the real score too.
+    const rainBuf = ac.createBuffer(1, bufLen, ac.sampleRate);
+    const rd = rainBuf.getChannelData(0);
+    for (let i = 0; i < bufLen; i++) rd[i] = Math.random() * 2 - 1;
+    rainGain = ac.createGain();
+    rainGain.gain.value = 0;
+    rainGain.connect(ac.destination);
+    const mkRain = (type, freq, q, g0) => {
+      const s = ac.createBufferSource(); s.buffer = rainBuf; s.loop = true;
+      const f = ac.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q;
+      const g = ac.createGain(); g.gain.value = g0;
+      s.connect(f); f.connect(g); g.connect(rainGain);
+      s.start();
+    };
+    mkRain("bandpass", 3800, 0.4, 0.05);   // patter against the glass
+    mkRain("lowpass", 480, 0.7, 0.09);     // the wash of the street
+
+    // rare far-off thunder while the audit desk is lit
+    clearInterval(thunderTimer);
+    thunderTimer = setInterval(() => {
+      if (audioMuted || G.phase !== "audit" || Math.random() > 0.22) return;
+      thunderRoll();
+    }, 11000);
 
     // VALE eerie dissonance oscillator: detuned tritone (116.5Hz)
     const valeOsc = ac.createOscillator();
@@ -310,6 +358,39 @@ function setValeDissonance(on) {
     const ac = audio();
     valeDissonanceGain.gain.cancelScheduledValues(ac.currentTime);
     valeDissonanceGain.gain.linearRampToValueAtTime(on ? 0.045 : 0, ac.currentTime + 0.5);
+  } catch { /* audio may be unavailable */ }
+}
+
+/* The weather is part of the week: every night shift a little wetter. */
+function applyRain() {
+  if (!rainGain) return;
+  try {
+    const ac = audio();
+    const v = rainOn && !audioMuted ? Math.min(0.45 + G.day * 0.09, 0.85) : 0;
+    rainGain.gain.cancelScheduledValues(ac.currentTime);
+    rainGain.gain.linearRampToValueAtTime(v, ac.currentTime + 1.6);
+  } catch { /* audio may be unavailable */ }
+}
+function setNightRain(on) { rainOn = on; applyRain(); }
+
+function thunderRoll() {
+  try {
+    const ac = audio(), t = ac.currentTime;
+    const len = Math.floor(ac.sampleRate * 2.6);
+    const buf = ac.createBuffer(1, len, ac.sampleRate);
+    const ch = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      const p = i / len;
+      ch[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * Math.min(p * 1.25, 1)) * (1 - p * 0.45);
+    }
+    const s = ac.createBufferSource(); s.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 130; f.Q.value = 0.8;
+    const g = ac.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.linearRampToValueAtTime(0.1, t + 0.55);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 2.6);
+    s.connect(f); f.connect(g); g.connect(ac.destination);
+    s.start(t);
   } catch { /* audio may be unavailable */ }
 }
 
@@ -615,6 +696,7 @@ function showOnly(which) {
   auditPhase.classList.toggle("hidden", which !== "audit");
   finalePhase.classList.toggle("hidden", which !== "finale");
   setShift(which === "audit" || which === "finale" ? "night" : "day");
+  setNightRain(which === "audit" || which === "finale");
   applyScore();
   if (which !== "verdict") wipeShift();
   hud();
@@ -1175,12 +1257,23 @@ function startAudit() {
     return a;
   })();
   const trng = stream("times");
+  // paperwork texture — a clerk's note, a tilt as the card lands, the angle
+  // your stamp happens to fall. Seeded with the night like everything else.
+  const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
+    "third filing this cycle", "witness signature smudged",
+    "forwarded from intake", "annotated in the margins",
+    "returned for correction ×1", "filed in person — waited"];
   let hi = 0;
   G.auditSubs = cases.map((c) => {
     const filer = c.bot ? "VALE" : humans[hi++];
     const filed = fmtFiled(40 + Math.floor(trng() * 500));
     const tel = c.bot ? valeTel(G.day, trng) : humanTel(trng, filed);
-    return { ...c, filer, filed, tel, truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
+    const note = c.bot ? "filed remotely — no wet signature"
+                       : NOTES[Math.floor(trng() * NOTES.length)];
+    const tilt = c.bot ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10;
+    const stampRot = Math.round((trng() * 14 - 7) * 10) / 10;
+    return { ...c, filer, filed, tel, note, tilt, stampRot,
+             truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
   });
   G.auditIdx = 0;
   // one filing a night is contested: right pays double bonus
@@ -1242,7 +1335,25 @@ function flagField(k) {
     later(() => cardEl.classList.remove("impact"), 700);
   }
   later(() => { sub.correct ? sfx.human() : sfx.sus(); }, 200);
-  if (sub.correct) later(nextCase, 1200);
+  // the evidence gets marked the way a desk marks it: a catch earns the
+  // red grease circle; a hunch gets the field you named struck through
+  const rows = $("caseCard").querySelectorAll(".case-stub .tel-row");
+  const idx = TEL_KEYS.indexOf(sub.flagKey);
+  if (sub.correct && idx >= 0 && rows[idx]) {
+    later(() => {
+      const row = rows[idx];
+      row.classList.add("ringed");
+      row.insertAdjacentHTML("beforeend",
+        `<svg class="ring" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
+           <ellipse cx="50" cy="17" rx="48" ry="13.5" pathLength="100"/></svg>`);
+      sfx.ring();
+    }, 380);
+    later(nextCase, 1750);
+  } else {
+    if (idx >= 0 && rows[idx]) {
+      later(() => { rows[idx].classList.add("struck"); sfx.strike(); }, 320);
+    }
+  }
 }
 
 function renderCase() {
@@ -1282,32 +1393,42 @@ function renderCase() {
 
   el.innerHTML =
     `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
-    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}">
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${isVale ? " machine" : ""}"
+      style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
       <div class="name">${sub.card.name}</div>
       ${sub.pick && !sub.pendingFlag ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
         <p class="case-reason">${reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
+      <div class="case-note">✎ ${sub.note}</div>
       ${factRows(sub.card, verdicts)}
       <div class="case-stub">
-        ${TEL_KEYS.map((k) =>
-          `<div class="tel-row"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
+        ${TEL_KEYS.map((k, ti) =>
+          `<div class="tel-row" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
       </div>
       ${sub.pendingFlag ? `<div class="flag-row">
         <span class="flag-q">the paper passed — what flagged it?</span>
         ${TEL_KEYS.map((k) => `<button class="flag-f" type="button" data-k="${k}">${TEL_LABEL[k]}</button>`).join("")}
         <button class="flag-f none" type="button" data-k="">no grounds</button>
       </div>` : ""}
-      ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}">${sub.pick}</div>` : ""}
+      ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}" style="transform:rotate(${sub.stampRot}deg)">${sub.pick}</div>` : ""}
       ${sub.pick && !sub.correct && !sub.pendingFlag ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
-  el.querySelectorAll(".flag-f").forEach((b) =>
-    b.addEventListener("click", (e) => { e.stopPropagation(); flagField(b.dataset.k); }));
+  const telRows = el.querySelectorAll(".case-stub .tel-row");
+  el.querySelectorAll(".flag-f").forEach((b) => {
+    b.addEventListener("click", (e) => { e.stopPropagation(); flagField(b.dataset.k); });
+    // hovering an accusation points at the row it names
+    const idx = TEL_KEYS.indexOf(b.dataset.k);
+    if (idx < 0) return;
+    const row = telRows[idx];
+    ["mouseenter", "focus"].forEach((ev) => b.addEventListener(ev, () => row.classList.add("peek")));
+    ["mouseleave", "blur"].forEach((ev) => b.addEventListener(ev, () => row.classList.remove("peek")));
+  });
   $("susBtn").disabled = $("humanBtn").disabled = checked;
   if (!checked) {
     if (!calmMotion()) {
-      later(() => sfx.drop(), 80);
+      later(() => (isVale ? sfx.servo() : sfx.drop()), 80);
       if (contested) later(() => sfx.gavel(), 320);
     }
   }
@@ -1842,6 +1963,7 @@ document.addEventListener("keydown", (e) => {
       ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.35, ac.currentTime);
     }
     score.setMuted();
+    applyRain();
     return;
   }
 

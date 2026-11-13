@@ -697,6 +697,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   border-radius: 12px 4px 12px 4px;
   padding: 18px 18px 14px; max-width: 440px; margin: 0 auto;
   text-align: left;
+  rotate: var(--tilt, 0deg); /* human filings land off-square; the machine's doesn't */
 }
 /* a fresh case file, dropped on the desk from the pile */
 .case-card.fresh { animation: casedrop .44s cubic-bezier(.18,1.05,.32,1) backwards; }
@@ -708,9 +709,24 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   }
   70% { transform: rotate(.4deg) translateY(1px); }
 }
+/* the machine's filing arrives too cleanly — faster, straighter, no settle */
+.case-card.machine.fresh { animation: machinedrop .3s cubic-bezier(.25,.9,.3,1) backwards; }
+@keyframes machinedrop {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(.995);
+    box-shadow: 0 30px 34px -26px rgba(0,0,0,.7);
+  }
+}
 .case-card .e-head .glyph { font-size: 30px; }
 .case-card .name { font-size: 15px; margin: 8px 0 4px; }
 .case-card .arg { font-size: 12px; color: var(--dim); font-style: italic; margin-bottom: 12px; }
+/* the clerk's marginal note — texture, not testimony */
+.case-note {
+  font-family: ui-monospace, monospace; font-size: 9.5px;
+  letter-spacing: .05em; color: var(--faint);
+  margin: -6px 0 10px; font-style: italic; opacity: .8;
+}
 .case-card.stamped-human { border-color: var(--green); --inkc: var(--green); }
 .case-card.stamped-sus { border-color: var(--red); --inkc: var(--red); }
 /* the card takes the hit: it gives a couple of pixels, then settles */
@@ -960,14 +976,65 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   color: #7d8ba0;
 }
 .case-stub .tel-row {
+  position: relative;
   display: flex;
   justify-content: space-between;
   line-height: 1.6;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border-radius: 3px;
 }
+/* a human postmark prints a line at a time, like a receipt */
+.case-card.fresh:not(.machine) .tel-row {
+  opacity: 0;
+  animation: stubprint .2s ease-out forwards;
+  animation-delay: calc(.3s + var(--i) * .13s);
+}
+@keyframes stubprint { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; } }
 .case-stub .tel-val.hit {
   color: var(--amber, #e8b34b);
   font-weight: 800;
 }
+/* hovering an accusation points at the row it names */
+.tel-row.peek { background: rgba(232,179,75,.07); }
+.tel-row.peek .tel-val { color: var(--amber, #e8b34b); }
+/* a correct flag: red grease pencil circles the field that held */
+.tel-row .ring {
+  position: absolute; inset: -6px -10px;
+  width: calc(100% + 20px); height: calc(100% + 12px);
+  pointer-events: none; overflow: visible;
+}
+.tel-row .ring ellipse {
+  fill: none; stroke: #d9483b; stroke-width: 3;
+  stroke-dasharray: 100; stroke-dashoffset: 100; stroke-linecap: round;
+  opacity: .9; transform: rotate(-1.6deg); transform-origin: 50% 50%;
+  animation: ringdraw .5s ease-out .05s forwards;
+}
+@keyframes ringdraw { to { stroke-dashoffset: 0; } }
+/* a hunch: the field you named gets struck through in pencil */
+.tel-row.struck .tel-val { position: relative; }
+.tel-row.struck .tel-val::after {
+  content: ""; position: absolute; left: -8%; right: -8%; top: 52%;
+  border-top: 2px solid rgba(217,72,59,.85);
+  transform-origin: left center;
+  animation: strikewipe .16s ease-out both;
+}
+@keyframes strikewipe {
+  from { transform: rotate(-3deg) scaleX(0); }
+  to   { transform: rotate(-3deg) scaleX(1); }
+}
+/* when the desk asks what flagged it, everything but the stub steps back */
+.case-card.flagging .e-head, .case-card.flagging .name,
+.case-card.flagging .arg, .case-card.flagging .case-note,
+.case-card.flagging .facts {
+  opacity: .3;
+  transition: opacity .3s ease;
+}
+.case-card.flagging .flag-row {
+  border-color: rgba(232,179,75,.5);
+  animation: flagpulse 1.7s ease-in-out infinite;
+}
+@keyframes flagpulse { 50% { border-color: rgba(232,179,75,.18); } }
 
 /* grounds — the desk asks which packet field flagged a clean-paper SUS */
 .flag-row {
@@ -1717,4 +1784,10 @@ body.brief-up #frame { filter: brightness(.5) saturate(.8); }
   #dayPhase.dealt #hand .evidence,
   #dayPhase.dealt .c-stamp .ink { animation: none; opacity: 1; }
   .brief-riddle::after { animation: none; content: ""; }
+  /* the marked-up evidence stays marked — just without the flourish */
+  .case-card.fresh, .case-card.machine.fresh { animation: none; }
+  .case-card.fresh:not(.machine) .tel-row { animation: none; opacity: 1; }
+  .tel-row .ring ellipse { animation: none; stroke-dashoffset: 0; }
+  .tel-row.struck .tel-val::after { animation: none; transform: rotate(-3deg) scaleX(1); }
+  .case-card.flagging .flag-row { animation: none; }
 }

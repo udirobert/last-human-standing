@@ -71,6 +71,8 @@ blind?"). Best conversations get collected into community collections.
 ## Feature bullets (for the page sidebar / trailer cards)
 
 - Every day opens on a shift brief — the riddle types itself, then the desk deals in
+- A desk that feels the week: rain on the window each night, thunder under the audit, grease-pencil marks on the evidence you catch
+- Filings with fingerprints: human cards land off-square with marginal notes — the machine's arrives dead straight, instantly printed
 - Five staged days: pay-for-clues, oaths, mid-night rule amendments, a liar on the docket
 - An escalating Turing mystery you discover, not a tutorial — catch the automated filer before dawn
 - A generated noir score (title theme, day and night shifts, dawn) with a procedural fallback

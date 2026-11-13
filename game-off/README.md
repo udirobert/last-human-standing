@@ -42,7 +42,11 @@ python3 -m http.server 8000
   for every filer, nothing flagged. Stamp **SUS** on paper that passes and
   the desk asks what flagged it — point at the field that read wrong. A
   field that holds is the catch (+100 bounty); anything else is a hunch,
-  and a hunch is just a wrong stamp.
+  and a hunch is just a wrong stamp. Watch the cards themselves, too:
+  human filings drop off-square with a clerk's marginal note, and the
+  machine's arrives dead straight, instantly printed, with a faint servo
+  whir. A caught flag is circled in red grease pencil; a hunch gets the
+  field you named struck through.
 - **From day 2**: you may *request one more ruling* per day (drops today's
   pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
   miss: two strikes — `O` toggles).
@@ -92,7 +96,10 @@ ambience, night tension, dawn resolve — generated with ElevenLabs Music),
 crossfaded per phase by a small `score` module. If a file can't load —
 `file://`, offline — it silently falls back to the procedural WebAudio
 soundscape (sub-bass drone, tape noise, stamp clunks, reactive VALE
-dissonance), so the game never depends on a network. `M` toggles audio.
+dissonance), so the game never depends on a network. A second procedural
+layer runs under either score: rain on the office window that gets wetter
+each night of the week, and the odd far-off thunder roll while the audit
+desk is lit. `M` toggles audio.
 
 ## Credits
 
