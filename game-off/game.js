@@ -475,6 +475,7 @@ const INSTR = {
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
+  cold: "The outgoing clerk left a tray — stamp each filing. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -511,6 +512,9 @@ const ARIA = {
     "The night shift doesn't sleep. Check every detail.",
     "Someone on this docket has never missed. Humans miss.",
     "The ledger is watching tonight. Stamp cleanly.",
+  ],
+  coldOpen: [
+    "Two filings the last clerk couldn't clear. The desk is yours — so is the tray.",
   ],
 };
 // one-line explainers shown the first time each mechanic appears
@@ -593,6 +597,7 @@ const G = {
   auditHitsToday: 0,
   nightPoints: 0,
   auditLocked: false,
+  coldOpen: false,
   verdictDone: false,
   dayResults: [],        // "survived" | "struck" | "juror"
   nightResults: [],      // correct stamps per night
@@ -605,7 +610,7 @@ function hud() {
   $("hudShift").textContent =
     G.phase === "audit" ? "🌙 NIGHT SHIFT" : G.phase === "finale" ? "✒ LAST CALL" : "☀ DAY SHIFT";
   const dots = $("dayDots");
-  dots.innerHTML = `<span class="day-label">DAY ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}</span>`;
+  dots.innerHTML = `<span class="day-label">${G.coldOpen ? "NIGHT 0" : `DAY ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}`}</span>`;
   DAYS.forEach((_, i) => {
     const s = document.createElement("span");
     s.className = "dot";
@@ -1185,6 +1190,13 @@ function joinNames(a) {
  * one residual tell. Nothing is hidden, nothing is flagged for you. */
 const TEL_KEYS = ["latency", "origin", "hops", "receipt"];
 const TEL_LABEL = { latency: "PKT", origin: "ORIGIN", hops: "HOPS", receipt: "RCPT" };
+/* paperwork texture — a clerk's note drawn from one shared pool. A remote
+ * filing is a red herring, not a fingerprint; the postmark testifies. */
+const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
+  "third filing this cycle", "witness signature smudged",
+  "forwarded from intake", "annotated in the margins",
+  "returned for correction ×1", "filed in person — waited",
+  "filed remotely — no wet signature", "auto-sorted — priority queue"];
 function humanTel(rng, filed) {
   const n = rng();
   return {
@@ -1243,13 +1255,6 @@ function startAudit() {
     return a;
   })();
   const trng = stream("times");
-  // paperwork texture — a clerk's note, a tilt as the card lands, the angle
-  // your stamp happens to fall. Seeded with the night like everything else.
-  const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
-    "third filing this cycle", "witness signature smudged",
-    "forwarded from intake", "annotated in the margins",
-    "returned for correction ×1", "filed in person — waited",
-    "filed remotely — no wet signature", "auto-sorted — priority queue"];
   let hi = 0;
   G.auditSubs = cases.map((c) => {
     const filer = c.bot ? "VALE" : humans[hi++];
@@ -1258,9 +1263,12 @@ function startAudit() {
     // every filer draws the same note pool — a remote filing is a red
     // herring, not a fingerprint. The postmark is the only testimony.
     const note = NOTES[Math.floor(trng() * NOTES.length)];
-    const tilt = c.bot ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10;
+    // humans land off-square most of the time — but a straight landing and
+    // a clean drop are human variance too, so neither is a signature
+    const tilt = c.bot || trng() < 0.3 ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10;
+    const cleanDrop = c.bot || trng() < 0.28;
     const stampRot = Math.round((trng() * 14 - 7) * 10) / 10;
-    return { ...c, filer, filed, tel, note, tilt, stampRot,
+    return { ...c, filer, filed, tel, note, tilt, cleanDrop, stampRot,
              truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
   });
   G.auditIdx = 0;
@@ -1273,6 +1281,79 @@ function startAudit() {
   $("auditActions").innerHTML = "";
   $("caseBtns").classList.remove("hidden");
   renderCase();
+}
+
+/* ---------- cold open: the tray ----------
+ * Clock-in lands on the night desk, not the day grid — two filings the
+ * outgoing clerk couldn't clear, judged under last week's standing order.
+ * Ninety seconds covering every verb the week uses: stamp, verdict,
+ * postmark, flag, catch-or-miss. Then 06:00 and the day crew's docket. */
+const COLD_RULE = [{ key: "setting", allow: ["indoor"], text: "indoors" }];
+const COLD_VALE_CARD = {
+  id: "cold-vale", name: "The overnight reading room", glyph: "🗄",
+  argument: "Third floor, after close. The quiet was very thorough — I measured it.",
+  tags: { place: "library", time: "night", people: "alone", setting: "indoor" },
+};
+function startColdOpen() {
+  G.coldOpen = true;
+  banner("02:40 — THE TRAY");
+  showOnly("audit");
+  setInstr("cold");
+  ariaSay([ARIA.coldOpen[0]]);
+  renderRuleChips(COLD_RULE, false);
+  const trng = stream("coldopen");
+  const mk = (card, filer, extra) => {
+    const filed = fmtFiled(40 + Math.floor(trng() * 500));
+    const tel = filer === "VALE" ? valeTel(0, trng, filed) : humanTel(trng, filed);
+    return {
+      card, rule: COLD_RULE, amended: false, bot: filer === "VALE", filer,
+      filed, tel, note: NOTES[Math.floor(trng() * NOTES.length)],
+      tilt: filer === "VALE" || trng() < 0.3 ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10,
+      cleanDrop: filer === "VALE" || trng() < 0.28,
+      stampRot: Math.round((trng() * 14 - 7) * 10) / 10,
+      truth: LOGIC.passes(card, COLD_RULE), pick: null, correct: null,
+      ...extra,
+    };
+  };
+  G.auditSubs = [
+    mk(CARDS.find((c) => c.id === "library-regular"),
+       FILERS[Math.floor(trng() * FILERS.length)]),
+    mk(COLD_VALE_CARD, "VALE", { arg: COLD_VALE_CARD.argument }),
+  ];
+  G.auditIdx = 0;
+  G.contestedIdx = -1;
+  G.amendAfter = null;
+  G.amendShown = true;
+  G.auditHitsToday = 0;
+  G.nightPoints = 0;
+  G.auditLocked = false;
+  $("auditSummary").classList.add("hidden");
+  $("auditActions").innerHTML = "";
+  $("caseBtns").classList.remove("hidden");
+  hud();
+  renderCase();
+}
+
+function endColdOpen() {
+  G.coldOpen = false;
+  $("caseBtns").classList.add("hidden");
+  $("caseCard").innerHTML = "";
+  const s = $("auditSummary");
+  s.classList.remove("hidden");
+  const valeSub = G.auditSubs.find((x) => x.filer === "VALE");
+  const caught = valeSub && valeSub.pick === "SUS" && valeSub.correct;
+  s.innerHTML = `<p class="sum-line">TRAY CLEARED</p>
+    <p class="sum-effect">${caught
+      ? "⚡ anomaly quarantined on your first night — the desk noticed"
+      : "one filing cleared faster than the ink could dry"}</p>
+    <p class="sum-vale quiet">· 06:00 — the day crew signs in. The docket is yours now.</p>`;
+  const actions = $("auditActions");
+  actions.innerHTML = "";
+  const btn = document.createElement("button");
+  btn.textContent = "Day one →";
+  btn.addEventListener("click", () => startDay());
+  actions.appendChild(btn);
+  btn.focus();
 }
 
 function renderRuleChips(rule, amended) {
@@ -1350,7 +1431,7 @@ function renderCase() {
   const checked = sub.pick !== null;
   const contested = G.auditIdx === G.contestedIdx;
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
-  const arg = sub.filer === "VALE" ? DAYS[G.day].valeLine : sub.card.argument;
+  const arg = sub.filer === "VALE" ? (sub.arg || DAYS[G.day].valeLine) : sub.card.argument;
   const isVale = sub.filer === "VALE";
 
   let reason = "";
@@ -1385,8 +1466,8 @@ function renderCase() {
   setInstr("night");
 
   el.innerHTML =
-    `<p class="case-num">CASE ${G.auditIdx + 1}/5${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
-    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${isVale ? " machine" : ""}"
+    `<p class="case-num">CASE ${G.auditIdx + 1}/${G.auditSubs.length}${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
@@ -1421,9 +1502,10 @@ function renderCase() {
   $("susBtn").disabled = $("humanBtn").disabled = checked;
   if (!checked) {
     if (!calmMotion()) {
-      // humans land with a rustle of paper; the machine lands dead quiet —
-      // the same thud, nothing to hear unless you were already listening
-      later(() => (isVale ? thudDrop() : sfx.drop()), 80);
+      // most filings land with a rustle; some — the machine's always,
+      // humans sometimes — land dead quiet. A quiet drop is texture now,
+      // not a signature.
+      later(() => (sub.cleanDrop ? thudDrop() : sfx.drop()), 80);
       if (contested) later(() => sfx.gavel(), 320);
     }
   }
@@ -1676,6 +1758,7 @@ function finishAmend() {
 }
 
 function auditSummary() {
+  if (G.coldOpen) return endColdOpen();
   const hits = G.auditHitsToday;
   G.nightResults[G.day] = hits;
   let pts = G.nightPoints;
@@ -2046,7 +2129,7 @@ function startGame(seed) {
   titleEl.classList.add("hidden");
   gameEl.classList.remove("hidden");
   hud();
-  if (G.status === "player") startDay();
+  if (G.status === "player") startColdOpen();
   else startAudit();
 }
 

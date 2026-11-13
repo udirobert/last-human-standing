@@ -22,6 +22,11 @@ python3 -m http.server 8000
 
 ## How to play
 
+- **The tray**: clocking in lands you on the night desk, not the docket —
+  the outgoing clerk left two filings behind. Clear them: stamp each one,
+  read the postmark strip at the foot of the card, and if the paper passes
+  but the packet reads wrong, stamp **SUS** and name the field. Then the
+  day crew signs in and the week begins.
 - **Day shift**: each morning opens with a **shift brief** — a memo card
   naming the day and typing out the riddle — then the desk deals in row by
   row. Study the docket: ARIA's already stamped two filings HUMAN and a
@@ -43,9 +48,10 @@ python3 -m http.server 8000
   the desk asks what flagged it — point at the field that read wrong. A
   field that holds is the catch (+100 bounty); anything else is a hunch,
   and a hunch is just a wrong stamp. Watch the cards themselves, too:
-  human filings drop off-square and rustle — and every filer, human or
-  otherwise, draws from the same pool of clerk's marginal notes, so a
-  remote filing is a red herring and the postmark is the only testimony.
+  human filings usually drop off-square and rustle — and every filer,
+  human or otherwise, draws from the same pool of clerk's marginal notes
+  and can land clean and quiet, so neither the note nor the drop is a
+  signature: the postmark is the only testimony.
   A caught flag is circled in red grease pencil; a hunch gets the field
   you named struck through.
 - **From day 2**: you may *request one more ruling* per day (drops today's

@@ -709,9 +709,10 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   }
   70% { transform: rotate(.4deg) translateY(1px); }
 }
-/* the machine's filing arrives too cleanly — faster, straighter, no settle */
-.case-card.machine.fresh { animation: machinedrop .3s cubic-bezier(.25,.9,.3,1) backwards; }
-@keyframes machinedrop {
+/* a filing that arrives too cleanly — faster, straighter, no settle
+   (always on the machine's card, sometimes on humans) */
+.case-card.clean-drop.fresh { animation: cleandrop .3s cubic-bezier(.25,.9,.3,1) backwards; }
+@keyframes cleandrop {
   from {
     opacity: 0;
     transform: translateY(-30px) scale(.995);
@@ -985,7 +986,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   border-radius: 3px;
 }
 /* a human postmark prints a line at a time, like a receipt */
-.case-card.fresh:not(.machine) .tel-row {
+.case-card.fresh:not(.clean-drop) .tel-row {
   opacity: 0;
   animation: stubprint .2s ease-out forwards;
   animation-delay: calc(.3s + var(--i) * .13s);
@@ -1791,8 +1792,8 @@ body.brief-up #frame { filter: brightness(.5) saturate(.8); }
   #dayPhase.dealt .c-stamp .ink { animation: none; opacity: 1; }
   .brief-riddle::after { animation: none; content: ""; }
   /* the marked-up evidence stays marked — just without the flourish */
-  .case-card.fresh, .case-card.machine.fresh { animation: none; }
-  .case-card.fresh:not(.machine) .tel-row { animation: none; opacity: 1; }
+  .case-card.fresh, .case-card.clean-drop.fresh { animation: none; }
+  .case-card.fresh:not(.clean-drop) .tel-row { animation: none; opacity: 1; }
   .tel-row .ring ellipse { animation: none; stroke-dashoffset: 0; }
   .tel-row.struck .tel-val::after { animation: none; transform: rotate(-3deg) scaleX(1); }
   .case-card.flagging .flag-row { animation: none; }

@@ -29,8 +29,10 @@ strike; three strikes and you're cut to nights for good.
 **🌙 NIGHT SHIFT.** Now you're the auditor and the rule is in plain sight.
 Five filings a night, one at a time — stamp each `S`US or `H`UMAN (`S`/`H`/arrows).
 But something is wrong: one filer on this docket isn't human, and the paper
-can't catch it — every filing passes the rule. The desk terminal keeps its own
-quiet log, if you think to look. Catch the machine for an anomaly bounty — but
+can't catch it — every filing passes the rule. Every filing also carries its
+packet postmark at the foot of the card — latency, origin, hops, receipt —
+and the machine's reads wrong. Stamp `SUS` on clean paper and the desk asks
+which field flagged it: point at the evidence for a +100 anomaly bounty —
 a blind hunch is just a wrong stamp. One filing a night is **contested**:
 call it right for double pay (+100).
 From day 3, head office **amends** the rule mid-shift — cases before the banner follow
@@ -48,9 +50,10 @@ any docket.
 
 ## Three games in one (no menu — just play)
 
-**📖 THE STORY.** Clock in and work all five nights: a curated rule curve
-from two-criterion tutorials to the liar, the amendments, and the filer
-who isn't human. One button, one arc, one ending. This is the game.
+**📖 THE STORY.** Clock in and you're already on the night desk — the
+outgoing clerk left a tray — then work all five nights: a curated rule
+curve from two-criterion tutorials to the liar, the amendments, and the
+filer who isn't human. One button, one arc, one ending. This is the game.
 
 **📅 THE DAILY.** Every date deals a fresh docket — same rules, new reads.
 Come back tomorrow, or race today's seed against a friend link-for-link.
