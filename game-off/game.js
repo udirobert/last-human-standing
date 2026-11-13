@@ -585,6 +585,7 @@ const G = {
   auditIdx: 0,
   amending: false,
   amendTimer: null,
+  amendAckAt: 0,
   contestedIdx: -1,
   finaleRows: null,
   finaleOpts: null,
@@ -649,7 +650,7 @@ function renderScore(n) {
     el.textContent = `SCORE ${n}`;
     return;
   }
-  const from = scoreShown, t0 = performance.now(), dur = 520;
+  const from = scoreShown, t0 = performance.now(), dur = 380;
   el.classList.add("rolling");
   scoreAnim = setInterval(() => {
     const p = Math.min(1, (performance.now() - t0) / dur);
@@ -1605,7 +1606,10 @@ function showAmendment() {
   b.classList.remove("falling");
   void b.offsetWidth;
   b.classList.add("falling");
-  b.onclick = () => finishAmend();
+  // it can't be acknowledged before the new chips have stamped in — a
+  // stray stamp key while it lands can't blow the moment past the player
+  G.amendAckAt = performance.now() + (calmMotion() ? 300 : 1500);
+  b.onclick = () => { if (performance.now() >= G.amendAckAt) finishAmend(); };
   sfx.klaxon();
   // the papers under it rattle — not the frame, whose transform would
   // trap this fixed overlay for the length of the shake
@@ -1650,7 +1654,9 @@ function showAmendment() {
     }, at);
     t += 350;
   });
-  G.amendTimer = later(finishAmend, t + 700);
+  // the amendment is acknowledged, not glimpsed — it holds until the
+  // player taps it or presses a key; the timer is only a failsafe
+  G.amendTimer = later(finishAmend, t + 9000);
 }
 
 function finishAmend() {
@@ -1677,14 +1683,11 @@ function auditSummary() {
   let effect;
   if (flawless) {
     pts += 50;
-    if (G.status === "player" && G.strikes > 0) {
-      G.strikes--;
-      effect = `Flawless — one strike cleared · +${pts} pts`;
-    } else {
-      effect = `Flawless — +${pts} pts`;
-    }
+    const cleared = G.status === "player" && G.strikes > 0;
+    if (cleared) G.strikes--;
+    effect = `night +${pts} pts · flawless${cleared ? " — one strike cleared" : " +50"}`;
   } else {
-    effect = `+${pts} pts`;
+    effect = `night +${pts} pts`;
   }
   G.score += flawless ? 50 : 0;
   sfx.audit();
@@ -1990,8 +1993,8 @@ document.addEventListener("keydown", (e) => {
       if (!MODIFIER_KEYS.has(e.key)) {
         const s2 = G.auditSubs[G.auditIdx];
         if (s2 && s2.pendingFlag) flagField(null);
-        else if (G.amending) finishAmend();
-        else nextCase();
+        else if (G.amending && performance.now() >= (G.amendAckAt || 0)) finishAmend();
+        else if (!G.amending) nextCase();
       }
       return;
     }

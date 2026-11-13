@@ -1264,6 +1264,12 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
   font-size: clamp(20px, 5vw, 32px); letter-spacing: .3em; color: #d96a5a;
 }
 #amendBanner span { font-size: 13px; letter-spacing: .08em; color: #ece5d8; max-width: 40ch; }
+#amendBanner .amend-ack {
+  font-family: ui-monospace, monospace; font-size: 9px;
+  letter-spacing: .18em; color: #899bb5; margin-top: 4px;
+  animation: ackpulse 1.8s ease-in-out infinite;
+}
+@keyframes ackpulse { 50% { opacity: .45; } }
 /* a criterion crossed off the rule, not greyed out */
 .chip.struck {
   position: relative; opacity: .55;
