@@ -313,6 +313,60 @@ function setValeDissonance(on) {
   } catch {}
 }
 
+/* Generated score (ElevenLabs) — real tracks where the files load, the
+ * procedural drone as the silent fallback so nothing breaks offline. */
+const score = {
+  VOL: { title: 0.5, day: 0.3, night: 0.42, dawn: 0.5 },
+  els: {},
+  cur: null,
+  el(name) {
+    if (!(name in this.els)) {
+      const a = new Audio(`audio/${name}.mp3`);
+      a.loop = true;
+      a.volume = 0;
+      a.addEventListener("error", () => { this.els[name] = null; });
+      this.els[name] = a;
+    }
+    return this.els[name];
+  },
+  fade(a, v) {
+    clearInterval(a._fade);
+    a._fade = setInterval(() => {
+      if (Math.abs(v - a.volume) <= 0.06) {
+        a.volume = v;
+        if (!v) a.pause();
+        clearInterval(a._fade);
+      } else {
+        a.volume = Math.max(0, Math.min(1, a.volume + Math.sign(v - a.volume) * 0.06));
+      }
+    }, 50);
+  },
+  play(name) {
+    if (this.cur === name) return;
+    this.cur = name;
+    for (const key of Object.keys(this.els)) {
+      const a = this.els[key];
+      if (a && key !== name) this.fade(a, 0);
+    }
+    if (!name) return;
+    const a = this.el(name);
+    if (!a) { this.fallback(name); return; }
+    a.play()
+      .then(() => { musicStop(); this.fade(a, audioMuted ? 0 : this.VOL[name]); })
+      .catch(() => { this.els[name] = null; this.fallback(name); });
+  },
+  fallback(name) { name === "night" ? musicStart() : musicStop(); },
+  setMuted() {
+    for (const key of Object.keys(this.els)) {
+      const a = this.els[key];
+      if (a) this.fade(a, audioMuted ? 0 : (key === this.cur ? this.VOL[key] : 0));
+    }
+  },
+};
+function applyScore() {
+  score.play({ day: "day", verdict: "day", audit: "night", finale: "night" }[G.phase]);
+}
+
 // ---------- skippable timers ----------
 let timers = [];
 function later(fn, ms) {
@@ -562,7 +616,7 @@ function showOnly(which) {
   auditPhase.classList.toggle("hidden", which !== "audit");
   finalePhase.classList.toggle("hidden", which !== "finale");
   setShift(which === "audit" || which === "finale" ? "night" : "day");
-  if (which === "day") musicStop();   // music plays nights + through the endings only
+  applyScore();
   if (which !== "verdict") wipeShift();
   hud();
 }
@@ -605,6 +659,51 @@ function startDay() {
   else if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
   else ariaSay(ARIA.dayOpen);
   renderDay();
+  stageDay(d);
+}
+
+/* the shift brief: a memo card opens the day, the riddle types itself,
+ * then the docket cascades onto the desk row by row. Any input skips it. */
+let briefOpen = false, briefTypeTimer = null;
+function stageDay(d) {
+  $("briefDay").textContent = d.dayLabel;
+  $("briefTheme").textContent = `${d.emoji} ${d.theme}`;
+  $("briefAria").textContent = d.ariaLine;
+  const riddleEl = $("briefRiddle");
+  riddleEl.textContent = "";
+  $("shiftBrief").classList.remove("hidden");
+  document.body.classList.add("brief-up");
+  dayPhase.classList.add("staging");
+  briefOpen = true;
+  const full = `\u201C${d.riddle}\u201D`;
+  clearInterval(briefTypeTimer);
+  if (calmMotion()) {
+    riddleEl.textContent = full;
+  } else {
+    let n = 0;
+    briefTypeTimer = setInterval(() => {
+      riddleEl.textContent = full.slice(0, ++n);
+      if (n % 3 === 0) sfx.tick();
+      if (n >= full.length) clearInterval(briefTypeTimer);
+    }, 28);
+  }
+  // the main-title theme swells under the first brief, then hands off
+  score.play(G.day === 0 ? "title" : "day");
+  later(endBrief, calmMotion() ? 1500 : 3400);
+}
+function endBrief() {
+  if (!briefOpen) return;
+  briefOpen = false;
+  clearInterval(briefTypeTimer);
+  $("shiftBrief").classList.add("hidden");
+  document.body.classList.remove("brief-up");
+  dayPhase.classList.add("dealt");
+  const rows = $("docketBody").children.length;
+  // a stamp tick per row as the ink lands, then the hand riffles in
+  for (let i = 0; i < Math.min(rows, 8); i++) later(() => sfx.tick(), 200 + i * 110);
+  later(() => sfx.riffle(), 420);
+  if (G.day === 0) later(() => score.play("day"), 1400);
+  later(() => dayPhase.classList.remove("staging", "dealt"), 1500 + rows * 110);
 }
 
 function highlightMatchingTags(tags) {
@@ -669,6 +768,7 @@ function renderDay() {
   G.hand.forEach((card, i) => {
     const el = document.createElement("div");
     el.className = "evidence" + (G.selected === card ? " selected" : "");
+    el.style.setProperty("--i", i);
     el.innerHTML = `<div class="e-head"><span class="glyph">${card.glyph}</span>
         <span class="key">${i + 1}</span></div>
       <div class="name">${card.name}</div>
@@ -700,12 +800,13 @@ function renderDocket(animRow) {
     ? [...G.docket].sort((a, b) => (a.verdict === "HUMAN" ? -1 : 1))
     : G.docket;
 
-  let lastVerdict = null;
+  let lastVerdict = null, di = 0;
   for (const row of rows) {
     if (G.day === 0 && row.verdict !== lastVerdict) {
       lastVerdict = row.verdict;
       const htr = document.createElement("tr");
       htr.className = "docket-hdr-tr";
+      htr.style.setProperty("--i", di++);
       const isH = row.verdict === "HUMAN";
       htr.innerHTML = `<td colspan="6" class="docket-sec-header ${isH ? "human" : "sus"}">
         ${isH ? "✔ ARIA'S APPROVED PRECEDENTS (HUMAN)" : "✖ ARIA'S REJECTIONS (SUS)"}
@@ -713,6 +814,7 @@ function renderDocket(animRow) {
       tb.appendChild(htr);
     }
     const tr = document.createElement("tr");
+    tr.style.setProperty("--i", di++);
     if (G.day >= 3) tr.className = "flaggable";
     if (row === animRow) tr.classList.add("new-row");
     if (row === G.flagged) tr.classList.add("flagged");
@@ -1010,7 +1112,6 @@ function joinNames(a) {
 function startAudit() {
   banner("NIGHT SHIFT — now you judge");
   showOnly("audit");
-  musicStart();
   setInstr("night");
   ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
   if (G.day === 2) explain("amend");
@@ -1657,6 +1758,7 @@ function endGame() {
   sfx.dawn();
 
   const title = G.finaleTitle || (G.status === "player" ? "LAST HUMAN STANDING" : "DAWN");
+  score.play(title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL" ? "title" : "dawn");
   const acc = G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0;
   const titleIdx = Math.min(JURY_TITLES.length - 1, Math.floor((acc / 100) * JURY_TITLES.length));
 
@@ -1706,6 +1808,7 @@ $("susBtn").addEventListener("click", () => stamp("SUS"));
 $("humanBtn").addEventListener("click", () => stamp("HUMAN"));
 $("telemetryBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
 $("finaleWireBtn").addEventListener("click", () => setTelemetry(!G.telemetry));
+$("shiftBrief").addEventListener("click", endBrief);
 document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
   b.addEventListener("click", () => { setFocusAttr(b.dataset.attr); sfx.click(); }));
 $("signBtn").addEventListener("click", signRule);
@@ -1722,8 +1825,12 @@ document.addEventListener("keydown", (e) => {
       ambientGain.gain.cancelScheduledValues(ac.currentTime);
       ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.35, ac.currentTime);
     }
+    score.setMuted();
     return;
   }
+
+  // a live brief swallows every key — it dismisses, nothing else fires
+  if (briefOpen) { endBrief(); return; }
 
   // SHIFT is the desk verb: by day it walks the loupe across the fact
   // columns; by night it holds the packet wire open. Key-repeat does

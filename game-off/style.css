@@ -1618,3 +1618,96 @@ body[data-shift="night"] #docket td.c-fact.tag-match {
   .evidence .name { margin: 4px 0 5px; }
   #fileBar { padding: 7px 14px; }
 }
+
+/* ---- Shift brief: the staged reveal before each day's desk ---- */
+#shiftBrief {
+  position: fixed; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(8, 9, 13, 0.72);
+  backdrop-filter: blur(2px);
+}
+#shiftBrief.hidden { display: none; }
+.brief-card {
+  width: min(520px, 88vw);
+  background: linear-gradient(175deg, #1a1d26 0%, #14161c 100%);
+  border: 1px solid #3a2f1c;
+  border-left: 3px solid var(--amber, #e8b34b);
+  border-radius: 4px;
+  padding: 26px 30px 18px;
+  text-align: left;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .6), 0 0 0 1px rgba(0,0,0,.4);
+  animation: briefIn .45s cubic-bezier(.2, .9, .25, 1) both;
+}
+@keyframes briefIn {
+  from { opacity: 0; transform: translateY(18px) scale(.97); }
+  to { opacity: 1; transform: none; }
+}
+.brief-day {
+  font-family: ui-monospace, monospace; font-size: 11px;
+  letter-spacing: .3em; color: var(--faint, #899bb5); margin: 0;
+}
+.brief-theme {
+  font-size: 26px; font-weight: 600; letter-spacing: .1em;
+  color: #ece5d8; margin: 6px 0 14px;
+}
+.brief-riddle {
+  font-family: Georgia, serif; font-style: italic;
+  font-size: 17px; line-height: 1.55; color: #d9cfb8;
+  min-height: 1.55em; margin: 0 0 14px;
+}
+.brief-riddle::after {
+  content: "▌"; color: var(--amber, #e8b34b);
+  animation: caretBlink 1s steps(1) infinite;
+}
+@keyframes caretBlink { 50% { opacity: 0; } }
+.brief-aria {
+  font-size: 12.5px; line-height: 1.5; color: #9aa4b5;
+  border-top: 1px solid #262a36; padding-top: 12px; margin: 0;
+}
+.brief-who { color: var(--amber, #e8b34b); font-family: ui-monospace, monospace; letter-spacing: .1em; }
+.brief-skip {
+  font-size: 9.5px; letter-spacing: .2em; color: #5a6478;
+  text-transform: uppercase; text-align: right; margin: 10px 0 0;
+}
+
+/* desk dims behind the brief */
+body.brief-up #frame { filter: brightness(.5) saturate(.8); }
+
+/* ---- the deal-in: docket rows and hand cards cascade after the brief ---- */
+#dayPhase.staging #docketBody tr,
+#dayPhase.staging #hand .evidence { opacity: 0; }
+#dayPhase.dealt #docketBody tr {
+  animation: rowDeal .42s cubic-bezier(.2, .8, .3, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+#dayPhase.dealt #hand .evidence {
+  animation: cardDeal .5s cubic-bezier(.2, .9, .3, 1) both;
+  animation-delay: calc(400ms + var(--i, 0) * 140ms);
+}
+@keyframes rowDeal {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cardDeal {
+  from { opacity: 0; transform: translateX(46px) rotate(2deg); }
+  to { opacity: 1; transform: none; }
+}
+/* each row's verdict ink punches in a beat after the paper lands */
+#dayPhase.staging .c-stamp .ink { opacity: 0; }
+#dayPhase.dealt .c-stamp .ink {
+  animation: inkPunch .28s cubic-bezier(.3, 1.4, .4, 1) both;
+  animation-delay: calc(var(--i, 0) * 110ms + 190ms);
+}
+@keyframes inkPunch {
+  from { opacity: 0; transform: scale(1.9) rotate(-14deg); }
+  to { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+.c-stamp .ink { display: inline-block; transform: rotate(-8deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .brief-card { animation: none; }
+  #dayPhase.dealt #docketBody tr,
+  #dayPhase.dealt #hand .evidence,
+  #dayPhase.dealt .c-stamp .ink { animation: none; opacity: 1; }
+  .brief-riddle::after { animation: none; content: ""; }
+}
