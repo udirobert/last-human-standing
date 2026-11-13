@@ -20,8 +20,6 @@
 # should not be committed.
 set -euo pipefail
 
-: "${DATABASE_URL:?Set DATABASE_URL (Supabase Direct postgres connection string).}"
-
 cd "$(dirname "$0")/.."
 
 PENDING=(
@@ -32,6 +30,8 @@ if [ ${#PENDING[@]} -eq 0 ]; then
   echo "No pending migrations."
   exit 0
 fi
+
+: "${DATABASE_URL:?Set DATABASE_URL (Supabase Direct postgres connection string).}"
 
 for f in "${PENDING[@]}"; do
   echo "→ $f"
