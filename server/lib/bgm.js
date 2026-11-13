@@ -39,6 +39,14 @@ export const BGM_STATIONS = [
     musicLengthMs: 28_000,
   },
   {
+    id: "night-rain",
+    title: "Night Rain",
+    phases: ["live", "audit"],
+    prompt:
+      "Instrumental only, no vocals. Rain on a filing-office window at night — steady patter wash, a desk lamp's hum, distant thunder rolling every minute, a wet street below. Noir ambience layer, low and steady, seamless loop. NIGHT SHIFT crossover: the night desk's weather.",
+    musicLengthMs: 30_000,
+  },
+  {
     id: "last-light",
     title: "Last Light",
     phases: ["ended"],

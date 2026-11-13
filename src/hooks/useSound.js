@@ -163,7 +163,7 @@ export function useSound() {
           Array.isArray(station.phases) && station.phases.includes(phase),
         );
         const screenStations = (screen === "feed" || screen === "audit")
-          ? phaseStations.filter((station) => station.id === "audit-pulse")
+          ? phaseStations.filter((station) => station.phases.includes("audit"))
           : phaseStations;
         const candidates = screenStations.length ? screenStations : (phaseStations.length ? phaseStations : ready);
         const recent = stationHistoryRef.current;

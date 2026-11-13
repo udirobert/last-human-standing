@@ -7,6 +7,7 @@ import { verifyMessage } from "viem";
 import { signRequest as idkitSignRequest } from "@worldcoin/idkit-server";
 import { getSupabaseAdmin } from "./supabase.js";
 import { checkGpsPlausibility, checkTimingAnomaly, checkVoteRing, checkVelocitySpoof, flagSubmission } from "./anticheat.js";
+import { buildPacket, packetTell } from "./lib/packet.js";
 import { rateLimit } from "./rateLimit.js";
 import { verifySelfProof } from "./selfVerify.js";
 import { fetchCeloPot } from "./lib/celoBalance.js";
@@ -2263,6 +2264,57 @@ app.get("/api/feed", async (req, res) => {
       mediaUrl: null,
       voteQuorum: s.vote_quorum ?? VOTE_QUORUM,
     }));
+
+    // The packet — postmark telemetry beside each filing (NIGHT SHIFT
+    // crossover): same four fields for everyone; the values are the
+    // testimony. Assembled from rounds, check-ins, per-day filing counts,
+    // and submission_flags — no schema change.
+    const subAddrs = [...new Set(subs.map((s) => s.address?.toLowerCase()).filter(Boolean))];
+    const subDays = [...new Set(subs.map((s) => s.day).filter((d) => d != null))];
+    try {
+      const roundsByDay = new Map();
+      for (const d of subDays) {
+        const r = await loadRound(d);
+        if (r) roundsByDay.set(d, r);
+      }
+      const geoByKey = new Map();
+      const countByKey = new Map();
+      const flagsById = new Map();
+      if (subAddrs.length && subDays.length) {
+        const [{ data: ckRows }, { data: sameDaySubs }, { data: flagRows }] = await Promise.all([
+          supabaseAdmin.from("checkins").select("address,day,lat").in("day", subDays),
+          supabaseAdmin.from("submissions").select("address,day").in("day", subDays),
+          supabaseAdmin.from("submission_flags").select("submission_id,reason").in("submission_id", ids),
+        ]);
+        for (const c of ckRows || []) {
+          const key = `${c.address?.toLowerCase()}:${c.day}`;
+          geoByKey.set(key, c.lat != null);
+        }
+        for (const s of sameDaySubs || []) {
+          const key = `${s.address?.toLowerCase()}:${s.day}`;
+          countByKey.set(key, (countByKey.get(key) || 0) + 1);
+        }
+        for (const f of flagRows || []) {
+          const arr = flagsById.get(f.submission_id) || [];
+          arr.push(f.reason);
+          flagsById.set(f.submission_id, arr);
+        }
+      }
+      for (const item of withVotes) {
+        const round = roundsByDay.get(item.day);
+        const key = `${item.address?.toLowerCase()}:${item.day}`;
+        const packet = buildPacket({
+          createdAtMs: Date.parse(item.created_at),
+          opensAtMs: Date.parse(round?.opens_at),
+          hasGeo: geoByKey.has(key) ? geoByKey.get(key) : null,
+          subCount: countByKey.get(key) || 1,
+          flagReasons: flagsById.get(item.id) || [],
+        });
+        item.packet = { ...packet, tells: packetTell(packet) };
+      }
+    } catch {
+      for (const item of withVotes) item.packet = null; // packet is texture, never a gate
+    }
 
     // Agent exhibition: machine labels are hidden while a day is open and
     // revealed once it closes (docs/COHORT1.md).

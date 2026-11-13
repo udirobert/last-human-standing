@@ -151,3 +151,12 @@ The pivot-4 plan front-loaded VALE with a styled `⚡ FILED +0.003s` badge — a
 - **Itch media kit**: `docs/itch-assets/` — six deterministic screenshots + `catch.gif` animated cover (grease-circle catch), captured headless at staged virtual-time budgets. Cover still regenerated with the grease circle on `+0.003s`.
 - **Bridge to the live game**: the dawn screen carries a quiet post-credits link to `lasthumanstanding.thisyearnofear.com` — one-way funnel, zero dependency; the jam build works entirely alone.
 - **Remaining gate**: itch.io upload + page setup (checklist in `ITCH_PAGE.md`) and one human-stranger playtest — both outside the repo.
+
+## Live-game crossovers — shipped (all loose coupling, either direction optional)
+
+The jam is a standalone spin-off; these are synergies, not dependencies:
+
+- **The packet is now a real anti-bot surface.** `/api/feed` attaches a `packet` to every submission — same four fields as the stub (PKT latency after round open · ORIGIN geo fix · HOPS same-day attempts · RCPT counter flags), computed from `rounds`, `checkins`, per-day filing counts, and `submission_flags` (`server/lib/packet.js`). `PacketStrip.jsx` renders it on every Feed card; values outside the human distribution render hot. The jam's verb — stamp SUS on clean paper, read the stub — is now a verb jurors can actually use.
+- **VALE is a live NPC.** `server/lib/vale.js` + `POST /api/admin/vale` seeds an exhibition filing into a day: clean caption, `created_at = opens + 3ms` (the signature `+0.003s`), no check-in record. Aliases rotate from the jam's human filer pool; day-close reveal unmasks it like any agent. "Spot the non-human filing" becomes a recurring community event on demand.
+- **Shared daily docket convention.** Both sides derive the day's seed as `YYYY-MM-DD` local date. `src/config/nightShift.js` (`nightShiftDocketUrl()`) builds `?seed=` links; TomorrowPostcard carries a quiet "the night desk runs this docket too →" link — renders only once `NIGHT_SHIFT_URL` points at the live itch page.
+- **Shared corpus + audio vocabulary.** The jam's five days already mirror cohort 1's round names (THE DAWN · THE BOND · THE WILD · THE GATHERING · THE QUIET). The rain went the other way: `night-rain` is a registered BGM station for live/audit phases — a procedurally generated two-layer rain bed (`server/data/bgm/night-rain.mp3`, ffmpeg noise, no ElevenLabs call needed) that rotates into the audit screen playlist beside audit-pulse.

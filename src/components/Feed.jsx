@@ -23,6 +23,7 @@ import { postSealCopy } from '../lib/copy.js';
 import { getDetectiveTitle } from '../lib/detective.js';
 import { consumeFeedIntent } from '../lib/feedIntent.js';
 import { usePolling } from '../hooks/usePolling.js';
+import PacketStrip from './PacketStrip.jsx';
 import { useCountdown } from '../hooks/useCountdown.js';
 import { visibilityInterval } from '../lib/visibilityInterval.js';
 import ScreenLoader from './ui/ScreenLoader.jsx';
@@ -181,6 +182,7 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
             voteQuorum: s.voteQuorum || s.vote_quorum || null,
             sealed: Boolean(s.sealed),
             commitCount: s.commitCount ?? 0,
+            packet: s.packet || null,
           })),
         );
       }
@@ -637,6 +639,10 @@ export default function Feed({ onBack, onCheckIn, onReserve }) {
                   {sub.caption && (
                     <p className="text-bone text-sm leading-relaxed mb-1">{sub.caption}</p>
                   )}
+
+                  {/* The postmark rides the paper — same four fields on
+                      every filing, values are the testimony. */}
+                  <PacketStrip packet={sub.packet} />
 
                   <LiveTally
                     real={sub.votes.real}

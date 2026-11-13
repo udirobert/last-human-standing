@@ -4,6 +4,7 @@ import {
 } from "../lib/validators.js";
 import { ariaSuggestNextRound, ariaBroadcastPayoutTx } from "../lib/ariaAgent.js";
 import { isValidAgentTier } from "../lib/agents.js";
+import { seedVale } from "../lib/vale.js";
 
 /**
  * Admin routes — round CRUD, agent registration, close-day, payout retry.
@@ -164,6 +165,49 @@ export default function adminRoutes(deps) {
       const nextSeats = await getAgentSeatState({ forPublic: false });
       log("admin_agent_registered", { address, tier, entryFeeUsd });
       return res.json({ ok: true, address, tier, agents: nextSeats });
+    } catch (error) {
+      sendValidationError(res, error);
+    }
+  });
+
+  /**
+   * POST /admin/vale — seed a VALE exhibition filing into a day's audit.
+   * Body: { day? } — defaults to the most recently opened round. The filing
+   * carries clean paper and a lying packet (+0.003s, no check-in record);
+   * day-close reveal unmasks it like any agent.
+   */
+  router.post("/admin/vale", requireAuth, requireAdmin, async (req, res) => {
+    if (!supabaseAdmin) return res.status(501).json({ error: "supabase_not_configured" });
+    try {
+      let day = Number(req.body?.day) || null;
+      let round = null;
+      if (day != null) {
+        round = await loadRound(day);
+      } else {
+        const { data: latest } = await supabaseAdmin
+          .from("rounds")
+          .select("*")
+          .lte("opens_at", new Date().toISOString())
+          .order("opens_at", { ascending: false })
+          .limit(1);
+        round = latest?.[0] || null;
+        day = round?.day ?? null;
+      }
+      if (!round || day == null) return res.status(404).json({ error: "round_not_found" });
+
+      const huntClosesAtIso = round.reveal_at ?? round.closes_at;
+      if (huntClosesAtIso && Date.now() > Date.parse(huntClosesAtIso)) {
+        return res.status(409).json({ error: "round_closed", closesAt: huntClosesAtIso });
+      }
+
+      const result = await seedVale(supabaseAdmin, {
+        round,
+        day,
+        cohort: COHORT_CONFIG.cohort,
+        voteQuorum: round.vote_quorum ?? null,
+      });
+      log("admin_vale_seeded", { day, ...result });
+      return res.json({ ok: true, day, ...result });
     } catch (error) {
       sendValidationError(res, error);
     }

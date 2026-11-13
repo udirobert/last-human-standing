@@ -8,6 +8,7 @@ import { HumanCta, GhostLink } from "./ui/CraftCta.jsx";
 import Countdown from "./Countdown.jsx";
 import { MOTION_DURATION, MOTION_EASE } from "../lib/motion.js";
 import { setFeedIntent } from "../lib/feedIntent.js";
+import { nightShiftDocketUrl } from "../config/nightShift.js";
 
 /**
  * Post-close "tomorrow postcard" — theme + cut + opens countdown.
@@ -164,6 +165,19 @@ export default function TomorrowPostcard({ onViewFeed }) {
               <GhostLink onClick={dismiss} className="mt-1">
                 {onViewFeed ? "Dismiss" : "Got it — see you tomorrow"}
               </GhostLink>
+
+              {/* NIGHT SHIFT bridge — same date-derived docket seed both
+                  sides; pure link, no dependency either direction. */}
+              {nightShiftDocketUrl() && (
+                <a
+                  href={nightShiftDocketUrl()}
+                  target="_blank"
+                  rel="noopener"
+                  className="block mt-2 font-mono text-[9px] text-dim/70 tracking-widest hover:text-amber transition-colors"
+                >
+                  the night desk runs this docket too →
+                </a>
+              )}
             </div>
           </div>
         </motion.div>

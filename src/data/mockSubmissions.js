@@ -20,6 +20,7 @@ export const MOCK_SUBMISSIONS = [
     accuracy: 91,
     location: "Lisbon, Portugal",
     gpsShared: true,
+    packet: { pkt: "+14m", origin: "geo", hops: 1, rcpt: "clean", tells: [] },
     mediaUrl: proofSceneDataUri({ scene: "cafe", seed: 1, width: 600, height: 400 }),
   },
   {
@@ -35,6 +36,7 @@ export const MOCK_SUBMISSIONS = [
     infiltrator: true,
     location: "Tokyo, Japan",
     gpsShared: true,
+    packet: { pkt: "+31m", origin: "geo", hops: 1, rcpt: "clean", tells: [] },
     mediaUrl: proofSceneDataUri({ scene: "beach", seed: 2, width: 600, height: 400 }),
   },
   {
@@ -49,6 +51,7 @@ export const MOCK_SUBMISSIONS = [
     accuracy: 72,
     location: null,
     gpsShared: false,
+    packet: { pkt: "+52m", origin: "remote", hops: 2, rcpt: "clean", tells: [] },
     mediaUrl: proofSceneDataUri({ scene: "beach", seed: 3, width: 600, height: 400 }),
   },
   {
@@ -63,6 +66,7 @@ export const MOCK_SUBMISSIONS = [
     accuracy: 95,
     location: "Nairobi, Kenya",
     gpsShared: true,
+    packet: { pkt: "+1h", origin: "geo", hops: 1, rcpt: "clean", tells: [] },
     mediaUrl: proofSceneDataUri({ scene: "beach", seed: 4, width: 600, height: 400 }),
   },
   {
@@ -78,6 +82,8 @@ export const MOCK_SUBMISSIONS = [
     infiltrator: true,
     location: "Berlin, Germany",
     gpsShared: false,
+    // VALE-analog demo filing — clean caption, lying packet.
+    packet: { pkt: "+0.003s", origin: "none", hops: 3, rcpt: "velocity_spoof", tells: ["pkt", "origin", "hops", "rcpt"] },
     mediaUrl: proofSceneDataUri({ scene: "beach", seed: 5, width: 600, height: 400 }),
   },
 ];
