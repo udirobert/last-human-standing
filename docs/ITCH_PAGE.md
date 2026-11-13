@@ -27,10 +27,12 @@ them like a puzzle. File the one card she'd pass. A wrong filing is a
 strike; three strikes and you're cut to nights for good.
 
 **🌙 NIGHT SHIFT.** Now you're the auditor and the rule is in plain sight.
-Five filings a night, one at a time — use the physical shift paddles to dispatch
-each filing (`⇦ SHIFT TO SUS` / `SHIFT TO HUMAN ⇨`). But something is wrong: filer
-VALE's packet arrived at +0.003s. Catch the machine with a forensic SUS stamp for
-an anomaly bounty. One filing a night is **contested**: call it right for double pay (+100).
+Five filings a night, one at a time — stamp each `S`US or `H`UMAN (`S`/`H`/arrows).
+But something is wrong: one filer on this docket isn't human, and the paper
+can't catch it — every filing passes the rule. The desk terminal keeps its own
+quiet log, if you think to look. Catch the machine for an anomaly bounty — but
+a blind hunch is just a wrong stamp. One filing a night is **contested**:
+call it right for double pay (+100).
 From day 3, head office **amends** the rule mid-shift — cases before the banner follow
 the old rule, cases after follow the new one, and trap filings flip their verdicts.
 Days 4–5 hide a **clerical error** on the docket: a SUS card stamped HUMAN. Find it.
@@ -61,17 +63,18 @@ blind?"). Best conversations get collected into community collections.
 ## Controls (page section, keep short)
 
 - **Shift**:
-  - *Day Shift*: Hold `Shift` (or click `💡 SHIFT LENS`) for Forensic UV Light — reveals shared criteria across approved precedents and your hand.
-  - *Night Shift*: Press `Shift` to flip the rotary stamp between `HUMAN` and `SUS`.
-- `1–4`: select a card · `Enter` / `Space`: file card (Day) / slam stamp (Night) / advance
-- `S` / `←`: stamp SUS · `H` / `→`: stamp HUMAN
+  - *Day Shift*: Tap `Shift` to walk a loupe across the fact columns (where → when → who → in/out) — it dims the rest, never hides them.
+  - *Night Shift*: Hold `Shift` to pull the desk terminal's log — the same muted columns for every filer.
+- `1–4`: select a card · `Enter` / `Space`: file card (Day) / advance · `S`/`H` or `←`/`→`: stamp (Night)
 - `O`: file under oath (pass clears a strike, miss costs two) · `M`: mute audio
-- Mobile: everything is 100% touch-operable with tactile paddles and switches.
+- Mobile: everything is 100% touch-operable.
 
 ## Feature bullets (for the page sidebar / trailer cards)
 
+- Every day opens on a shift brief — the riddle types itself, then the desk deals in
 - Five staged days: pay-for-clues, oaths, mid-night rule amendments, a liar on the docket
-- An escalating Turing mystery: catch the automated filer before dawn
+- An escalating Turing mystery you discover, not a tutorial — catch the automated filer before dawn
+- A generated noir score (title theme, day and night shifts, dawn) with a procedural fallback
 - Verdicts explained line by line — losses teach, never confuse
 - Daily seeded docket + share grid
 - Runs in the browser, no install; keyboard + touch
@@ -79,7 +82,7 @@ blind?"). Best conversations get collected into community collections.
 
 ## Credits
 
-Bespoke WebAudio soundscape & tactile foley. All proceedings fictional.
+Score generated with ElevenLabs Music · bespoke WebAudio foley · inline SVG artwork. All proceedings fictional.
 
 ## Tags (itch)
 
@@ -98,7 +101,7 @@ trailer beats), then the end slate. No voiceover; let the stamp SFX punctuate.
 | 2 | READ HER RULINGS. FILE WHAT SHE'D PASS | Select card → file (flight to the tray) → staged fact-row reveal → SURVIVED stamp biting down, card recoil |
 | 3 | AT NIGHT, YOU ARE THE AUDITOR          | Night stamping: SUS/HUMAN stamps, streak ×3 popping         |
 | 4 | THE RULE CAN CHANGE MID-SHIFT          | **Amendment banner firing**: klaxon, chips struck one by one, ghost line visible |
-| 5 | ONE FILER ISN'T HUMAN                  | Finale table, timestamps column, option select → rule sign  |
+| 5 | ONE FILER ISN'T HUMAN                  | Finale ledger, the terminal's log over five packets, option select → rule sign |
 | 6 | Montage (8s, quick cuts on the beat)   | contested ×2 stamp · clock under 3s · third-strike CUT (room goes dark) · COLLATERAL / LAST HUMAN STANDING titles |
 | 7 | End slate (4s)                         | NIGHT SHIFT · Game Off 2026 · play in your browser · [itch URL] |
 
@@ -140,6 +143,6 @@ explaining, it doesn't belong in the trailer.
 - [ ] Cover GIF uploaded, tagline in short description
 - [ ] Trailer embedded at top of description
 - [ ] Controls section states mobile-tappable
-- [ ] Music credit present (CC-BY requirement)
+- [ ] Music credit present (generated score — ElevenLabs Music in credits)
 - [ ] `?seed=` documented for replay/share threads
 - [ ] Play + rate other entries during voting (reciprocity drives ratings)

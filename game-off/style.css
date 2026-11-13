@@ -1009,6 +1009,7 @@ body.telemetry-active .case-telemetry,
 #auditSummary .sum-vale { font-size: 11px; font-family: ui-monospace, monospace; margin-top: 10px; letter-spacing: .06em; }
 #auditSummary .sum-vale.ok { color: var(--amber, #e8b34b); }
 #auditSummary .sum-vale.warn { color: var(--red, #d96a5a); }
+#auditSummary .sum-vale.quiet { color: var(--faint, #899bb5); font-style: italic; opacity: .8; }
 #auditActions { display: flex; justify-content: center; padding-bottom: 20px; }
 
 /* ---------- dossier ---------- */

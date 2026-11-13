@@ -1554,6 +1554,13 @@ function auditSummary() {
   const s = $("auditSummary");
   s.classList.remove("hidden");
   const valeSub = G.auditSubs.find((x) => x.filer === "VALE");
+  const QUIET = [
+    "five stamps, five sounds — one landed before it was swung",
+    "one filing cleared faster than the ink could dry",
+    "the log shows five filings; one of them didn't wait",
+    "the night passed without incident — the counter disagrees",
+    "a filing was already done before the lamp came up",
+  ];
   const valeLine = !valeSub ? ""
     : (valeSub.pick === "SUS" && valeSub.correct)
       ? `<p class="sum-vale ok">⚡ anomaly quarantined — the machine was on tonight's docket</p>`
@@ -1561,11 +1568,12 @@ function auditSummary() {
         ? ""   // a blind hunch earns no postscript
         : G.valeWireSeen
           ? `<p class="sum-vale warn">⚠ you read the wire and stamped it through</p>`
-          : `<p class="sum-vale warn">⚠ the wire went unread tonight — something filed in 3ms</p>`;
+          : `<p class="sum-vale quiet">· ${QUIET[G.day % QUIET.length]}</p>`;
   const wireChecks = G.auditSubs.filter((x) => x.wireOpened).length;
+  const wireLine = wireChecks
+    ? `<p class="sum-wire">wire checks ${wireChecks}/5 · +${wireChecks * 15} diligence</p>` : "";
   s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
-    <p class="sum-effect">${effect}</p>
-    <p class="sum-wire">wire checks ${wireChecks}/5 · +15 each</p>${valeLine}`;
+    <p class="sum-effect">${effect}</p>${wireLine}${valeLine}`;
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");

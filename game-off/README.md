@@ -38,8 +38,8 @@ python3 -m http.server 8000
   Wrong stamps explain the needed criterion. One filing a night is **contested** —
   call it right for double pay (+100). A flawless 5/5 night clears a strike.
   The paper checks facts. The desk has a wire (`Shift`, or the little
-  monitor by the pinned rule): latency, origin, hops, receipt — same muted
-  columns for every filer, nothing flagged. A wire-checked stamp pays +15
+  log terminal by the pinned rule): latency, origin, hops, receipt — same
+  muted columns for every filer, nothing flagged. A wire-checked stamp pays +15
   diligence. Whatever reads wrong is yours to catch, but a catch needs the
   packet on the desk: blind SUS on clean paper is just a wrong stamp, and
   once you've seen *that* packet, waving it through is a wrong stamp too.
