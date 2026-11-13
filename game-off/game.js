@@ -94,7 +94,7 @@ const sfx = {
       noiseBurst(.15, 850, .07, .02);
       tone(85, .28, "square", .09, .06);
       thudDrop(.08);
-    } catch {}
+    } catch { /* audio may be unavailable */ }
   },
   // UV forensic lens transformer hum
   lensHum: () => {
@@ -109,7 +109,7 @@ const sfx = {
       o1.connect(g); o2.connect(g); g.connect(ambientGain || ac.destination);
       o1.start(t); o1.stop(t + 0.65);
       o2.start(t); o2.stop(t + 0.65);
-    } catch {}
+    } catch { /* audio may be unavailable */ }
   },
 };
 
@@ -267,7 +267,7 @@ function initAmbient() {
           noiseBurst(0.035, 1900, 0.012);
         }
         beat = (beat + 1) % 4;
-      } catch {}
+      } catch { /* audio may be unavailable */ }
     }, tempoMs);
 
     AMBIENT = { master, osc1, osc2, lfo, noiseSrc, valeOsc };
@@ -283,7 +283,7 @@ function musicStart() {
     const ac = audio();
     ambientGain.gain.cancelScheduledValues(ac.currentTime);
     ambientGain.gain.linearRampToValueAtTime(0.35, ac.currentTime + 1.2);
-  } catch {}
+  } catch { /* audio may be unavailable */ }
 }
 
 function musicStop() {
@@ -292,7 +292,7 @@ function musicStop() {
     const ac = audio();
     ambientGain.gain.cancelScheduledValues(ac.currentTime);
     ambientGain.gain.linearRampToValueAtTime(0, ac.currentTime + 0.6);
-  } catch {}
+  } catch { /* audio may be unavailable */ }
 }
 
 function musicDuck(on) {
@@ -301,7 +301,7 @@ function musicDuck(on) {
     const ac = audio();
     ambientGain.gain.cancelScheduledValues(ac.currentTime);
     ambientGain.gain.linearRampToValueAtTime(on ? 0.08 : 0.35, ac.currentTime + 0.4);
-  } catch {}
+  } catch { /* audio may be unavailable */ }
 }
 
 function setValeDissonance(on) {
@@ -310,7 +310,7 @@ function setValeDissonance(on) {
     const ac = audio();
     valeDissonanceGain.gain.cancelScheduledValues(ac.currentTime);
     valeDissonanceGain.gain.linearRampToValueAtTime(on ? 0.045 : 0, ac.currentTime + 0.5);
-  } catch {}
+  } catch { /* audio may be unavailable */ }
 }
 
 /* Generated score (ElevenLabs) — real tracks where the files load, the
