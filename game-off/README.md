@@ -43,10 +43,11 @@ python3 -m http.server 8000
   the desk asks what flagged it — point at the field that read wrong. A
   field that holds is the catch (+100 bounty); anything else is a hunch,
   and a hunch is just a wrong stamp. Watch the cards themselves, too:
-  human filings drop off-square with a clerk's marginal note, and the
-  machine's arrives dead straight, instantly printed, with a faint servo
-  whir. A caught flag is circled in red grease pencil; a hunch gets the
-  field you named struck through.
+  human filings drop off-square and rustle — and every filer, human or
+  otherwise, draws from the same pool of clerk's marginal notes, so a
+  remote filing is a red herring and the postmark is the only testimony.
+  A caught flag is circled in red grease pencil; a hunch gets the field
+  you named struck through.
 - **From day 2**: you may *request one more ruling* per day (drops today's
   pay 300 → 200) and file *under oath* (pass: clears a strike or pays +200;
   miss: two strikes — `O` toggles).

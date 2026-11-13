@@ -87,21 +87,6 @@ const sfx = {
   handover: () => { noiseBurst(.2, 1100, .05); thudDrop(.16); },
   // a case file dropped onto the desk
   drop:   () => { thudDrop(); noiseBurst(.09, 2400, .035, .03); },
-  // the filing that arrives too cleanly — a servo chirp, not a paper drop
-  servo: () => {
-    try {
-      const ac = audio(), t = ac.currentTime;
-      const o = ac.createOscillator(), g = ac.createGain();
-      o.type = "square";
-      o.frequency.setValueAtTime(1420, t);
-      o.frequency.exponentialRampToValueAtTime(680, t + .1);
-      g.gain.setValueAtTime(.026, t);
-      g.gain.exponentialRampToValueAtTime(.0001, t + .15);
-      o.connect(g).connect(ac.destination);
-      o.start(t); o.stop(t + .17);
-      noiseBurst(.11, 3400, .025, .03);
-    } catch { /* audio may be unavailable */ }
-  },
   // red grease pencil circling the evidence
   ring:   () => [0, .1, .19].forEach((w, i) => noiseBurst(.07, 2600 + i * 500, .04, w)),
   // a pencil strike across a field that didn't hold
@@ -1039,6 +1024,8 @@ function renderVerdict() {
 
   $("stampBox").innerHTML = "";
   $("verdictActions").innerHTML = "";
+  // yesterday's ruling stays filed — the ledger speaks only when ARIA does
+  $("ledgerLine").textContent = "";
 
   // staggered reveal: unchecked rows first (250ms apart), then checked
   // rows passes-first (550ms apart, rising tone), last checked row holds
@@ -1207,13 +1194,11 @@ function humanTel(rng, filed) {
     tells: [],
   };
 }
-function valeTel(day, rng) {
-  const human = {
-    latency: `${140 + Math.floor(rng() * 320)}ms`,
-    origin: `EXT GATE ${1 + Math.floor(rng() * 6)}`,
-    hops: `${1 + Math.floor(rng() * 4)}`,
-    receipt: `+${(rng() * 0.6 + 0.15).toFixed(2)}s after post`,
-  };
+function valeTel(day, rng, filed) {
+  // the disguise wears the human distribution exactly — a clean field on
+  // VALE's stub is indistinguishable from a real filing, so flagging one
+  // is a hunch, not a boundary case
+  const human = humanTel(rng, filed);
   // how many fields betray it: two early, one later — and the rest wear
   // human values, so a flag pointed at a clean field is still a hunch
   const keys = [...TEL_KEYS];
@@ -1262,14 +1247,16 @@ function startAudit() {
   const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
     "third filing this cycle", "witness signature smudged",
     "forwarded from intake", "annotated in the margins",
-    "returned for correction ×1", "filed in person — waited"];
+    "returned for correction ×1", "filed in person — waited",
+    "filed remotely — no wet signature", "auto-sorted — priority queue"];
   let hi = 0;
   G.auditSubs = cases.map((c) => {
     const filer = c.bot ? "VALE" : humans[hi++];
     const filed = fmtFiled(40 + Math.floor(trng() * 500));
-    const tel = c.bot ? valeTel(G.day, trng) : humanTel(trng, filed);
-    const note = c.bot ? "filed remotely — no wet signature"
-                       : NOTES[Math.floor(trng() * NOTES.length)];
+    const tel = c.bot ? valeTel(G.day, trng, filed) : humanTel(trng, filed);
+    // every filer draws the same note pool — a remote filing is a red
+    // herring, not a fingerprint. The postmark is the only testimony.
+    const note = NOTES[Math.floor(trng() * NOTES.length)];
     const tilt = c.bot ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10;
     const stampRot = Math.round((trng() * 14 - 7) * 10) / 10;
     return { ...c, filer, filed, tel, note, tilt, stampRot,
@@ -1373,12 +1360,17 @@ function renderCase() {
       } else if (sub.correct) {
         reason = `✔ Meets every criterion.`;
       } else if (sub.pick === "SUS") {
-        // a hunch reads like any wrong quarantine — clean paper, bad stamp
-        reason = "passes: meets every criterion";
+        // a hunch answers the accusation itself: the field you named read
+        // within the norm — clean paper, bad stamp
+        reason = sub.flagKey
+          ? `${TEL_LABEL[sub.flagKey]} ${sub.tel[sub.flagKey]} reads within the norm — no grounds`
+          : "no grounds — a clean-paper hunch";
       } else {
+        // the loss names one field of evidence — enough to know the
+        // postmark mattered, not enough to skip reading the next one
         reason = G.valeCaught > 0
           ? `✗ You'd flagged that postmark before — and you stamped it through.`
-          : `✗ the paper passed — the postmark didn't: ${sub.tel.tells.map((k) => `${TEL_LABEL[k]} ${sub.tel[k]}`).join(" · ")}`;
+          : `✗ the paper passed — the postmark didn't: ${TEL_LABEL[sub.tel.tells[0]]} ${sub.tel[sub.tel.tells[0]]}`;
       }
     } else {
       reason = sub.correct
@@ -1428,7 +1420,9 @@ function renderCase() {
   $("susBtn").disabled = $("humanBtn").disabled = checked;
   if (!checked) {
     if (!calmMotion()) {
-      later(() => (isVale ? sfx.servo() : sfx.drop()), 80);
+      // humans land with a rustle of paper; the machine lands dead quiet —
+      // the same thud, nothing to hear unless you were already listening
+      later(() => (isVale ? thudDrop() : sfx.drop()), 80);
       if (contested) later(() => sfx.gavel(), 320);
     }
   }
@@ -1758,7 +1752,7 @@ function startFinale() {
   // every filer carries its packet stub onto the ledger
   const trng = stream("finale-tel");
   G.finaleRows.forEach((row) => {
-    row.tel = row.filer === "VALE" ? valeTel(4, trng) : humanTel(trng, row.ts);
+    row.tel = row.filer === "VALE" ? valeTel(4, trng, row.ts) : humanTel(trng, row.ts);
   });
   G.signing = false;
   $("decree").classList.remove("signed");
