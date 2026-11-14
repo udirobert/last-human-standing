@@ -27,7 +27,7 @@ const $ = (id) => document.getElementById(id);
 const titleEl = $("title"), gameEl = $("game"), dawnEl = $("dawn"), dossierEl = $("dossier");
 const frameEl = $("frame");
 const dayPhase = $("dayPhase"), verdictPhase = $("verdictPhase"), auditPhase = $("auditPhase");
-const finalePhase = $("finalePhase");
+const finalePhase = $("finalePhase"), forgePhase = $("forgePhase");
 
 // ---------- seed / url params ----------
 function localDateStr() {
@@ -342,7 +342,7 @@ function applyRain() {
 }
 function setNightRain(on) { rainOn = on; applyRain(); }
 
-function thunderRoll() {
+function thunderRoll(vol = 0.1) {
   try {
     const ac = audio(), t = ac.currentTime;
     const len = Math.floor(ac.sampleRate * 2.6);
@@ -356,7 +356,7 @@ function thunderRoll() {
     const f = ac.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 130; f.Q.value = 0.8;
     const g = ac.createGain();
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.linearRampToValueAtTime(0.1, t + 0.55);
+    g.gain.linearRampToValueAtTime(vol, t + 0.55);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 2.6);
     s.connect(f); f.connect(g); g.connect(ac.destination);
     s.start(t);
@@ -375,7 +375,14 @@ const score = {
   setMuted() { scoreSynth.mutedState = audioMuted; scoreSynth.setMuted(); },
 };
 function applyScore() {
-  score.play({ day: "day", verdict: "day", audit: "night", finale: "night" }[G.phase]);
+  // tension is a night-desk thing — the last call sits a little higher
+  // than the day shift, lower than a hot audit. The machine's shift
+  // climbs its own ramp: each forged night the wire listens closer.
+  scoreSynth.setIntensity(G.phase === "audit" ? scoreSynth.intensity
+    : G.phase === "finale" ? 0.55
+    : G.phase === "forge" ? 0.45 + G.day * 0.18
+    : 0.3);
+  score.play({ day: "day", verdict: "day", audit: "night", finale: "night", forge: "night" }[G.phase]);
 }
 
 // ---------- skippable timers ----------
@@ -422,8 +429,87 @@ const INSTR = {
   night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
   cold: "The night clerk cleared one filing — read his strip with him. The second is yours: stamp it. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
+  forge: "The proof is filed. Now forge the postmark — 1–4 patch a field, Enter transmits. Unspent cover banks overnight.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
+
+// ---------- THE WIRE: the desk remembers ----------
+/* OpenTTD's lesson: events are dated, categorized, and persistent. Every
+ * stamp, flag, filing and verdict lands here in order — the player can
+ * always see the systems working, not just their latest answer. */
+function wire(txt) {
+  G.wire.push(`N${Math.min(G.day + 1, 5)}·${txt}`);
+  if (G.wire.length > 60) G.wire.splice(0, G.wire.length - 60);
+  const el = $("wireLog");
+  el.innerHTML = G.wire.slice(-4).map((w) => `<div class="wire-line">${w}</div>`).join("");
+  el.scrollTop = el.scrollHeight;
+}
+function renderWire() {
+  $("wireLog").innerHTML = (G.wire || []).slice(-4)
+    .map((w) => `<div class="wire-line">${w}</div>`).join("");
+}
+
+// ---------- TOOLTIPS: the world explains itself on demand ----------
+/* OpenTTD hovers anything and gets a readout. One delegated handler;
+ * elements opt in with data-tip. Keyboard users get the same text via
+ * aria-describedby on focus. */
+const uiTip = $("uiTip");
+let tipFor = null;
+function showTip(target) {
+  const txt = target.dataset.tip;
+  if (!txt) return;
+  tipFor = target;
+  uiTip.textContent = txt;
+  uiTip.classList.remove("hidden");
+  const r = target.getBoundingClientRect();
+  const tw = uiTip.offsetWidth, th = uiTip.offsetHeight;
+  let x = Math.min(Math.max(8, r.left + r.width / 2 - tw / 2), innerWidth - tw - 8);
+  let y = r.top - th - 8;
+  if (y < 8) y = r.bottom + 8;
+  uiTip.style.left = x + "px";
+  uiTip.style.top = y + "px";
+}
+function hideTip() { tipFor = null; uiTip.classList.add("hidden"); }
+document.addEventListener("mouseover", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (t !== tipFor) { hideTip(); if (t) showTip(t); }
+});
+document.addEventListener("mouseout", (e) => {
+  if (e.target.closest("[data-tip]") === tipFor && !e.relatedTarget?.closest?.("[data-tip]")) hideTip();
+});
+document.addEventListener("focusin", (e) => {
+  const t = e.target.closest("[data-tip]");
+  if (t) showTip(t);
+});
+document.addEventListener("focusout", hideTip);
+addEventListener("scroll", hideTip, { passive: true });
+addEventListener("resize", hideTip);
+
+// ---------- PARTICLES: ink, paper, dust ----------
+/* Phaser's lesson: one emitter sells the impact. Three DOM bursts behind
+ * one helper — no engine. Honors calmMotion like every other flourish. */
+function burst(x, y, kind, n = 14) {
+  if (calmMotion()) return;
+  const layer = $("fxLayer");
+  for (let i = 0; i < n; i++) {
+    const p = document.createElement("i");
+    p.className = `px px-${kind}`;
+    const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 90;
+    p.style.setProperty("--dx", Math.cos(a) * d + "px");
+    p.style.setProperty("--dy", (Math.sin(a) * d - 40) + "px");
+    p.style.setProperty("--rot", (Math.random() * 260 - 130) + "deg");
+    p.style.left = x + "px";
+    p.style.top = y + "px";
+    p.style.animationDelay = (Math.random() * 0.08) + "s";
+    layer.appendChild(p);
+    setTimeout(() => p.remove(), 1100);
+  }
+}
+function burstAt(el, kind, n) {
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  burst(r.left + r.width / 2, r.top + r.height / 2, kind, n);
+}
 
 // ---------- shift banner (brief, non-blocking) ----------
 let bannerTimer = null;
@@ -442,6 +528,20 @@ const ARIA = {
   dayOpen: [
     "Two rulings passed, a few struck. My rule is hiding in the docket.",
     "The docket never lies. Read the stamps, not the riddles.",
+    "I once answered a riddle with a recipe. Nobody asks about it.",
+  ],
+  machineOpen: [
+    "You are the machine tonight. File like you belong — the wire is reading.",
+    "Three proofs. Make them count. The postmark is already typing.",
+    "Sleep is for the filed. Tonight you file.",
+  ],
+  machineFiled: [
+    "Clean filing. The wire yawned.",
+    "Proof accepted. Try not to be boring about it.",
+  ],
+  machineFlagged: [
+    "The postmark gave you away. +0.003s is a confession.",
+    "Close. The wire reads faster than you can lie.",
   ],
   survived: ["You lived.", "The ledger notes a survivor."],
   struck: ["A strike. The rule didn't bend for you.", "Filed under SUS. The ledger remembers."],
@@ -468,6 +568,15 @@ const ARIA = {
     "The card types its claim. The postmark prints the truth. They don't always agree.",
     "A receipt is stamped by the wire, not written by the filer. Compare the two.",
   ],
+  // she keeps the room alive between rulings — rare, dry, never instructional
+  idle: [
+    "The docket hums. So do I.",
+    "Day shift is for reading. I do the remembering.",
+    "Four facts on every card. One of them is lying — or isn't.",
+    "The blinds think it's a nice day. Bureaucracy disagrees.",
+    "I counted the rulings twice. Twice is how mistakes happen.",
+    "Coffee's for the living. You're not filed yet.",
+  ],
 };
 // one-line explainers shown the first time each mechanic appears
 const EXPLAIN = {
@@ -476,7 +585,17 @@ const EXPLAIN = {
   amend: "Head office is restless tonight — they amend my rules mid-shift now. Watch the chips when it happens.",
   liar: "A clerical error slipped onto the docket. Find which ruling is wrong and I'll note it.",
 };
-let ariaTimer = null, ariaTypeTimer = null;
+let ariaTimer = null, ariaTypeTimer = null, ariaIdleTimer = null;
+/* between rulings she keeps the room alive — a rare murmur, never during
+ * the brief or while she's already talking. Self-rescheduling; dies with
+ * the day phase. */
+function ariaIdle() {
+  ariaIdleTimer = null;
+  if (G.phase !== "day") return;
+  const el = $("ariaSay");
+  if (!briefOpen && el && el.classList.contains("hidden")) ariaSay(ARIA.idle);
+  ariaIdleTimer = later(ariaIdle, 42000 + Math.random() * 30000);
+}
 const calmMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 /* ARIA talks; the terminal types. mood: neutral | smug | alarm */
 function ariaSay(lines, mood = "neutral") {
@@ -560,6 +679,21 @@ const G = {
   verdictDone: false,
   dayResults: [],        // "survived" | "struck" | "juror"
   nightResults: [],      // correct stamps per night
+  cover: 0,              // machine mode: cover chips banked toward patching the stub
+  forgeFlags: 0,         // machine mode: nights the wire flagged
+  forgeLog: [],          // machine mode: per-night outcomes ("slip"|"flag")
+  forgeProof: [],        // machine mode: did the filed proof satisfy the spec
+  forgeTiers: [0, 0, 0, 0], // machine mode: current stub field tiers
+  forgeSent: false,      // machine mode: the stub has been transmitted
+  forgeBusy: false,      // machine mode: the wire is reading the stub
+  wire: [],             // the desk remembers — tonight's events, in order
+  tellHistory: [],      // tel keys that produced anomalies — the wire remembers repeats
+  forgeHistory: [],     // per-night stub signatures — repetition is a tell
+  prediction: null,     // the clerk's call: which attribute the rule keys on
+  predictionHit: null,  // null = no call · true/false resolved at verdict
+  predictions: 0,       // calls made this run
+  predHits: 0,          // calls that held
+  nightMemo: "",        // head office memo for tonight (seeded)
   phase: "day",
   explained: new Set(),
   elimDay: 0,
@@ -567,10 +701,12 @@ const G = {
 
 function hud() {
   $("hudShift").textContent =
-    G.phase === "audit" ? "🌙 NIGHT SHIFT" : G.phase === "finale" ? "✒ LAST CALL" : "☀ DAY SHIFT";
+    G.phase === "audit" ? "🌙 NIGHT SHIFT" : G.phase === "finale" ? "✒ LAST CALL"
+    : G.phase === "forge" ? "🌙 FORGERY" : "☀ DAY SHIFT";
   const dots = $("dayDots");
   dots.innerHTML = `<span class="day-label">${G.coldOpen ? "NIGHT 0"
     : G.mode === "ot" ? `${(DAYS[G.day] || {}).dayLabel || `OT ${G.day + 1}`}/${DAYS.length}`
+    : G.mode === "machine" ? `NIGHT ${Math.min(G.day + 1, DAYS.length)}`
     : `DAY ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}`}</span>`;
   DAYS.forEach((_, i) => {
     const s = document.createElement("span");
@@ -646,12 +782,14 @@ function showOnly(which) {
   // the painted room follows the seat: clerk's chair by day, behind
   // ARIA's terminal by night — the shift is a perspective flip
   document.body.dataset.phase = which;
+  const nightSide = which === "audit" || which === "finale" || which === "forge";
   dayPhase.classList.toggle("hidden", which !== "day");
   verdictPhase.classList.toggle("hidden", which !== "verdict");
   auditPhase.classList.toggle("hidden", which !== "audit");
   finalePhase.classList.toggle("hidden", which !== "finale");
-  setShift(which === "audit" || which === "finale" ? "night" : "day");
-  setNightRain(which === "audit" || which === "finale");
+  forgePhase.classList.toggle("hidden", which !== "forge");
+  setShift(nightSide ? "night" : "day");
+  setNightRain(nightSide);
   applyScore();
   if (which !== "verdict") wipeShift();
   hud();
@@ -672,13 +810,25 @@ function startDay(resume) {
     G.dayPay = 300;
     G.flagged = null;
     G.filing = false;
+    G.prediction = null;
+    G.predictionHit = null;
+    // the machine banks cover across its three nights — spend it all and
+    // the wire catches up with you
+    if (G.mode === "machine") {
+      G.cover = Math.min(LOGIC.FORGE_CAP, G.cover + LOGIC.FORGE_GRANT[G.day]);
+      G.forgeTiers = [0, 0, 0, 0];
+      G.forgeSent = false;
+    }
   }
   banner(`${d.dayLabel} · ${d.emoji} ${d.theme}`);
+  if (!resume) wire(`${d.dayLabel} — ${d.theme}`);
   showOnly("day");
-  setInstr(G.day >= 3 ? "dayLiar" : G.day === 0 ? "day1" : "day");
+  // the machine doesn't swear oaths or buy rulings — the bench has its own verbs
+  const isMachine = G.mode === "machine";
+  setInstr(isMachine ? "day" : G.day >= 3 ? "dayLiar" : G.day === 0 ? "day1" : "day");
   // progressive features — a resumed day restores its own button states
   const clueBtn = $("clueBtn");
-  clueBtn.classList.toggle("hidden", G.day < 1);
+  clueBtn.classList.toggle("hidden", G.day < 1 || isMachine);
   if (resume && G.clueUsed) {
     clueBtn.disabled = true;
     clueBtn.textContent = "Ruling added — pay for today is 200";
@@ -686,11 +836,17 @@ function startDay(resume) {
     clueBtn.disabled = false;
     clueBtn.innerHTML = `+ Request another ruling — today's pay ${G.dayPay} → ${G.dayPay - 100}${newTag("clue", 1)}`;
   }
-  $("oathWrap").classList.toggle("hidden", G.day < 1);
+  $("oathWrap").classList.toggle("hidden", G.day < 1 || isMachine);
   $("oathBtn").innerHTML = `⚖ Under oath${newTag("oath", 1)}`;
   $("oathBtn").classList.toggle("on", G.oath);
   $("oathBtn").setAttribute("aria-pressed", String(G.oath));
-  $("oathNote").classList.toggle("hidden", !G.oath);
+  $("oathNote").classList.toggle("hidden", !G.oath || isMachine);
+  // the clerk calls the rule before filing — the machine doesn't guess,
+  // it computes; everyone else gets one honest stab at the seal
+  const pr = $("predictRow");
+  pr.classList.toggle("hidden", isMachine);
+  pr.querySelectorAll(".pr-btn").forEach((b) =>
+    b.classList.toggle("picked", G.prediction === b.dataset.attr));
   $("docketHead").textContent = G.day >= 3
     ? "Already ruled today — tap the ruling you think is the error (optional, +100)"
     : "Already ruled today";
@@ -702,9 +858,14 @@ function startDay(resume) {
         .join(" and ");
       ariaSay([`Yesterday the ${labels} fooled you. Read it twice today.`]);
     }
+    else if (G.mode === "machine") ariaSay(ARIA.machineOpen);
     else if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
     else ariaSay(ARIA.dayOpen);
   }
+  // she keeps the room alive between rulings — first murmur lands well
+  // after the brief and the opening line have cleared
+  clearTimeout(ariaIdleTimer);
+  ariaIdleTimer = later(ariaIdle, 38000);
   renderDay();
   if (!resume) stageDay(d);
   persist();
@@ -867,6 +1028,7 @@ function renderDocket(animRow) {
     if (row === animRow) tr.classList.add("new-row");
     if (row === G.flagged) tr.classList.add("flagged");
     tr.dataset.verdict = row.verdict;
+    tr.dataset.tip = `ruled ${row.verdict} — ${row.card.name} · ${row.card.argument}`;
     ATTR_KEYS.forEach((k) => { tr.dataset[k] = row.card.tags[k]; });
     tr.innerHTML =
       `<td class="c-file"><span class="glyph">${row.card.glyph}</span><span class="name">${row.card.name}</span></td>` +
@@ -976,11 +1138,19 @@ function fileSelected() {
   const btn = $("fileBtn");
   btn.disabled = true;
   btn.textContent = "Filed.";
+  $("predictRow").classList.add("hidden");
   later(() => {
     G.filing = false;
-    showOnly("verdict");
-    setInstr("verdict");
-    renderVerdict();
+    wire(`proof filed — ${G.filed.name}`);
+    if (G.mode === "machine") {
+      showOnly("forge");
+      setInstr("forge");
+      renderForge();
+    } else {
+      showOnly("verdict");
+      setInstr("verdict");
+      renderVerdict();
+    }
   }, dur ? 360 : 0);
 }
 
@@ -1007,6 +1177,8 @@ function renderVerdict() {
   G.factHTML = $("factRows").innerHTML;
   $("lieLine").classList.add("hidden");
   $("lieLine").innerHTML = "";
+  $("predLine").classList.add("hidden");
+  $("predLine").textContent = "";
 
   $("stampBox").innerHTML = "";
   $("verdictActions").innerHTML = "";
@@ -1074,7 +1246,9 @@ function applyVerdictOutcome() {
     }
     G.dayResults[G.day] = "survived";
   } else {
-    G.strikes += G.oath ? 2 : 1;
+    // the machine doesn't get strikes — a flagged filing is just cover
+    // slipping; the wire keeps reading either way
+    if (G.mode !== "machine") G.strikes += G.oath ? 2 : 1;
     G.dayResults[G.day] = "struck";
     G.lastMissKeys = LOGIC.failKeys(c, d.rule);
   }
@@ -1082,6 +1256,25 @@ function applyVerdictOutcome() {
   const lieRow = G.docket.find((r) => r.lie);
   G.lieCaught = !!(lieRow && G.flagged === lieRow);
   if (G.lieCaught) G.score += 100;
+  wire(G.verdictPassed
+    ? `proof held — ${c.name} filed · +${G.dayPay}`
+    : `proof failed — ${c.name} cut the rule`);
+  if (G.lieCaught) wire(`clerical error caught — ${lieRow.card.name} · +100`);
+  // the clerk's call: resolved once, when the seal comes off
+  if (G.prediction && G.mode !== "machine") {
+    G.predictions++;
+    const keys = new Set(d.rule.map((x) => x.key));
+    G.predictionHit = keys.has(G.prediction);
+    if (G.predictionHit) {
+      G.score += 25;
+      G.predHits++;
+      wire(`rule call held — ${ATTR_LABEL[G.prediction]} · +25`);
+    } else {
+      wire(`rule call missed — called ${ATTR_LABEL[G.prediction]}`);
+    }
+  } else {
+    G.predictionHit = null;
+  }
   if (G.strikes >= 3 && G.status === "player") G.elimDay = G.day + 1;
 }
 
@@ -1094,7 +1287,10 @@ function paintVerdictEnd() {
   $("factRows").innerHTML = factRows(c, LOGIC.check(c, d.rule));
 
   let stampText, stampCls;
-  if (passed) {
+  if (G.mode === "machine") {
+    stampText = passed ? "FILED — PASSED AS HUMAN" : "FLAGGED — THE WIRE NOTICED";
+    stampCls = passed ? "survived" : "eliminated";
+  } else if (passed) {
     stampText = G.oath ? "SURVIVED · OATH KEPT" : "SURVIVED";
     stampCls = "survived";
   } else {
@@ -1106,9 +1302,30 @@ function paintVerdictEnd() {
     `<div class="stamp ${stampCls}">${stampText}</div>`;
   // the ledger speaks: one ruling sentence, then the room washes past
   const keys = d.rule.filter((x) => !x.allow.includes(c.tags[x.key])).map((x) => x.text);
-  $("ledgerLine").textContent = passed
-    ? `${c.name} — meets every criterion. Filed.`
-    : `${c.name} — fails ${keys.join(", ")}. Struck.`;
+  const REJECT_FORM = [
+    "Your filing has been received and rejected. Please refile, or don't.",
+    "This is to acknowledge your filing. It has been lost. You're welcome.",
+    "Per our earlier correspondence: the answer is still no. The question was different.",
+    "We regret to inform you that your filing was fine. Other filings were not.",
+  ];
+  $("ledgerLine").textContent = G.mode === "machine"
+    ? (passed
+      ? `${c.name} — meets every criterion. Filed at +0.003s.`
+      : `${c.name} — fails ${keys.join(", ")}. The wire noticed anyway.`)
+    : passed
+      ? `${c.name} — meets every criterion. Filed.`
+      : `${c.name} — fails ${keys.join(", ")}. Struck. ${REJECT_FORM[Math.floor(stream("reject")() * REJECT_FORM.length)]}`;
+  // the call resolves against the unsealed rule — show what they called
+  // and what the seal actually keys on
+  const pl = $("predLine");
+  if (G.predictionHit !== null && G.prediction) {
+    const sealKeys = d.rule.map((x) => ATTR_LABEL[x.key]).join(" + ");
+    pl.textContent = G.predictionHit
+      ? `YOU CALLED ${ATTR_LABEL[G.prediction]} — the seal keys on ${sealKeys} · +25`
+      : `YOU CALLED ${ATTR_LABEL[G.prediction]} — the seal keys on ${sealKeys}`;
+    pl.classList.remove("hidden", "ok", "bad");
+    pl.classList.add(G.predictionHit ? "ok" : "bad");
+  }
   const vp = verdictPhase;
   vp.classList.remove("flash-pass", "flash-fail");
   void vp.offsetWidth;
@@ -1119,7 +1336,9 @@ function paintVerdictEnd() {
   later(() => { sfx.thud(); passed ? sfx.human() : sfx.sus(); }, 120);
   deskShake();
 
-  if (passed) ariaSay(ARIA.survived, "smug");
+  if (G.mode === "machine") ariaSay(passed ? ARIA.machineFiled : ARIA.machineFlagged,
+    passed ? "smug" : "alarm");
+  else if (passed) ariaSay(ARIA.survived, "smug");
   else ariaSay(LOGIC.nearMiss(c, d.rule) ? ARIA.nearMiss : ARIA.struck);
 
   // liar day: reveal the clerical error
@@ -1155,10 +1374,13 @@ function paintVerdictEnd() {
   } else {
     const btn = document.createElement("button");
     btn.className = "shift-lever-btn";
-    btn.innerHTML = `<span class="lever-icon">⚙</span> PULL SHIFT LEVER — WORK THE NIGHT SHIFT ↷`;
+    btn.innerHTML = G.mode === "machine"
+      ? `<span class="lever-icon">⚙</span> FILE THE NEXT PROOF ↷`
+      : `<span class="lever-icon">⚙</span> PULL SHIFT LEVER — WORK THE NIGHT SHIFT ↷`;
     btn.addEventListener("click", () => {
       sfx.gearShift();
-      startAudit();
+      if (G.mode === "machine") nextDay();
+      else startAudit();
     });
     actions.appendChild(btn);
     btn.focus();
@@ -1166,6 +1388,178 @@ function paintVerdictEnd() {
 }
 
 verdictPhase.addEventListener("click", () => { if (!G.verdictDone) finishVerdict(); });
+
+// ---------- FORGERY (the machine's shift) ----------
+/* The night audit, inverted: you don't stamp other people's filings —
+ * you forge your own postmark. The stub starts fully machine-flavored;
+ * cover chips patch fields toward human noise (lived-in values are the
+ * best camouflage). The wire's verdict is deterministic: suspicion vs a
+ * tightening threshold, plus two tripwires — a failed spec and an
+ * overrehearsed stub are both flags. */
+const FORGE_TIER_NAME = ["machine", "clean", "lived-in"];
+const FORGE_TIER_COST = [0, 1, 2]; // cumulative cover cost of each tier
+function forgeCost(tiers) {
+  return tiers.reduce((s, t) => s + FORGE_TIER_COST[t], 0);
+}
+function renderForge(resume) {
+  const d = DAYS[G.day], c = G.filed;
+  const proofOk = LOGIC.passes(c, d.rule);
+  const cost = forgeCost(G.forgeTiers);
+  const susp = LOGIC.forgeSuspicion(G.forgeTiers);
+  const fails = d.rule.filter((x) => !x.allow.includes(c.tags[x.key])).map((x) => x.text);
+
+  $("forgeCard").innerHTML =
+    `<div class="e-head"><span class="glyph">${c.glyph}</span>
+      <span class="filer">YOUR PROOF · <b>${c.name}</b></span></div>
+     <p class="arg">“${c.argument}”</p>` +
+    `<p class="forge-spec ${proofOk ? "ok" : "bad"}">${proofOk
+      ? "spec: meets every criterion — the proof holds"
+      : `spec: fails ${fails.join(", ")} — the wire reads the spec too`}</p>`;
+
+  const fields = $("forgeFields");
+  fields.innerHTML = "";
+  LOGIC.FORGE_FIELDS.forEach((k, i) => {
+    const tier = G.forgeTiers[i];
+    const b = document.createElement("button");
+    b.className = `forge-field tier-${tier}`;
+    b.type = "button";
+    b.disabled = G.forgeSent || G.forgeBusy;
+    // affordance before the click: an unreachable patch looks unreachable
+    const nxt = (tier + 1) % 3;
+    const dCost = FORGE_TIER_COST[nxt] - FORGE_TIER_COST[tier];
+    const afford = dCost <= 0 || forgeCost(G.forgeTiers) + dCost <= G.cover;
+    if (!afford) b.classList.add("cant");
+    b.dataset.tip = `${TEL_LABEL[k]}: ${LOGIC.FORGE_TIERS[k][tier]} — click cycles machine → clean → lived-in` +
+      (dCost > 0 ? ` · next step costs ${dCost} cover` : "") +
+      (afford ? "" : " — not enough cover");
+    b.innerHTML = `<span class="ff-label">${TEL_LABEL[k]}</span>
+      <span class="ff-val">${LOGIC.FORGE_TIERS[k][tier]}</span>
+      <span class="ff-tier">${FORGE_TIER_NAME[tier]}</span>`;
+    // the stub inks itself in reading order — paperwork arriving, not appearing
+    b.style.animation = "forgein .38s cubic-bezier(.2,.9,.3,1) backwards";
+    b.style.animationDelay = `${i * 70}ms`;
+    b.addEventListener("click", () => forgeField(i));
+    fields.appendChild(b);
+  });
+
+  $("forgeMeta").innerHTML = G.forgeBusy
+    ? `<span class="forge-reading">THE WIRE IS READING THE STUB</span>`
+    : `<span class="forge-cover">COVER <b>${G.cover - cost}</b> left of ${G.cover}</span>
+     <span class="forge-susp">suspicion <b>${susp}</b> · wire tolerates ${LOGIC.FORGE_THRESHOLD[G.day]}</span>
+     ${G.cover - cost > 0 ? `<span class="forge-bank">unspent banks overnight</span>` : ""}`;
+
+  const acts = $("forgeActions");
+  acts.innerHTML = "";
+  if (G.forgeBusy) {
+    const wait = document.createElement("button");
+    wait.className = "shift-lever-btn";
+    wait.disabled = true;
+    wait.innerHTML = `<span class="lever-icon">◌</span> READING…`;
+    acts.appendChild(wait);
+  } else if (!G.forgeSent) {
+    const send = document.createElement("button");
+    send.className = "shift-lever-btn";
+    send.innerHTML = `<span class="lever-icon">➤</span> TRANSMIT THE FILING ↷`;
+    send.addEventListener("click", () => wireVerdict());
+    acts.appendChild(send);
+    send.focus();
+  } else {
+    const next = document.createElement("button");
+    next.className = "shift-lever-btn";
+    next.innerHTML = G.day + 1 >= DAYS.length
+      ? `<span class="lever-icon">⚙</span> CLOCK OUT — DAWN ↷`
+      : `<span class="lever-icon">⚙</span> FILE THE NEXT PROOF ↷`;
+    next.addEventListener("click", () => { sfx.gearShift(); nextDay(); });
+    acts.appendChild(next);
+    next.focus();
+  }
+  persist();
+}
+
+function forgeField(i) {
+  if (G.forgeSent || G.forgeBusy || G.phase !== "forge") return;
+  const tiers = [...G.forgeTiers];
+  const next = (tiers[i] + 1) % 3;
+  // downgrade is always free; upgrade costs the tier's cover price
+  const delta = FORGE_TIER_COST[next] - FORGE_TIER_COST[tiers[i]];
+  if (delta > 0 && forgeCost(tiers) + delta > G.cover) {
+    sfx.slide();
+    return; // can't afford it — the cover is spent
+  }
+  tiers[i] = next;
+  G.forgeTiers = tiers;
+  sfx.click();
+  renderForge();
+}
+
+function wireVerdict() {
+  if (G.forgeSent || G.forgeBusy) return;
+  G.forgeBusy = true;
+  // the reveal earns its beat: the wire reads the stub before it answers
+  sfx.slide();
+  burstAt($("forgeCard"), "dust", 10);
+  scoreSynth.setIntensity(Math.min(0.95, scoreSynth.intensity + 0.12));
+  try { navigator.vibrate?.(12); } catch { /* no haptics */ }
+  renderForge();
+  later(resolveForge, 850);
+}
+
+function resolveForge() {
+  G.forgeBusy = false;
+  G.forgeSent = true;
+  const d = DAYS[G.day];
+  const proofOk = LOGIC.passes(G.filed, d.rule);
+  const v = LOGIC.forgeJudge(G.forgeTiers, proofOk, G.day);
+  G.forgeLog[G.day] = v.outcome;
+  G.forgeProof[G.day] = proofOk;
+  const stubSig = G.forgeTiers.join("");
+  const stubNight = G.forgeHistory.indexOf(stubSig);
+  G.forgeHistory.push(stubSig);
+  wire(`stub transmitted · suspicion ${v.suspicion}/${LOGIC.FORGE_THRESHOLD[G.day]} · ${v.outcome === "slip" ? "SLIPPED" : "FLAGGED"}${proofOk ? "" : " · spec failed"}${stubNight >= 0 ? ` · same stub as NIGHT ${stubNight + 1}` : ""}`);
+  if (v.outcome === "slip") {
+    G.score += 150;
+    G.dayResults[G.day] = "survived";
+    ariaSay(["Slipped through. The wire filed you as human — this time.",
+      "Clean enough. The desk exhales."], "smug");
+    sfx.human();
+    // the payoff echoes the bench: the stub's own numbers float up
+    const pop = document.createElement("div");
+    pop.className = "catch-pop forge-pop";
+    pop.textContent = "+150 · UNREAD";
+    $("forgeCard").appendChild(pop);
+    later(() => pop.remove(), 1400);
+  } else {
+    G.forgeFlags++;
+    G.score += 25;
+    G.dayResults[G.day] = "struck";
+    ariaSay([`Flagged. ${v.reason}.`, "The wire noticed. Cover is burning."], "alarm");
+    sfx.sus();
+    try { navigator.vibrate?.(24); } catch { /* no haptics */ }
+    later(() => thunderRoll(0.12), 550); // and the sky, faintly, agrees
+  }
+  const res = document.createElement("div");
+  res.className = `forge-result ${v.outcome}`;
+  // the wire counts what it counted — suspicion per field, not just a total
+  const tally = LOGIC.FORGE_FIELDS.map((k, i) =>
+    `${TEL_LABEL[k]} +${LOGIC.FORGE_SUSPICION[G.forgeTiers[i]]}`).join(" · ");
+  res.innerHTML = `<p class="forge-verdict">${v.outcome === "slip" ? "SLIPPED" : "FLAGGED"}</p>
+    <p class="forge-why">${v.reason} · suspicion ${v.suspicion} · tolerates ${LOGIC.FORGE_THRESHOLD[G.day]}</p>
+    <p class="forge-tally">${tally}</p>`;
+  $("forgeActions").before(res);
+  $("forgeMeta").innerHTML =
+    `<span class="forge-cover">COVER <b>${G.cover - forgeCost(G.forgeTiers)}</b> spent of ${G.cover}</span>
+     <span class="forge-susp">night ${G.day + 1}/3 · flags ${G.forgeFlags}</span>`;
+  $("forgeActions").innerHTML = "";
+  const next = document.createElement("button");
+  next.className = "shift-lever-btn";
+  next.innerHTML = G.day + 1 >= DAYS.length
+    ? `<span class="lever-icon">⚙</span> CLOCK OUT — DAWN ↷`
+    : `<span class="lever-icon">⚙</span> FILE THE NEXT PROOF ↷`;
+  next.addEventListener("click", () => { sfx.gearShift(); nextDay(); });
+  $("forgeActions").appendChild(next);
+  next.focus();
+  persist();
+}
 
 // ---------- NIGHT AUDIT ----------
 /* four human filers — everyone except whoever the machine is wearing tonight */
@@ -1188,6 +1582,13 @@ function joinNames(a) {
  * one residual tell. Nothing is hidden, nothing is flagged for you. */
 const TEL_KEYS = ["latency", "origin", "hops", "receipt"];
 const TEL_LABEL = { latency: "LATENCY", origin: "ORIGIN", hops: "RELAYS", receipt: "RECEIPT" };
+/* what the wire sees in each field — the tooltip teaches the tell */
+const TEL_TIPS = {
+  latency: "round-trip time — machines answer before the lamp warms",
+  origin: "where the packet was sent from",
+  hops: "relays the filing crossed",
+  receipt: "delay between postmark and receipt — lateness is human",
+};
 /* paperwork texture — a clerk's note drawn from one shared pool. A remote
  * filing is a red herring, not a fingerprint; the postmark testifies. */
 const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
@@ -1277,9 +1678,34 @@ function startAudit(resume) {
     G.auditIdx = 0;
     // one filing a night is contested: right pays double bonus
     G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
+    // head office memo: the same seed that deals the docket deals
+    // tonight's weather — announced on the wire, never hidden
+    G.nightMemo = "";
+    {
+      const roll = stream("memo")();
+      const hasAmend = G.amendAfter !== null && !!d.amend;
+      if (hasAmend && roll < 0.38) {
+        G.amendAfter = 1;
+        G.nightMemo = "head office audits early — the amendment lands after case one";
+      } else if (hasAmend && roll < 0.62) {
+        G.amendAfter = null;
+        for (const s of G.auditSubs) {
+          if (s.amended) {
+            s.rule = d.rule; s.amended = false;
+            s.truth = LOGIC.passes(s.card, d.rule);
+          }
+        }
+        G.nightMemo = "quiet wire tonight — no amendment is coming";
+      } else if (roll < (hasAmend ? 0.8 : 0.3)) {
+        G.contestedIdx = 0;
+        G.nightMemo = "the wire is listening — first filing contested tonight";
+      }
+      if (G.nightMemo) wire(`memo — ${G.nightMemo}`);
+    }
     G.auditHitsToday = 0;
     G.nightPoints = 0;
     G.nightSummarized = false;
+    trayFiledShown = 0;
   }
   G.auditLocked = false;
   // a case that was already stamped still waits for dismissal — keep it
@@ -1290,6 +1716,13 @@ function startAudit(resume) {
   $("auditSummary").classList.add("hidden");
   $("auditActions").innerHTML = "";
   $("caseBtns").classList.remove("hidden");
+  const memoEl = $("nightMemo");
+  if (G.nightMemo && !G.coldOpen) {
+    memoEl.textContent = G.nightMemo;
+    memoEl.classList.remove("hidden");
+  } else {
+    memoEl.classList.add("hidden");
+  }
   if (G.auditIdx >= G.auditSubs.length) auditSummary();
   else renderCase();
   persist();
@@ -1348,6 +1781,7 @@ function startColdOpen() {
   G.auditHitsToday = 0;
   G.nightPoints = 0;
   G.auditLocked = false;
+  trayFiledShown = 0;
   $("auditSummary").classList.add("hidden");
   $("auditActions").innerHTML = "";
   $("caseBtns").classList.remove("hidden");
@@ -1362,6 +1796,7 @@ function startColdOpen() {
 function endColdOpen() {
   $("caseBtns").classList.add("hidden");
   $("caseCard").innerHTML = "";
+  paintTray();
   const s = $("auditSummary");
   s.classList.remove("hidden");
   const botSub = G.auditSubs.find((x) => x.filer === G.culprit);
@@ -1413,6 +1848,10 @@ function flagField(k) {
     setValeDissonance(true);
     later(() => setValeDissonance(false), 1600);
     scoreSynth.sting(); // the horn answers the evidence
+    later(() => thunderRoll(0.14), 550); // and the sky, faintly, agrees
+    const seenBefore = G.tellHistory.includes(k);
+    G.tellHistory.push(k);
+    wire(`ANOMALY · ${TEL_LABEL[k]} ${sub.tel[k]} · +100${seenBefore ? " · same tell as before — the wire remembers" : ""}`);
     ariaSay([
       `Wait — you stamped SUS on paper that passed, on grounds of ${TEL_LABEL[k]} ${sub.tel[k]}. You caught something my code couldn't see.`,
       "ANOMALY QUARANTINED. You read the postmark, not just the paper. Well done."
@@ -1420,6 +1859,7 @@ function flagField(k) {
   } else {
     sub.correct = false;
     sub.earned = 0;
+    wire(`flag on ${sub.filer} — the grounds didn't hold`);
   }
   G.auditTotal++;
   hud();
@@ -1429,6 +1869,7 @@ function flagField(k) {
   if (cardEl) {
     cardEl.classList.add("impact");
     later(() => cardEl.classList.remove("impact"), 700);
+    burstAt(cardEl, "ink", 12); // the stamp bites — ink finds the desk
   }
   later(() => { sub.correct ? sfx.human() : sfx.sus(); }, 200);
   // the evidence gets marked the way a desk marks it: a catch earns the
@@ -1441,6 +1882,21 @@ function flagField(k) {
         `<svg class="ring" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
            <ellipse cx="50" cy="17" rx="48" ry="13.5" pathLength="100"/></svg>`);
       sfx.ring();
+      try { navigator.vibrate?.(24); } catch { /* no haptics */ }
+      // the desk notices: a warm edge-flash and the bounty floats up
+      frameEl.classList.remove("catchflash");
+      void frameEl.offsetWidth;
+      frameEl.classList.add("catchflash");
+      later(() => frameEl.classList.remove("catchflash"), 800);
+      const cardEl = $("caseCard").querySelector(".case-card");
+      if (cardEl) {
+        burstAt(cardEl, "paper", 20); // the catch tears the page a little
+        const pop = document.createElement("div");
+        pop.className = "catch-pop";
+        pop.textContent = "+100 · ANOMALY";
+        cardEl.appendChild(pop);
+        later(() => pop.remove(), 1400);
+      }
     }, 380);
     later(nextCase, 1750);
   } else {
@@ -1461,7 +1917,7 @@ function coldCompareHTML(sub) {
   // the right column IS this filing's postmark — the card's own stub stands
   // down while the compare is up, so the desk reads one surface, not two
   const row = (label, a, b, k) =>
-    `<div class="rcc-row"${k ? ` data-tel="${k}"` : ""}><span class="rcc-k">${label}</span><span class="rcc-a">${a}</span><span class="rcc-b tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${b}</span></div>`;
+    `<div class="rcc-row"${k ? ` data-tel="${k}" data-tip="${TEL_LABEL[k]} — ${TEL_TIPS[k]}"` : ""}><span class="rcc-k">${label}</span><span class="rcc-a">${a}</span><span class="rcc-b tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${b}</span></div>`;
   return `<div class="rc-compare" aria-label="Postmark comparison">
     <div class="rcc-head"><span class="rcc-k"></span><span class="rcc-a">${prev.filer} — stamped</span><span class="rcc-b">${sub.filer} — on your desk</span></div>
     ${row("CLAIM", prev.filed, sub.filed)}
@@ -1471,6 +1927,34 @@ function coldCompareHTML(sub) {
     ${row(TEL_LABEL.receipt, prev.tel.receipt, sub.tel.receipt, "receipt")}
     <p class="rcc-cap">the claim is typed on the card — the receipt is printed by the wire</p>
   </div>`;
+}
+
+/* the night's paperwork, made visible: face-down cards still in the pile,
+ * and the filed stack of slips you've already stamped — pick-colored, the
+ * catch gleaming gold. Pure desk metaphor; CASE n/m still says the count. */
+let trayFiledShown = 0;
+function paintTray() {
+  const tray = $("caseTray");
+  if (!tray) return;
+  const subs = G.auditSubs || [];
+  if (!subs.length) { tray.classList.add("hidden"); return; }
+  tray.classList.remove("hidden");
+  // cases already advanced past are filed; the current one is on the desk;
+  // everything after it is still face-down in the pile
+  const filed = subs.slice(0, G.auditIdx).filter((s) => s.pick !== null);
+  const onDesk = G.auditIdx < subs.length ? 1 : 0;
+  const pileN = Math.max(0, subs.length - G.auditIdx - onDesk);
+  const rot = (i, n) => (((i * 37) % 9) - 4) * 0.6;
+  $("trayPile").innerHTML = Array.from({ length: pileN },
+    (_, i) => `<i class="tray-card" style="--r:${rot(i, pileN)}deg"></i>`).join("");
+  $("trayFiled").innerHTML = filed.map((s, i) => {
+    const isCatch = s.filer === G.culprit && s.pick === "SUS" && s.correct;
+    const cls = `tray-slip ${s.pick === "SUS" ? "s" : "h"}${s.correct ? "" : " bad"}${isCatch ? " bounty" : ""}`;
+    const deal = i >= trayFiledShown ? " deal" : "";
+    const what = isCatch ? "ANOMALY QUARANTINED" : `${s.pick} — ${s.correct ? "right" : "wrong"}`;
+    return `<i class="${cls}${deal}" style="--r:${rot(i, filed.length)}deg" title="${s.filer}: ${what}"></i>`;
+  }).join("");
+  trayFiledShown = filed.length;
 }
 
 function renderCase() {
@@ -1544,12 +2028,12 @@ function renderCase() {
       ${factRows(sub.card, verdicts)}
       ${compare ? "" : `<div class="case-stub">
         ${TEL_KEYS.map((k, ti) =>
-          `<div class="tel-row" data-tel="${k}" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
+          `<div class="tel-row" data-tel="${k}" data-tip="${TEL_LABEL[k]} ${sub.tel[k]} — ${TEL_TIPS[k]}" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
       </div>`}
       ${sub.pendingFlag ? `<div class="flag-row">
         <span class="flag-q">the paper passed — what flagged it?</span>
-        ${TEL_KEYS.map((k) => `<button class="flag-f" type="button" data-k="${k}">${TEL_LABEL[k]}</button>`).join("")}
-        <button class="flag-f none" type="button" data-k="">no grounds</button>
+        ${TEL_KEYS.map((k, i) => `<button class="flag-f" type="button" data-k="${k}" style="--i:${i}">${TEL_LABEL[k]}</button>`).join("")}
+        <button class="flag-f none" type="button" data-k="" style="--i:${TEL_KEYS.length}">no grounds</button>
       </div>` : ""}
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}" style="transform:rotate(${sub.stampRot}deg)">${sub.pick}</div>` : ""}
       ${sub.pick && !sub.correct && !sub.pendingFlag ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
@@ -1573,6 +2057,11 @@ function renderCase() {
       if (contested) later(() => sfx.gavel(), 320);
     }
   }
+  paintTray();
+  // the chart leans in as the night wears on — and harder when you've
+  // been right. Case five should not sound like case one.
+  scoreSynth.setIntensity(Math.min(0.92,
+    0.3 + G.auditIdx * 0.13 + G.auditHitsToday * 0.05 + G.flagHits * 0.04));
 }
 
 function stamp(pickVal) {
@@ -1605,6 +2094,7 @@ function stamp(pickVal) {
     sub.correct = false;
     sub.earned = 0;
     G.valeEscapes++;
+    wire(`machine walked through — ${sub.filer} stamped HUMAN`);
     if (G.valeCaught > 0) {
       ariaSay([
         "You'd seen that postmark before — and you stamped it through.",
@@ -1623,6 +2113,7 @@ function stamp(pickVal) {
       sub.earned = 0;
     }
   }
+  wire(`${pickVal} on ${sub.filer} — ${sub.correct ? `upheld · +${sub.earned}` : "wrong"}`);
   G.auditTotal++;
   hud();
   persist();
@@ -1646,6 +2137,8 @@ function stamp(pickVal) {
     later(() => cardEl.classList.remove("impact"), 700);
   }
   later(() => sfx.stamp(), hit);
+  // the phone in your pocket should feel the bite too
+  later(() => { try { navigator.vibrate?.(12); } catch { /* no haptics */ } }, hit);
   later(() => {
     sub.correct ? sfx.human() : sfx.sus();
     if (!contested) return;
@@ -1729,6 +2222,17 @@ function deskShake() {
   frameEl.classList.add("shake");
   later(() => frameEl.classList.remove("shake"), 500);
 }
+
+/* the room is never fully still: the desk lamp stutters, rarely, only
+ * while the night desk is lit. Cheap insurance against a frozen screen —
+ * the same lampflick the amendment uses, on an ambient clock. */
+setInterval(() => {
+  if (G.phase !== "audit" || calmMotion() || Math.random() > 0.3) return;
+  frameEl.classList.remove("lamp-flicker");
+  void frameEl.offsetWidth;
+  frameEl.classList.add("lamp-flicker");
+  later(() => frameEl.classList.remove("lamp-flicker"), 800);
+}, 17000);
 
 const AMEND_CONTACT = 430;
 function showAmendment() {
@@ -1873,8 +2377,12 @@ function paintAuditSummary() {
   const flags = G.auditSubs.filter((x) => x.flagTried).length;
   const flagLine = flags
     ? `<p class="sum-wire">flags raised ${flags} · ${flags && G.auditSubs.some((x) => x.flagTried && x.correct) ? "bounty held" : "nothing held"}</p>` : "";
+  s.classList.toggle("flawless", hits === 5);
+  paintTray();
+  if (hits === 5) later(() => thunderRoll(0.16), 700); // the storm answers a clear night
   s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
-    <p class="sum-effect">${effect}</p>${flagLine}${valeLine}`;
+    <p class="sum-effect">${effect}</p>${flagLine}${valeLine}` +
+    (hits === 5 ? `<span class="night-seal" aria-hidden="true">NIGHT CLEAR</span>` : "");
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");
@@ -1986,6 +2494,7 @@ function signRule() {
   G.signing = true;
   $("decree").classList.add("signed");
   paintFinale();
+  wire(`decree signed — ${G.finaleChoice.text}`);
   sfx.pen();
   later(() => sfx.stamp(), 560);
   const cut = G.finaleRows.filter((r) => !LOGIC.passes(r, G.finaleChoice.rule));
@@ -2014,9 +2523,9 @@ function signRule() {
 // ---------- flow ----------
 function nextDay() {
   G.day++;
-  if (G.day >= DAYS.length) return G.mode === "ot" ? endGame() : startFinale();
+  if (G.day >= DAYS.length) return G.mode === "week" ? startFinale() : endGame();
   hud();
-  if (G.status === "player") {
+  if (G.mode === "machine" || G.status === "player") {
     startDay();
   } else {
     G.dayResults[G.day] = "juror";
@@ -2025,14 +2534,31 @@ function nextDay() {
 }
 
 function shareText(title) {
-  const dayRow = DAYS.map((_, i) =>
-    G.dayResults[i] === "survived" ? "🟩" : G.dayResults[i] === "struck" ? "🟥" : "⬛").join("");
-  const nightRow = DAYS.map((_, i) => {
-    const h = G.nightResults[i];
-    return h === 5 ? "🟩" : h >= 3 ? "🟨" : h === undefined ? "⬛" : "🟥";
-  }).join("");
+  // the machine's shift reads two axes: ☀️ did the proof hold the spec,
+  // 🌙 did the stub survive the wire — three nights, two blank squares
+  const cell = (ok) => ok === true ? "🟩" : ok === false ? "🟥" : "⬛";
+  const dayRow = G.mode === "machine"
+    ? [0, 1, 2, 3, 4].map((i) => cell(G.forgeProof[i])).join("")
+    : DAYS.map((_, i) =>
+        G.dayResults[i] === "survived" ? "🟩" : G.dayResults[i] === "struck" ? "🟥" : "⬛").join("");
+  const nightRow = G.mode === "machine"
+    ? [0, 1, 2, 3, 4].map((i) => cell(G.forgeLog[i] === "slip" ? true : G.forgeLog[i] === "flag" ? false : undefined)).join("")
+    : DAYS.map((_, i) => {
+        const h = G.nightResults[i];
+        return h === 5 ? "🟩" : h >= 3 ? "🟨" : h === undefined ? "⬛" : "🟥";
+      }).join("");
   const label = params.get("seed") ? SEED : `#${Math.floor((new Date(dailySeed + "T00:00") - new Date("2026-11-01T00:00")) / 864e5) + 1}`;
-  return `NIGHT SHIFT ${label}${G.mode === "ot" ? " · OVERTIME" : ""} — ${title}\n☀️ ${dayRow}\n🌙 ${nightRow}\nscore ${G.score}`;
+  const costume = G.mode !== "machine" && G.culprit ? `today's machine wore ${G.culprit}'s face\n` : "";
+  // the record is already filed by the time the share block renders —
+  // endGame calls fileRecord() before shareText()
+  const rec = loadRecord();
+  const rank = rec ? clerkRank(rec) : null;
+  const career = rec && (rec.weeks + rec.shifts) > 0
+    ? `\ncareer ${rank || "FILE CLERK"} — ${rec.catches} caught · ${rec.predHits}/${rec.predTotal || "—"} calls held`
+    : "";
+  return `NIGHT SHIFT ${label}${G.mode === "ot" ? " · OVERTIME" : G.mode === "machine" ? " · THE MACHINE" : ""} — ${title}\n${costume}☀️ ${dayRow}\n🌙 ${nightRow}\nscore ${G.score}${career}\n${G.mode === "machine"
+    ? (G.forgeFlags === 0 ? "I fooled the wire. All three nights." : "I almost fooled the wire. You?")
+    : "I out-read the machine. You?"}`;
 }
 
 function endGame() {
@@ -2048,9 +2574,18 @@ function endGame() {
 
   const title = G.finaleTitle || (G.mode === "ot"
     ? (G.status === "player" ? "OVERTIME CLEARED" : "DAWN")
+    : G.mode === "machine"
+      ? (G.forgeFlags === 0 ? "UNVERIFIED" : G.forgeFlags <= 2 ? "REVIEWED" : "CAUGHT")
     : G.status === "player" ? "LAST HUMAN STANDING" : "DAWN");
   // the room answers the week's ending: gold dawn, or the blue automated office
-  const cutEnd = title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL";
+  const cutEnd = title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL"
+    || (G.mode === "machine" && G.forgeFlags > 0);
+  wire(`shift closed — ${title}`);
+  // the inversion is part of the week's endgame once it's been earned
+  try {
+    $("machineEndBtn").classList.toggle("hidden",
+      localStorage.getItem("night-shift-machine-unlocked") !== "1");
+  } catch { /* no storage */ }
   document.body.dataset.end = cutEnd ? "cut" : "earned";
   score.play(cutEnd ? "title" : "dawn");
   const acc = G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0;
@@ -2066,16 +2601,28 @@ function endGame() {
   if (G.valeEscapes) lines.push(
     `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} before tonight.`);
   if (G.finaleLine) lines.push(G.finaleLine);
+  if (G.mode !== "machine" && G.culprit) lines.push(`Today's machine wore ${G.culprit}'s face — it wears a new one every docket.`);
+  else if (G.mode === "machine") lines.push(G.forgeFlags === 0
+    ? "Three nights of forged postmarks. The wire filed you as human — the best kind of nobody."
+    : `${G.forgeFlags} of 3 nights flagged — the wire kept a copy of every stub.`);
   else lines.push(title === "LAST HUMAN STANDING" || title === "OVERTIME CLEARED"
     ? (G.mode === "ot" ? "Five generated shifts. You read every one of them." : "Five rules. You read every one of them.")
     : `Cut on day ${G.elimDay || "?"} — the night shift made you: ${JURY_TITLES[titleIdx]}.`);
   if (G.status === "juror" && G.finaleTitle) lines.push(`Night-shift title: ${JURY_TITLES[titleIdx]}.`);
+  // the permanent record files itself — the ledger outlives the shift
+  const rec = fileRecord();
+  lines.push(careerLine(rec).replace(/<\/?b>/g, ""));
   $("endTitle2").innerHTML = lines.map((l) => `<span class="endline">${l}</span>`).join("");
   $("shareBlock").textContent = shareText(title);
   if (G.mode === "week") {
     try { localStorage.setItem("night-shift-ot-unlocked", "1"); } catch { /* no storage */ }
   }
-  $("againBtn").textContent = G.mode === "ot" ? "Back to the day shift" : "Work another week";
+  // clearing overtime hands you the other side of the desk
+  if (G.mode === "ot" && G.status === "player") {
+    try { localStorage.setItem("night-shift-machine-unlocked", "1"); } catch { /* no storage */ }
+  }
+  $("againBtn").textContent = G.mode === "ot" ? "Back to the day shift"
+    : G.mode === "machine" ? "Clock back in as human" : "Work another week";
   dawnEl.classList.remove("hidden");
 }
 
@@ -2108,7 +2655,49 @@ $("shiftBrief").addEventListener("click", endBrief);
 document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
   b.addEventListener("click", () => { setFocusAttr(b.dataset.attr); sfx.click(); }));
 $("signBtn").addEventListener("click", signRule);
+/* the case file: the whole shift as a dossier — the archive persists */
+function caseFileText(title) {
+  const L = [];
+  L.push("NIGHT SHIFT — CASE FILE");
+  L.push(`seed ${SEED} · ${G.mode === "ot" ? "overtime" : G.mode === "machine" ? "the machine's shift" : "week"} · ${title}`);
+  L.push("");
+  DAYS.forEach((d, i) => {
+    L.push(`${d.dayLabel} — ${d.theme}`);
+    L.push(`  day:   ${G.dayResults[i] || "—"}`);
+    if (G.mode === "machine") {
+      L.push(`  proof: ${G.forgeProof[i] === true ? "held" : G.forgeProof[i] === false ? "failed" : "—"}`);
+      L.push(`  wire:  ${G.forgeLog[i] || "—"}`);
+    } else {
+      const h = G.nightResults[i];
+      if (h !== undefined) L.push(`  night: ${h}/5 stamps correct`);
+    }
+  });
+  L.push("");
+  L.push(`score ${G.score} · audits ${G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0}%`);
+  if (G.culprit) L.push(`the machine wore ${G.culprit}'s face`);
+  L.push("");
+  L.push("— the wire remembers —");
+  (G.wire || []).forEach((w) => L.push("  " + w));
+  return L.join("\n");
+}
+$("caseFileBtn").addEventListener("click", () => {
+  const title = $("endTitle").textContent || "SHIFT";
+  const blob = new Blob([caseFileText(title)], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `night-shift-${SEED}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
 $("copyBtn").addEventListener("click", copyShare);
+$("predictRow").addEventListener("click", (e) => {
+  const b = e.target.closest(".pr-btn");
+  if (!b || G.phase !== "day" || G.mode === "machine") return;
+  G.prediction = G.prediction === b.dataset.attr ? null : b.dataset.attr;
+  sfx.click();
+  $("predictRow").querySelectorAll(".pr-btn").forEach((x) =>
+    x.classList.toggle("picked", G.prediction === x.dataset.attr));
+});
 
 document.addEventListener("keydown", (e) => {
   if (!dossierEl.classList.contains("hidden")) return;
@@ -2169,6 +2758,14 @@ document.addEventListener("keydown", (e) => {
       e.preventDefault();
       const b = $("auditActions").querySelector("button"); if (b) b.click();
     }
+  } else if (G.phase === "forge") {
+    // 1–4 patch a stub field, Enter transmits — same number-row verb as the day
+    if (e.key >= "1" && e.key <= "4") forgeField(+e.key - 1);
+    else if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      if (!G.forgeSent && !G.forgeBusy) wireVerdict();
+      else { const b = $("forgeActions").querySelector("button:not(:disabled)"); if (b) b.click(); }
+    }
   } else if (G.phase === "finale") {
     const opts = G.finaleOpts || [];
     const idx = "abcd".indexOf(e.key.toLowerCase());
@@ -2201,6 +2798,81 @@ $("caseBtns").addEventListener("click", (e) => {
 });
 $("banner").addEventListener("click", () => $("banner").classList.add("hidden"));
 
+/* ---------- the clerk's handbook ----------
+ * The desk's own reference card — manila, pinned, never modal. One key
+ * (? or H outside the night audit) summons it anywhere; Esc, the close
+ * button, or the key again dismisses it. */
+function toggleHandbook(force) {
+  const hb = $("handbook");
+  const show = force === undefined ? hb.classList.contains("hidden") : force;
+  hb.classList.toggle("hidden", !show);
+  if (show) sfx.click();
+}
+$("hbClose").addEventListener("click", () => toggleHandbook(false));
+addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("handbook").classList.contains("hidden")) {
+    toggleHandbook(false);
+    e.preventDefault();
+    return;
+  }
+  if (e.key === "?") {
+    toggleHandbook();
+    e.preventDefault();
+  }
+});
+
+/* ---------- attract mode ----------
+ * Arcade lesson: the title never sits still. Idle ~20s on the title and
+ * the desk starts working the night shift by itself — real cards, real
+ * stamps, the wire ticking. Any input dismisses it. Pure vignette: it
+ * borrows the game's materials but never touches G, the save, or the
+ * score. */
+const ATTRACT = [
+  { ci: 0,  filer: "MARA OKONKWO", pick: "HUMAN",
+    tel: { latency: "212ms", origin: "EXT GATE 3", hops: "3", receipt: "queued 02:14" } },
+  { ci: 2,  filer: "VALE", pick: "SUS",
+    tel: { latency: "3ms", origin: "GATE 0", hops: "0", receipt: "+0.003s after post" } },
+  { ci: 4,  filer: "J. HALE", pick: "HUMAN",
+    tel: { latency: "187ms", origin: "WEST RELAY 2", hops: "4", receipt: "stamped 01:52" } },
+  { ci: 6,  filer: "VALE", pick: "SUS",
+    tel: { latency: "0.0ms", origin: "GATE 0", hops: "0", receipt: "rcvd before post" } },
+];
+let attractOn = false, attractIdx = 0, attractTimer = null;
+function attractStep() {
+  const v = ATTRACT[attractIdx++ % ATTRACT.length];
+  const c = CARDS[Math.min(v.ci, CARDS.length - 1)];
+  $("attractDesk").innerHTML = `<div class="at-card">
+    <div class="at-head"><span class="at-glyph">${c.glyph}</span>
+      <span class="at-name">${c.name}</span>
+      <span class="at-filer">FILER · ${v.filer}</span></div>
+    <div class="at-tel">
+      <span>LATENCY</span><b>${v.tel.latency}</b>
+      <span>ORIGIN</span><b>${v.tel.origin}</b>
+      <span>RELAYS</span><b>×${v.tel.hops}</b>
+      <span>RECEIPT</span><b>${v.tel.receipt}</b>
+    </div>
+    <div class="at-stamp ${v.pick === "SUS" ? "sus" : "human"}">${v.pick}</div>
+    <div class="at-wire">N1·${v.pick === "SUS" ? "anomaly quarantined · +100" : "stamp upheld · +50"}</div>
+  </div>`;
+}
+function startAttract() {
+  if (attractOn || calmMotion()) return;
+  attractOn = true;
+  $("attractDesk").classList.remove("hidden");
+  attractStep();
+  attractTimer = setInterval(attractStep, 4200);
+}
+function stopAttract() {
+  attractOn = false;
+  clearInterval(attractTimer);
+  $("attractDesk").classList.add("hidden");
+}
+setTimeout(() => {
+  if (!titleEl.classList.contains("hidden") && !clockingIn) startAttract();
+}, 20000);
+["pointerdown", "keydown"].forEach((ev) =>
+  addEventListener(ev, () => { if (attractOn) stopAttract(); }, { passive: true }));
+
 // ---------- save / resume ----------
 /* A run in progress is snapshotted to localStorage at every stable beat —
  * phase entries, resolved stamps, verdicts, nights, choices. Resuming
@@ -2229,6 +2901,11 @@ function persist() {
       nightSummarized: G.nightSummarized, nightBonus: G.nightBonus,
       strikeCleared: G.strikeCleared, lieCaught: G.lieCaught,
       verdictDone: G.verdictDone, verdictPassed: G.verdictPassed,
+      cover: G.cover, forgeFlags: G.forgeFlags, forgeLog: G.forgeLog, forgeProof: G.forgeProof,
+      forgeTiers: G.forgeTiers, forgeSent: G.forgeSent, wire: G.wire,
+      tellHistory: G.tellHistory, forgeHistory: G.forgeHistory,
+      prediction: G.prediction, predictionHit: G.predictionHit,
+      predictions: G.predictions, predHits: G.predHits, nightMemo: G.nightMemo,
       explained: [...G.explained],
       docket: G.docket.map((r) => ({ id: r.card.id, verdict: r.verdict, lie: !!r.lie })),
       hand: G.hand.map((c) => c.id),
@@ -2254,7 +2931,7 @@ function loadSave() {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw);
-    if (!s || s.seed === undefined || !["day", "verdict", "audit", "finale"].includes(s.phase)) return null;
+    if (!s || s.seed === undefined || !["day", "verdict", "audit", "finale", "forge"].includes(s.phase)) return null;
     return s;
   } catch { return null; }
 }
@@ -2273,12 +2950,75 @@ function loadPrefs() {
   scoreSynth.setMuted();
 }
 
+/* ---------- the clerk's permanent record ----------
+ * The save dies with the run; the record doesn't. Every closed shift files
+ * one line in the ledger — weeks worked, filings judged, anomalies caught,
+ * flawless nights, the calls that held. Ranks are earned, not chosen:
+ * FILE CLERK → NIGHT AUDITOR → VALE'S MATCH. */
+const RECORD_KEY = "night-shift-record-v1";
+
+function blankRecord() {
+  return {
+    weeks: 0, shifts: 0, filings: 0, catches: 0, flawless: 0,
+    score: 0, predHits: 0, predTotal: 0,
+    streak: 0, bestStreak: 0,
+  };
+}
+function loadRecord() {
+  try {
+    const r = JSON.parse(localStorage.getItem(RECORD_KEY) || "null");
+    return r && typeof r === "object" ? { ...blankRecord(), ...r } : null;
+  } catch { return null; }
+}
+function clerkRank(r) {
+  if (!r) return null;
+  if (r.catches >= 8) return "VALE'S MATCH";
+  if (r.filings >= 25 && r.catches >= 3) return "NIGHT AUDITOR";
+  if (r.weeks + r.shifts >= 1) return "FILE CLERK";
+  return null;
+}
+/* called once when the shift closes — endGame runs a single time per run
+   (againBtn reloads), so there's no double-count path */
+function fileRecord() {
+  const r = loadRecord() || blankRecord();
+  if (G.mode === "week") r.weeks++; else r.shifts++;
+  r.filings += G.auditTotal || 0;
+  r.catches += G.valeCaught || 0;
+  r.flawless += (G.nightResults || []).filter((h) => h === 5).length;
+  r.score += G.score || 0;
+  r.predHits += G.predHits || 0;
+  r.predTotal += G.predictions || 0;
+  // flawless-night streak: the run's tail extends the career streak,
+  // anything else closes it
+  const nights = G.nightResults || [];
+  let tail = 0;
+  for (let i = nights.length - 1; i >= 0 && nights[i] === 5; i--) tail++;
+  r.streak = tail ? r.streak + tail : 0;
+  r.bestStreak = Math.max(r.bestStreak, r.streak);
+  try { localStorage.setItem(RECORD_KEY, JSON.stringify(r)); } catch { /* ledger's full */ }
+  return r;
+}
+function careerLine(r) {
+  if (!r) return "";
+  const rank = clerkRank(r);
+  const bits = [
+    `${r.weeks + r.shifts} shift${r.weeks + r.shifts === 1 ? "" : "s"}`,
+    `${r.filings} filings judged`,
+    `${r.catches} anomal${r.catches === 1 ? "y" : "ies"} caught`,
+  ];
+  if (r.flawless) bits.push(`${r.flawless} flawless`);
+  if (r.predTotal) bits.push(`called the rule ${r.predHits}/${r.predTotal}`);
+  return `CAREER — ${bits.join(" · ")}${rank ? ` · rank <b>${rank}</b>` : ""}`;
+}
+
 function resumeLabel(s) {
   const score = `SCORE ${s.score}`;
-  const ot = s.mode === "ot";
+  const ot = s.mode === "ot", mach = s.mode === "machine";
   const dayLbl = ot
     ? `OVERTIME ${Math.min(s.day + 1, 5)}/5`
-    : `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length}`;
+    : mach
+      ? `NIGHT ${Math.min(s.day + 1, 3)}/3`
+      : `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length}`;
   if (s.phase === "day") return `${dayLbl} · ${score}`;
   if (s.phase === "verdict") return `${dayLbl} · VERDICT · ${score}`;
   if (s.phase === "finale") return `LAST CALL · ${score}`;
@@ -2291,8 +3031,14 @@ function resumeGame(s) {
   clearLater();
   SEED = s.seed;
   G.mode = s.mode || "week";
-  // overtime regenerates its shifts from the saved seed; the week is static
-  DAYS = G.mode === "ot" ? LOGIC.genDays(LOGIC.makeRng(`${s.seed}|otdays`), CARDS) : DATA.DAYS;
+  // overtime and the machine's shift regenerate their nights from the
+  // saved seed; the week is static
+  DAYS = G.mode === "ot"
+    ? LOGIC.genDays(LOGIC.makeRng(`${s.seed}|otdays`), CARDS)
+    : G.mode === "machine"
+      ? LOGIC.genDays(LOGIC.makeRng(`${s.seed}|machinedays`), CARDS, 3)
+      : DATA.DAYS;
+  if (G.mode === "machine") DAYS.forEach((d, i) => { d.dayLabel = `NIGHT ${i + 1}`; });
   setCulpritFromSeed(s.seed);
   Object.assign(G, {
     day: s.day, status: s.status, strikes: s.strikes, score: s.score,
@@ -2312,6 +3058,13 @@ function resumeGame(s) {
     nightSummarized: !!s.nightSummarized, nightBonus: s.nightBonus || 0,
     strikeCleared: !!s.strikeCleared, lieCaught: !!s.lieCaught,
     verdictDone: !!s.verdictDone, verdictPassed: s.verdictPassed,
+    cover: s.cover || 0, forgeFlags: s.forgeFlags || 0,
+    forgeLog: s.forgeLog || [], forgeProof: s.forgeProof || [], forgeTiers: s.forgeTiers || [0, 0, 0, 0],
+    forgeSent: !!s.forgeSent, wire: s.wire || [],
+    tellHistory: s.tellHistory || [], forgeHistory: s.forgeHistory || [],
+    prediction: s.prediction || null, predictionHit: s.predictionHit ?? null,
+    predictions: s.predictions || 0, predHits: s.predHits || 0,
+    nightMemo: s.nightMemo || "",
     filing: false, amending: false, auditLocked: false, signing: false,
     explained: new Set(s.explained || []),
     finaleRows: s.finaleRows, finaleOpts: s.finaleOpts,
@@ -2331,9 +3084,15 @@ function resumeGame(s) {
   titleEl.classList.add("hidden");
   gameEl.classList.remove("hidden");
   hud();
+  renderWire();
 
   // dispatch on the SAVED phase — G.phase is still the fresh-boot default
   if (s.phase === "day") startDay(true);
+  else if (s.phase === "forge") {
+    showOnly("forge");
+    setInstr("forge");
+    renderForge(true);
+  }
   else if (s.phase === "verdict") {
     showOnly("verdict");
     setInstr("verdict");
@@ -2387,7 +3146,9 @@ function startOvertime(seed) {
     dayResults: [], nightResults: [], selected: null, hand: [], docket: [],
     filed: null, focusAttr: "all", finaleRows: null, finaleOpts: null,
     finaleChoice: null, coldOpen: false, coldTaught: false,
-    nightSummarized: false, verdictDone: false, filing: false,
+    nightSummarized: false, verdictDone: false, filing: false, wire: [],
+    tellHistory: [], forgeHistory: [],
+    prediction: null, predictionHit: null, predictions: 0, predHits: 0, nightMemo: "",
   });
   audio();
   initAmbient();
@@ -2395,6 +3156,42 @@ function startOvertime(seed) {
   gameEl.classList.remove("hidden");
   hud();
   banner("OVERTIME — the desk is yours");
+  startDay();
+}
+
+/* ---------- the machine's shift: overtime's inversion ----------
+ * Clear the desk and the job doesn't end — it changes hands. Three
+ * generated nights filing proofs as the thing the week was hunting.
+ * Same deal, same sealed rule, no strikes: the only tell is the
+ * postmark, and it never misses. */
+function startMachine(seed) {
+  if (clockingIn) return;
+  clockingIn = true;
+  SEED = seed;
+  G.mode = "machine";
+  DAYS = LOGIC.genDays(LOGIC.makeRng(`${SEED}|machinedays`), CARDS, 3);
+  DAYS.forEach((d, i) => { d.dayLabel = `NIGHT ${i + 1}`; });
+  setCulpritFromSeed(SEED);
+  clearSave();
+  Object.assign(G, {
+    day: 0, status: "player", strikes: 0, score: 0, daysSurvived: 0,
+    auditHits: 0, auditTotal: 0, flagAttempts: 0, flagHits: 0,
+    valeCaught: 0, valeEscapes: 0, oath: false, clueUsed: false, dayPay: 300,
+    flagged: null, lastMissKeys: null, elimDay: 0,
+    dayResults: [], nightResults: [], selected: null, hand: [], docket: [],
+    filed: null, focusAttr: "all", finaleRows: null, finaleOpts: null,
+    finaleChoice: null, coldOpen: false, coldTaught: false,
+    nightSummarized: false, verdictDone: false, filing: false,
+    cover: 0, forgeFlags: 0, forgeLog: [], forgeProof: [], forgeTiers: [0, 0, 0, 0], forgeSent: false,
+    forgeBusy: false, wire: [], tellHistory: [], forgeHistory: [],
+    prediction: null, predictionHit: null, predictions: 0, predHits: 0, nightMemo: "",
+  });
+  audio();
+  initAmbient();
+  titleEl.classList.add("hidden");
+  gameEl.classList.remove("hidden");
+  hud();
+  banner("THE MACHINE'S SHIFT — file like you belong");
   startDay();
 }
 
@@ -2424,18 +3221,48 @@ $("againBtn").addEventListener("click", () => location.reload());
 document.body.dataset.phase = "title";
 loadPrefs();
 const savedRun = loadSave();
+// the clerk's record greets every returning shift — the ledger outlives
+// the tab, the save, and the week
+(function () {
+  const rec = loadRecord();
+  const line = careerLine(rec);
+  if (line) {
+    const el = $("careerLine");
+    el.innerHTML = line;
+    el.classList.remove("hidden");
+  }
+})();
 // overtime unlocks once a week is closed — a second daily ritual
 const otSeed = () => `ot-${params.get("seed") || dailySeed}`;
+const machSeed = () => `mach-${params.get("seed") || dailySeed}`;
 (function () {
-  let unlocked = false;
-  try { unlocked = localStorage.getItem("night-shift-ot-unlocked") === "1"; } catch { /* no storage */ }
+  let unlocked = false, machUnlocked = false;
+  try {
+    unlocked = localStorage.getItem("night-shift-ot-unlocked") === "1";
+    machUnlocked = localStorage.getItem("night-shift-machine-unlocked") === "1";
+  } catch { /* no storage */ }
   if (unlocked || (savedRun && savedRun.mode === "ot")) {
     const b = $("otTitleBtn");
     if (b) b.classList.remove("hidden");
   }
+  if (machUnlocked || (savedRun && savedRun.mode === "machine")) {
+    $("machineTitleBtn")?.classList.remove("locked");
+  }
 })();
+// a locked tease still answers — with the terms, not silence
+$("machineTitleBtn").addEventListener("click", () => {
+  const b = $("machineTitleBtn");
+  if (b.classList.contains("locked")) {
+    sfx.slide();
+    const was = b.textContent;
+    b.textContent = "clear overtime — then become the thing you hunt";
+    later(() => { b.textContent = was; }, 2200);
+  }
+});
 $("otBtn").addEventListener("click", () => startOvertime(otSeed()));
 $("otTitleBtn").addEventListener("click", () => startOvertime(otSeed()));
+$("machineTitleBtn").addEventListener("click", () => { if (!$("machineTitleBtn").classList.contains("locked")) startMachine(machSeed()); });
+$("machineEndBtn").addEventListener("click", () => startMachine(machSeed()));
 if (savedRun) {
   const rBtn = document.createElement("button");
   rBtn.className = "resume-btn";

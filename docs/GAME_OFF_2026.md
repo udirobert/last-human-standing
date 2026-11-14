@@ -218,3 +218,96 @@ Read the four most-referenced craft articles behind the itch game-design/tutoria
 - **Quality Guidelines → hard checklist gate:** `ITCH_PAGE.md` gains a "Platform + disclosure metadata" section — AI disclosure filled (art: MiniMax H3 generative, tag AI-assisted; WebAudio score: exempt, say so), Web/HTML5 platform only, English, no tag stuffing, and "don't publish until the page is complete" (the Most Recent boost is one-shot). Upload checklist also gains the frame-1 cover check.
 
 Tripwire after the batch: `test-logic.mjs` ALL PASS (300 OT weeks, 2000 finale seeds) · `audit-deduction.mjs` ONE-WORD-HARMFUL 0% on all five days. Repackaged `dist/night-shift-itch.zip` — 4.8MB.
+
+## Resonance pass — relatable-layer enhancements (Nov 14, pm)
+
+A design brainstorm on making the game land for more people turned into shipped changes. The through-line: the game was already about *proof of humanity as paperwork* — these changes name the real-world rituals it rhymes with and give the machine a inner life.
+
+- **Nine new cards** (`riddles.js`, deck now 49): night market, temple bell at dusk, off-shift nurse, 3am feeding, last delivery route, the 2am scroll, stockroom inventory — plus two tonal-range outliers: *Microwave fish, 1am* ("No further questions.") and the fourth-wall *loading screen, day 4*. Same four-fact schema; no new art needed (vignette fallback covers missing `card-*.webp`).
+- **The machine wants in** (`logic.js` `MACHINE_ARGS`): the finale culprit's filing now speaks in the machine's own voice some of the time — "I have never been cold. I believe this is what warmth is for." — instead of the borrowed card's argument. OT nights occasionally draw `MACHINE_CONFESSIONS` valeLines ("If the proof is a life, mine is the smallest one on the docket. File it anyway.", ~18%).
+- **"Stayed up late" finale clause**: lateness is now a first-class criterion — finale rows carry a `late` pseudo-tag (human postmarks are all ≥51min; the machine's is +0.003s). ~35% of seeds the winning clause is *stayed up late* instead of the shared-fact clause; when it isn't the answer it can't appear (would be a second right answer). "You win by being gloriously inefficient" is now literally a rule you can write.
+- **THE VERIFICATION**: new OT theme — its riddle is filed like a captcha ("Select all filings that prove…", "Human check — prove that…").
+- **Humor vectors**: failed day filings append a bureaucratic rejection couplet ("Your filing has been received and rejected. Please refile, or don't." — seeded per docket); ARIA's dayOpen gained the recipe quirk ("I once answered a riddle with a recipe. Nobody asks about it."); share text now ends with a taunt ("I out-read the machine. You?" / machine mode: "I almost fooled the wire. You?").
+- **THE MACHINE'S SHIFT** (new mode, `game.js`): clear overtime → title unlocks a third button. Three generated nights (`mach-<date>` seed) where you file proofs *as* the machine — same deal/rule machinery, no strikes, stamp text becomes "FILED — PASSED AS HUMAN" / "FLAGGED — THE WIRE NOTICED", ledger always reads +0.003s. Ends at REVIEWED in the blue automated-office room. Resume-safe; day phase only, no audit/finale.
+
+Verified: `test-logic.mjs` ALL PASS (finale rotation still exactly-4-options/one-cuts-culprit with the late clause) · real-Chrome smoke of machine mode end-to-end (day → verdict → 3 nights → REVIEWED, correct stamp/ledger/share text).
+
+## THE MACHINE'S SHIFT — forgery bench redesign (Nov 14, late)
+
+Playtest feedback rightly called the first machine mode a reskin: same deal, same docket, same stamp — new labels only. Rebuilt it as a mechanically distinct mode instead of a cosmetic one.
+
+- **New phase**: filing a proof no longer routes to the verdict/audit loop — `fileSelected` sends machine mode to `forgePhase`. The deduction verb stays (you still have to satisfy the sealed rule), but the night audit is replaced by a **forgery bench**: your own packet stub — latency, origin, relays, receipt — arrives fully machine-flavored (`3ms` / `GATE 0` / `0` / `+0.003s after post`).
+- **Cover economy** (`logic.js`): each night grants cover (5/4/3, bankable up to 7 — spend it all and the wire catches up). Clicking a field cycles its tier: machine → clean human (1 cover) → lived-in human (2 cover — retried, delayed, VPN exit, the noise real filings have). Downgrades are free.
+- **Deterministic wire** (`forgeJudge`): suspicion = 2·machine + 1·clean + 0·lived-in fields vs a tightening tolerance (4/3/2). Two tripwires: a proof that fails the day's spec is flagged regardless of the postmark, and an all-clean stub is flagged as *overrehearsed* — humans don't polish every field. The mode's thesis: you win by being convincingly imperfect.
+- **Endings**: UNVERIFIED (slipped all three — the wire filed you as human), REVIEWED (≤2 flags), CAUGHT. Share text upgrades on a clean sweep ("I fooled the wire. All three nights.").
+- Resume-safe: cover, tiers, flags, forge log and sent state all persist through the existing save path (`phase: "forge"`).
+
+Verified: `forgeJudge` unit-checked across tier combinations; `test-logic.mjs` ALL PASS (forge additions don't touch deal/audit/finale invariants); real-Chrome smoke — filed proof → patched fields (cover 5→1, suspicion 8→4) → SLIPPED → three nights → REVIEWED ending with correct title.
+
+## Delight pass + forge juice (Nov 14, late)
+
+A second research pass (`docs/UI_DENSITY_PATTERNS.md` — juice must be success-dependent, anticipation is a reward multiplier, the verb should invite itself, haptics as fourth channel, choreographed entrances, payoffs echoing their teachers) landed as ambient upgrades, then got extended to the forge bench so machine mode feels as finished as the week it inverts.
+
+- **Desk tension drives the kit** (`score.js` `setIntensity`): drum voices scale, ghost-brush rate climbs, and past 0.6 an extra kick + low brush answer on the off-off-beat. Audit intensity escalates per case and per hit; finale sits at 0.55; forge climbs its own ramp 0.45 → 0.81 across the three nights.
+- **Catch payoff completes its pattern**: the machine's field rings *and* the human baseline cell beside it lifts — the player sees the contrast that proved it, not just the answer.
+- **Ambient invite**: enabled stamp buttons, all `.shift-lever-btn` primary verbs (TRANSMIT, CLOCK OUT, overtime), and `#signBtn` share the 3.6s `vbbreathe` lamp-glow.
+- **Haptics**: `navigator.vibrate` 12ms on stamp contact, 24ms on catch — guarded, desktop-silent.
+- **Forge bench wired into the same system**: TRANSMIT earns an 850ms "THE WIRE IS READING THE STUB" anticipation beat (intensity +0.12, slide whoosh, 12ms haptic) before SLIPPED/FLAGGED; slip floats "+150 · UNREAD", flag vibrates 24ms + thunder rolls; the verdict now shows the wire's per-field suspicion tally (the ringed-baseline pattern — show what it counted, not just the total). Stub fields ink in staggered reading order; oath/clue controls hidden in machine mode (the bench has its own verbs).
+
+Verified: real-Chrome smoke — forge fields stagger in, oath/clue hidden, READING state during anticipation, SLIPPED with correct tally (LATENCY +1 · ORIGIN +1 · RELAYS +2 · RECEIPT +0), zero console errors.
+
+## Forge accessibility + share grid + polish audit (Nov 14, late)
+
+Closed the two gaps flagged after the juice pass, then ran a full-repo consistency audit over everything shipped this session.
+
+- **Forge keyboard path**: `1`–`4` cycle stub fields, `Enter`/`Space` transmits then advances — same number-row verb grammar as the day phase. Verified in real Chrome: keys patch tiers correctly, transmit → FLAGGED with correct tally, Enter advances to the next night, zero console errors.
+- **Cover banking is now legible**: `forgeMeta` shows "unspent banks overnight" whenever cover remains, and `INSTR.forge` teaches the keys + the banking rule up front.
+- **Share grid tells the two-axis story**: machine mode previously rendered 🌙 as five blank squares (nightResults never populates). Now ☀️ = did the proof satisfy the spec (`forgeProof`), 🌙 = did the stub survive the wire (`forgeLog`) — three nights plus two blank squares, persisted through save/resume.
+- **Audit findings fixed**: `vbbreathe` reduced-motion coverage extended to `.shift-lever-btn`/`#signBtn` (the breathe selector had outgrown its motion-off twin); `forgeBusy` added to the base state literal; `forgeMeta` is `aria-live="polite"`.
+- **Audit findings accepted as-is**: machine-mode verdict/audit copy branches are unreachable dead code (forge intercepts before verdict) — harmless, kept for clarity; a silent `sfx.slide` on unaffordable patches is enough feedback at this density; `tray-test.tmp.mjs` left alone (not ours).
+
+Verified: `test-logic.mjs` ALL PASS · keyboard smoke clean · repackaged `dist/night-shift-itch.zip` 4.6MB.
+
+## Shipped-games UI study — judge feedback "too simple" (Nov 14, late)
+
+Judge called the UI/UX too simple to win. Diagnosis: the mechanics aren't simple — the *visibility* is. Events are ephemeral (ariaSay, toasts, instant phase swaps), so players see answers but never the systems producing them. Studied OpenTTD (`src/` news/message + window/tooltip code), godot-demo-projects (`gui/` control_gallery, accessibility, theming_override, multiple_resolutions; `2d/`), and phaserjs/examples (`public/examples` particles/camera/tweens/filters). Five adoptions written up as patterns 13–17 in `docs/UI_DENSITY_PATTERNS.md`: persistent desk wire log, tooltip-on-everything, full control state matrix, DOM particle bursts, phase fades + counting numbers. Ship order: wire log → tooltips → state matrix → particles → transitions.
+
+## Visibility pass — wire log, tooltips, state matrix, particles, transitions (Nov 14, late)
+
+Implemented all five adoptions from the shipped-games study (patterns 13–17 in UI_DENSITY_PATTERNS.md). Judge feedback was "UI/UX too simple to win" — the fix is making the systems visible and physical.
+
+- **The wire** (`#wireLog` under the HUD): every stamp, flag, filing, verdict, forge transmit and shift close lands as a dated `N·event` line — last four visible, 60-entry cap, persisted through save/resume. Catches the resolution paths the first pass missed: SUS-pending-flag resolutions, machine walk-throughs, failed flag grounds.
+- **Tooltips** (`data-tip` + one delegated handler, `#uiTip`): tel rows and compare rows explain what the wire sees ("LATENCY 3ms — machines answer before the lamp warms"), docket rows read their ruling on hover, forge fields show tier cost + affordability, cover chips explain banking. Keyboard users get tips on focus.
+- **State matrix**: `:focus-visible` accent rings on all controls, universal `:active` press-down, forge fields that can't afford their next tier render `.cant` (dimmed + "can't reach" + not-allowed cursor) *before* the click.
+- **Particles** (`#fxLayer` + `burst()`): ink spatter on stamp impact, paper flecks on anomaly catch, dust off the stub on transmit — ~40 divs, CSS keyframes, `calmMotion`-gated.
+- **Transitions**: every phase section arrives with a 240ms `phasein` (fade + 8px rise), all killed under reduced-motion; score already tweened — now the whole UI moves like a desk, not a webpage.
+
+Verified: real-Chrome playthrough — cold open → day → verdict → audit, wire accumulating correctly (`DAY 1 — THE DAWN | proof filed | proof failed | HUMAN on VALE — wrong`), tel tooltip live, zero console errors.
+
+## Differentiation pass — lessons from DIFFERENTIATION.md (Nov 14, late)
+
+Implemented the priced leans from the comp research (`docs/DIFFERENTIATION.md`).
+
+- **Title tease**: THE MACHINE'S SHIFT is now visible-but-locked on the title (`#machineTitleBtn.locked`, dashed border) — clicking it answers with the terms ("clear overtime — then become the thing you hunt") instead of silence. Once unlocked it also appears on the end screen (`#machineEndBtn`). The inversion is part of the week's endgame, not a hidden bonus.
+- **Daily-docket hook**: share text and the epilogue now name the costume — "today's machine wore MARA's face — it wears a new one every docket." The daily comparison is the Wordle hook, finally on the surface.
+- **The wire remembers you**: anomaly catches note repeated tells ("same tell as before — the wire remembers"); forge nights cross-reference identical stubs ("same stub as NIGHT 1"). `tellHistory`/`forgeHistory` persist through save/resume.
+- **Case file export**: end screen gains "Case file (.txt)" — a downloadable dossier with per-day results, night audit totals, forge proofs/wire outcomes, score, the culprit's face, and the full wire log. The archive persists; the Golden Idol replay instinct, productized.
+- **Pitch copy**: itch short description and README now lead with the loneliness thesis ("the only admissible evidence is a life… the saddest filing on the docket is the one trying to belong") per the pitch sentence in DIFFERENTIATION.md.
+
+Not done (priced higher): haunted-paperwork ledger degradation and machine-recognition filings — medium-cost ambience pass, candidate for next session. User-side WIP (`prediction`, `nightMemo`, `predictRow`) left untouched.
+
+Verified: locked-title click-through in real Chrome, zero console errors.
+
+## Depth pass — five systems made playable (Nov 15)
+
+Second judge-facing pass after the visibility work: not more legibility, more *systems the player owns*. All five verified in jsdom drive-throughs incl. a full bot-played run to dawn, zero JS errors.
+
+- **Attract mode**: 20s idle on the title runs a self-playing reel — real card data, stamps, postmarks, wire lines, including a VALE catch. Any input dismisses; `calmMotion()` skips it. Pure vignette: borrows the game's materials, never touches `G`/save/score. *Known limit: demos the stamp verb, not the deduction — see deduction-attract plan.*
+- **Prediction stamp** (`#predictRow`): before filing, the clerk calls the rule — WHERE / WHEN / WHO / IN·OUT. Resolved at verdict against the unsealed rule's keys: hit +25, shown as `YOU CALLED WHERE — the seal keys on WHEN + WHO`. Optional, no penalty for abstaining or missing. Persisted via save. Machine mode exempt (it computes, doesn't guess).
+- **Clerk's permanent record** (`night-shift-record-v1`): career ledger separate from the run save — shifts, filings judged, anomalies caught, flawless nights, score, prediction record, flawless-night streak. Ranks FILE CLERK → NIGHT AUDITOR → VALE'S MATCH. Filed once in `endGame` (againBtn reloads → no double-count), shown on title, dawn screen, and share text.
+- **Clerk's handbook** (`#handbook`): manila reference card, `?` toggles anywhere incl. title, Esc/✕/`?` dismisses. Day loop, night stamping + flag grounds, all four postmark fields, controls, modes. (`H` rejected — already the HUMAN stamp in audit.)
+- **Head office memo**: seeded per night via `stream("memo")` — same seed, same memo, same behavior. Early amendment (`amendAfter=1`), quiet wire (amendment suppressed, amended cases re-judged under base rule), or contested-first (`contestedIdx=0`, double bounty). Announced as `✉ MEMO ·` line + wire entry; persisted through resume.
+
+Verified: `node --check` clean; `test-logic.mjs` ALL PASS; jsdom full-run to dawn — memo fired on a real night, record filed `{weeks:1, filings:26, predTotal:1}`, share carries career line. `smoke-art.mjs` still fails on 9 missing card-vignette webps (pre-existing, art pipeline).
+
+Watch-items: quiet-wire nights can have lopsided pass/fail mixes (dealt for amended rule, re-judged under base) — playable, worth a feel-check. Attract reel is verb-demo, not deduction-demo — judges asked to see deduction; plan drafted.

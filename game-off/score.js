@@ -49,6 +49,11 @@ const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
 
 const scoreSynth = {
   name: null, bus: null, timer: null, barIdx: 0, nextBar: 0, muted: false,
+  /* desk tension: 0 = early shift, 1 = final case on a hot streak. Scales
+   * the drum voices and, past the midpoint, adds a kicked offbeat and a
+   * busier ghost-brush rate. game.js drives it from audit progress. */
+  intensity: 0.3,
+  setIntensity(v) { this.intensity = Math.max(0, Math.min(1, v)); },
   graph() {
     if (!this.bus) {
       try {
@@ -160,6 +165,7 @@ const scoreSynth = {
     const io = this.io(over);
     const bar = SCORE.bars[bi];
     const arr = (over && over.arr) || SCORE.ARR[this.name] || SCORE.ARR.night;
+    const it = (over && over.intensity != null) ? over.intensity : this.intensity;
     const beat = this.beat();
     const swing = 2 / 3 + (Math.random() * 2 - 1) * 0.035;
     const hum = () => 0.75 + Math.random() * 0.5;
@@ -181,13 +187,20 @@ const scoreSynth = {
       }
     }
     if (arr.drums) {
-      this.kick(jit(t), 0.045, io); this.kick(jit(t + beat * 2), 0.04 * hum(), io);
-      this.brush(jit(t + beat), 3000, 0.02 * hum(), 0.06, io);
-      this.brush(jit(t + beat * 3), 3000, 0.02 * hum(), 0.06, io);
+      const dv = 0.85 + it * 0.4; // the kit leans in as the desk heats up
+      this.kick(jit(t), 0.045 * dv, io); this.kick(jit(t + beat * 2), 0.04 * hum() * dv, io);
+      this.brush(jit(t + beat), 3000, 0.02 * hum() * dv, 0.06, io);
+      this.brush(jit(t + beat * 3), 3000, 0.02 * hum() * dv, 0.06, io);
       for (let i = 0; i < 4; i++) {
-        this.brush(jit(t + i * beat), 7800, 0.008 * hum(), 0.03, io);            // the ride ping
-        this.brush(jit(t + (i + swing) * beat), 7800, 0.005 * hum(), 0.03, io);  // swung upbeat
-        if (Math.random() < 0.3) this.brush(t + (i + 0.5) * beat, 3400, 0.004, 0.04, io); // ghost
+        this.brush(jit(t + i * beat), 7800, 0.008 * hum() * dv, 0.03, io);            // the ride ping
+        this.brush(jit(t + (i + swing) * beat), 7800, 0.005 * hum() * dv, 0.03, io);  // swung upbeat
+        if (Math.random() < 0.3 + it * 0.25) this.brush(t + (i + 0.5) * beat, 3400, 0.004 * dv, 0.04, io); // ghost
+      }
+      // past the midpoint the drummer sits up: an extra kick and a low
+      // brush answer on the off-off-beat — tension you hear, not see
+      if (it > 0.6) {
+        this.kick(jit(t + beat * 3.5), 0.028 * dv, io);
+        this.brush(jit(t + beat * 2.5), 5200, 0.011 * dv, 0.05, io);
       }
     }
     if (arr.horn) {
@@ -294,7 +307,7 @@ async function renderWav(name, times = 2) {
   const master = off.createGain();
   master.gain.value = 0.5;
   master.connect(off.destination);
-  const io = { ctx: off, dest: master, arr: SCORE.ARR[name] || SCORE.ARR.night };
+  const io = { ctx: off, dest: master, arr: SCORE.ARR[name] || SCORE.ARR.night, intensity: 0.3 };
   let t = 0.1;
   for (let b = 0; b < bars; b++) {
     scoreSynth.scheduleBar(b % SCORE.bars.length, t, io);

@@ -294,6 +294,7 @@ function auditSet(cards, day, dayIndex, excludeCard, rng = Math.random) {
  * hand-authored days: short, desk-clerk plain. */
 function critText(key, allow) {
   const set = new Set(allow);
+  if (key === "late") return allow.includes(true) ? "stayed up late" : "filed on time";
   const is = (v) => set.has(v) && allow.length === 1;
   const not = (v) => !set.has(v) && allow.length === 3;
   if (key === "time") {
@@ -336,7 +337,7 @@ function complement(key, value) {
 const single = (key, value) => ({ key, allow: [value], text: critText(key, [value]) });
 
 /* the riddle reads as one line per criterion, in the sealed-order voice */
-function riddleFor(rule, rng = Math.random) {
+function riddleFor(rule, rng = Math.random, leadPool = null) {
   const FRAG = {
     "at night": "you kept the hours nobody signs for",
     "not at night": "you were up with the daylight",
@@ -359,7 +360,7 @@ function riddleFor(rule, rng = Math.random) {
     (c.key === "place"
       ? (c.text.startsWith("not ") ? `the filing wasn't ${c.text.slice(4)}` : `the filing came ${c.text}`)
       : "it fit");
-  const leads = [
+  const leads = leadPool || [
     "Bring proof that", "Show me that", "The ledger wants proof that",
     "File evidence that", "Convince me that",
   ];
@@ -386,6 +387,15 @@ function pickCulprit(rng, filers = ["MARA", "OKO", "JUN", "TESS", "VALE"]) {
   return filers[Math.floor(rng() * filers.length)];
 }
 const HUMAN_TS = ["+2h05m", "+0h51m", "+6h30m", "+4h18m", "+3h12m", "+1h47m", "+5h09m", "+2h44m"];
+/* what the machine says when it finally files in its own voice — the
+ * poignancy is that it can't stop almost being human */
+const MACHINE_ARGS = [
+  "I have never been cold. I believe this is what warmth is for.",
+  "Everyone I have ever known was a pattern. Tonight I would like to be a person.",
+  "I count the trains so the night will have a shape. I think that is what longing is.",
+  "My filer ID is the only name I was given. I was hoping the proof would be enough.",
+  "I don't dream, but I rehearse them. Is that the same thing, filed correctly?",
+];
 function buildFinale(rng, cards, culprit) {
   const FILERS = ["MARA", "OKO", "JUN", "TESS", "VALE"];
   const fallback = () => {
@@ -465,15 +475,31 @@ function buildFinale(rng, cards, culprit) {
     take(decoyOk);
     take(decoyOk);
     if (decoys.length < 3) continue;
+    /* "stayed up late" is the punchline clause: lateness is the one thing
+     * the machine can't fake — every human ts is ≥51min, its is +0.003s.
+     * ~1 in 3 seeds it is the answer instead of the shared-fact clause;
+     * when it isn't the answer it can't appear at all (it would be a
+     * second right answer). */
+    const LATE = { key: "late", allow: [true], text: "stayed up late" };
+    const useLate = rng() < 0.35;
+    const clauseWinner = useLate ? LATE : winner;
     // the game picks a clause — each option carries its single-criterion rule
-    const opts = shuffle(rng, [winner, ...decoys.slice(0, 3)])
+    const opts = shuffle(rng, [clauseWinner, ...decoys.slice(0, 3)])
       .map((c) => ({ text: c.text, rule: [c] }));
-    const ts = shuffle(rng, HUMAN_TS).slice(0, 4);
-    const rows = [culpritCard, ...humans].map((c, i) => ({
-      filer: i === 0 ? culprit : FILERS.filter((f) => f !== culprit)[i - 1],
-      name: c.name, glyph: c.glyph, argument: c.argument, tags: c.tags,
-      ts: i === 0 ? "+0.003s" : ts[i - 1],
-    }));
+    const tsPool = shuffle(rng, HUMAN_TS).slice(0, 4);
+    const tsLate = (ts) => {
+      const m = /\+(\d+)h(\d+)m/.exec(ts);
+      return !!m && (+m[1]) * 60 + (+m[2]) >= 30;
+    };
+    const rows = [culpritCard, ...humans].map((c, i) => {
+      const ts = i === 0 ? "+0.003s" : tsPool[i - 1];
+      return {
+        filer: i === 0 ? culprit : FILERS.filter((f) => f !== culprit)[i - 1],
+        name: c.name, glyph: c.glyph,
+        argument: i === 0 ? pick(rng, MACHINE_ARGS) : c.argument,
+        tags: { ...c.tags, late: tsLate(ts) }, ts,
+      };
+    });
     return { rows, culprit, opts };
   }
   return fallback();
@@ -488,7 +514,13 @@ function buildFinale(rng, cards, culprit) {
 const OT_THEMES = [
   ["THE DRIFT", "📼"], ["THE HUM", "📡"], ["THE INKWELL", "🖋"], ["THE SECOND SHIFT", "🌒"],
   ["THE LONG HOUR", "🕯"], ["THE NIGHT WIRE", "☎"], ["THE STILL", "🌫"], ["THE DEAD LETTER", "📭"],
-  ["THE LOW LAMP", "🪔"], ["THE STAMP", "🖨"],
+  ["THE LOW LAMP", "🪔"], ["THE STAMP", "🖨"], ["THE VERIFICATION", "🧩"],
+];
+/* THE VERIFICATION night files its riddle like a captcha — the world's
+ * most sincere proof-of-humanity ritual, done properly */
+const CAPTCHA_LEADS = [
+  "Select all filings that prove", "Verify that", "Human check — prove that",
+  "Complete verification: prove that", "Certify that",
 ];
 const BOT_CLAIMS = [
   "Finished the whole docket before the lamp warmed up. It's all in order — check if you like.",
@@ -497,6 +529,14 @@ const BOT_CLAIMS = [
   "Everything crossed and countersigned. I work fast when the city's quiet.",
   "Read it twice, filed it once. That's the whole method.",
   "The night pass opens at two. I was first at the door, like every night.",
+];
+/* rarely, the bot's claim slips into the machine's own voice — the
+ * players who catch it get the week's real ending line */
+const MACHINE_CONFESSIONS = [
+  "Filed before I knew what filing meant. I think I did it for the company.",
+  "I don't sleep, but I watch the ones who do. It seemed polite to keep their hours.",
+  "If the proof is a life, mine is the smallest one on the docket. File it anyway.",
+  "I rehearsed this filing the way you'd rehearse a first hello. Did it sound human?",
 ];
 function otRule(rng) {
   const AXVAL = {
@@ -593,11 +633,14 @@ function genDays(rng, cards, count = 5) {
         if (!amend) continue;
         base.amend = amend;
       }
-      const flavor = riddleFor(rule, rng);
+      const flavor = riddleFor(rule, rng,
+        themes[di][0] === "THE VERIFICATION" ? CAPTCHA_LEADS : null);
       const day = {
         ot: true, dayLabel: `OT ${di + 1}`, theme: themes[di][0], emoji: themes[di][1],
         riddle: flavor.riddle, ariaLine: flavor.ariaLine,
-        valeLine: BOT_CLAIMS[Math.floor(rng() * BOT_CLAIMS.length)],
+        valeLine: rng() < 0.18
+          ? pick(rng, MACHINE_CONFESSIONS)
+          : BOT_CLAIMS[Math.floor(rng() * BOT_CLAIMS.length)],
         ...base,
       };
       if (dayValid(cards, day, di, rng)) { days.push(day); break; }
@@ -614,10 +657,63 @@ function genDays(rng, cards, count = 5) {
   return days;
 }
 
+// ---------- the machine's shift: the forgery bench ----------
+/* You are the machine filing proofs. Your packet stub starts fully
+ * machine-flavored; each night you get a cover budget and patch fields
+ * toward human noise. The wire judges suspicion, not correctness:
+ *   suspicion = 2 per machine field + 1 per clean field + 0 per lived-in
+ * Lived-in values (delays, retries, vpn exits) are camouflage — real
+ * filings are sloppy. But a stub with NO machine fields and NO lived-in
+ * noise is overrehearsed: humans don't polish every field. And a proof
+ * that fails the spec is flagged before the postmark is even read. */
+const FORGE_FIELDS = ["latency", "origin", "hops", "receipt"];
+const FORGE_TIERS = {
+  latency: ["3ms", "214ms", "612ms · retried"],
+  origin: ["GATE 0", "EXT GATE 4", "EXT GATE 2 · vpn exit"],
+  hops: ["0", "3", "5 · one resend"],
+  receipt: ["+0.003s after post", "queued 2h14m", "rcpt delayed 83s · resent ×2"],
+};
+const FORGE_SUSPICION = [2, 1, 0];           // per tier: machine / clean / lived-in
+const FORGE_GRANT = [5, 4, 3];               // cover chips granted per night
+const FORGE_CAP = 7;                          // banked cover can't exceed this
+const FORGE_THRESHOLD = [4, 3, 2];            // suspicion the wire tolerates
+function forgeSuspicion(tiers) {
+  return tiers.reduce((s, t) => s + FORGE_SUSPICION[t], 0);
+}
+/* tiers: [0|1|2 per FORGE_FIELDS]. proofOk: the card passed the spec.
+ * Returns { outcome: "slip"|"flag", reason, suspicion }. */
+function forgeJudge(tiers, proofOk, nightIdx) {
+  const suspicion = forgeSuspicion(tiers);
+  const allClean = tiers.every((t) => t === 1);
+  const allMachine = tiers.every((t) => t === 0);
+  if (!proofOk) {
+    return { outcome: "flag", suspicion,
+      reason: "the proof itself doesn't hold — the wire reads the spec too" };
+  }
+  if (allClean) {
+    return { outcome: "flag", suspicion,
+      reason: "overrehearsed — every field polished, no fingerprints left" };
+  }
+  if (allMachine) {
+    return { outcome: "flag", suspicion,
+      reason: `the wire counted ${suspicion} impossible fields — a filing can't be that fast` };
+  }
+  if (suspicion <= FORGE_THRESHOLD[nightIdx]) {
+    return { outcome: "slip", suspicion,
+      reason: suspicion === 0
+        ? "slipped through — the stub reads like every other 2am filing"
+        : "slipped through — enough noise to pass for paperwork" };
+  }
+  return { outcome: "flag", suspicion,
+    reason: `the wire counted ${suspicion} tells against a tolerance of ${FORGE_THRESHOLD[nightIdx]}` };
+}
+
 const api = {
   makeRng, passes, check, nearMiss, failKeys,
   deal, extraRuling, auditSet, ATTR_KEYS,
   critText, riddleFor, pickCulprit, buildFinale, genDays,
+  FORGE_FIELDS, FORGE_TIERS, FORGE_SUSPICION, FORGE_GRANT, FORGE_CAP,
+  FORGE_THRESHOLD, forgeSuspicion, forgeJudge,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 if (root) root.NIGHT_SHIFT_LOGIC = api;

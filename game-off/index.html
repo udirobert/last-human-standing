@@ -98,9 +98,57 @@
       onerror="this.classList.add('missing');if(this.parentNode.querySelectorAll('img:not(.missing)').length===0)this.parentNode.classList.add('no-art')" />
     <img class="bg-art bg-dawn-automated" src="art/dawn-automated.webp" alt=""
       onerror="this.classList.add('missing');if(this.parentNode.querySelectorAll('img:not(.missing)').length===0)this.parentNode.classList.add('no-art')" />
+    <!-- dust in the lamplight: the painted rooms are stills, so the air
+         itself carries the only motion between stamps. Faint on purpose —
+         atmosphere, never information. -->
+    <div class="desk-motes" aria-hidden="true">
+      <i style="--x:14%;--y:26%;--s:2px;--d:12s;--dl:-2s;--sx:14px"></i>
+      <i style="--x:22%;--y:44%;--s:1.6px;--d:15s;--dl:-7s;--sx:-10px"></i>
+      <i style="--x:31%;--y:20%;--s:2.4px;--d:10s;--dl:-4s;--sx:8px"></i>
+      <i style="--x:38%;--y:58%;--s:1.5px;--d:17s;--dl:-9s;--sx:16px"></i>
+      <i style="--x:47%;--y:34%;--s:2px;--d:13s;--dl:-1s;--sx:-14px"></i>
+      <i style="--x:55%;--y:18%;--s:1.8px;--d:11s;--dl:-6s;--sx:10px"></i>
+      <i style="--x:63%;--y:48%;--s:2.6px;--d:14s;--dl:-3s;--sx:-8px"></i>
+      <i style="--x:71%;--y:28%;--s:1.5px;--d:16s;--dl:-11s;--sx:12px"></i>
+      <i style="--x:79%;--y:40%;--s:2.2px;--d:12s;--dl:-5s;--sx:-16px"></i>
+      <i style="--x:86%;--y:22%;--s:1.7px;--d:18s;--dl:-8s;--sx:9px"></i>
+      <i style="--x:92%;--y:55%;--s:2px;--d:13s;--dl:-2s;--sx:-11px"></i>
+      <i style="--x:68%;--y:64%;--s:1.4px;--d:19s;--dl:-12s;--sx:7px"></i>
+    </div>
   </div>
 </div>
 <div class="scanline"></div>
+<!-- the clerk's handbook: the desk's own reference card, one keypress away.
+     Manilla, not modal — it never blocks the work it describes. -->
+<div id="handbook" class="hidden" role="dialog" aria-label="Clerk's handbook">
+  <div class="hb-card">
+    <div class="hb-head"><b>CLERK'S HANDBOOK</b><button id="hbClose" aria-label="Close handbook">✕</button></div>
+    <div class="hb-cols">
+      <section><h4>THE DAY</h4>
+        <p>Read ARIA's docket — ruled HUMAN or SUS. Deduce the sealed rule from what passes and what fails.</p>
+        <p><kbd>1–4</kbd> pick a proof · <kbd>Shift</kbd> cycles the loupe · <kbd>Enter</kbd> files it.</p>
+        <p>File a card that fails the rule and it's a <b class="hb-red">STRIKE</b>. Three strikes and you're cut to jury duty.</p>
+      </section>
+      <section><h4>THE NIGHT</h4>
+        <p>Stamp each filing <b>HUMAN</b> or <b class="hb-red">SUS</b> — the paper AND the postmark both count.</p>
+        <p><kbd>S</kbd>/<kbd>←</kbd> SUS · <kbd>H</kbd>/<kbd>→</kbd> HUMAN. Stamping SUS on clean paper asks for grounds — point at the field that read wrong.</p>
+        <p>Five cases a night. One is contested — right pays double. A flawless night earns <b>NIGHT CLEAR</b>.</p>
+      </section>
+      <section><h4>THE POSTMARK</h4>
+        <p class="hb-mono">LATENCY — round-trip time. Machines answer before the lamp warms.</p>
+        <p class="hb-mono">ORIGIN — where the packet was sent from.</p>
+        <p class="hb-mono">RELAYS — hops the filing crossed. Humans route; machines don't.</p>
+        <p class="hb-mono">RECEIPT — delay between post and receipt. Lateness is human.</p>
+      </section>
+      <section><h4>THE DESK</h4>
+        <p><kbd>?</kbd> this card · <kbd>M</kbd> mute · tap a stamped case to continue.</p>
+        <p>Overtime deals generated rules. The Machine's Shift inverts the desk — you forge the postmark.</p>
+        <p>The wire remembers everything. It always does.</p>
+      </section>
+    </div>
+    <p class="hb-foot">— pinned above every desk, for every clerk —</p>
+  </div>
+</div>
 <div id="frame">
 
   <div id="banner" class="hidden"><span id="bannerText"></span></div>
@@ -186,6 +234,7 @@
     </div>
     <p class="legend">Three strikes and you're cut.</p>
     <div class="resume-slot" id="resumeSlot"></div>
+    <p class="career-line hidden" id="careerLine"></p>
     <div class="title-btns">
       <button id="startBtn" class="stamp-btn" aria-label="Clock in" title="Today's fresh docket — same for everyone, changes daily">
         <span class="pc-top"><span class="pc-week">WEEK 12</span><span class="pc-no" id="pcDocket">DOCKET</span></span>
@@ -194,6 +243,7 @@
       </button>
       <button id="randomBtn" class="ghost">Random shift</button>
       <button id="otTitleBtn" class="ghost hidden" title="A fresh five-night run, rules generated per docket">Overtime — a generated docket</button>
+      <button id="machineTitleBtn" class="ghost locked" title="Locked — clear overtime, then become the thing you hunt">The Machine's Shift — file like you belong</button>
     </div>
     <div class="shift-ledger" aria-label="What shifts in this game">
       <span class="sl-k">shift (v.)</span>
@@ -204,7 +254,10 @@
       <span class="sl-i"><b>who signs</b> — the last rule is yours to write</span>
     </div>
     <p class="hint">five nights, one machine in a new face each docket · overtime: rules generated daily · audio recommended</p>
-    <p class="hint">A five-day deduction thriller · all proceedings fictional</p>
+    <p class="hint">A five-day deduction thriller · all proceedings fictional · <kbd>?</kbd> handbook</p>
+    <!-- attract reel: after idle, the desk keeps working without you.
+         Any input dismisses it. Decorative — real cards, real stamps. -->
+    <div id="attractDesk" class="hidden" aria-hidden="true"></div>
   </div>
 
   <!-- ===== GAME ===== -->
@@ -218,8 +271,14 @@
       <span id="hudScore"></span>
     </header>
 
+    <!-- the desk remembers: tonight's events, in order, never erased -->
+    <div id="wireLog" aria-hidden="true"></div>
+
     <!-- the one instruction per screen — "what do I do right now" -->
     <p id="instr"></p>
+
+    <div id="fxLayer" aria-hidden="true"></div>
+    <div id="uiTip" class="hidden" role="tooltip"></div>
 
     <!-- ARIA's quip: flavour only, never the instruction. She has a face. -->
     <div id="ariaSay" class="hidden" data-mood="neutral">
@@ -275,12 +334,19 @@
         <div id="hand"></div>
       </div>
       <p id="oathNote" class="hidden">pass: clears a strike (or +200 if you have none) · miss: 2 strikes</p>
+      <div id="predictRow" class="hidden">
+        <span class="pr-label">call the rule:</span>
+        <button class="pr-btn" data-attr="place" data-tip="you think ARIA's rule keys on WHERE">WHERE</button>
+        <button class="pr-btn" data-attr="time" data-tip="you think ARIA's rule keys on WHEN">WHEN</button>
+        <button class="pr-btn" data-attr="people" data-tip="you think ARIA's rule keys on WHO">WHO</button>
+        <button class="pr-btn" data-attr="setting" data-tip="you think ARIA's rule keys on IN/OUT">IN·OUT</button>
+      </div>
       <div id="fileBar">
         <div id="oathWrap" class="hidden">
           <button id="oathBtn" aria-pressed="false"
             title="pass: clears a strike (or +200 if you have none) · miss: 2 strikes">⚖ Under oath</button>
         </div>
-        <button id="fileBtn" disabled>Pick a card — 1–4, then Enter</button>
+        <button id="fileBtn" disabled data-tip="file the selected proof — the desk rules on it">Pick a card — 1–4, then Enter</button>
       </div>
     </section>
 
@@ -292,7 +358,16 @@
       <div id="factRows"></div>
       <div id="stampBox"></div>
       <p id="ledgerLine"></p>
+      <p id="predLine" class="pred-verdict hidden"></p>
       <div id="verdictActions"></div>
+    </section>
+
+    <!-- FORGE: the machine's shift — patch your own postmark before the wire reads it -->
+    <section id="forgePhase" class="hidden">
+      <div id="forgeCard"></div>
+      <div id="forgeFields"></div>
+      <p id="forgeMeta" aria-live="polite"></p>
+      <div id="forgeActions"></div>
     </section>
 
     <!-- NIGHT: rule chips pinned, five cases one at a time -->
@@ -300,6 +375,15 @@
       <div id="deskBar">
         <div id="ruleChips"></div>
       </div>
+      <!-- the night's paperwork, made visible: what's still in the pile
+           vs what's been stamped and filed. Decorative — CASE n/m says it. -->
+      <div id="caseTray" class="hidden" aria-hidden="true">
+        <span class="tray-label">PILE</span>
+        <span class="tray-pile" id="trayPile"></span>
+        <span class="tray-arrow">→</span>
+        <span class="tray-filed" id="trayFiled"></span>
+      </div>
+      <p id="nightMemo" class="hidden"></p>
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span><span class="amend-ack">— press or tap to acknowledge —</span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
@@ -414,7 +498,9 @@
     </div>
     <p class="hint">the week is closed — the docket never is. Replay this seed, clock in tomorrow, or work overtime.</p>
     <button id="copyBtn" class="ghost">Copy result</button>
+    <button id="caseFileBtn" class="ghost" data-tip="download the full shift dossier — every stamp, postmark and wire entry">Case file (.txt)</button>
     <button id="otBtn" class="ghost">Overtime — a fresh generated docket</button>
+    <button id="machineEndBtn" class="ghost hidden">The Machine's Shift — become the thing you hunt</button>
     <button id="againBtn">Work another week</button>
     <div class="shift-ledger">
       <span class="sl-k">shift (v.)</span>
