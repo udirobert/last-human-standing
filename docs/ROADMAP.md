@@ -47,7 +47,8 @@ payout — before any contract work. See doc for KPIs and kill criteria.
 
 Spec & overhaul plan: `docs/GAME_OFF_2026.md`. Standalone 5-day deduction
 browser thriller for GitHub Game Off 2026 (theme: SHIFT). Built with vanilla
-JS, procedural WebAudio, and SVG (zero dependencies, 208KB). Standalone
+JS, a composed WebAudio noir score, inline-SVG paper UI, and painted key
+art (no build step, no dependencies). Standalone
 packager in `scripts/package-game-off.sh` outputs `dist/night-shift-itch.zip`
 and standalone repo `dist/night-shift`. Submission deadline: Dec 1, 2026 13:37 PST.
 

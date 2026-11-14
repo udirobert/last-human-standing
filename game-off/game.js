@@ -161,7 +161,6 @@ let AMBIENT = null;
 let ambientGain = null;
 let valeDissonanceGain = null;
 let audioMuted = false;
-let rhythmTimer = null;
 let rainGain = null;
 let rainOn = false;
 let thunderTimer = null;
@@ -171,7 +170,8 @@ function initAmbient() {
   try {
     const ac = audio();
     const master = ac.createGain();
-    master.gain.setValueAtTime(0, ac.currentTime);
+    // room tone under the chart: tape hiss, the drone, VALE's dissonance
+    master.gain.setValueAtTime(audioMuted ? 0 : 0.22, ac.currentTime);
     master.connect(ac.destination);
     ambientGain = master;
 
@@ -277,64 +277,22 @@ function initAmbient() {
     noiseSrc.start();
     valeOsc.start();
 
-    // Rhythmic 72 BPM subtle clockwork pulse (kick on 1 & 3, typewriter click on 2 & 4)
-    let beat = 0;
-    const tempoMs = (60 / 72) * 1000;
-    clearInterval(rhythmTimer);
-    rhythmTimer = setInterval(() => {
-      if (!ambientGain || audioMuted || G.phase === "day") return;
-      try {
-        const curAc = audio(), ct = curAc.currentTime;
-        if (beat % 2 === 0) {
-          // Soft subterranean pulse
-          const k = curAc.createOscillator(), kg = curAc.createGain();
-          k.type = "sine";
-          k.frequency.setValueAtTime(76, ct);
-          k.frequency.exponentialRampToValueAtTime(32, ct + 0.12);
-          kg.gain.setValueAtTime(0.045, ct);
-          kg.gain.exponentialRampToValueAtTime(0.0001, ct + 0.14);
-          k.connect(kg); kg.connect(master);
-          k.start(ct); k.stop(ct + 0.16);
-        } else {
-          // Subtle mechanical clockwork/teletype tick
-          noiseBurst(0.035, 1900, 0.012);
-        }
-        beat = (beat + 1) % 4;
-      } catch { /* audio may be unavailable */ }
-    }, tempoMs);
-
     AMBIENT = { master, osc1, osc2, lfo, noiseSrc, valeOsc };
   } catch (e) {
     /* audio unavailable */
   }
 }
 
-function musicStart() {
-  initAmbient();
-  if (!ambientGain || audioMuted) return;
-  try {
-    const ac = audio();
-    ambientGain.gain.cancelScheduledValues(ac.currentTime);
-    ambientGain.gain.linearRampToValueAtTime(0.35, ac.currentTime + 1.2);
-  } catch { /* audio may be unavailable */ }
-}
-
-function musicStop() {
-  if (!ambientGain) return;
-  try {
-    const ac = audio();
-    ambientGain.gain.cancelScheduledValues(ac.currentTime);
-    ambientGain.gain.linearRampToValueAtTime(0, ac.currentTime + 0.6);
-  } catch { /* audio may be unavailable */ }
-}
-
 function musicDuck(on) {
-  if (!ambientGain || audioMuted) return;
-  try {
-    const ac = audio();
-    ambientGain.gain.cancelScheduledValues(ac.currentTime);
-    ambientGain.gain.linearRampToValueAtTime(on ? 0.08 : 0.35, ac.currentTime + 0.4);
-  } catch { /* audio may be unavailable */ }
+  if (ambientGain && !audioMuted) {
+    try {
+      const ac = audio();
+      ambientGain.gain.cancelScheduledValues(ac.currentTime);
+      ambientGain.gain.linearRampToValueAtTime(on ? 0.06 : 0.22, ac.currentTime + 0.4);
+    } catch { /* audio may be unavailable */ }
+  }
+  // the chart ducks too — the amendment lands on top of everything
+  scoreSynth.duck(on);
 }
 
 function setValeDissonance(on) {
@@ -379,55 +337,237 @@ function thunderRoll() {
   } catch { /* audio may be unavailable */ }
 }
 
-/* Generated score (ElevenLabs) — real tracks where the files load, the
- * procedural drone as the silent fallback so nothing breaks offline. */
-const score = {
-  VOL: { title: 0.5, day: 0.3, night: 0.42, dawn: 0.5 },
-  els: {},
-  cur: null,
-  el(name) {
-    if (!(name in this.els)) {
-      const a = new Audio(`audio/${name}.mp3`);
-      a.loop = true;
-      a.volume = 0;
-      a.addEventListener("error", () => { this.els[name] = null; });
-      this.els[name] = a;
+/* ---------- the composed score — one chart, played by code ----------
+ * An eight-bar noir progression in D minor (76 bpm, swung): Dm9 · Gm9 ·
+ * B♭maj7 · A7sus, twice around. Upright bass walks quarters, piano
+ * comps the charleston, brushes keep time, a muted horn carries the
+ * melody. The room chooses what plays: the title gets the full chart,
+ * the day shift strips to piano (reading music), the night shift drops
+ * the horn — the melody is the human voice, and it isn't at the desk —
+ * and dawn gets a sustained reprise that resolves and rests.
+ * Zero audio files: file:// and the itch embed hear the same score. */
+const SCORE = {
+  bpm: 76,
+  bars: [
+    { bass: [38, 45, 38, 42], voicing: [65, 72, 76], mel: [[0, 69, 2], [2, 72, 1], [3, 74, 1]] },  // Dm9
+    { bass: [43, 50, 43, 45], voicing: [70, 74, 77], mel: [[0, 74, 2], [2, 72, 1], [3, 70, 1]] },  // Gm9
+    { bass: [46, 53, 46, 44], voicing: [74, 77, 81], mel: [[0, 70, 1], [1, 69, 1], [2, 67, 2]] },  // B♭maj7
+    { bass: [45, 52, 45, 37], voicing: [67, 72, 74], mel: [[0, 69, 3], [3, 67, 1]] },              // A7sus
+    { bass: [38, 45, 38, 42], voicing: [65, 72, 76], mel: [[0, 69, 2], [2, 72, 1], [3, 76, 1]] },  // Dm9
+    { bass: [43, 50, 43, 38], voicing: [70, 74, 77], mel: [[0, 77, 2], [2, 79, 1], [3, 77, 1]] },  // Gm7
+    { bass: [39, 46, 39, 44], voicing: [67, 70, 74], mel: [[0, 75, 2], [2, 74, 1], [3, 72, 1]] },  // E♭maj7
+    { bass: [45, 52, 45, 37], voicing: [67, 72, 74], mel: [[1, 73, 1], [2, 74, 2]] },              // A7sus → Dm
+  ],
+  ARR: {
+    title: { bass: true, piano: true, drums: true, horn: true, loop: true },
+    day:   { bass: "roots", piano: true, drums: false, horn: false, loop: true },
+    night: { bass: true, piano: true, drums: true, horn: false, loop: true },
+    dawn:  { bass: "whole", piano: "whole", drums: false, horn: true, loop: false },
+  },
+};
+const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
+
+const scoreSynth = {
+  name: null, bus: null, timer: null, barIdx: 0, nextBar: 0, muted: false,
+  graph() {
+    if (!this.bus) {
+      try {
+        const g = audio().createGain();
+        g.gain.value = this.muted ? 0 : 0.5;
+        g.connect(audio().destination);
+        this.bus = g;
+      } catch { return null; }
     }
-    return this.els[name];
+    return this.bus;
   },
-  fade(a, v) {
-    clearInterval(a._fade);
-    a._fade = setInterval(() => {
-      if (Math.abs(v - a.volume) <= 0.06) {
-        a.volume = v;
-        if (!v) a.pause();
-        clearInterval(a._fade);
+  beat() { return 60 / SCORE.bpm; },
+  barDur() { return this.beat() * 4; },
+
+  /* --- the voices --- */
+  bassNote(m, t, dur) {
+    const ac = audio();
+    const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+    o.type = "triangle"; o.frequency.value = midiHz(m);
+    f.type = "lowpass"; f.frequency.value = 320;
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.16, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.028, t + Math.min(dur, 0.5));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(f); f.connect(g); g.connect(this.graph());
+    o.start(t); o.stop(t + dur + 0.05);
+  },
+  pianoNote(m, t, dur, vel = 0.05) {
+    const ac = audio();
+    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine"; o.frequency.value = midiHz(m);
+    o2.type = "sine"; o2.frequency.value = midiHz(m) * 2.001; // one shimmer partial
+    const g2 = ac.createGain(); g2.gain.value = 0.28;
+    o2.connect(g2); g2.connect(g);
+    o.connect(g);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(vel, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    g.connect(this.graph());
+    o.start(t); o2.start(t);
+    o.stop(t + dur + 0.1); o2.stop(t + dur + 0.1);
+  },
+  hornNote(m, t, dur) {
+    const ac = audio();
+    const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
+    o.type = "triangle"; o.frequency.value = midiHz(m);
+    f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 1.2;
+    // the vibrato arrives after the attack, like breath
+    const lfo = ac.createOscillator(), lg = ac.createGain();
+    lfo.frequency.value = 5.4; lg.gain.setValueAtTime(0, t);
+    lg.gain.setValueAtTime(0.8, t);
+    lg.gain.linearRampToValueAtTime(4.5, t + Math.max(0.25, dur * 0.6));
+    lfo.connect(lg); lg.connect(o.frequency);
+    g.gain.setValueAtTime(0, t);
+    g.gain.linearRampToValueAtTime(0.075, t + 0.07);
+    g.gain.setValueAtTime(0.075, t + dur * 0.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
+    o.connect(f); f.connect(g); g.connect(this.graph());
+    o.start(t); lfo.start(t);
+    o.stop(t + dur + 0.15); lfo.stop(t + dur + 0.15);
+  },
+  kick(t, vol = 0.05) {
+    const ac = audio();
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = "sine";
+    o.frequency.setValueAtTime(78, t);
+    o.frequency.exponentialRampToValueAtTime(38, t + 0.12);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(this.graph());
+    o.start(t); o.stop(t + 0.18);
+  },
+  brush(t, freq, vol = 0.02, dur = 0.06) {
+    try {
+      const ac = audio();
+      const len = Math.max(1, Math.floor(ac.sampleRate * dur));
+      const buf = ac.createBuffer(1, len, ac.sampleRate);
+      const ch = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const s = ac.createBufferSource(); s.buffer = buf;
+      const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 0.8;
+      const g = ac.createGain(); g.gain.value = vol;
+      s.connect(f); f.connect(g); g.connect(this.graph());
+      s.start(t);
+    } catch { /* no audio */ }
+  },
+
+  /* --- one bar of the chart, arranged for the room --- */
+  scheduleBar(bi, t) {
+    const bar = SCORE.bars[bi];
+    const arr = SCORE.ARR[this.name] || SCORE.ARR.night;
+    const beat = this.beat();
+    if (arr.bass === true) {
+      bar.bass.forEach((m, i) => this.bassNote(m, t + i * beat, beat * 0.95));
+    } else if (arr.bass === "roots" && bi % 2 === 0) {
+      this.bassNote(bar.bass[0], t, beat * 1.8);
+    } else if (arr.bass === "whole") {
+      this.bassNote(bar.bass[0], t, this.barDur() * 0.95);
+    }
+    if (arr.piano) {
+      const swing = 2 / 3; // offbeat 8ths swing
+      if (arr.piano === "whole") {
+        bar.voicing.forEach((m, i) => this.pianoNote(m, t + i * 0.03, this.barDur() * 0.9, 0.042));
       } else {
-        a.volume = Math.max(0, Math.min(1, a.volume + Math.sign(v - a.volume) * 0.06));
+        bar.voicing.forEach((m) => this.pianoNote(m, t, beat * 0.85, 0.05));
+        bar.voicing.forEach((m) => this.pianoNote(m, t + beat * (2 + swing), beat * 0.6, 0.042));
+        if (bi % 2 === 1) bar.voicing.forEach((m) => this.pianoNote(m, t + beat * 3.5, beat * 0.5, 0.036));
       }
-    }, 50);
+    }
+    if (arr.drums) {
+      this.kick(t, 0.045); this.kick(t + beat * 2, 0.04);
+      this.brush(t + beat, 3000, 0.02); this.brush(t + beat * 3, 3000, 0.02);
+      for (let i = 0; i < 4; i++) {
+        this.brush(t + i * beat, 7800, 0.008, 0.03);            // the ride ping
+        this.brush(t + (i + 2 / 3) * beat, 7800, 0.005, 0.03);   // swung upbeat
+      }
+    }
+    if (arr.horn) {
+      bar.mel.forEach(([b, m, d]) => this.hornNote(m, t + b * beat, d * beat * 0.92));
+    }
   },
+
+  /* --- the transport --- */
+  play(name) {
+    if (!name || this.name === name) return;
+    this.name = name;
+    if (!this.graph()) return;
+    this.barIdx = 0;
+    this.nextBar = audio().currentTime + 0.12;
+    clearInterval(this.timer);
+    this.timer = setInterval(() => this.tick(), 120);
+    this.tick();
+  },
+  tick() {
+    if (!this.name) return;
+    const ac = audio();
+    while (this.nextBar < ac.currentTime + 0.4) {
+      this.scheduleBar(this.barIdx, this.nextBar);
+      this.nextBar += this.barDur();
+      this.barIdx++;
+      if (this.barIdx >= SCORE.bars.length) {
+        if (SCORE.ARR[this.name]?.loop) this.barIdx = 0;
+        else { this.resolve(); return; }
+      }
+    }
+  },
+  /* dawn passes once and resolves: the last chord held, then rest */
+  resolve() {
+    clearInterval(this.timer);
+    this.timer = null;
+    const t = this.nextBar;
+    [53, 62, 65, 69, 72].forEach((m, i) => this.pianoNote(m, t + i * 0.06, 5.5, 0.045));
+    this.bassNote(38, t, 5.2);
+    this.name = null;
+  },
+  stop() {
+    clearInterval(this.timer);
+    this.timer = null;
+    this.name = null;
+  },
+  duck(on) {
+    const bus = this.graph();
+    if (!bus) return;
+    try {
+      const ac = audio();
+      bus.gain.cancelScheduledValues(ac.currentTime);
+      bus.gain.linearRampToValueAtTime(this.muted ? 0 : (on ? 0.16 : 0.5), ac.currentTime + 0.4);
+    } catch { /* */ }
+  },
+  setMuted() {
+    const bus = this.graph();
+    if (!bus) { this.muted = audioMuted; return; }
+    this.muted = audioMuted;
+    try {
+      const ac = audio();
+      bus.gain.cancelScheduledValues(ac.currentTime);
+      bus.gain.setValueAtTime(audioMuted ? 0 : 0.5, ac.currentTime);
+    } catch { /* */ }
+  },
+  /* the catch sting: the horn answers the player's evidence */
+  sting() {
+    if (!this.graph() || audioMuted) return;
+    const ac = audio();
+    const t = ac.currentTime + 0.05;
+    this.hornNote(74, t, 0.22);
+    this.hornNote(79, t + 0.2, 0.5);
+    [65, 72, 76].forEach((m, i) => this.pianoNote(m, t + 0.34, 1.1, 0.05));
+  },
+};
+
+/* same call surface the game has always used — now every call is code */
+const score = {
+  cur: null,
   play(name) {
     if (this.cur === name) return;
     this.cur = name;
-    for (const key of Object.keys(this.els)) {
-      const a = this.els[key];
-      if (a && key !== name) this.fade(a, 0);
-    }
-    if (!name) return;
-    const a = this.el(name);
-    if (!a) { this.fallback(name); return; }
-    a.play()
-      .then(() => { musicStop(); this.fade(a, audioMuted ? 0 : this.VOL[name]); })
-      .catch(() => { this.els[name] = null; this.fallback(name); });
+    scoreSynth.play(name);
   },
-  fallback(name) { name === "night" ? musicStart() : musicStop(); },
-  setMuted() {
-    for (const key of Object.keys(this.els)) {
-      const a = this.els[key];
-      if (a) this.fade(a, audioMuted ? 0 : (key === this.cur ? this.VOL[key] : 0));
-    }
-  },
+  setMuted() { scoreSynth.setMuted(); },
 };
 function applyScore() {
   score.play({ day: "day", verdict: "day", audit: "night", finale: "night" }[G.phase]);
@@ -475,7 +615,7 @@ const INSTR = {
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
-  cold: "The outgoing clerk left a tray — stamp each filing. No strikes tonight. S: SUS · H: HUMAN.",
+  cold: "The outgoing clerk left a tray — stamp each filing, paper and postmark both. No strikes tonight. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -515,6 +655,13 @@ const ARIA = {
   ],
   coldOpen: [
     "Two filings the last clerk couldn't clear. The desk is yours — so is the tray.",
+  ],
+  coldFirst: [
+    "Paper checked against the rule, postmark read against the claim. If nothing reads wrong, the filing is HUMAN.",
+  ],
+  coldCompare: [
+    "The card types its claim. The postmark prints the truth. They don't always agree.",
+    "A receipt is stamped by the wire, not written by the filer. Compare the two.",
   ],
 };
 // one-line explainers shown the first time each mechanic appears
@@ -596,6 +743,11 @@ const G = {
   finaleChoice: null,
   auditHitsToday: 0,
   nightPoints: 0,
+  nightSummarized: false,  // tonight's summary pay already posted
+  nightBonus: 0,           // the flawless +50, kept for repaint
+  strikeCleared: false,    // flawless night cleared a strike
+  lieCaught: false,        // liar-day flag scored on this verdict
+  coldTaught: false,       // cold-open comparison beat already shown
   auditLocked: false,
   coldOpen: false,
   verdictDone: false,
@@ -682,6 +834,9 @@ function wipeShift() {
 }
 function showOnly(which) {
   G.phase = which;
+  // the painted room follows the seat: clerk's chair by day, behind
+  // ARIA's terminal by night — the shift is a perspective flip
+  document.body.dataset.phase = which;
   dayPhase.classList.toggle("hidden", which !== "day");
   verdictPhase.classList.toggle("hidden", which !== "verdict");
   auditPhase.classList.toggle("hidden", which !== "audit");
@@ -694,44 +849,56 @@ function showOnly(which) {
 }
 
 // ---------- DAY PHASE ----------
-function startDay() {
+function startDay(resume) {
   const d = DAYS[G.day];
-  const deal = LOGIC.deal(CARDS, d, G.day, stream("deal"));
-  G.docket = deal.docket;
-  G.hand = deal.hand;
-  G.selected = null;
-  G.oath = false;
-  G.clueUsed = false;
-  G.dayPay = 300;
-  G.flagged = null;
-  G.filing = false;
+  // the day crew signs in — the night desk closes behind them
+  G.coldOpen = false;
+  if (!resume) {
+    const deal = LOGIC.deal(CARDS, d, G.day, stream("deal"));
+    G.docket = deal.docket;
+    G.hand = deal.hand;
+    G.selected = null;
+    G.oath = false;
+    G.clueUsed = false;
+    G.dayPay = 300;
+    G.flagged = null;
+    G.filing = false;
+  }
   banner(`${d.dayLabel} · ${d.emoji} ${d.theme}`);
   showOnly("day");
   setInstr(G.day >= 3 ? "dayLiar" : G.day === 0 ? "day1" : "day");
-  // progressive features
+  // progressive features — a resumed day restores its own button states
   const clueBtn = $("clueBtn");
   clueBtn.classList.toggle("hidden", G.day < 1);
-  clueBtn.disabled = false;
-  clueBtn.innerHTML = `+ Request another ruling — today's pay 300 → 200${newTag("clue", 1)}`;
+  if (resume && G.clueUsed) {
+    clueBtn.disabled = true;
+    clueBtn.textContent = "Ruling added — pay for today is 200";
+  } else {
+    clueBtn.disabled = false;
+    clueBtn.innerHTML = `+ Request another ruling — today's pay ${G.dayPay} → ${G.dayPay - 100}${newTag("clue", 1)}`;
+  }
   $("oathWrap").classList.toggle("hidden", G.day < 1);
   $("oathBtn").innerHTML = `⚖ Under oath${newTag("oath", 1)}`;
-  $("oathBtn").classList.remove("on");
-  $("oathBtn").setAttribute("aria-pressed", "false");
-  $("oathNote").classList.add("hidden");
+  $("oathBtn").classList.toggle("on", G.oath);
+  $("oathBtn").setAttribute("aria-pressed", String(G.oath));
+  $("oathNote").classList.toggle("hidden", !G.oath);
   $("docketHead").textContent = G.day >= 3
     ? "Already ruled today — tap the ruling you think is the error (optional, +100)"
     : "Already ruled today";
-  // Golden-Idol nudge: name exactly what fooled them yesterday
-  if (G.day >= 1 && G.lastMissKeys && G.lastMissKeys.length) {
-    const labels = G.lastMissKeys
-      .map((k) => ({ place: "WHERE", time: "WHEN", people: "WHO", setting: "IN/OUT" }[k]))
-      .join(" and ");
-    ariaSay([`Yesterday the ${labels} fooled you. Read it twice today.`]);
+  if (!resume) {
+    // Golden-Idol nudge: name exactly what fooled them yesterday
+    if (G.day >= 1 && G.lastMissKeys && G.lastMissKeys.length) {
+      const labels = G.lastMissKeys
+        .map((k) => ({ place: "WHERE", time: "WHEN", people: "WHO", setting: "IN/OUT" }[k]))
+        .join(" and ");
+      ariaSay([`Yesterday the ${labels} fooled you. Read it twice today.`]);
+    }
+    else if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
+    else ariaSay(ARIA.dayOpen);
   }
-  else if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
-  else ariaSay(ARIA.dayOpen);
   renderDay();
-  stageDay(d);
+  if (!resume) stageDay(d);
+  persist();
 }
 
 /* the shift brief: a memo card opens the day, the riddle types itself,
@@ -923,6 +1090,7 @@ function requestClue() {
   $("clueBtn").disabled = true;
   $("clueBtn").textContent = "Ruling added — pay for today is 200";
   renderDocket(row);
+  persist();
   explain("clue");
 }
 
@@ -933,6 +1101,7 @@ function toggleOath() {
   $("oathBtn").setAttribute("aria-pressed", String(G.oath));
   $("oathNote").classList.toggle("hidden", !G.oath);
   sfx.tick();
+  persist();
   if (G.oath) explain("oath");
   updateFileBtn();
 }
@@ -942,6 +1111,7 @@ function selectCard(card) {
   sfx.tick();
   $("hand").querySelectorAll(".evidence").forEach((el, i) =>
     el.classList.toggle("selected", G.hand[i] === card));
+  persist();
   updateFileBtn();
 }
 function updateFileBtn() {
@@ -1014,6 +1184,7 @@ function renderVerdict() {
   const d = DAYS[G.day], c = G.filed;
   G.verdictDone = false;
   clearLater();
+  persist();
 
   const passed = LOGIC.passes(c, d.rule);
   const verdicts = LOGIC.check(c, d.rule);
@@ -1068,16 +1239,50 @@ function renderVerdict() {
   later(() => finishVerdict(), t + 300);
 }
 
+/* the verdict resolves in two halves: apply (the ledger truth — score,
+ * strikes, results) and paint (the desk catching up). A resumed run
+ * re-paints without re-applying, so nothing is ever counted twice. */
 function finishVerdict() {
   if (G.verdictDone) return;
   G.verdictDone = true;
   clearLater();
+  applyVerdictOutcome();
+  paintVerdictEnd();
+  persist();
+}
+
+function applyVerdictOutcome() {
+  const d = DAYS[G.day], c = G.filed;
+  // a day resolves exactly once — a stale save can never double-post it
+  if (G.dayResults[G.day] === "survived" || G.dayResults[G.day] === "struck") return;
+  if (G.verdictPassed) {
+    G.daysSurvived++;
+    G.lastMissKeys = null;
+    G.score += G.dayPay;
+    if (G.oath) {
+      if (G.strikes > 0) G.strikes--;
+      else G.score += 200;
+    }
+    G.dayResults[G.day] = "survived";
+  } else {
+    G.strikes += G.oath ? 2 : 1;
+    G.dayResults[G.day] = "struck";
+    G.lastMissKeys = LOGIC.failKeys(c, d.rule);
+  }
+  // liar day: the flag is scored exactly once, when the verdict resolves
+  const lieRow = G.docket.find((r) => r.lie);
+  G.lieCaught = !!(lieRow && G.flagged === lieRow);
+  if (G.lieCaught) G.score += 100;
+  if (G.strikes >= 3 && G.status === "player") G.elimDay = G.day + 1;
+}
+
+function paintVerdictEnd() {
   const d = DAYS[G.day], c = G.filed;
   const passed = G.verdictPassed;
+  const cut = G.strikes >= 3 && G.status === "player";
 
-  // restore full rows instantly on skip
-  $("factRows").innerHTML = G.factHTML;
-  $("factRows").querySelectorAll(".pre").forEach((r) => r.classList.remove("pre"));
+  // the fact rows land complete — a resumed desk skips the ceremony
+  $("factRows").innerHTML = factRows(c, LOGIC.check(c, d.rule));
 
   let stampText, stampCls;
   if (passed) {
@@ -1105,42 +1310,25 @@ function finishVerdict() {
   later(() => { sfx.thud(); passed ? sfx.human() : sfx.sus(); }, 120);
   deskShake();
 
-  if (passed) {
-    G.daysSurvived++;
-    G.lastMissKeys = null;
-    G.score += G.dayPay;
-    if (G.oath) {
-      if (G.strikes > 0) G.strikes--;
-      else G.score += 200;
-    }
-    G.dayResults[G.day] = "survived";
-    ariaSay(ARIA.survived, "smug");
-  } else {
-    G.strikes += G.oath ? 2 : 1;
-    G.dayResults[G.day] = "struck";
-    G.lastMissKeys = LOGIC.failKeys(c, d.rule);
-    // off by exactly one fact — the near-miss gets its own line
-    ariaSay(LOGIC.nearMiss(c, d.rule) ? ARIA.nearMiss : ARIA.struck);
-  }
+  if (passed) ariaSay(ARIA.survived, "smug");
+  else ariaSay(LOGIC.nearMiss(c, d.rule) ? ARIA.nearMiss : ARIA.struck);
 
-  // liar day: reveal the clerical error, score the flag
+  // liar day: reveal the clerical error
   const lieRow = G.docket.find((r) => r.lie);
   if (lieRow) {
     const ll = $("lieLine");
     ll.classList.remove("hidden");
     let note = `Clerical error: ${lieRow.card.name} was stamped HUMAN, should be SUS.`;
-    if (G.flagged === lieRow) { G.score += 100; note += ` You caught it — +100`; }
+    if (G.lieCaught) note += ` You caught it — +100`;
     else if (G.flagged) note += ` You flagged the wrong one.`;
     ll.innerHTML = note;
   }
-  const cut = G.strikes >= 3 && G.status === "player";
   hud();
   if (cut) strikeOut();
 
   const actions = $("verdictActions");
   actions.innerHTML = "";
   if (cut) {
-    G.elimDay = G.day + 1;
     $("dossierDay").textContent = `${d.dayLabel} · ${d.theme}`;
     $("dossierArg").textContent = `“${c.argument}”`;
     $("dossierMeta").textContent =
@@ -1189,7 +1377,7 @@ function joinNames(a) {
  * human could file — and after night two it wears human clothing, with
  * one residual tell. Nothing is hidden, nothing is flagged for you. */
 const TEL_KEYS = ["latency", "origin", "hops", "receipt"];
-const TEL_LABEL = { latency: "PKT", origin: "ORIGIN", hops: "HOPS", receipt: "RCPT" };
+const TEL_LABEL = { latency: "LATENCY", origin: "ORIGIN", hops: "RELAYS", receipt: "RECEIPT" };
 /* paperwork texture — a clerk's note drawn from one shared pool. A remote
  * filing is a red herring, not a fingerprint; the postmark testifies. */
 const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
@@ -1233,54 +1421,67 @@ function valeTel(day, rng, filed) {
   return tel;
 }
 
-function startAudit() {
-  banner("NIGHT SHIFT — now you judge");
+function startAudit(resume) {
+  banner("NIGHT SHIFT — you are the desk now");
   showOnly("audit");
-  setInstr("night");
-  ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
-  if (G.day === 2) explain("amend");
+  setInstr(G.coldOpen ? "cold" : "night");
   const d = DAYS[G.day];
+  if (!resume) {
+    ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
+    if (G.day === 2) explain("amend");
+  }
+  // chips honor the amendment if it already landed this night
+  if (G.amendShown && d.amend) renderRuleChips(d.amend.rule, true);
+  else renderRuleChips(G.coldOpen ? COLD_RULE : d.rule, false);
 
-  renderRuleChips(d.rule, false);
-
-  const { cases, amendAfter } = LOGIC.auditSet(CARDS, d, G.day, G.filed, stream("audit"));
-  G.amendAfter = amendAfter;
-  G.amendShown = false;
-  // filers: the bot case is VALE; the rest get the four humans shuffled
-  const humans = (function () {
-    const r = stream("filers"), a = [...FILERS];
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  })();
-  const trng = stream("times");
-  let hi = 0;
-  G.auditSubs = cases.map((c) => {
-    const filer = c.bot ? "VALE" : humans[hi++];
-    const filed = fmtFiled(40 + Math.floor(trng() * 500));
-    const tel = c.bot ? valeTel(G.day, trng, filed) : humanTel(trng, filed);
-    // every filer draws the same note pool — a remote filing is a red
-    // herring, not a fingerprint. The postmark is the only testimony.
-    const note = NOTES[Math.floor(trng() * NOTES.length)];
-    // humans land off-square most of the time — but a straight landing and
-    // a clean drop are human variance too, so neither is a signature
-    const tilt = c.bot || trng() < 0.3 ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10;
-    const cleanDrop = c.bot || trng() < 0.28;
-    const stampRot = Math.round((trng() * 14 - 7) * 10) / 10;
-    return { ...c, filer, filed, tel, note, tilt, cleanDrop, stampRot,
-             truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
-  });
-  G.auditIdx = 0;
-  // one filing a night is contested: right pays double bonus
-  G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
-  G.auditHitsToday = 0;
-  G.nightPoints = 0;
+  if (!resume) {
+    const { cases, amendAfter } = LOGIC.auditSet(CARDS, d, G.day, G.filed, stream("audit"));
+    G.amendAfter = amendAfter;
+    G.amendShown = false;
+    // filers: the bot case is VALE; the rest get the four humans shuffled
+    const humans = (function () {
+      const r = stream("filers"), a = [...FILERS];
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    })();
+    const trng = stream("times");
+    let hi = 0;
+    G.auditSubs = cases.map((c) => {
+      const filer = c.bot ? "VALE" : humans[hi++];
+      const filed = fmtFiled(40 + Math.floor(trng() * 500));
+      const tel = c.bot ? valeTel(G.day, trng, filed) : humanTel(trng, filed);
+      // every filer draws the same note pool — a remote filing is a red
+      // herring, not a fingerprint. The postmark is the only testimony.
+      const note = NOTES[Math.floor(trng() * NOTES.length)];
+      // humans land off-square most of the time — but a straight landing and
+      // a clean drop are human variance too, so neither is a signature
+      const tilt = c.bot || trng() < 0.3 ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10;
+      const cleanDrop = c.bot || trng() < 0.28;
+      const stampRot = Math.round((trng() * 14 - 7) * 10) / 10;
+      return { ...c, filer, filed, tel, note, tilt, cleanDrop, stampRot,
+               truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
+    });
+    G.auditIdx = 0;
+    // one filing a night is contested: right pays double bonus
+    G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
+    G.auditHitsToday = 0;
+    G.nightPoints = 0;
+    G.nightSummarized = false;
+  }
   G.auditLocked = false;
+  // a case that was already stamped still waits for dismissal — keep it
+  // locked so the tap-to-continue handlers stay live after a resume
+  const curSub = G.auditSubs[G.auditIdx];
+  if (curSub && curSub.pick !== null) G.auditLocked = true;
+  G.amending = false;
   $("auditSummary").classList.add("hidden");
   $("auditActions").innerHTML = "";
   $("caseBtns").classList.remove("hidden");
-  renderCase();
+  if (G.auditIdx >= G.auditSubs.length) auditSummary();
+  else renderCase();
+  persist();
 }
 
 /* ---------- cold open: the tray ----------
@@ -1332,10 +1533,10 @@ function startColdOpen() {
   $("caseBtns").classList.remove("hidden");
   hud();
   renderCase();
+  persist();
 }
 
 function endColdOpen() {
-  G.coldOpen = false;
   $("caseBtns").classList.add("hidden");
   $("caseCard").innerHTML = "";
   const s = $("auditSummary");
@@ -1354,6 +1555,7 @@ function endColdOpen() {
   btn.addEventListener("click", () => startDay());
   actions.appendChild(btn);
   btn.focus();
+  persist();
 }
 
 function renderRuleChips(rule, amended) {
@@ -1387,6 +1589,7 @@ function flagField(k) {
     // the dissonance is the sting after the catch — never a tell before it
     setValeDissonance(true);
     later(() => setValeDissonance(false), 1600);
+    scoreSynth.sting(); // the horn answers the evidence
     ariaSay([
       `Wait — you stamped SUS on paper that passed, on grounds of ${TEL_LABEL[k]} ${sub.tel[k]}. You caught something my code couldn't see.`,
       "ANOMALY QUARANTINED. You read the postmark, not just the paper. Well done."
@@ -1397,6 +1600,7 @@ function flagField(k) {
   }
   G.auditTotal++;
   hud();
+  persist();
   renderCase();
   const cardEl = $("caseCard").querySelector(".case-card");
   if (cardEl) {
@@ -1425,6 +1629,27 @@ function flagField(k) {
   }
 }
 
+/* Cold open, second filing: the two receipts side by side, aligned row by
+ * row — claim, latency, origin, relays, receipt. For the human filing the
+ * claim and the receipt agree (the receipt echoes the claim); for the
+ * machine they contradict. The strip aligns; it never says which is wrong.
+ * This is the baseline the rest of the week is read against. */
+function coldCompareHTML(sub) {
+  const prev = G.auditSubs[0];
+  if (!prev || prev === sub) return "";
+  const row = (label, a, b) =>
+    `<div class="rcc-row"><span class="rcc-k">${label}</span><span class="rcc-a">${a}</span><span class="rcc-b">${b}</span></div>`;
+  return `<div class="rc-compare" aria-label="Postmark comparison">
+    <div class="rcc-head"><span class="rcc-k"></span><span class="rcc-a">${prev.filer} — stamped</span><span class="rcc-b">${sub.filer} — on your desk</span></div>
+    ${row("CLAIM", prev.filed, sub.filed)}
+    ${row(TEL_LABEL.latency, prev.tel.latency, sub.tel.latency)}
+    ${row(TEL_LABEL.origin, prev.tel.origin, sub.tel.origin)}
+    ${row(TEL_LABEL.hops, "×" + prev.tel.hops, "×" + sub.tel.hops)}
+    ${row(TEL_LABEL.receipt, prev.tel.receipt, sub.tel.receipt)}
+    <p class="rcc-cap">the claim is typed on the card — the receipt is printed by the wire</p>
+  </div>`;
+}
+
 function renderCase() {
   const sub = G.auditSubs[G.auditIdx];
   const el = $("caseCard");
@@ -1433,6 +1658,14 @@ function renderCase() {
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
   const arg = sub.filer === "VALE" ? (sub.arg || DAYS[G.day].valeLine) : sub.card.argument;
   const isVale = sub.filer === "VALE";
+  // cold open, second filing: align the receipts, teach the contrast once
+  const compare = G.coldOpen && G.auditIdx === 1 ? coldCompareHTML(sub) : "";
+  if (compare && !G.coldTaught) {
+    G.coldTaught = true;
+    ariaSay(ARIA.coldCompare);
+  } else if (G.coldOpen && G.auditIdx === 0 && !G.coldTaught) {
+    ariaSay(ARIA.coldFirst); // the default is HUMAN — SUS needs a reason
+  }
 
   let reason = "";
   if (sub.pick && !sub.pendingFlag) {
@@ -1466,6 +1699,7 @@ function renderCase() {
   setInstr("night");
 
   el.innerHTML =
+    `${compare}` +
     `<p class="case-num">CASE ${G.auditIdx + 1}/${G.auditSubs.length}${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
     `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
@@ -1530,6 +1764,7 @@ function stamp(pickVal) {
     renderCase();
     stampSwing($("caseCard").querySelector(".case-stamp"));
     later(() => sfx.stamp(), 200);
+    persist();
     return;
   }
 
@@ -1560,6 +1795,7 @@ function stamp(pickVal) {
   }
   G.auditTotal++;
   hud();
+  persist();
   const arm = pickVal === "SUS" ? $("susBtn") : $("humanBtn");
   $("susBtn").classList.remove("press");
   $("humanBtn").classList.remove("press");
@@ -1653,6 +1889,7 @@ function advanceCase() {
   G.auditIdx = next;
   if (G.auditIdx >= G.auditSubs.length) return auditSummary();
   renderCase();
+  persist();
 }
 
 /* the desk takes the hit so the fact rows don't have to. */
@@ -1756,26 +1993,32 @@ function finishAmend() {
   G.auditLocked = false;
   G.auditIdx++;
   renderCase();
+  persist();
 }
 
 function auditSummary() {
   if (G.coldOpen) return endColdOpen();
+  if (G.nightSummarized) return paintAuditSummary();
+  // apply: the night's pay posts once — a resumed summary only repaints
+  G.nightSummarized = true;
   const hits = G.auditHitsToday;
   G.nightResults[G.day] = hits;
-  let pts = G.nightPoints;
   const flawless = hits === 5;
-  let effect;
-  if (flawless) {
-    pts += 50;
-    const cleared = G.status === "player" && G.strikes > 0;
-    if (cleared) G.strikes--;
-    effect = `night +${pts} pts · flawless${cleared ? " — one strike cleared" : " +50"}`;
-  } else {
-    effect = `night +${pts} pts`;
-  }
-  G.score += flawless ? 50 : 0;
-  sfx.audit();
+  G.nightBonus = flawless ? 50 : 0;
+  G.strikeCleared = flawless && G.status === "player" && G.strikes > 0;
+  if (G.strikeCleared) G.strikes--;
+  G.score += G.nightBonus;
   hud();
+  paintAuditSummary();
+  persist();
+}
+
+function paintAuditSummary() {
+  const hits = G.auditHitsToday;
+  const pts = G.nightPoints + G.nightBonus;
+  const effect = `night +${pts} pts` +
+    (hits === 5 ? (G.strikeCleared ? " · flawless — one strike cleared" : " · flawless +50") : "");
+  sfx.audit();
 
   $("caseBtns").classList.add("hidden");
   $("caseCard").innerHTML = "";
@@ -1819,38 +2062,43 @@ const FINALE_RULES = [
   { text: "at night", rule: [{ key: "time", allow: ["night"], text: "at night" }] },
 ];
 
-function startFinale() {
+function startFinale(resume) {
   showOnly("finale");
   setInstr("finale");
   banner("LAST CALL — write the rule");
-  G.finaleChoice = null;
-  // seeded shuffle — same puzzle, but VALE isn't always the last row and
-  // the winning rule isn't always option d. Spoilers stay spoiled.
-  const frng = stream("finale");
-  const shuf = (a) => {
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(frng() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a;
-  };
-  G.finaleRows = shuf([...FINALE]);
-  G.finaleOpts = shuf([...FINALE_RULES]);
-  // every filer carries its packet stub onto the ledger
-  const trng = stream("finale-tel");
-  G.finaleRows.forEach((row) => {
-    row.tel = row.filer === "VALE" ? valeTel(4, trng, row.ts) : humanTel(trng, row.ts);
-  });
-  G.signing = false;
-  $("decree").classList.remove("signed");
+  if (!resume) {
+    G.finaleChoice = null;
+    // seeded shuffle — same puzzle, but VALE isn't always the last row and
+    // the winning rule isn't always option d. Spoilers stay spoiled.
+    const frng = stream("finale");
+    const shuf = (a) => {
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(frng() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    G.finaleRows = shuf([...FINALE]);
+    G.finaleOpts = shuf([...FINALE_RULES]);
+    // every filer carries its packet stub onto the ledger
+    const trng = stream("finale-tel");
+    G.finaleRows.forEach((row) => {
+      row.tel = row.filer === "VALE" ? valeTel(4, trng, row.ts) : humanTel(trng, row.ts);
+    });
+    G.signing = false;
+  }
+  $("decree").classList.toggle("signed", !!G.signing);
   buildFinale();
   paintFinale();
-  // the last line she says depends on whether you ever flagged the postmark
-  if (G.valeCaught > 0) {
-    ariaSay(["You flagged her once on the postmark. Now write the clause only she can't file."], "smug");
-  } else {
-    ariaSay(["My rules only check facts. Read the ledger the way it was filed — not the way it was argued."]);
+  if (!resume) {
+    // the last line she says depends on whether you ever flagged the postmark
+    if (G.valeCaught > 0) {
+      ariaSay(["You flagged her once on the postmark. Now write the clause only she can't file."], "smug");
+    } else {
+      ariaSay(["My rules only check facts. Read the ledger the way it was filed — not the way it was argued."]);
+    }
   }
+  persist();
 }
 
 /* the decree is set once — clauses are written into it, rows are struck
@@ -1864,7 +2112,7 @@ function buildFinale() {
       `<td class="c-file"><span class="glyph">${row.glyph}</span><span class="name">${row.name}</span></td>` +
       ATTR_KEYS.map((k) => `<td class="c-fact">${factCell(k, row.tags[k])}</td>`).join("") +
       `<td class="c-filer">${row.filer}</td><td class="c-ts">${row.ts}</td>` +
-      `<td class="c-pkt">${row.tel.latency} · ${row.tel.origin} · ${row.tel.hops}h · ${row.tel.receipt}</td>` +
+      `<td class="c-pkt">${row.tel.latency} · ${row.tel.origin} · relays ×${row.tel.hops} · ${row.tel.receipt}</td>` +
       `<td class="c-cut"></td>`;
     tb.appendChild(tr);
   }
@@ -1911,6 +2159,7 @@ function paintFinale() {
   s.disabled = !G.finaleChoice || !!G.signing;
   s.textContent = G.signing ? "Signed into record"
     : G.finaleChoice ? "\u270E Sign here" : "Choose a clause";
+  persist();
 }
 
 function signRule() {
@@ -1969,6 +2218,8 @@ function shareText(title) {
 }
 
 function endGame() {
+  clearSave(); // the week is closed — nothing left to resume
+  document.body.dataset.phase = "dawn";
   setValeDissonance(false);
   dayPhase.classList.add("hidden");
   verdictPhase.classList.add("hidden");
@@ -2041,10 +2292,11 @@ document.addEventListener("keydown", (e) => {
     if (ambientGain) {
       const ac = audio();
       ambientGain.gain.cancelScheduledValues(ac.currentTime);
-      ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.35, ac.currentTime);
+      ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.22, ac.currentTime);
     }
     score.setMuted();
     applyRain();
+    savePrefs();
     return;
   }
 
@@ -2122,9 +2374,141 @@ $("caseBtns").addEventListener("click", (e) => {
 });
 $("banner").addEventListener("click", () => $("banner").classList.add("hidden"));
 
+// ---------- save / resume ----------
+/* A run in progress is snapshotted to localStorage at every stable beat —
+ * phase entries, resolved stamps, verdicts, nights, choices. Resuming
+ * repaints the exact desk: phase, day, docket, and the night's stamped
+ * cases. Pay and strikes post exactly once; the apply/paint splits above
+ * guarantee a resumed desk never counts anything twice. */
+const SAVE_KEY = "night-shift-save-v1";
+const PREF_KEY = "night-shift-prefs-v1";
+
+function persist() {
+  try {
+    const s = {
+      seed: SEED, phase: G.phase,
+      day: G.day, status: G.status, strikes: G.strikes, score: G.score,
+      daysSurvived: G.daysSurvived, auditHits: G.auditHits, auditTotal: G.auditTotal,
+      flagAttempts: G.flagAttempts, flagHits: G.flagHits,
+      valeCaught: G.valeCaught, valeEscapes: G.valeEscapes,
+      oath: G.oath, clueUsed: G.clueUsed, dayPay: G.dayPay,
+      lastMissKeys: G.lastMissKeys, elimDay: G.elimDay,
+      dayResults: G.dayResults, nightResults: G.nightResults,
+      focusAttr: G.focusAttr,
+      coldOpen: G.coldOpen, coldTaught: G.coldTaught,
+      amendAfter: G.amendAfter, amendShown: G.amendShown, amending: G.amending,
+      auditIdx: G.auditIdx, contestedIdx: G.contestedIdx,
+      auditHitsToday: G.auditHitsToday, nightPoints: G.nightPoints,
+      nightSummarized: G.nightSummarized, nightBonus: G.nightBonus,
+      strikeCleared: G.strikeCleared, lieCaught: G.lieCaught,
+      verdictDone: G.verdictDone, verdictPassed: G.verdictPassed,
+      explained: [...G.explained],
+      docket: G.docket.map((r) => ({ id: r.card.id, verdict: r.verdict, lie: !!r.lie })),
+      hand: G.hand.map((c) => c.id),
+      selected: G.selected ? G.selected.id : null,
+      filed: G.filed ? G.filed.id : null,
+      flaggedIdx: G.flagged ? G.docket.indexOf(G.flagged) : -1,
+      subs: G.auditSubs.map((sub) => ({ ...sub, card: sub.card.id })),
+      finaleRows: G.finaleRows, finaleOpts: G.finaleOpts,
+      finaleChoiceText: G.finaleChoice ? G.finaleChoice.text : null,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(s));
+  } catch { /* storage unavailable (private mode) — the shift just isn't resumable */ }
+}
+
+function cardById(id) {
+  if (!id) return null;
+  if (id === COLD_VALE_CARD.id) return COLD_VALE_CARD;
+  return CARDS.find((c) => c.id === id) || null;
+}
+
+function loadSave() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (!s || s.seed === undefined || !["day", "verdict", "audit", "finale"].includes(s.phase)) return null;
+    return s;
+  } catch { return null; }
+}
+function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch { /* nothing to clear */ } }
+function savePrefs() {
+  try { localStorage.setItem(PREF_KEY, JSON.stringify({ muted: audioMuted })); } catch { /* ears only */ }
+}
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREF_KEY) || "null");
+    if (p && p.muted) audioMuted = true;
+  } catch { /* fresh ears */ }
+}
+
+function resumeLabel(s) {
+  const score = `SCORE ${s.score}`;
+  if (s.phase === "day") return `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length} · ${score}`;
+  if (s.phase === "verdict") return `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length} · VERDICT · ${score}`;
+  if (s.phase === "finale") return `LAST CALL · ${score}`;
+  return s.coldOpen
+    ? "NIGHT 0 · THE TRAY"
+    : `${s.status === "juror" ? "JURY DUTY · " : ""}NIGHT ${Math.min(s.day + 1, DAYS.length)} · ${score}`;
+}
+
+function resumeGame(s) {
+  clearLater();
+  SEED = s.seed;
+  Object.assign(G, {
+    day: s.day, status: s.status, strikes: s.strikes, score: s.score,
+    daysSurvived: s.daysSurvived, auditHits: s.auditHits, auditTotal: s.auditTotal,
+    flagAttempts: s.flagAttempts, flagHits: s.flagHits,
+    valeCaught: s.valeCaught, valeEscapes: s.valeEscapes,
+    oath: s.oath, clueUsed: s.clueUsed, dayPay: s.dayPay,
+    lastMissKeys: s.lastMissKeys, elimDay: s.elimDay,
+    dayResults: s.dayResults || [], nightResults: s.nightResults || [],
+    focusAttr: s.focusAttr || "all",
+    coldOpen: !!s.coldOpen, coldTaught: !!s.coldTaught,
+    // a mid-amendment save restores as acknowledged: chips match the
+    // cases' per-case rules, no klaxon replays on a fresh load
+    amendAfter: s.amendAfter, amendShown: !!s.amendShown || !!s.amending,
+    auditIdx: s.auditIdx || 0, contestedIdx: s.contestedIdx,
+    auditHitsToday: s.auditHitsToday || 0, nightPoints: s.nightPoints || 0,
+    nightSummarized: !!s.nightSummarized, nightBonus: s.nightBonus || 0,
+    strikeCleared: !!s.strikeCleared, lieCaught: !!s.lieCaught,
+    verdictDone: !!s.verdictDone, verdictPassed: s.verdictPassed,
+    filing: false, amending: false, auditLocked: false, signing: false,
+    explained: new Set(s.explained || []),
+    finaleRows: s.finaleRows, finaleOpts: s.finaleOpts,
+    finaleChoice: (s.finaleOpts || []).find((o) => o.text === s.finaleChoiceText) || null,
+  });
+  G.docket = (s.docket || []).map((r) => ({ card: cardById(r.id), verdict: r.verdict, lie: !!r.lie }))
+    .filter((r) => r.card);
+  G.hand = (s.hand || []).map(cardById).filter(Boolean);
+  G.selected = cardById(s.selected);
+  G.filed = cardById(s.filed);
+  G.flagged = s.flaggedIdx >= 0 ? (G.docket[s.flaggedIdx] || null) : null;
+  G.auditSubs = (s.subs || []).map((sub) => ({ ...sub, card: cardById(sub.card) }))
+    .filter((sub) => sub.card);
+
+  audio();
+  initAmbient();
+  titleEl.classList.add("hidden");
+  gameEl.classList.remove("hidden");
+  hud();
+
+  // dispatch on the SAVED phase — G.phase is still the fresh-boot default
+  if (s.phase === "day") startDay(true);
+  else if (s.phase === "verdict") {
+    showOnly("verdict");
+    setInstr("verdict");
+    if (G.verdictDone) paintVerdictEnd();
+    else renderVerdict();
+  }
+  else if (s.phase === "audit") startAudit(true);
+  else if (s.phase === "finale") startFinale(true);
+}
+
 // ---------- boot ----------
 function startGame(seed) {
   SEED = seed;
+  clearSave(); // a fresh clock-in ends any unfinished shift
   audio();
   initAmbient();
   titleEl.classList.add("hidden");
@@ -2155,3 +2539,21 @@ $("startBtn").addEventListener("click", () => clockIn(SEED));
 $("randomBtn").addEventListener("click", () =>
   clockIn("rnd-" + Math.random().toString(36).slice(2, 8)));
 $("againBtn").addEventListener("click", () => location.reload());
+
+// ---------- boot: the unfinished shift waits on the title ----------
+document.body.dataset.phase = "title";
+loadPrefs();
+const savedRun = loadSave();
+if (savedRun) {
+  const rBtn = document.createElement("button");
+  rBtn.className = "resume-btn";
+  rBtn.setAttribute("aria-label", "Resume your unfinished shift");
+  rBtn.innerHTML = `<span class="r-line">⟲ RESUME SHIFT</span>` +
+    `<span class="r-sub">${resumeLabel(savedRun)}</span>`;
+  rBtn.addEventListener("click", () => {
+    audio();
+    initAmbient();
+    resumeGame(savedRun);
+  });
+  $("resumeSlot").appendChild(rBtn);
+}

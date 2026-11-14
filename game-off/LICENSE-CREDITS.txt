@@ -2,8 +2,8 @@ NIGHT SHIFT — credits & license
 ========================================
 
 Original submission for GitHub Game Off 2026 (theme: SHIFT).
-- Code, procedural WebAudio soundscape, and vector art: MIT License.
-- Music tracks in audio/ generated with ElevenLabs Music (music_v2_5);
-  the procedural soundscape plays as an offline fallback.
+- Code, composed WebAudio score, soundscape, and vector art: MIT License.
+- Painted room art in art/ generated with MiniMax H3 (fal.ai); the SVG
+  scene is the offline fallback.
 - Runs standalone from file:// or any static web server; no network calls.
 - All proceedings and characters depicted are fictional.

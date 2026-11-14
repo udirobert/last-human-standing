@@ -22,7 +22,7 @@ zip -r "$ZIP_OUTPUT" \
   game.js \
   logic.js \
   riddles.js \
-  audio \
+  art \
   cover-630x500.png \
   cover-630x500.svg \
   export-cover.html \

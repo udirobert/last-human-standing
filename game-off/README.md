@@ -44,8 +44,8 @@ python3 -m http.server 8000
   time — stamp each **SUS** or **HUMAN** (`S` / `H` / `←` / `→` / buttons).
   Wrong stamps explain the needed criterion. One filing a night is **contested** —
   call it right for double pay (+100). A flawless 5/5 night clears a strike.
-  The paper checks facts — and every filing carries its packet postmark at
-  the foot of the card: latency, origin, hops, receipt. Same muted strip
+  The paper checks facts — and every filing carries its postmark strip at
+  the foot of the card: latency, origin, relays, receipt. Same muted strip
   for every filer, nothing flagged. Stamp **SUS** on paper that passes and
   the desk asks what flagged it — point at the field that read wrong. A
   field that holds is the catch (+100 bounty); anything else is a hunch,
@@ -94,26 +94,29 @@ could conclude — pinning rate, single-word harmful theories (wrong
 one-word rules with full docket support that could bait a strike:
 0% on all five days), and liar-day fog cover. Report-only; run
 `node audit-deduction.mjs` after touching `deal()`. The day/night shift
-is `body[data-shift]` + CSS variables; all art is inline SVG + CSS, and
-there are no image assets. State changes are physical on purpose — cards
+is `body[data-shift]` + CSS variables; the UI layer is inline SVG + CSS,
+and the room behind it is painted key art (generated with MiniMax H3 via
+fal.ai — three angles of one office, crossfaded per shift, with the SVG
+scene as the fallback). State changes are physical on purpose — cards
 deal, docket rows cascade in, filings fly to the tray, the night stamp
 swings and throws ink, the amendment is stapled on, the finale is a decree
 you fill in and sign — and `prefers-reduced-motion` skips every flight,
 leaving the state change visible and instant.
-The score is four pre-rendered tracks in `audio/` (main-title noir, day
-ambience, night tension, dawn resolve — generated with ElevenLabs Music),
-crossfaded per phase by a small `score` module. If a file can't load —
-`file://`, offline — it silently falls back to the procedural WebAudio
-soundscape (sub-bass drone, tape noise, stamp clunks, reactive VALE
-dissonance), so the game never depends on a network. A second procedural
-layer runs under either score: rain on the office window that gets wetter
+The score is composed, not recorded: an eight-bar noir progression in D
+minor (76 bpm, swung — upright bass, charleston piano, brushes, a muted
+horn) scheduled live in WebAudio. The room chooses the arrangement — full
+chart on the title, piano only on the day shift, no melody at night, a
+sustained reprise at dawn — and a catch raises a horn sting. No audio
+files exist: `file://` and the itch page hear the same score. Under it runs
+a procedural weather layer: rain on the office window that gets wetter
 each night of the week, and the odd far-off thunder roll while the audit
 desk is lit. `M` toggles audio.
 
 ## Credits
 
-ElevenLabs Music (generated tracks), bespoke WebAudio sound design and
-SVG artwork. All proceedings fictional.
+Painted key art generated with MiniMax H3 (fal.ai); the score, foley and
+sound design are composed WebAudio; the paper UI is inline SVG. All
+proceedings fictional.
 
 ## Status
 

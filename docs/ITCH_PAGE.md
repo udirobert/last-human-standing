@@ -1,13 +1,14 @@
 # NIGHT SHIFT — itch page copy + trailer shot list
 
+> **2026-11-14:** the pivot-5 game-side overhaul (see `GAME_OFF_2026.md`) repaints the game and changes the copy below. W7 (freeze 2026-11-25) hands over a regenerated cover, GIF, six screenshots and a one-pager of final copy blocks — re-verify everything in this doc against that handoff before building the page. Canonical tagline from W6 onward: "Deduce by day. Enforce by night. Catch the machine."
+
 Game Off 2026 entry. This doc is the shippable source for the itch page and
 the trailer. Copy sections verbatim; capture instructions at the bottom are
 for whoever has the game open in a browser (record locally, upload to itch).
 
 ## Page title + tagline
 
-**NIGHT SHIFT** — *Deduce the rule by day. Enforce it by night. Catch the
-filer who isn't human.*
+**NIGHT SHIFT** — *Deduce by day. Enforce by night. Catch the machine.*
 
 (One sentence, verb + fantasy + twist. This line also opens the trailer.)
 
@@ -78,15 +79,15 @@ blind?"). Best conversations get collected into community collections.
 - Filings with fingerprints: human cards land off-square with marginal notes — the machine's arrives dead straight, instantly printed
 - Five staged days: pay-for-clues, oaths, mid-night rule amendments, a liar on the docket
 - An escalating Turing mystery you discover, not a tutorial — catch the automated filer before dawn
-- A generated noir score (title theme, day and night shifts, dawn) with a procedural fallback
+- A composed noir score — upright bass, brushes, charleston piano, muted horn — arranged live per shift, no audio files
 - Verdicts explained line by line — losses teach, never confuse
 - Daily seeded docket + share grid
 - Runs in the browser, no install; keyboard + touch
-- Zero dependencies, responsive HTML5 canvas & SVG
+- Zero dependencies, responsive HTML5; save/resume mid-shift
 
 ## Credits
 
-Score generated with ElevenLabs Music · bespoke WebAudio foley · inline SVG artwork. All proceedings fictional.
+Painted key art generated with MiniMax H3 (fal.ai) · the score is composed WebAudio — no AI-music service, no audio files · paper UI is inline SVG. All proceedings fictional.
 
 ## Tags (itch)
 
@@ -151,6 +152,6 @@ Assets in `docs/itch-assets/` — produced by scripted Chrome runs against
 - [ ] Cover GIF uploaded, tagline in short description
 - [ ] Trailer embedded at top of description
 - [ ] Controls section states mobile-tappable
-- [ ] Music credit present (generated score — ElevenLabs Music in credits)
+- [ ] Music credit present (composed WebAudio score in credits)
 - [ ] `?seed=` documented for replay/share threads
 - [ ] Play + rate other entries during voting (reciprocity drives ratings)

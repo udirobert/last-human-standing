@@ -95,8 +95,8 @@ The rule of thumb now applies one layer up: if a player can't *see* what just ha
 
 ## Scope & Architecture
 
-- **Tech**: vanilla JS + DOM + WebAudio, no build step, works from `file://`. `game-off/{index.html,style.css,game.js,logic.js,riddles.js,test-logic.mjs}` — extracted to standalone public repo via `scripts/package-game-off.sh`. All art is inline SVG + CSS — night desk title, stage room, ARIA's terminal head, paper grain, rubber stamps, and seals.
-- **Audio**: Procedural WebAudio atmospheric soundscape synthesized at runtime (low-pass sub-bass drone, warm analog tape hiss, physical foley, and reactive VALE tritone dissonance). Zero external audio dependencies, 208KB total directory size. `M` toggles mute.
+- **Tech**: vanilla JS + DOM + WebAudio, no build step, works from `file://`. `game-off/{index.html,style.css,game.js,logic.js,riddles.js,test-logic.mjs}` — extracted to standalone public repo via `scripts/package-game-off.sh`. The paper UI is inline SVG + CSS (night desk title, ARIA's terminal head, rubber stamps, seals); the room behind it is painted key art in `game-off/art/` (MiniMax H3 via fal.ai), crossfaded per shift with the SVG scene as fallback if an image fails.
+- **Audio**: all composed at runtime in WebAudio — an eight-bar noir chart (76 bpm swung: upright bass, charleston piano, brushes, muted horn) with per-phase arrangements, a horn sting on a catch, plus the atmospheric bed (sub-bass drone, tape hiss, reactive VALE tritone dissonance) and the rain/thunder weather layer. No audio files; `file://` and the itch embed hear the same score. `M` toggles mute.
 - **Data & Verification**: Case data lives in `riddles.js`, deal/verdict rules in `logic.js` (pure, node-testable). `test-logic.mjs` verifies 2,000 seeds per day with 100% determinism.
 
 ## Milestones (Updated 2026-11-12 — Jam-Winning Overhaul)
@@ -113,8 +113,50 @@ The rule of thumb now applies one layer up: if a player can't *see* what just ha
    - Standalone extraction: created `scripts/package-game-off.sh` producing 52KB `night-shift-itch.zip` and clean standalone repo at `dist/night-shift`.
 5. ~~Fresh-Player Playtesting~~ **done (agent-side)**: persona harness + three blind fresh-context playtests — see "Playtest program" below. Human-stranger session still open.
 6. **Submission & Itch Launch (by Nov 30)**: media kit ready (`docs/itch-assets/`); deploy to itch.io and configure the page — see `ITCH_PAGE.md` checklist. Push standalone repo before Dec 1 13:37 PST.
+7. **Pivot 5 — game-side review overhaul (in flight, started 2026-11-14)**: lift the losing categories (Graphics, Audio, onboarding, theme, completion) without touching the frozen deduction design. Full plan in the "Pivot 5" section below. **Code freeze 2026-11-25**; itch page, trailer, upload, human playtest and ratings reciprocity stay with the owner.
+
+## Pivot 5 — game-side review overhaul (2026-11-14 → freeze 2026-11-25)
+
+A full review against the jam's six judged categories (community vote) found the losing causes: the build is provably fair but *presents* as a styled web page — dark text screens at thumbnail size (Graphics), an ambient score that ignores the player (Audio), the most literal theme reading on offer (Theme), no save state so raters bounce mid-run and never return (Gameplay/Overall), and a cold open whose first judgment is a coin flip for a fresh player. Presentation is changed; deduction design is **frozen** — `test-logic.mjs` + `audit-deduction.mjs` are the tripwire and must pass untouched.
+
+Decisions locked 2026-11-14:
+
+- **Art direction: painterly noir poster** (gouache/oil, warm lamp ambers, film grain) via MiniMax H3 on fal.ai (`FAL_KEY` in `.env.local`, free during jam window). Doctrine: painted world *behind*, crisp DOM/SVG paper UI *in front*; every generated `<img>` falls back to the existing inline SVG scene on error so `file://` and offline stay safe.
+- **Postmark strip: plain words in the jam build** — `LATENCY · ORIGIN · RELAYS · RECEIPT`. The live LHS packet strip keeps `PKT/ORIGIN/HOPS/RCPT`; the itch page copy bridges the crossover.
+- **Audio: compose an original procedural noir score in WebAudio** (upright bass, brushed kit, piano, muted trumpet), phase-layered and event-reactive (catch sting, contested swell, duck under stamps, silence before CUT). Drops the 3.4MB `audio/` dir entirely — one score everywhere, file:// and embed parity, no AI-music credit. **Decision checkpoint 2026-11-21**: if the motif doesn't land, fall back to keep-current-tracks + mixing polish.
+- **Owner split**: Droid owns W1–W8 (game + regenerated media kit, freeze Nov 25). The owner keeps: itch page, trailer, upload, human-stranger playtest, and ratings reciprocity during voting.
+
+### Workstreams
+
+- **W1 — Save/resume** (P0): snapshot state to `localStorage` after every phase transition (seed, day, score, strikes, flags, mute, reduced-motion). Title gains `RESUME SHIFT — Day N · Score S` when a save exists; a new shift clears it. Resumed runs keep their original seed even after the daily seed rolls over.
+- **W2 — Cold open: teach by contrast** (P0): after stamping the human filing, a two-beat comparison strip aligns the two receipts side by side — "filed hours after the riddle" vs "filed 3 milliseconds after" — so the VALE judgment is a deduction, not a coin flip. Plain-word relabel everywhere in the jam build. ARIA teaches the contrast in one sentence; lore demoted. **Gate:** a fresh blind agent catches VALE *with stated reasons* on the cold open in ≥2 of 3 runs.
+- **W3 — Art pipeline + integration** (P0, largest): `scripts/generate-art.mjs` (fal client) + committed prompt manifest (`scripts/art-manifest.mjs`). 36 assets in 5 groups: room×4 incl. cover-base, filer portraits×6 (VALE subtly uncanny), card vignettes×24, endings×2. WebP, 250KB/asset budget with ffmpeg recompress. Style anchor goes to the owner for review before the batch runs. Docs/credits updated honestly (painted key art: MiniMax H3 via fal.ai).
+- **W4 — Make the shift visible** (P1): the lever pull becomes a perspective flip — the same painted room from the clerk's chair (day) crossfades to the same room from behind ARIA's desk (night), one-line beat: "You are the desk now." Gives Theme raters a screenshotable moment and upgrades the literal take with the role-reversal read. Full `prefers-reduced-motion` parity.
+- **W5 — Original procedural score** (P1): see decision above. **Gate:** blind listeners describe it as "jazz noir", not "drone".
+- **W6 — Copy, mobile, consistency**: one canonical tagline everywhere ("Deduce by day. Enforce by night. Catch the machine."), fix the "canvas" feature bullet and stale size claims (208KB/52KB), README + credits pass, 390px mobile audit (docket, portraits, vignette crops, night buttons), zip target < 8MB with art lazy-loaded behind the title.
+- **W7 — Media kit regen** (~½ day, handoff): cover rebuilt from the painted hero + vector text; `catch.gif` + six screenshots re-captured headless into `docs/itch-assets/`; one-pager of final copy blocks for `ITCH_PAGE.md`.
+- **W8 — Validation** (concentrated Nov 22–25): `test-logic.mjs` + `audit-deduction.mjs` untouched-pass; new asset smoke script (manifest completeness + size budget); save/resume round-trip test; `file://` vs http parity; 390px capture; three blind fresh-context playtests with measured gates (cold-open catch-with-reason, first-60s comprehension, full-week completion, feed gut-check on new screenshots).
+
+### Timeline
+
+| Dates | Work |
+|---|---|
+| Nov 14-15 | W1 + W2 |
+| Nov 16-20 | W3 (style anchor to owner ~Nov 16, batch generation after the nod) |
+| Nov 21-22 | W4 + W5 (score checkpoint Nov 21) |
+| Nov 23-24 | W6 + W7 |
+| Nov 25 | W8 full pass, code freeze, zip + media kit handed to owner |
+| Nov 26-Dec 1 | Owner: itch page, trailer, upload, human playtest; Droid on standby for fixes |
+
+### Expected scorecard + honest caveat
+
+Graphics 2-3 → ~4 (painted world + crisp paper contrast), Audio ~3 → 4 with a story ("the score is code"), Gameplay retention up (save/resume) + a fair first minute (contrast teach), Theme upgraded by the flip. This raises the ceiling; it does not guarantee a win — community vote also needs early upload, ratings reciprocity, and a trailer that shows the flip moment. Those are the owner's and matter as much as anything in this plan.
 
 ## Status log
+
+- **2026-11-14 (pivot 5 execution — W1/W2/W4/W5/W6 landed, ahead of schedule)** — Logic tripwire untouched-pass throughout (`test-logic.mjs` + `audit-deduction.mjs`). **W1 save/resume**: localStorage snapshot at every stable beat, `RESUME SHIFT` on the title with day/score labels, seed pinned to the saved run; browser-verified across mid-day, mid-verdict (pay posts exactly once), mid-night, resolved-case dismissal, cold-open end, repeated resumes. **W2 cold open**: both filings aligned in a comparison strip (CLAIM/LATENCY/ORIGIN/RELAYS/RECEIPT), plain-word labels everywhere; three blind fresh-context agents all caught VALE with valid stated reasons (3/3 — gate passed), all three flagged case-1-no-baseline → added the `coldFirst` ARIA line. **W3 anchor**: `scripts/art-manifest.mjs` (36 entries, 5 groups) + `scripts/generate-art.mjs` (fal.ai MiniMax H3, refs as base64, WebP, 250KB/asset budget); room anchor generated and visually reviewed — consistent noir room. Remaining batch (portraits, cards, endings, cover-base) gated on owner's style nod. **W4 flip**: `.stage-art` backdrop layer in `index.html`, crossfade per `body[data-phase]`, readability scrim, reduced-motion parity, onerror fallback to the SVG scene; verified in all three seats. **W5 score**: mp3 `score` module replaced with a composed WebAudio jazz-noir chart (76bpm swung, 8 bars Dm9·Gm9·B♭maj7·A7sus×2 — upright bass, charleston piano, brushes, muted horn), per-phase arrangements, horn sting on a catch, ducks under the amendment; the 72bpm ambient pulse removed (two tempi fight), room-tone bed kept at 0.22 with rain/VALE dissonance; `game-off/audio/` (3.4MB) deleted, packager no longer zips it; runtime-probed clean (scheduled node counts match the chart, zero JS errors) — ear checkpoint for the owner stands (Nov 21: does it read as "jazz noir"?). **W6 copy/mobile**: canonical tagline "Deduce by day. Enforce by night. Catch the machine." on the title + itch copy; stale claims fixed (canvas bullet, 208KB/52KB, ElevenLabs credits → MiniMax H3 + composed score); 390×844 mobile audit — title, cold open, night audit incl. postmark strip: no horizontal overflow, stamp buttons at thumb height (desktop verdict seat unchanged); zip 554KB with anchor art. Remaining: post-batch 390px re-check (portraits, vignettes), zip < 8MB after batch.
+
+- **2026-11-14 (pivot 5 — review-driven overhaul)** — Full review against the six judged categories. Verdict: fair game, losing presentation. Plan above: save/resume, contrast-taught cold open, painted key-art overhaul (MiniMax H3 via fal.ai), perspective-flip shift seam, composed procedural score. Deduction design frozen; logic tests are the tripwire. Freeze 2026-11-25.
 
 - **2026-11-09** — Doc created; concept locked as **NIGHT SHIFT**.
 - **2026-11-09 (pivot 1)** — First build rejected as too generic. Rebuilt as 5-day deduction/audit cycle.

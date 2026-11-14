@@ -82,6 +82,18 @@
       </g>
     </svg>
   </div>
+  <!-- painted key art (MiniMax H3 via fal.ai): three angles of the same
+       office — the clerk's chair by night (title), the same chair by day
+       (day shift), and the view from behind ARIA's terminal (night shift,
+       the perspective flip). Missing files leave the SVG scene beneath. -->
+  <div class="stage-art">
+    <img class="bg-art bg-room-night" src="art/room-night.webp" alt=""
+      onerror="this.classList.add('missing');if(this.parentNode.querySelectorAll('img:not(.missing)').length===0)this.parentNode.classList.add('no-art')" />
+    <img class="bg-art bg-room-day" src="art/room-day.webp" alt=""
+      onerror="this.classList.add('missing');if(this.parentNode.querySelectorAll('img:not(.missing)').length===0)this.parentNode.classList.add('no-art')" />
+    <img class="bg-art bg-room-aria" src="art/room-night-aria.webp" alt=""
+      onerror="this.classList.add('missing');if(this.parentNode.querySelectorAll('img:not(.missing)').length===0)this.parentNode.classList.add('no-art')" />
+  </div>
 </div>
 <div class="scanline"></div>
 <div id="frame">
@@ -159,7 +171,7 @@
       <rect x="0" y="0" width="640" height="300" filter="url(#paperGrain)" opacity=".06"/>
     </svg>
     </div>
-    <p class="sub">Deduce ARIA's secret rule by day. Enforce it by night.</p>
+    <p class="sub">Deduce by day. Enforce by night. Catch the machine.</p>
     <div class="steps">
       <div class="step"><b>1 · READ</b><span>her rulings</span></div>
       <div class="step-arrow" aria-hidden="true">→</div>
@@ -168,6 +180,7 @@
       <div class="step"><b>3 · STAMP</b><span>the shift</span></div>
     </div>
     <p class="legend">Three strikes and you're cut.</p>
+    <div class="resume-slot" id="resumeSlot"></div>
     <div class="title-btns">
       <button id="startBtn" class="stamp-btn" aria-label="Clock in" title="Today's fresh docket — same for everyone, changes daily">
         <span class="pc-top"><span class="pc-week">WEEK 12</span><span class="pc-no" id="pcDocket">DOCKET</span></span>

@@ -59,6 +59,41 @@ body[data-shift="day"] { background: #e6dcc4; }
 .stage-night { opacity: 0; }
 body[data-shift="night"] .stage-day { opacity: 0; }
 body[data-shift="night"] .stage-night { opacity: 1; }
+/* ---------- painted key art: the room the desk sits in, for real ----------
+   Three painted angles of one office, crossfaded by body[data-phase] —
+   the seat you're in: the clerk's chair by night (title), the same chair
+   by day (day shift), and the view from behind ARIA's terminal (night
+   shift — the perspective flip: the judged becomes the judge). A missing
+   file (display:none) leaves the SVG scene beneath it. */
+#stage .stage-art { position: absolute; inset: 0; }
+#stage .bg-art {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; opacity: 0;
+  transition: opacity 1.2s ease;
+}
+#stage .bg-art.missing { display: none; }
+/* no painted files at all → the SVG room carries the frame alone */
+#stage .stage-art.no-art { display: none; }
+body[data-phase="title"] #stage .bg-room-night,
+body[data-phase="day"] #stage .bg-room-day,
+body[data-phase="verdict"] #stage .bg-room-day,
+body[data-phase="audit"] #stage .bg-room-aria,
+body[data-phase="finale"] #stage .bg-room-aria,
+body[data-phase="dawn"] #stage .bg-room-night { opacity: 1; }
+/* the painted room sits behind the paper, never over it — a soft scrim
+   keeps the frame's text panels readable on the brightest paintings */
+#stage .stage-art::after {
+  content: ""; position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 30%, rgba(9, 10, 14, .5) 100%),
+    linear-gradient(rgba(9, 10, 14, .22), rgba(9, 10, 14, .3));
+  pointer-events: none;
+}
+body[data-shift="day"] #stage .stage-art::after {
+  background:
+    radial-gradient(120% 90% at 50% 40%, transparent 35%, rgba(64, 52, 26, .34) 100%),
+    linear-gradient(rgba(240, 232, 208, .16), rgba(64, 52, 26, .2));
+}
 /* day: the blinds breathe as clouds cross the window */
 .stage-day .beams { animation: cloudpass 26s ease-in-out infinite; }
 @keyframes cloudpass { 50% { opacity: .55; } }
@@ -192,6 +227,35 @@ button:disabled { opacity: .45; cursor: default; }
   font-size: 13px; color: #c9c2b2;
 }
 #title .step-arrow { align-self: center; color: #5c5546; font-size: 16px; }
+/* resume an unfinished shift — offered only when a run is in progress */
+#title .resume-slot { width: 100%; }
+#title .resume-btn {
+  display: flex; flex-direction: column; gap: 3px; align-items: center;
+  width: min(340px, 86vw);
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border: 1px solid rgba(232, 179, 75, .5);
+  border-radius: 6px;
+  background: rgba(232, 179, 75, .07);
+  cursor: pointer;
+  animation: resumeGlow 2.6s ease-in-out infinite;
+}
+#title .resume-btn:hover { background: rgba(232, 179, 75, .15); }
+#title .resume-btn .r-line {
+  font-family: ui-monospace, monospace;
+  font-weight: 800; font-size: 13px;
+  letter-spacing: .22em;
+  color: var(--amber, #e8b34b);
+}
+#title .resume-btn .r-sub {
+  font-family: ui-monospace, monospace;
+  font-size: 10px; letter-spacing: .14em;
+  color: #a99f8c;
+}
+@keyframes resumeGlow { 50% { border-color: rgba(232, 179, 75, .85); } }
+@media (prefers-reduced-motion: reduce) {
+  #title .resume-btn { animation: none; }
+}
 #title .title-btns {
   display: flex; gap: 12px; align-items: center;
   justify-content: center; flex-wrap: wrap;
@@ -1043,6 +1107,43 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 }
 @keyframes flagpulse { 50% { border-color: rgba(232,179,75,.18); } }
 
+/* cold open: the two receipts aligned row by row — teach by contrast.
+   Styled as a magnified postmark strip; it aligns, it never accuses. */
+.rc-compare {
+  margin: 0 0 14px;
+  padding: 10px 14px 8px;
+  border: 1px dashed var(--line, #3b4255);
+  border-radius: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: .06em;
+  color: #7d8ba0;
+}
+.rcc-row, .rcc-head {
+  display: grid;
+  grid-template-columns: 4.4em 1fr 1fr;
+  gap: 0 10px;
+  line-height: 1.7;
+}
+.rcc-head {
+  color: #a3b0c4;
+  border-bottom: 1px dashed var(--line, #3b4255);
+  padding-bottom: 3px;
+  margin-bottom: 3px;
+}
+.rcc-k { color: #5c6a80; }
+.rcc-a, .rcc-b { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rcc-cap {
+  margin: 7px 0 0;
+  text-align: center;
+  color: #5c6a80;
+  font-style: italic;
+}
+@media (max-width: 420px) {
+  .rc-compare { padding: 8px 9px 6px; }
+  .rcc-row, .rcc-head { grid-template-columns: 3.9em 1fr 1fr; gap: 0 6px; }
+}
+
 /* grounds — the desk asks which packet field flagged a clean-paper SUS */
 .flag-row {
   margin-top: 10px;
@@ -1793,6 +1894,8 @@ body.brief-up #frame { filter: brightness(.5) saturate(.8); }
 
 @media (prefers-reduced-motion: reduce) {
   .brief-card { animation: none; }
+  /* the painted room cuts between seats, it doesn't sweep */
+  #stage .bg-art { transition: none; }
   #dayPhase.dealt #docketBody tr,
   #dayPhase.dealt #hand .evidence,
   #dayPhase.dealt .c-stamp .ink { animation: none; opacity: 1; }
