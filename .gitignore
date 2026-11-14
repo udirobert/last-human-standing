@@ -75,3 +75,6 @@ supabase/.env
 # Server-side .env files (dev only; production env is set on machine)
 .env.backup
 exhibition/photos/
+
+.codex/
+.gemini/
