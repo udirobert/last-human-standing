@@ -1705,6 +1705,12 @@ function renderCase() {
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
+      <div class="case-photo" aria-hidden="true">
+        <img class="case-vignette" src="art/card-${sub.card.id}.webp" alt="" loading="lazy"
+          onerror="this.classList.add('missing')" />
+        <img class="case-id" src="art/${sub.filer.toLowerCase()}.webp" alt="" loading="lazy"
+          onerror="this.classList.add('missing')" />
+      </div>
       <div class="name">${sub.card.name}</div>
       ${sub.pick && !sub.pendingFlag ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
         <p class="case-reason">${reason}</p>` : ""}
@@ -2229,7 +2235,10 @@ function endGame() {
   sfx.dawn();
 
   const title = G.finaleTitle || (G.status === "player" ? "LAST HUMAN STANDING" : "DAWN");
-  score.play(title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL" ? "title" : "dawn");
+  // the room answers the week's ending: gold dawn, or the blue automated office
+  const cutEnd = title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL";
+  document.body.dataset.end = cutEnd ? "cut" : "earned";
+  score.play(cutEnd ? "title" : "dawn");
   const acc = G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0;
   const titleIdx = Math.min(JURY_TITLES.length - 1, Math.floor((acc / 100) * JURY_TITLES.length));
 

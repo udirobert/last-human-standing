@@ -78,8 +78,12 @@ body[data-phase="title"] #stage .bg-room-night,
 body[data-phase="day"] #stage .bg-room-day,
 body[data-phase="verdict"] #stage .bg-room-day,
 body[data-phase="audit"] #stage .bg-room-aria,
-body[data-phase="finale"] #stage .bg-room-aria,
-body[data-phase="dawn"] #stage .bg-room-night { opacity: 1; }
+body[data-phase="finale"] #stage .bg-room-aria { opacity: 1; }
+/* the week's endings paint the last room: gold dawn if you earned it,
+   the blue automated office if you didn't */
+body[data-phase="dawn"] #stage .bg-dawn { opacity: 1; }
+body[data-phase="dawn"][data-end="cut"] #stage .bg-dawn { opacity: 0; }
+body[data-phase="dawn"][data-end="cut"] #stage .bg-dawn-automated { opacity: 1; }
 /* the painted room sits behind the paper, never over it — a soft scrim
    keeps the frame's text panels readable on the brightest paintings */
 #stage .stage-art::after {
@@ -768,6 +772,34 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   padding: 18px 18px 14px; max-width: 440px; margin: 0 auto;
   text-align: left;
   rotate: var(--tilt, 0deg); /* human filings land off-square; the machine's doesn't */
+}
+/* the photo clipped to the filing: a painted print of the claim with the
+   filer's ID shot pinned over its corner. Every filer gets the same
+   treatment — the paper still carries the facts, the photo only the scene.
+   Missing files leave the paper exactly as it was; the glyph still speaks. */
+.case-photo { position: relative; margin: 2px 0 10px; }
+.case-photo img.missing { display: none; }
+.case-photo:not(:has(img:not(.missing))) { display: none; }
+.case-photo .case-vignette {
+  display: block; width: 100%; height: 118px;
+  object-fit: cover; object-position: 50% 42%;
+  border: 5px solid #e9e2cb; outline: 1px solid rgba(0, 0, 0, .35);
+  border-radius: 2px; box-shadow: 0 3px 10px rgba(0, 0, 0, .5);
+  transform: rotate(-.8deg); background: #0d1117;
+}
+.case-photo .case-id {
+  display: block; position: absolute; top: -14px; right: 10px;
+  width: 52px; height: 64px;
+  object-fit: cover; object-position: 50% 18%;
+  border: 3px solid #e9e2cb; outline: 1px solid rgba(0, 0, 0, .4);
+  border-radius: 2px; box-shadow: 0 3px 8px rgba(0, 0, 0, .55);
+  transform: rotate(2deg); background: #0d1117;
+}
+/* on a phone the postmark matters more than the picture — keep the
+   facts and the stub above the fold */
+@media (max-width: 480px) {
+  .case-photo .case-vignette { height: 84px; border-width: 4px; }
+  .case-photo .case-id { width: 42px; height: 52px; top: -10px; }
 }
 /* a fresh case file, dropped on the desk from the pile */
 .case-card.fresh { animation: casedrop .44s cubic-bezier(.18,1.05,.32,1) backwards; }

@@ -26,6 +26,7 @@ zip -r "$ZIP_OUTPUT" \
   cover-630x500.png \
   cover-630x500.svg \
   export-cover.html \
+  export-cover-painted.html \
   README.md \
   LICENSE-CREDITS.txt
 

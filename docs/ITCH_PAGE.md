@@ -1,6 +1,6 @@
 # NIGHT SHIFT — itch page copy + trailer shot list
 
-> **2026-11-14:** the pivot-5 game-side overhaul (see `GAME_OFF_2026.md`) repaints the game and changes the copy below. W7 (freeze 2026-11-25) hands over a regenerated cover, GIF, six screenshots and a one-pager of final copy blocks — re-verify everything in this doc against that handoff before building the page. Canonical tagline from W6 onward: "Deduce by day. Enforce by night. Catch the machine."
+> **2026-11-14:** the pivot-5 game-side overhaul (see `GAME_OFF_2026.md`) repaints the game and changes the copy below. **W7 done — the media kit in `docs/itch-assets/` is regenerated from the painted build**: `cover.png` (painted poster), `catch.gif` (5-frame grease-circle catch), `tray.png` (cold-open compare strip), `flag.png`, `day.png`, `verdict.png`, `amend.png`, `finale.png`, `ending.png`. Still re-verify the copy blocks below against the shipped build before publishing. Canonical tagline: "Deduce by day. Enforce by night. Catch the machine."
 
 Game Off 2026 entry. This doc is the shippable source for the itch page and
 the trailer. Copy sections verbatim; capture instructions at the bottom are

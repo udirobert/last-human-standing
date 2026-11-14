@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>NIGHT SHIFT — painted cover (630×500)</title>
+<style>
+  /* the painted cover: the poster shot from art/cover-base.webp with the
+     game's own paper UI type laid over it — painterly world behind,
+     crisp paper in front, same as the game itself. */
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #0a0b0f;
+    display: grid; place-items: center;
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  }
+  .cover {
+    position: relative; width: 630px; height: 500px; overflow: hidden;
+    background: #0d0f14;
+    box-shadow: 0 10px 40px rgba(0,0,0,.8);
+  }
+  .cover img.base {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block;
+  }
+  /* keep the type legible without flattening the painting */
+  .cover::after {
+    content: ""; position: absolute; inset: 0;
+    background:
+      radial-gradient(130% 100% at 50% 18%, transparent 26%, rgba(9,10,14,.62) 100%),
+      linear-gradient(rgba(9,10,14,.30) 0%, rgba(9,10,14,.55) 62%, rgba(9,10,14,.72) 100%);
+  }
+  .lockup {
+    position: absolute; inset: 0; z-index: 2;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center; color: #ece5d8;
+  }
+  .kicker {
+    margin-top: 34px;
+    font-family: ui-monospace, "SF Mono", Menlo, "Courier New", monospace;
+    font-size: 12px; letter-spacing: .24em; text-transform: uppercase;
+    color: #e8b34b;
+  }
+  h1 {
+    margin: 6px 0 0; font-size: 64px; font-weight: 600; letter-spacing: .05em;
+    line-height: 1; text-shadow: 0 3px 18px rgba(0,0,0,.85);
+  }
+  .rule-line {
+    width: 54px; height: 0; border-top: 2px solid #e8b34b; margin: 14px 0 12px;
+  }
+  .tagline {
+    font-family: ui-monospace, "SF Mono", Menlo, "Courier New", monospace;
+    font-size: 13px; letter-spacing: .12em; color: #c9c2b2;
+    line-height: 1.8; text-transform: uppercase;
+  }
+  .stamp {
+    position: absolute; right: 22px; bottom: 18px; z-index: 2;
+    font-family: ui-monospace, "SF Mono", Menlo, "Courier New", monospace;
+    font-size: 15px; font-weight: bold; letter-spacing: .18em;
+    color: #d08c86;
+    border: 3px solid #d08c86; border-radius: 4px;
+    padding: 5px 10px;
+    transform: rotate(-7deg);
+    opacity: .92;
+    text-shadow: 0 0 1px #d08c86;
+    box-shadow: inset 0 0 6px rgba(208,140,134,.35);
+  }
+</style>
+</head>
+<body>
+  <div class="cover" id="cover">
+    <img class="base" src="art/cover-base.webp" alt="">
+    <div class="lockup">
+      <span class="kicker">a deduction thriller in five night shifts</span>
+      <h1>NIGHT SHIFT</h1>
+      <div class="rule-line"></div>
+      <span class="tagline">Deduce by day. Enforce by night.<br>Catch the machine.</span>
+    </div>
+    <span class="stamp">SUS</span>
+  </div>
+</body>
+</html>
