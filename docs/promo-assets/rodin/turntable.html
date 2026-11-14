@@ -1,0 +1,36 @@
+<!doctype html><meta charset="utf-8"><style>html,body{margin:0;background:#1a1712}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js","three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const W = 256;
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true, alpha: true });
+renderer.setSize(W, W); renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const cam = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
+cam.position.set(0, 0.15, 1.6); cam.lookAt(0, 0.1, 0);
+scene.add(new THREE.HemisphereLight(0xfff2dd, 0x2a2018, 1.4));
+const key = new THREE.DirectionalLight(0xffe8c8, 2.2); key.position.set(1.2, 1.6, 1.4); scene.add(key);
+const rim = new THREE.DirectionalLight(0x88aaff, 0.8); rim.position.set(-1.4, 0.6, -1.2); scene.add(rim);
+const gltf = await new GLTFLoader().loadAsync('stamp.glb');
+const obj = gltf.scene;
+// normalize: center and fit
+const box = new THREE.Box3().setFromObject(obj);
+const size = box.getSize(new THREE.Vector3());
+const ctr = box.getCenter(new THREE.Vector3());
+obj.position.sub(ctr);
+const s = 0.9 / Math.max(size.x, size.y, size.z);
+obj.scale.setScalar(s);
+scene.add(obj);
+renderer.render(scene, cam);
+window.FRAMES = 12;
+window.ready = true;
+window.grab = (i) => {
+  const a = (i / window.FRAMES) * Math.PI * 2;
+  obj.rotation.y = a;
+  renderer.render(scene, cam);
+  return renderer.domElement.toDataURL('image/png');
+};
+</script>

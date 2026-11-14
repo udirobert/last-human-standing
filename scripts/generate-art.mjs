@@ -136,7 +136,7 @@ function select(args) {
 
 const args = process.argv.slice(2);
 mkdirSync(OUT_DIR, { recursive: true });
-const todo = select(args);
+const todo = select(args).filter((e) => e.kind !== "vendor");
 console.log(`NIGHT SHIFT art — generating ${todo.length} asset${todo.length === 1 ? "" : "s"} → game-off/art/`);
 const t0 = Date.now();
 let failed = 0;

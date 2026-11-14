@@ -5,5 +5,11 @@ Original submission for GitHub Game Off 2026 (theme: SHIFT).
 - Code, composed WebAudio score, soundscape, and vector art: MIT License.
 - Painted room art in art/ generated with MiniMax H3 (fal.ai); the SVG
   scene is the offline fallback.
+- Music: "Manhattan Lounge" and "Blue In Green" by WeLoveIndies
+  (weloveindies.com), licensed under the WeLoveIndies FREE & DEMO
+  license for this non-commercial jam release; attribution kept on the
+  title screen and here.
+- Brass seal render in art/rodin-stamp.webp generated with Hyper3D
+  Rodin (Gen-2.5); source GLB archived outside the shipped package.
 - Runs standalone from file:// or any static web server; no network calls.
 - All proceedings and characters depicted are fictional.

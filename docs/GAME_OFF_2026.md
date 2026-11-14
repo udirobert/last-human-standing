@@ -349,3 +349,56 @@ Completed the remaining priced items from `docs/DIFFERENTIATION.md`.
 Verified: `test-logic.mjs` ALL PASS · `deskDream` exercised across 10 seeds in
 real Chrome (correct slots, correct card ids, truth recomputed) · dossier HTML
 validated · wear dataset confirmed · zero console errors · browser session closed.
+
+## Sponsor pass — WeLoveIndies audio + fal vignette completion (2026-11-14)
+
+- **WeLoveIndies (F/demo license, non-commercial):** "Manhattan Lounge" now
+  loops under the title/attract (`audio/title.mp3`, loudnorm −16 LUFS,
+  edge fades); "Blue In Green" plays once at dawn (`audio/dawn.mp3`).
+  `playLicensed()`/`stopLicensed()` in game.js ride the first user
+  gesture (autoplay policy), respect the M-mute, and fail silently if
+  the file is absent — the procedural score still carries gameplay.
+- **Machine faces:** `faceImg()` renders the existing painted portraits
+  (`art/{mara,oko,jun,tess,vale}.webp`) on the dawn "the machine wore
+  X's face" line and in the exported case-file HTML. The face only
+  appears where the fiction names it.
+- **fal (MiniMax H3, existing pipeline):** the 9 missing card vignettes
+  generated via `scripts/generate-art.mjs` + new scenes in
+  `art-manifest.mjs` — `card-night-market`, `card-temple-dusk`,
+  `card-offshift-couch`, `card-feeding-three`, `card-last-route`,
+  `card-the-scroll`, `card-stockroom`, `card-microwave-fish`,
+  `card-loading-screen`. `smoke-art.mjs` now PASSes: 62 assets, all
+  in budget.
+- Pending: Rodin emblem (Hyper3D credits claimed; generation queued
+  manually), WeLoveIndies intro-tag check on the two tracks.
+
+## Elevation pass — payoffs, attribution, packaging (2026-11-14, later)
+
+- **Dawn mugshot:** the culprit's portrait now gets a framed reveal block
+  on the end screen (`#endMug` — manila card, name, "the face the
+  machine wore tonight") instead of a 56px footnote; absent files hide
+  the whole block via img onerror.
+- **Rank promotion:** `endGame` compares `clerkRank` before/after
+  `fileRecord()` — a promotion lands as a gold `PROMOTED — <rank>`
+  endline plus a wire entry. First-shift FILE CLERK doesn't self-promote.
+- **Attract mode completes the loop:** the day act now performs the
+  clerk's call — four attribute chips, one picked (even days hit a real
+  rule key, odd days whiff), resolved at verdict as
+  `YOU CALLED X — the seal keys on Y · +25`. The reel demos every verb
+  the day phase has, including the prediction stamp.
+- **Clerk's call is visible live:** picking a prediction chip writes
+  `clerk's call — WHERE` to the wire immediately; handbook's THE DAY
+  section documents the chips; title screen hints `?` opens it.
+- **Licensed-audio polish:** bookend tracks fade in (~1.5s) and out
+  (~0.9s, `__fadeOut` race-guarded) instead of hard-cutting; a
+  `music · WeLoveIndies` credit line sits on the title and the shipped
+  `LICENSE-CREDITS.txt` names both tracks + the F/demo license.
+- **Rodin seal goes cinematic:** `art/rodin-stamp.webp` is now a
+  12-frame turntable (192px animated WebP, 124KB) rendered from the
+  archived GLB via a local three.js viewer — the brass seal slowly
+  rotates inside the exported case-file dossier. Viewer + frames
+  archived in `docs/promo-assets/rodin/`.
+- **Packaging fix (real bug):** `scripts/package-game-off.sh` zipped an
+  explicit file list that predated `audio/` — the licensed tracks would
+  have silently not shipped to itch.io. `audio` added to the zip; the
+  standalone repo export already copies the whole dir.

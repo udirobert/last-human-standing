@@ -2613,6 +2613,8 @@ function endGame() {
   finalePhase.classList.add("hidden");
   setShift("night");
   sfx.dawn();
+  playLicensed("dawn");
+  stopLicensed("title");
 
   const title = G.finaleTitle || (G.mode === "ot"
     ? (G.status === "player" ? "OVERTIME CLEARED" : "DAWN")
@@ -2652,9 +2654,27 @@ function endGame() {
     : `Cut on day ${G.elimDay || "?"} — the night shift made you: ${JURY_TITLES[titleIdx]}.`);
   if (G.status === "juror" && G.finaleTitle) lines.push(`Night-shift title: ${JURY_TITLES[titleIdx]}.`);
   // the permanent record files itself — the ledger outlives the shift
+  const rankBefore = clerkRank(loadRecord());
   const rec = fileRecord();
+  const rankAfter = clerkRank(rec);
+  if (rankAfter && rankBefore && rankAfter !== rankBefore) {
+    lines.unshift(`PROMOTED — ${rankAfter}`);
+    wire(`promoted — ${rankAfter}`);
+  }
   lines.push(careerLine(rec).replace(/<\/?b>/g, ""));
-  $("endTitle2").innerHTML = lines.map((l) => `<span class="endline">${l}</span>`).join("");
+  $("endTitle2").innerHTML = lines.map((l) =>
+    `<span class="endline${l.startsWith("PROMOTED") ? " promote" : ""}">${l}</span>`).join("");
+  // the mugshot: the face the machine wore, big enough to be a reveal
+  const mug = $("endMug");
+  mug.classList.add("hidden");
+  if (G.mode !== "machine" && G.culprit) {
+    const img = $("endMugImg");
+    img.onload = () => mug.classList.remove("hidden");
+    img.onerror = () => mug.classList.add("hidden");
+    img.src = `art/${G.culprit.toLowerCase()}.webp`;
+    img.alt = `${G.culprit}'s portrait`;
+    $("endMugName").textContent = G.culprit;
+  }
   $("shareBlock").textContent = shareText(title);
   if (G.mode === "week") {
     try { localStorage.setItem("night-shift-ot-unlocked", "1"); } catch { /* no storage */ }
@@ -2699,7 +2719,7 @@ document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
 $("signBtn").addEventListener("click", signRule);
 /* the case file: the whole shift as a dossier — the archive persists.
    Styled HTML so it prints to PDF as a physical case folder. */
-function caseFileHTML(title) {
+function caseFileHTML(title, seal = "") {
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const rows = DAYS.map((d, i) => {
     let night;
@@ -2732,21 +2752,32 @@ function caseFileHTML(title) {
   .stamp{display:inline-block;border:2px solid #8c2f22;color:#8c2f22;
          padding:3px 12px;font-size:12px;letter-spacing:.2em;transform:rotate(-4deg);
          margin:10px 0 0}
+  .seal{float:right;width:96px;height:96px;object-fit:contain;opacity:.9;
+        filter:sepia(.4) contrast(1.05);margin:0 0 8px 16px}
   @media print{body{margin:0;max-width:none}}
 </style></head><body>
 <h1>NIGHT SHIFT — CASE FILE</h1>
+${seal ? `<img class="seal" src="${seal}" alt="" />` : ""}
 <div class="meta">seed ${esc(SEED)} · ${G.mode === "ot" ? "overtime" : G.mode === "machine" ? "the machine's shift" : "week"} · ${esc(title)}</div>
 <table><tr><th>shift</th><th>theme</th><th>day</th><th>night</th></tr>${rows}</table>
 <div class="score">SCORE ${G.score} · AUDITS ${G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0}% ACCURACY
-${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears a new one every docket` : ""}</div>
+${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears a new one every docket ${faceImg(G.culprit)}` : ""}</div>
 <div class="stamp">${esc(title)}</div>
 <h2>the wire remembers</h2>
 <ul>${wire || "<li>—</li>"}</ul>
 </body></html>`;
 }
-$("caseFileBtn").addEventListener("click", () => {
+$("caseFileBtn").addEventListener("click", async () => {
   const title = $("endTitle").textContent || "SHIFT";
-  const blob = new Blob([caseFileHTML(title)], { type: "text/html" });
+  // the Rodin seal embeds as base64 so the dossier stays self-contained
+  let seal = "";
+  try {
+    const buf = await (await fetch("art/rodin-stamp.webp")).arrayBuffer();
+    let bin = ""; const bytes = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+    seal = "data:image/webp;base64," + btoa(bin);
+  } catch { /* seal optional */ }
+  const blob = new Blob([caseFileHTML(title, seal)], { type: "text/html" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `night-shift-${SEED}-casefile.html`;
@@ -2759,6 +2790,7 @@ $("predictRow").addEventListener("click", (e) => {
   if (!b || G.phase !== "day" || G.mode === "machine") return;
   G.prediction = G.prediction === b.dataset.attr ? null : b.dataset.attr;
   sfx.click();
+  if (G.prediction) wire(`clerk's call — ${ATTR_LABEL[G.prediction]}`);
   $("predictRow").querySelectorAll(".pr-btn").forEach((x) =>
     x.classList.toggle("picked", G.prediction === x.dataset.attr));
 });
@@ -2775,6 +2807,7 @@ document.addEventListener("keydown", (e) => {
       ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.22, ac.currentTime);
     }
     score.setMuted();
+    setLicensedMuted();
     applyRain();
     savePrefs();
     return;
@@ -2956,6 +2989,7 @@ function attractDayAct() {
     <div class="at-docket"></div>
     <div class="at-rulebar"><span class="rc-label">ARIA's rule: <b>SEALED</b></span></div>
     <div class="at-hand"></div>
+    <div class="at-predict"></div>
     <div class="at-verdict"></div>
   </div>`;
   // beat 1 — the docket deals in, rulings stamped
@@ -2984,11 +3018,24 @@ function attractDayAct() {
       hd.appendChild(hc);
     }, 350 + Math.min(docket.length, 6) * 380 + 1400 + i * 260);
   });
+  // beat 2.5 — the clerk calls the rule before the seal comes off;
+  // even days call a real key, odd days whiff — both outcomes on display
+  const keys = [...new Set(d.rule.map((x) => x.key))];
+  const call = n % 2 === 0 ? keys[0] : (ATTR_KEYS.find((k) => !keys.includes(k)) || keys[0]);
+  const callHit = keys.includes(call);
+  const pt = 350 + Math.min(docket.length, 6) * 380 + 1400 + hand.length * 260 + 250;
+  atDelay(() => {
+    const pr = el.querySelector(".at-predict");
+    pr.innerHTML = `<span class="at-prlabel">clerk's call:</span>` +
+      ATTR_KEYS.map((k) =>
+        `<span class="at-pchip${k === call ? " picked" : ""}">${ATTR_LABEL[k]}</span>`).join("");
+  }, pt);
   // beat 3 — the filing resolves: fact rows stagger, stamp falls
-  const vt = 350 + Math.min(docket.length, 6) * 380 + 1400 + hand.length * 260 + 700;
+  const vt = pt + 900;
   atDelay(() => {
     const v = el.querySelector(".at-verdict");
     v.innerHTML = `<div class="at-ruleline">ARIA's rule: ${d.rule.map((c) => c.text).join(" · ")}</div>
+      <div class="at-predline ${callHit ? "ok" : "bad"}">YOU CALLED ${ATTR_LABEL[call]} — the seal keys on ${keys.map((k) => ATTR_LABEL[k]).join(" + ")}${callHit ? " · +25" : ""}</div>
       <div class="at-facts">${factRows(filed, verdicts, true)}</div>
       <div class="at-stamp ${passed ? "human" : "sus"} big">${passed ? "SURVIVED" : "STRIKE"}</div>`;
     const rows = [...v.querySelectorAll(".fact")];
@@ -3141,6 +3188,47 @@ function fileRecord() {
   try { localStorage.setItem(RECORD_KEY, JSON.stringify(r)); } catch { /* ledger's full */ }
   return r;
 }
+/* licensed bookend audio (WeLoveIndies) — absent files fail silently,
+   so the scaffold ships before the tracks do. Title loops under the
+   attract reel; dawn plays once over the ending. */
+const licensed = {};
+function playLicensed(name, { loop = false, vol = 0.4 } = {}) {
+  if (audioMuted || licensed[name] === false) return null;
+  const a = licensed[name] || (licensed[name] = new Audio(`audio/${name}.mp3`));
+  a.loop = loop; a.volume = 0; a.muted = audioMuted; a.__fadeOut = false;
+  a.onerror = () => { licensed[name] = false; a.removeAttribute("src"); };
+  try {
+    const p = a.play(); if (p && p.catch) p.catch(() => {});
+    // fade the bookend in — music should arrive, not cut
+    const steps = 30;
+    for (let i = 1; i <= steps; i++) {
+      setTimeout(() => { if (licensed[name] === a && !a.__fadeOut) a.volume = vol * (i / steps); }, i * 50);
+    }
+  } catch { /* no audio ctx */ }
+  return a;
+}
+function stopLicensed(name, fadeMs = 900) {
+  const a = licensed[name];
+  if (!a || !a.pause) return;
+  // fade rather than hard-cut — bookend music should leave the room, not slam the door
+  a.__fadeOut = true;
+  const steps = Math.max(1, Math.round(fadeMs / 50));
+  const v0 = a.volume;
+  for (let i = 1; i <= steps; i++) {
+    setTimeout(() => { if (licensed[name]) a.volume = v0 * (1 - i / steps); }, i * 50);
+  }
+  setTimeout(() => { a.pause(); a.currentTime = 0; a.volume = v0; if (licensed[name] === a) licensed[name] = null; }, fadeMs + 60);
+}
+function setLicensedMuted() {
+  for (const k in licensed) if (licensed[k] && licensed[k].mute !== undefined) licensed[k].muted = audioMuted;
+}
+/* the machine's face, when the portrait set exists — absent files remove
+   themselves so the line degrades to plain text */
+function faceImg(name) {
+  return `<img class="face-portrait" src="art/${(name || "").toLowerCase()}.webp" alt="" ` +
+    `onerror="this.remove()" />`;
+}
+
 function careerLine(r) {
   if (!r) return "";
   const rank = clerkRank(r);
@@ -3349,6 +3437,7 @@ let clockingIn = false;
 function clockIn(seed) {
   if (clockingIn) return;
   clockingIn = true;
+  stopLicensed("title");
   // unlock audio on the gesture itself — the visual punch comes after
   audio();
   initAmbient();
@@ -3363,6 +3452,13 @@ $("startBtn").addEventListener("click", () => clockIn(SEED));
 $("randomBtn").addEventListener("click", () =>
   clockIn("rnd-" + Math.random().toString(36).slice(2, 8)));
 $("againBtn").addEventListener("click", () => location.reload());
+
+// licensed title music rides the first user gesture (autoplay policy);
+// absent file → playLicensed fails silently and the synth carries on
+["pointerdown", "keydown"].forEach((ev) =>
+  document.addEventListener(ev, () => {
+    if (document.body.dataset.phase === "title") playLicensed("title", { loop: true });
+  }, { once: false, capture: true }));
 
 // ---------- boot: the unfinished shift waits on the title ----------
 document.body.dataset.phase = "title";

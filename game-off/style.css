@@ -2497,3 +2497,49 @@ body[data-wear="4"]::before { opacity: .015; }
 
 /* the dream filing: your own argument under someone else's name */
 .echo-tag { color: #8c2f22; font-style: normal; letter-spacing: .04em; }
+
+/* the machine's face — portrait appears only where the fiction names it;
+   absent files remove themselves via onerror */
+.face-portrait {
+  display: inline-block; width: 84px; height: 84px; margin: 6px 0 0 8px;
+  border: 1px solid var(--paper-edge, #6b5a44); border-radius: 3px;
+  object-fit: cover; filter: sepia(.35) contrast(1.05); vertical-align: middle;
+  box-shadow: 0 2px 10px rgba(0,0,0,.35);
+}
+.endline .face-portrait { width: 56px; height: 56px; }
+
+/* WeLoveIndies F-license credit — the intro/attribution the demo license asks for */
+.music-credit {
+  font-size: 10px; letter-spacing: .08em; color: var(--dim, #8a7d63);
+  margin: 10px 0 0; opacity: .7;
+}
+.music-credit a { color: inherit; }
+
+/* dawn mugshot — the reveal deserves a frame, not a footnote */
+.end-mug {
+  display: flex; align-items: center; gap: 14px; margin: 14px auto 4px;
+  padding: 10px 16px; max-width: 460px;
+  background: linear-gradient(160deg, #efe6d2, #e2d4b8);
+  border: 1px solid #6b5a44; border-radius: 4px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.4), inset 0 0 0 4px rgba(255,252,240,.5);
+  transform: rotate(-1.2deg);
+}
+.end-mug img {
+  width: 84px; height: 84px; object-fit: cover; flex: none;
+  border: 1px solid #6b5a44; filter: sepia(.4) contrast(1.08);
+}
+.mug-meta { display: flex; flex-direction: column; gap: 2px; text-align: left; }
+.mug-name { font-weight: 700; letter-spacing: .14em; font-size: 15px; color: #2b2118; }
+.mug-tag { font-size: 11px; letter-spacing: .06em; color: #6b5a44; font-style: italic; }
+.endline.promote { color: #e8b34b; font-weight: 700; letter-spacing: .1em; }
+.title-hint { font-size: 10px; letter-spacing: .08em; color: var(--dim, #8a7d63); margin: 6px 0 0; opacity: .55; }
+.at-predict { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.at-prlabel { font-size: 10px; letter-spacing: .1em; color: var(--dim, #8a7d63); text-transform: uppercase; }
+.at-pchip {
+  font-size: 10px; letter-spacing: .06em; padding: 2px 8px;
+  border: 1px solid #6b5a44; border-radius: 3px; color: #8a7d63;
+}
+.at-pchip.picked { border-color: #e8b34b; color: #e8b34b; background: rgba(232,179,75,.12); }
+.at-predline { font-size: 11px; letter-spacing: .04em; margin: 6px 0 4px; }
+.at-predline.ok { color: #9ec27a; }
+.at-predline.bad { color: #d98a7a; }

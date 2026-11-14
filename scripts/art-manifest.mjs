@@ -91,6 +91,15 @@ const ENTRIES = [
     "rooftop-two": "two folding chairs on a fire escape at dusk, a thermos between them, the city humming three floors down",
     "garage-night": "an old garage that never closes, one mechanic passing a wrench without looking up, thirty years of engines",
     "loadin-dawn": "delivery vans at 4am outside a market, crates and night-shift jokes, the city waking up carried on shoulders",
+    "night-market": "a night market at closing time, last paper lanterns over food stalls, steam rising off skewers, an elderly woman haggling over fruit with a vendor",
+    "temple-dusk": "a small temple garden at dusk, one bronze bell rope still swinging, a lone figure in simple robes standing in the fading light while the garden settles back into stillness",
+    "offshift-couch": "a nurse in wrinkled scrubs asleep upright on a worn couch in a dark living room, a cold mug of coffee on the side table, hospital badge still clipped to her pocket",
+    "feeding-three": "a dim nursery at 3am, a mother seated in a rocking chair humming over a swaddled bundle while a father paces the floorboards with a bottle, a dog asleep on the rug",
+    "last-route": "a lone delivery driver at the wheel of a small truck on an empty pre-dawn street, one porch light already on ahead, thermos in the cup holder",
+    "the-scroll": "a person sunk in a dark apartment couch at 2am, face lit only by a phone screen glow, the blue light of job listings and group chats reflecting in their tired eyes",
+    "stockroom": "a lone worker with a clipboard doing a midnight inventory in a cluttered stockroom, boxes of canned goods and lightbulbs stacked to the ceiling, one bare bulb swinging",
+    "microwave-fish": "a kitchen at 1am, one figure in pajamas watching a fish dinner rotate inside a humming microwave, the only light a pale under-cabinet strip",
+    "loading-screen": "a person on the edge of a bed at night staring at a dark monitor showing only a thin glowing progress bar crawling forward, the room lit by nothing else",
   }).map(([id, scene]) => ({
     id: `card-${id}`, group: "cards", kind: "edit", size: [960, 720], refs: ["room-night"],
     prompt: `Use Image 1 only as the painting style, palette, and lighting mood. Paint a small narrative vignette: ${scene}. Landscape composition, one clear focal moment, painted like a memory pinned to a case file. No text anywhere.`,
@@ -101,6 +110,12 @@ const ENTRIES = [
     prompt: "Use Image 1 only as the painting style and palette. Paint the end of the week: dawn breaking through the same records office window, the room lamp finally switched off, the skyline gold behind rain-cleaned glass, the desk cleared, one last manila folder squared on the wood. Quiet, earned, warm. No text anywhere." },
   { id: "dawn-automated", group: "endings", kind: "edit", size: [1536, 1024], refs: ["room-night"],
     prompt: "Use Image 1 only as the painting style and palette. Paint the bad ending: the same records office with the terminal's pale cyan light now the only light in the room, the clerk's chair pushed back and empty, papers stamped and stacked with inhuman neatness in ranks, the window showing a city gone blue and silent. Cold, orderly, no humans anywhere. No text anywhere." },
+  // ---------- G5 · vendor assets (generated outside the fal pipeline) ----------
+  // Rodin Gen-2.5 via Hyper3D API — brass hand stamp render, used as the
+  // case-file seal. Pre-generated; generate-art.mjs skips kind:"vendor".
+  { id: "rodin-stamp", group: "vendor", kind: "vendor", size: [724, 724],
+    prompt: "(Hyper3D Rodin API) antique brass manual rubber hand stamp with turned wooden handle and ornate emblem base, vintage office tool, studio lighting — rendered turntable frame on dark ground",
+    note: "docs/promo-assets or /tmp render; see docs/SPONSOR_INTEGRATION.md" },
 ];
 
 export const MANIFEST = ENTRIES;
@@ -110,4 +125,5 @@ export const GROUPS = {
   portraits: ["aria", "mara", "oko", "jun", "tess", "vale"],
   cards: ENTRIES.filter((e) => e.group === "cards").map((e) => e.id),
   endings: ["dawn", "dawn-automated"],
+  vendor: ["rodin-stamp"],
 };

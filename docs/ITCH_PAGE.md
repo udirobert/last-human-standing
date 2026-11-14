@@ -82,7 +82,7 @@ blind?"). Best conversations get collected into community collections.
 - Filings with fingerprints: human cards land off-square with marginal notes — the machine's arrives dead straight, instantly printed
 - Five staged days: pay-for-clues, oaths, mid-night rule amendments, a liar on the docket
 - An escalating Turing mystery you discover, not a tutorial — catch the automated filer before dawn
-- A composed noir score — upright bass, brushes, charleston piano, muted horn — arranged live per shift, no audio files
+- A composed noir score — upright bass, brushes, charleston piano, muted horn — arranged live per shift, with licensed WeLoveIndies bookend tracks on the title and dawn
 - Verdicts explained line by line — losses teach, never confuse
 - Daily seeded docket + share grid
 - Runs in the browser, no install; keyboard + touch
@@ -90,7 +90,7 @@ blind?"). Best conversations get collected into community collections.
 
 ## Credits
 
-Painted key art generated with MiniMax H3 (fal.ai) · the score is composed WebAudio — no AI-music service, no audio files · paper UI is inline SVG. All proceedings fictional.
+Painted key art and card vignettes generated with MiniMax H3 (fal.ai) · brass seal render generated with Hyper3D Rodin · the score is composed WebAudio — no AI-music service · title/dawn music licensed from WeLoveIndies (F/demo) · paper UI is inline SVG. All proceedings fictional.
 
 ## Tags (itch)
 
@@ -166,9 +166,10 @@ Assets in `docs/itch-assets/` — produced by scripted Chrome runs against
 ## Platform + disclosure metadata (Quality Guidelines — delisting risk)
 
 - [ ] **AI Disclosure section filled:** key art / card vignettes are
-      generative (MiniMax H3 via fal.ai) — tag AI-assisted art. The
-      procedural WebAudio score is composed code, not AI music — exempt,
-      say so in the disclosure note.
+      generative (MiniMax H3 via fal.ai; Rodin via Hyper3D for the case-file
+      seal) — tag AI-assisted art. The procedural WebAudio score is composed
+      code and the WeLoveIndies tracks are licensed stock, not AI music —
+      exempt, say so in the disclosure note.
 - [ ] **Platform metadata: Web/HTML5 only.** Don't check Windows/macOS/Linux
       (the build targets the browser). Language: English. Tags limited to
       the list above — no tag stuffing.

@@ -24,6 +24,7 @@ zip -r "$ZIP_OUTPUT" \
   logic.js \
   riddles.js \
   art \
+  audio \
   cover-630x500.png \
   cover-630x500.svg \
   export-cover.html \
