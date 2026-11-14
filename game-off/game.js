@@ -689,6 +689,9 @@ const G = {
   wire: [],             // the desk remembers — tonight's events, in order
   tellHistory: [],      // tel keys that produced anomalies — the wire remembers repeats
   forgeHistory: [],     // per-night stub signatures — repetition is a tell
+  filedIds: [],         // proofs filed per day — the desk may resurface your own hand
+  forgePatchCounts: [0, 0, 0, 0], // times each stub field was patched — habits are tells
+  echoSaid: false,      // the dream filing has been named once
   prediction: null,     // the clerk's call: which attribute the rule keys on
   predictionHit: null,  // null = no call · true/false resolved at verdict
   predictions: 0,       // calls made this run
@@ -1131,6 +1134,7 @@ function flyToTray(from) {
 function fileSelected() {
   if (!G.selected || G.phase !== "day" || G.filing) return;
   G.filed = G.selected;
+  G.filedIds[G.day] = G.filed.id;
   G.filing = true;
   sfx.slide();
   const cards = $("hand").querySelectorAll(".evidence");
@@ -1596,13 +1600,19 @@ const NOTES = ["re-filed after rejection", "urgent — hand-delivered",
   "forwarded from intake", "annotated in the margins",
   "returned for correction ×1", "filed in person — waited",
   "filed remotely — no wet signature", "auto-sorted — priority queue"];
-function humanTel(rng, filed) {
+function humanTel(rng, filed, day = 0) {
   const n = rng();
+  // the whole wire runs faster as the week wears on — human packets tidy
+  // themselves: quicker acks, fewer retries, shorter relay chains. Still
+  // human (nothing here is a tell), just… cleaner than it should be.
+  const resendP = Math.max(0.08, 0.2 - day * 0.03);
+  const delayP = Math.max(0.2, 0.45 - day * 0.05);
+  const hopsN = Math.max(2, 4 - Math.floor(day / 2));
   return {
-    latency: `${150 + Math.floor(rng() * 350)}ms`,
-    origin: `EXT GATE ${1 + Math.floor(rng() * 6)}`,
-    hops: `${2 + Math.floor(rng() * 4)}`,
-    receipt: n < 0.2 ? "resent ×2" : n < 0.45 ? `rcpt delayed ${20 + Math.floor(rng() * 50)}s` : `queued ${filed}`,
+    latency: `${Math.max(110, 150 - day * 12) + Math.floor(rng() * Math.max(180, 350 - day * 30))}ms`,
+    origin: `EXT GATE ${1 + Math.floor(rng() * Math.max(3, 6 - day))}`,
+    hops: `${2 + Math.floor(rng() * hopsN)}`,
+    receipt: n < resendP ? "resent ×2" : n < resendP + delayP ? `rcpt delayed ${20 + Math.floor(rng() * 50)}s` : `queued ${filed}`,
     tells: [],
   };
 }
@@ -1610,7 +1620,7 @@ function botTel(day, rng, filed) {
   // the disguise wears the human distribution exactly — a clean field on
   // the machine's stub is indistinguishable from a real filing, so flagging
   // one is a hunch, not a boundary case
-  const human = humanTel(rng, filed);
+  const human = humanTel(rng, filed, day);
   // how many fields betray it: two early, one later — and the rest wear
   // human values, so a flag pointed at a clean field is still a hunch
   const keys = [...TEL_KEYS];
@@ -1663,7 +1673,7 @@ function startAudit(resume) {
     G.auditSubs = cases.map((c) => {
       const filer = c.bot ? G.culprit : roster[hi++];
       const filed = fmtFiled(40 + Math.floor(trng() * 500));
-      const tel = c.bot ? botTel(G.day, trng, filed) : humanTel(trng, filed);
+      const tel = c.bot ? botTel(G.day, trng, filed) : humanTel(trng, filed, G.day);
       // every filer draws the same note pool — a remote filing is a red
       // herring, not a fingerprint. The postmark is the only testimony.
       const note = NOTES[Math.floor(trng() * NOTES.length)];
@@ -2821,12 +2831,18 @@ addEventListener("keydown", (e) => {
   }
 });
 
-/* ---------- attract mode ----------
- * Arcade lesson: the title never sits still. Idle ~20s on the title and
- * the desk starts working the night shift by itself — real cards, real
- * stamps, the wire ticking. Any input dismisses it. Pure vignette: it
- * borrows the game's materials but never touches G, the save, or the
- * score. */
+/* ---------- attract mode: the desk works without you ----------
+ * Arcade lesson: the title never sits still. Idle ~20s and the reel runs
+ * a full shift in fast-forward — two acts per ~40s cycle:
+ *
+ *   THE DAY   a real dealt docket (LOGIC.deal headlessly), ARIA's sealed
+ *             rule, a filing, the unsealing verdict with the same stagger
+ *             the real ceremony uses. Even cycles file a passer, odd
+ *             cycles file a failure — judges see both stamps.
+ *   THE NIGHT  stamp/postmark vignettes, including a VALE catch.
+ *
+ * Pure vignette: real cards, real rule math, real verdict rows — but it
+ * never touches G, the save, the score, or audio. Any input aborts. */
 const ATTRACT = [
   { ci: 0,  filer: "MARA OKONKWO", pick: "HUMAN",
     tel: { latency: "212ms", origin: "EXT GATE 3", hops: "3", receipt: "queued 02:14" } },
@@ -2837,8 +2853,15 @@ const ATTRACT = [
   { ci: 6,  filer: "VALE", pick: "SUS",
     tel: { latency: "0.0ms", origin: "GATE 0", hops: "0", receipt: "rcvd before post" } },
 ];
-let attractOn = false, attractIdx = 0, attractTimer = null;
-function attractStep() {
+let attractOn = false, attractIdx = 0, attractDayIdx = 0, attractTimers = [];
+function atDelay(fn, ms) {
+  const id = setTimeout(() => {
+    attractTimers = attractTimers.filter((t) => t !== id);
+    if (attractOn) fn();
+  }, ms);
+  attractTimers.push(id);
+}
+function attractNightStep() {
   const v = ATTRACT[attractIdx++ % ATTRACT.length];
   const c = CARDS[Math.min(v.ci, CARDS.length - 1)];
   $("attractDesk").innerHTML = `<div class="at-card">
@@ -2855,16 +2878,81 @@ function attractStep() {
     <div class="at-wire">N1·${v.pick === "SUS" ? "anomaly quarantined · +100" : "stamp upheld · +50"}</div>
   </div>`;
 }
+function attractNightAct() {
+  attractIdx = 0;
+  attractNightStep();
+  for (let i = 1; i <= ATTRACT.length; i++) atDelay(attractNightStep, i * 4300);
+  atDelay(() => attractDayAct(), (ATTRACT.length + 1) * 4300 + 600);
+}
+/* THE DAY act — the deduction itself, performed with real dealt content */
+function attractDayAct() {
+  const n = attractDayIdx++ % DAYS.length;
+  const d = DAYS[n];
+  const { docket, hand } = LOGIC.deal(CARDS, d, n, LOGIC.makeRng(`attract|${n}`));
+  // even cycles file a passer, odd cycles a failure — both stamps seen
+  const wantPass = n % 2 === 0;
+  const filed = hand.find((c) => LOGIC.passes(c, d.rule) === wantPass)
+    || (wantPass ? hand.find((c) => LOGIC.passes(c, d.rule)) : hand.find((c) => !LOGIC.passes(c, d.rule)))
+    || hand[0];
+  const verdicts = LOGIC.check(filed, d.rule);
+  const passed = LOGIC.passes(filed, d.rule);
+  const el = $("attractDesk");
+  el.innerHTML = `<div class="at-stage">
+    <div class="at-dayhead"><b>DAY ${n + 1}</b><span>${d.emoji} ${d.theme}</span></div>
+    <div class="at-docket"></div>
+    <div class="at-rulebar"><span class="rc-label">ARIA's rule: <b>SEALED</b></span></div>
+    <div class="at-hand"></div>
+    <div class="at-verdict"></div>
+  </div>`;
+  // beat 1 — the docket deals in, rulings stamped
+  const dk = el.querySelector(".at-docket");
+  docket.slice(0, 6).forEach((r, i) => {
+    atDelay(() => {
+      const row = document.createElement("div");
+      row.className = "at-drow";
+      row.innerHTML = `<span class="at-glyph">${r.card.glyph}</span>
+        <span class="at-dname">${r.card.name}</span>
+        <span class="at-ruling ${r.verdict === "HUMAN" ? "human" : "sus"}">${r.verdict}</span>`;
+      dk.appendChild(row);
+    }, 350 + i * 380);
+  });
+  // beat 2 — the seal holds, then the hand arrives
+  atDelay(() => {
+    el.querySelector(".at-rulebar b").textContent = d.rule.map((c) => c.text).join(" · ");
+    el.querySelector(".at-rulebar b").classList.add("unsealed");
+  }, 350 + Math.min(docket.length, 6) * 380 + 500);
+  const hd = el.querySelector(".at-hand");
+  hand.forEach((c, i) => {
+    atDelay(() => {
+      const hc = document.createElement("div");
+      hc.className = "at-hcard" + (c === filed ? " picked" : "");
+      hc.innerHTML = `<span class="at-glyph">${c.glyph}</span><span class="at-hname">${c.name}</span>`;
+      hd.appendChild(hc);
+    }, 350 + Math.min(docket.length, 6) * 380 + 1400 + i * 260);
+  });
+  // beat 3 — the filing resolves: fact rows stagger, stamp falls
+  const vt = 350 + Math.min(docket.length, 6) * 380 + 1400 + hand.length * 260 + 700;
+  atDelay(() => {
+    const v = el.querySelector(".at-verdict");
+    v.innerHTML = `<div class="at-ruleline">ARIA's rule: ${d.rule.map((c) => c.text).join(" · ")}</div>
+      <div class="at-facts">${factRows(filed, verdicts, true)}</div>
+      <div class="at-stamp ${passed ? "human" : "sus"} big">${passed ? "SURVIVED" : "STRIKE"}</div>`;
+    const rows = [...v.querySelectorAll(".fact")];
+    rows.forEach((r, i) => atDelay(() => r.classList.remove("pre"), 500 + i * 420));
+  }, vt);
+  atDelay(() => attractNightAct(), vt + 500 + 5 * 420 + 1400);
+}
 function startAttract() {
   if (attractOn || calmMotion()) return;
   attractOn = true;
+  attractTimers = [];
   $("attractDesk").classList.remove("hidden");
-  attractStep();
-  attractTimer = setInterval(attractStep, 4200);
+  attractDayAct();
 }
 function stopAttract() {
   attractOn = false;
-  clearInterval(attractTimer);
+  attractTimers.forEach(clearTimeout);
+  attractTimers = [];
   $("attractDesk").classList.add("hidden");
 }
 setTimeout(() => {

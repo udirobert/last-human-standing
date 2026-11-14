@@ -311,3 +311,9 @@ Second judge-facing pass after the visibility work: not more legibility, more *s
 Verified: `node --check` clean; `test-logic.mjs` ALL PASS; jsdom full-run to dawn — memo fired on a real night, record filed `{weeks:1, filings:26, predTotal:1}`, share carries career line. `smoke-art.mjs` still fails on 9 missing card-vignette webps (pre-existing, art pipeline).
 
 Watch-items: quiet-wire nights can have lopsided pass/fail mixes (dealt for amended rule, re-judged under base) — playable, worth a feel-check. Attract reel is verb-demo, not deduction-demo — judges asked to see deduction; plan drafted.
+
+## Attract v2 — the reel now performs the deduction (Nov 15)
+
+Judges wanted to see *deduction*, not just stamping. The attract reel is now a two-act ~35s cycle: **THE DAY** deals a real docket via `LOGIC.deal` headlessly (rulings stamp in staggered), the rule bar holds "SEALED" then unseals to the real rule text, a hand deals, the filed card lifts, and the verdict replays the real ceremony — `factRows()` output with the same `.pre` stagger, ending in SURVIVED or STRIKE (even cycles file passers, odd cycles failures — both stamps seen). **THE NIGHT** keeps the stamp/postmark vignettes incl. the VALE catch. Rotates through all five days, so each loop shows a different rule. Still zero writes to G/save/audio; input aborts; `calmMotion()` skips.
+
+Verified in jsdom: full cycle sampled — docket→unseal→hand→verdict→night vignettes→next day, dismiss on input, zero JS errors.
