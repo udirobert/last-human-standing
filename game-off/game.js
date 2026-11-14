@@ -16,7 +16,7 @@
  * deals the same way every time. Vanilla JS, no deps, works from file://.
  */
 const DATA = window.NIGHT_SHIFT_DATA;
-const { CARDS, JURY_TITLES, ATTR_KEYS, ATTR_LABEL, ATTR_ICONS, ATTR_WORD, FINALE } = DATA;
+const { CARDS, JURY_TITLES, ATTR_KEYS, ATTR_LABEL, ATTR_ICONS, ATTR_WORD, FINALE, VALE_ARC } = DATA;
 let DAYS = DATA.DAYS;   // swapped for generated shifts in overtime mode
 const LOGIC = window.NIGHT_SHIFT_LOGIC;
 /* The machine wears a seeded face: any of the five filers can be it.
@@ -437,12 +437,27 @@ function setInstr(key) { $("instr").textContent = INSTR[key]; }
 /* OpenTTD's lesson: events are dated, categorized, and persistent. Every
  * stamp, flag, filing and verdict lands here in order — the player can
  * always see the systems working, not just their latest answer. */
+let wireTimer = 0;
 function wire(txt) {
   G.wire.push(`N${Math.min(G.day + 1, 5)}·${txt}`);
   if (G.wire.length > 60) G.wire.splice(0, G.wire.length - 60);
   const el = $("wireLog");
   el.innerHTML = G.wire.slice(-4).map((w) => `<div class="wire-line">${w}</div>`).join("");
   el.scrollTop = el.scrollHeight;
+  if (calmMotion()) return;
+  // the desk prints, it doesn't render — the newest entry types itself in
+  const last = el.lastElementChild;
+  if (!last) return;
+  const full = last.textContent;
+  clearInterval(wireTimer);
+  let n = 0;
+  wireTimer = setInterval(() => {
+    n += 2;
+    if (!last.isConnected) { clearInterval(wireTimer); return; }
+    last.textContent = full.slice(0, n);
+    el.scrollTop = el.scrollHeight;
+    if (n >= full.length) clearInterval(wireTimer);
+  }, 14);
 }
 function renderWire() {
   $("wireLog").innerHTML = (G.wire || []).slice(-4)
@@ -862,7 +877,10 @@ function startDay(resume) {
         .join(" and ");
       ariaSay([`Yesterday the ${labels} fooled you. Read it twice today.`]);
     }
-    else if (G.mode === "machine") ariaSay(ARIA.machineOpen);
+    else if (G.mode === "machine") {
+      ariaSay(ARIA.machineOpen);
+      wire(`night ${G.day + 1} — tolerance ${LOGIC.FORGE_THRESHOLD[G.day]} — proceed`);
+    }
     else if (G.day === 3) explain("liar") || ariaSay(ARIA.dayOpen);
     else ariaSay(ARIA.dayOpen);
   }
@@ -1254,6 +1272,10 @@ function applyVerdictOutcome() {
     // the machine doesn't get strikes — a flagged filing is just cover
     // slipping; the wire keeps reading either way
     if (G.mode !== "machine") G.strikes += G.oath ? 2 : 1;
+    if (!calmMotion()) {
+      document.body.classList.add("strikepulse");
+      later(() => document.body.classList.remove("strikepulse"), 420);
+    }
     G.dayResults[G.day] = "struck";
     G.lastMissKeys = LOGIC.failKeys(c, d.rule);
   }
@@ -1439,7 +1461,7 @@ function renderForge(resume) {
       (afford ? "" : " — not enough cover");
     b.innerHTML = `<span class="ff-label">${TEL_LABEL[k]}</span>
       <span class="ff-val">${LOGIC.FORGE_TIERS[k][tier]}</span>
-      <span class="ff-tier">${FORGE_TIER_NAME[tier]}</span>`;
+      <span class="ff-tier"><i class="ff-glyph">${["●", "◐", "○"][tier]}</i> ${FORGE_TIER_NAME[tier]}</span>`;
     // the stub inks itself in reading order — paperwork arriving, not appearing
     b.style.animation = "forgein .38s cubic-bezier(.2,.9,.3,1) backwards";
     b.style.animationDelay = `${i * 70}ms`;
@@ -1525,6 +1547,8 @@ function resolveForge() {
     .map((k, i) => (G.forgePatchCounts[i] >= 2 ? `${TEL_LABEL[k]} ×${G.forgePatchCounts[i]}` : null))
     .filter(Boolean);
   wire(`stub transmitted · suspicion ${v.suspicion}/${LOGIC.FORGE_THRESHOLD[G.day]} · ${v.outcome === "slip" ? "SLIPPED" : "FLAGGED"}${proofOk ? "" : " · spec failed"}${stubNight >= 0 ? ` · same stub as NIGHT ${stubNight + 1}` : ""}${habits.length ? ` · habit: ${habits.join(", ")} — the wire counts patterns` : ""}`);
+  wire(v.outcome === "slip" ? "stub accepted — filed as human"
+                            : "anomaly logged — continue anyway");
   if (v.outcome === "slip") {
     G.score += 150;
     G.dayResults[G.day] = "survived";
@@ -1656,13 +1680,23 @@ function deskDream() {
   const slots = G.auditSubs.map((s, i) => ({ s, i }))
     .filter((x) => x.s.filer !== G.culprit);
   if (!past.length || !slots.length || stream("echo")() >= 0.5) return;
+  const lastNight = G.day === DAYS.length - 1;
   const pick = past[Math.floor(stream("echoPick")() * past.length)];
-  const slot = slots[Math.floor(stream("echoSlot")() * slots.length)];
+  const slot = lastNight
+    ? slots[0]   // the desk leads with it — it wants you to see
+    : slots[Math.floor(stream("echoSlot")() * slots.length)];
   const card = cardById(pick.id);
   if (!card) return;
   slot.s.card = card;
   slot.s.truth = LOGIC.passes(card, slot.s.rule);
   slot.s.echoDay = pick.day + 1;
+  if (lastNight) {
+    // the desk already judged your argument — it answers before you can ask
+    slot.s.pick = "SUS";
+    slot.s.preStamped = "echo";
+    slot.s.correct = null;
+    slot.s.stampRot = -6;
+  }
 }
 
 function startAudit(resume) {
@@ -1709,6 +1743,7 @@ function startAudit(resume) {
                truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
     });
     deskDream();
+    wire(`tonight's docket — ${G.auditSubs.map((x) => x.filer).join(" · ")}`);
     G.auditIdx = 0;
     // one filing a night is contested: right pays double bonus
     G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
@@ -2000,7 +2035,9 @@ function renderCase() {
   const checked = sub.pick !== null;
   const contested = G.auditIdx === G.contestedIdx;
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
-  const arg = sub.filer === G.culprit ? (sub.arg || DAYS[G.day].valeLine) : sub.card.argument;
+  const arg = sub.filer === G.culprit
+    ? (sub.arg || DAYS[G.day].valeLine + " " + (VALE_ARC[Math.min(G.day, VALE_ARC.length - 1)] || ""))
+    : sub.card.argument;
   const isBot = sub.filer === G.culprit;
   // cold open, second filing: align the receipts, teach the contrast once
   const compare = G.coldOpen && G.auditIdx === 1 ? coldCompareHTML(sub) : "";
@@ -2040,9 +2077,20 @@ function renderCase() {
     }
   }
 
+  // the filing's presence stutters the lamp — a cue you feel, not read
+  if (isBot && !sub.pick && !calmMotion()) {
+    frameEl.classList.remove("lamp-flicker");
+    void frameEl.offsetWidth;
+    frameEl.classList.add("lamp-flicker");
+    later(() => frameEl.classList.remove("lamp-flicker"), 900);
+  }
   if (sub.echoDay && !G.echoSaid) {
     G.echoSaid = true;
     ariaSay(["That argument looks familiar.", "You filed it yourself. The desk keeps copies — of everything."], "soft");
+  }
+  if (sub.preStamped === "echo" && !sub.echoWired) {
+    sub.echoWired = true;
+    wire(`cross-ref — the desk already ruled on your DAY ${sub.echoDay} proof · SUS`);
   }
   setInstr(G.coldOpen ? "cold" : "night");
 
@@ -2061,7 +2109,9 @@ function renderCase() {
       </div>
       <div class="name">${sub.card.name}</div>
       ${sub.pick && !sub.pendingFlag ? `<p class="case-verdict ${sub.preStamped ? "prev" : sub.correct ? "ok" : "bad"}">${sub.preStamped ? "PREVIOUS SHIFT" : sub.correct ? "RIGHT" : "WRONG"}</p>
-        <p class="case-reason">${sub.preStamped
+        <p class="case-reason">${sub.preStamped === "echo"
+          ? "the desk already ruled on this one — your argument, its verdict"
+          : sub.preStamped
           ? "the night clerk passed this one — read his strip against his stamp"
           : reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
@@ -2073,12 +2123,18 @@ function renderCase() {
       </div>`}
       ${sub.pendingFlag ? `<div class="flag-row">
         <span class="flag-q">the paper passed — what flagged it?</span>
-        ${TEL_KEYS.map((k, i) => `<button class="flag-f" type="button" data-k="${k}" style="--i:${i}">${TEL_LABEL[k]}</button>`).join("")}
+        ${TEL_KEYS.map((k, i) => {
+          const prevS = G.auditIdx > 0 ? G.auditSubs[G.auditIdx - 1] : null;
+          const same = prevS && prevS.tel[k] === sub.tel[k];
+          return `<button class="flag-f${same ? " dim" : ""}" type="button" data-k="${k}" style="--i:${i}"${same ? ' data-tip="identical to the previous filing — thin grounds"' : ""}>${TEL_LABEL[k]}</button>`;
+        }).join("")}
         <button class="flag-f none" type="button" data-k="" style="--i:${TEL_KEYS.length}">no grounds</button>
       </div>` : ""}
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}" style="transform:rotate(${sub.stampRot}deg)">${sub.pick}</div>` : ""}
       ${sub.pick && !sub.correct && !sub.pendingFlag ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
+  const kh = $("auditKeyHint");
+  if (kh) kh.classList.toggle("hidden", G.auditTotal > 0 || G.coldOpen);
   el.querySelectorAll(".flag-f").forEach((b) => {
     b.addEventListener("click", (e) => { e.stopPropagation(); flagField(b.dataset.k); });
     // hovering an accusation points at the row it names — on whichever
@@ -2254,6 +2310,10 @@ function advanceCase() {
   G.auditIdx = next;
   if (G.auditIdx >= G.auditSubs.length) return auditSummary();
   renderCase();
+  // a case that arrives already judged (the desk's echo) still waits for
+  // a tap — keep the desk locked so the continue handlers stay live
+  const cur = G.auditSubs[G.auditIdx];
+  if (cur && cur.pick !== null) G.auditLocked = true;
   persist();
 }
 
@@ -2384,6 +2444,13 @@ function auditSummary() {
   G.strikeCleared = flawless && G.status === "player" && G.strikes > 0;
   if (G.strikeCleared) G.strikes--;
   G.score += G.nightBonus;
+  // the wire watches the clerk as closely as the docket
+  if (flawless) wire("five for five — the wire notes your accuracy, and approves");
+  else if (hits === 0) wire("nothing held tonight — the wire is patient; patience is a form of doubt");
+  if (G.strikes === 2 && G.status === "player") wire("two marks on your file — the desk is teaching you");
+  const botSub0 = G.auditSubs.find((x) => x.filer === G.culprit);
+  if (botSub0 && botSub0.pick === "SUS" && botSub0.correct) wire("you read the postmark — the wire wonders what else you see");
+  else if (botSub0 && botSub0.pick === "HUMAN") wire("an escape went unremarked — the wire counts those too");
   hud();
   paintAuditSummary();
   persist();
@@ -2625,6 +2692,11 @@ function endGame() {
   const cutEnd = title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL"
     || (G.mode === "machine" && G.forgeFlags > 0);
   wire(`shift closed — ${title}`);
+  if (G.mode !== "machine") {
+    if (cutEnd) wire("the desk will remember you — accurately, at least");
+    else if (G.valeCaught >= 3) wire("you read postmarks like letters — it noticed");
+    else if (G.nightResults.every((h) => h === 5)) wire("the wire has filed you as thorough");
+  }
   // the inversion is part of the week's endgame once it's been earned
   try {
     $("machineEndBtn").classList.toggle("hidden",
@@ -2719,7 +2791,7 @@ document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
 $("signBtn").addEventListener("click", signRule);
 /* the case file: the whole shift as a dossier — the archive persists.
    Styled HTML so it prints to PDF as a physical case folder. */
-function caseFileHTML(title, seal = "") {
+function caseFileHTML(title, seal = "", portrait = "") {
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
   const rows = DAYS.map((d, i) => {
     let night;
@@ -2761,7 +2833,7 @@ ${seal ? `<img class="seal" src="${seal}" alt="" />` : ""}
 <div class="meta">seed ${esc(SEED)} · ${G.mode === "ot" ? "overtime" : G.mode === "machine" ? "the machine's shift" : "week"} · ${esc(title)}</div>
 <table><tr><th>shift</th><th>theme</th><th>day</th><th>night</th></tr>${rows}</table>
 <div class="score">SCORE ${G.score} · AUDITS ${G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0}% ACCURACY
-${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears a new one every docket ${faceImg(G.culprit)}` : ""}</div>
+${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears a new one every docket${portrait ? ` <img class="face-portrait" src="${portrait}" alt="" />` : ""}` : ""}</div>
 <div class="stamp">${esc(title)}</div>
 <h2>the wire remembers</h2>
 <ul>${wire || "<li>—</li>"}</ul>
@@ -2769,15 +2841,20 @@ ${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears
 }
 $("caseFileBtn").addEventListener("click", async () => {
   const title = $("endTitle").textContent || "SHIFT";
-  // the Rodin seal embeds as base64 so the dossier stays self-contained
-  let seal = "";
-  try {
-    const buf = await (await fetch("art/rodin-stamp.webp")).arrayBuffer();
-    let bin = ""; const bytes = new Uint8Array(buf);
-    for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
-    seal = "data:image/webp;base64," + btoa(bin);
-  } catch { /* seal optional */ }
-  const blob = new Blob([caseFileHTML(title, seal)], { type: "text/html" });
+  // seal + culprit's face embed as base64 so the dossier stays self-contained
+  const toDataURI = async (path) => {
+    try {
+      const buf = await (await fetch(path)).arrayBuffer();
+      let bin = ""; const bytes = new Uint8Array(buf);
+      for (let i = 0; i < bytes.length; i += 8192) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 8192));
+      return "data:image/webp;base64," + btoa(bin);
+    } catch { return ""; }
+  };
+  const [seal, portrait] = await Promise.all([
+    toDataURI("art/rodin-stamp.webp"),
+    G.culprit ? toDataURI(`art/${G.culprit.toLowerCase()}.webp`) : "",
+  ]);
+  const blob = new Blob([caseFileHTML(title, seal, portrait)], { type: "text/html" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `night-shift-${SEED}-casefile.html`;
@@ -2797,7 +2874,6 @@ $("predictRow").addEventListener("click", (e) => {
 
 document.addEventListener("keydown", (e) => {
   if (!dossierEl.classList.contains("hidden")) return;
-  if (gameEl.classList.contains("hidden")) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === "m" || e.key === "M") {
     audioMuted = !audioMuted;
@@ -2812,6 +2888,7 @@ document.addEventListener("keydown", (e) => {
     savePrefs();
     return;
   }
+  if (gameEl.classList.contains("hidden")) return;
 
   // a live brief swallows every key — it dismisses, nothing else fires
   if (briefOpen) { endBrief(); return; }
@@ -3194,6 +3271,7 @@ function fileRecord() {
 const licensed = {};
 function playLicensed(name, { loop = false, vol = 0.4 } = {}) {
   if (audioMuted || licensed[name] === false) return null;
+  if (licensed[name] && !licensed[name].ended) return licensed[name];
   const a = licensed[name] || (licensed[name] = new Audio(`audio/${name}.mp3`));
   a.loop = loop; a.volume = 0; a.muted = audioMuted; a.__fadeOut = false;
   a.onerror = () => { licensed[name] = false; a.removeAttribute("src"); };
@@ -3220,15 +3298,8 @@ function stopLicensed(name, fadeMs = 900) {
   setTimeout(() => { a.pause(); a.currentTime = 0; a.volume = v0; if (licensed[name] === a) licensed[name] = null; }, fadeMs + 60);
 }
 function setLicensedMuted() {
-  for (const k in licensed) if (licensed[k] && licensed[k].mute !== undefined) licensed[k].muted = audioMuted;
+  for (const k in licensed) if (licensed[k] && licensed[k].muted !== undefined) licensed[k].muted = audioMuted;
 }
-/* the machine's face, when the portrait set exists — absent files remove
-   themselves so the line degrades to plain text */
-function faceImg(name) {
-  return `<img class="face-portrait" src="art/${(name || "").toLowerCase()}.webp" alt="" ` +
-    `onerror="this.remove()" />`;
-}
-
 function careerLine(r) {
   if (!r) return "";
   const rank = clerkRank(r);

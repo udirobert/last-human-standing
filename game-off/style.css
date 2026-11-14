@@ -2543,3 +2543,72 @@ body[data-wear="4"]::before { opacity: .015; }
 .at-predline { font-size: 11px; letter-spacing: .04em; margin: 6px 0 4px; }
 .at-predline.ok { color: #9ec27a; }
 .at-predline.bad { color: #d98a7a; }
+
+/* ---------- ambient pass: rain, wear, wire, ghost hints, strike pulse ---------- */
+
+/* visual rain over the night stage — opacity follows the week's wear,
+   matching the rain bed in the score */
+.rainfx { pointer-events: none; transition: opacity 1.2s ease; }
+.rainfx .rain-a { animation: rainfall-a 1.1s linear infinite; }
+.rainfx .rain-b { animation: rainfall-b 1.6s linear infinite; }
+@keyframes rainfall-a { to { transform: translate(-60px, 130px); } }
+@keyframes rainfall-b { to { transform: translate(-40px, 110px); } }
+body[data-wear="1"] .rainfx { opacity: .35; }
+body[data-wear="2"] .rainfx { opacity: .6; }
+body[data-wear="3"] .rainfx { opacity: .85; }
+body[data-wear="4"] .rainfx { opacity: 1; }
+
+/* late-week paper: the desk's paperwork gets tired before you do */
+.case-card { position: relative; }
+body[data-wear="3"] .case-card::after,
+body[data-wear="4"] .case-card::after {
+  content: ""; position: absolute; right: 8%; bottom: 6%;
+  width: 92px; height: 92px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle, transparent 52%, rgba(122,74,30,.14) 58%, transparent 66%),
+              radial-gradient(circle, rgba(122,74,30,.05) 0%, transparent 55%);
+}
+body[data-wear="4"] .case-card::after { opacity: 1.4; }
+
+/* the wire teletypes — cursor on the line being printed */
+.wire-line:last-child::after {
+  content: "▌"; font-size: .8em; opacity: .7;
+  animation: blink 0.8s steps(1) infinite;
+}
+
+/* forge tier glyph */
+.ff-glyph { font-style: normal; font-size: .85em; opacity: .8; }
+
+/* flag row: fields identical to the previous filing read as thin grounds */
+.flag-f.dim { opacity: .45; font-style: italic; }
+.flag-f.dim:hover, .flag-f.dim:focus { opacity: .7; }
+
+/* ghost key hint — gone for good once you've stamped one */
+.keyhint {
+  font-size: 10px; letter-spacing: .1em; color: var(--dim, #8a7d63);
+  text-transform: uppercase; margin-top: 8px; text-align: center;
+  animation: hintpulse 2.4s ease-in-out infinite;
+}
+@keyframes hintpulse { 50% { opacity: .45; } }
+.keyhint.hidden { display: none; }
+
+/* strike flinch: a red vignette pulse when a mark lands on your file */
+body.strikepulse #frame::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(140,47,34,.38) 100%);
+  animation: strikepulse .4s ease-out forwards;
+}
+@keyframes strikepulse { from { opacity: 1; } to { opacity: 0; } }
+
+/* the dream filing's tag pulses once so the beat isn't missed */
+.echo-tag { animation: echoping 1.3s ease-in-out 2; }
+@keyframes echoping {
+  0%, 100% { text-shadow: none; }
+  50% { text-shadow: 0 0 9px rgba(140,47,34,.9); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rainfx .rain-a, .rainfx .rain-b { animation: none; }
+  .wire-line:last-child::after { animation: none; }
+  .keyhint { animation: none; }
+  .echo-tag { animation: none; }
+}

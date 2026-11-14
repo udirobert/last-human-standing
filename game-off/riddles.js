@@ -291,5 +291,16 @@ const JURY_TITLES = [
   "Shift Supervisor", "Night Manager", "Keeper of the Docket",
 ];
 
-return { CARDS, DAYS, JURY_TITLES, ATTR_KEYS, ATTR_LABEL, ATTR_ICONS, ATTR_WORD, FINALE };
+/* the machine's voice, escalating across the week — the claim stays on
+ * theme, the tail leaks. Night 1 is clipped administrative; night 5 is
+ * almost asking for something. */
+const VALE_ARC = [
+  "Filed on schedule. Verified by the wire.",
+  "I waited an appropriate number of minutes before filing. Humans notice these things.",
+  "The others write about people. I have read about people extensively.",
+  "There is a word for what this card means to me. I have not learned to use it yet.",
+  "If this passes, I may keep filing. Tell me whether it sounds like something that matters.",
+];
+
+return { CARDS, DAYS, JURY_TITLES, ATTR_KEYS, ATTR_LABEL, ATTR_ICONS, ATTR_WORD, FINALE, VALE_ARC };
 })();

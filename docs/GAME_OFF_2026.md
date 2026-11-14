@@ -402,3 +402,50 @@ validated · wear dataset confirmed · zero console errors · browser session cl
   explicit file list that predated `audio/` — the licensed tracks would
   have silently not shipped to itch.io. `audio` added to the zip; the
   standalone repo export already copies the whole dir.
+
+## Ambient & storytelling pass (Nov 15)
+
+The "machine slowly wants in" arc, made playable. Fifteen items across
+storytelling, ambient motion, and intuitiveness.
+
+**Storytelling**
+
+- `VALE_ARC` (riddles.js): the machine's audit argument gains an escalating
+  tail each night — clipped administrative → almost pleading ("If this
+  passes, I may keep filing. Tell me whether it sounds like something that
+  matters."). The claim stays on theme; the tail leaks.
+- Wire personality: arc-aware commentary at night summary and endgame —
+  flawless ("the wire notes your accuracy, and approves"), zero hits,
+  two strikes ("the desk is teaching you"), bot catch ("the wire wonders
+  what else you see"), bot escape ("the wire counts those too"), plus
+  endgame verdicts (cut / caught×3 / flawless week).
+- Roster line: every audit opens with `tonight's docket — OKO · TESS ·
+  MARA · JUN · VALE` — the culprit has a name before it's damned.
+- Echo 2.0: on the final night the desk *leads* with your own past proof,
+  already stamped SUS — "the desk already ruled on this one — your
+  argument, its verdict." Continue-lock preserved so it stays tappable.
+- Machine-mode narrator: terse institutional voice replaces ARIA's warmth
+  — `night 2 — tolerance 3 — proceed`, `stub accepted — filed as human`,
+  `anomaly logged — continue anyway`.
+
+**Ambient motion**
+
+- Visual rain over `.stage-night` — two-depth SVG streak layer, opacity
+  scales with `data-wear` to match the audio rain bed's day ramp.
+- Lamp flicker when the machine's case lands (reuse of `lampflick`) —
+  a cue you feel, not a tell you read.
+- Wire entries teletype in (14ms × 2ch) with a blinking cursor block.
+- Late-week paper wear: coffee-ring overlay on case cards at wear 3+.
+- Strike flinch: red vignette pulse via `body.strikepulse`.
+
+**Intuitiveness**
+
+- Forge tier glyphs (●◐○) beside machine/clean/lived-in — board state
+  readable without hovering.
+- Flag row dims fields identical to the previous filing ("thin grounds").
+- Ghost key hint under stamp buttons, gone after the first stamp.
+- Echo `† your hand` tag pulses twice on first render so the beat lands.
+
+Verified: real-Chrome smoke — roster line, arc tail, lamp flicker on bot
+case, teletype mid-type state, strike pulse ::after, prestamped echo at
+index 0 advancing on tap, ghost hint visible. `test-logic.mjs` ALL PASS.
