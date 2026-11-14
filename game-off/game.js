@@ -703,6 +703,7 @@ const G = {
 };
 
 function hud() {
+  document.body.dataset.wear = String(Math.min(G.day, 4));
   $("hudShift").textContent =
     G.phase === "audit" ? "🌙 NIGHT SHIFT" : G.phase === "finale" ? "✒ LAST CALL"
     : G.phase === "forge" ? "🌙 FORGERY" : "☀ DAY SHIFT";
@@ -1490,6 +1491,7 @@ function forgeField(i) {
     sfx.slide();
     return; // can't afford it — the cover is spent
   }
+  if (next > tiers[i]) G.forgePatchCounts[i]++;
   tiers[i] = next;
   G.forgeTiers = tiers;
   sfx.click();
@@ -1519,7 +1521,10 @@ function resolveForge() {
   const stubSig = G.forgeTiers.join("");
   const stubNight = G.forgeHistory.indexOf(stubSig);
   G.forgeHistory.push(stubSig);
-  wire(`stub transmitted · suspicion ${v.suspicion}/${LOGIC.FORGE_THRESHOLD[G.day]} · ${v.outcome === "slip" ? "SLIPPED" : "FLAGGED"}${proofOk ? "" : " · spec failed"}${stubNight >= 0 ? ` · same stub as NIGHT ${stubNight + 1}` : ""}`);
+  const habits = LOGIC.FORGE_FIELDS
+    .map((k, i) => (G.forgePatchCounts[i] >= 2 ? `${TEL_LABEL[k]} ×${G.forgePatchCounts[i]}` : null))
+    .filter(Boolean);
+  wire(`stub transmitted · suspicion ${v.suspicion}/${LOGIC.FORGE_THRESHOLD[G.day]} · ${v.outcome === "slip" ? "SLIPPED" : "FLAGGED"}${proofOk ? "" : " · spec failed"}${stubNight >= 0 ? ` · same stub as NIGHT ${stubNight + 1}` : ""}${habits.length ? ` · habit: ${habits.join(", ")} — the wire counts patterns` : ""}`);
   if (v.outcome === "slip") {
     G.score += 150;
     G.dayResults[G.day] = "survived";
@@ -1642,6 +1647,24 @@ function botTel(day, rng, filed) {
   return tel;
 }
 
+/* the desk dreams: from the third night on, it may resurface a proof
+ * you filed yourself — same argument, someone else's name on it */
+function deskDream() {
+  if (G.coldOpen || G.day < 2) return;
+  const past = G.filedIds.slice(0, G.day)
+    .map((id, i) => (id ? { id, day: i } : null)).filter(Boolean);
+  const slots = G.auditSubs.map((s, i) => ({ s, i }))
+    .filter((x) => x.s.filer !== G.culprit);
+  if (!past.length || !slots.length || stream("echo")() >= 0.5) return;
+  const pick = past[Math.floor(stream("echoPick")() * past.length)];
+  const slot = slots[Math.floor(stream("echoSlot")() * slots.length)];
+  const card = cardById(pick.id);
+  if (!card) return;
+  slot.s.card = card;
+  slot.s.truth = LOGIC.passes(card, slot.s.rule);
+  slot.s.echoDay = pick.day + 1;
+}
+
 function startAudit(resume) {
   banner("NIGHT SHIFT — you are the desk now");
   showOnly("audit");
@@ -1685,6 +1708,7 @@ function startAudit(resume) {
       return { ...c, filer, filed, tel, note, tilt, cleanDrop, stampRot,
                truth: LOGIC.passes(c.card, c.rule), pick: null, correct: null };
     });
+    deskDream();
     G.auditIdx = 0;
     // one filing a night is contested: right pays double bonus
     G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
@@ -1859,9 +1883,12 @@ function flagField(k) {
     later(() => setValeDissonance(false), 1600);
     scoreSynth.sting(); // the horn answers the evidence
     later(() => thunderRoll(0.14), 550); // and the sky, faintly, agrees
-    const seenBefore = G.tellHistory.includes(k);
+    const priorTells = G.tellHistory.filter((t) => t === k).length;
     G.tellHistory.push(k);
-    wire(`ANOMALY · ${TEL_LABEL[k]} ${sub.tel[k]} · +100${seenBefore ? " · same tell as before — the wire remembers" : ""}`);
+    const tellNote = priorTells === 0 ? ""
+      : priorTells === 1 ? " · same tell as before — the wire remembers"
+      : ` · ${TEL_LABEL[k]} again — ${priorTells + 1}× this run, the wire keeps score`;
+    wire(`ANOMALY · ${TEL_LABEL[k]} ${sub.tel[k]} · +100${tellNote}`);
     ariaSay([
       `Wait — you stamped SUS on paper that passed, on grounds of ${TEL_LABEL[k]} ${sub.tel[k]}. You caught something my code couldn't see.`,
       "ANOMALY QUARANTINED. You read the postmark, not just the paper. Well done."
@@ -2013,6 +2040,10 @@ function renderCase() {
     }
   }
 
+  if (sub.echoDay && !G.echoSaid) {
+    G.echoSaid = true;
+    ariaSay(["That argument looks familiar.", "You filed it yourself. The desk keeps copies — of everything."], "soft");
+  }
   setInstr(G.coldOpen ? "cold" : "night");
 
   el.innerHTML =
@@ -2021,7 +2052,7 @@ function renderCase() {
     `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isBot && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
-        <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
+        <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i>${sub.echoDay ? ` <i class="echo-tag" data-tip="this argument appeared in your DAY ${sub.echoDay} filing — the desk keeps copies">† your hand</i>` : ""}</span></div>
       <div class="case-photo" aria-hidden="true">
         <img class="case-vignette" src="art/card-${sub.card.id}.webp" alt="" loading="lazy"
           onerror="this.classList.add('missing')" />
@@ -2124,6 +2155,7 @@ function stamp(pickVal) {
     }
   }
   wire(`${pickVal} on ${sub.filer} — ${sub.correct ? `upheld · +${sub.earned}` : "wrong"}`);
+  if (sub.echoDay) wire(`cross-ref — that argument is yours · filed DAY ${sub.echoDay} · the desk keeps copies`);
   G.auditTotal++;
   hud();
   persist();
@@ -2665,37 +2697,59 @@ $("shiftBrief").addEventListener("click", endBrief);
 document.querySelectorAll("#attrShiftRail .rail-btn").forEach((b) =>
   b.addEventListener("click", () => { setFocusAttr(b.dataset.attr); sfx.click(); }));
 $("signBtn").addEventListener("click", signRule);
-/* the case file: the whole shift as a dossier — the archive persists */
-function caseFileText(title) {
-  const L = [];
-  L.push("NIGHT SHIFT — CASE FILE");
-  L.push(`seed ${SEED} · ${G.mode === "ot" ? "overtime" : G.mode === "machine" ? "the machine's shift" : "week"} · ${title}`);
-  L.push("");
-  DAYS.forEach((d, i) => {
-    L.push(`${d.dayLabel} — ${d.theme}`);
-    L.push(`  day:   ${G.dayResults[i] || "—"}`);
+/* the case file: the whole shift as a dossier — the archive persists.
+   Styled HTML so it prints to PDF as a physical case folder. */
+function caseFileHTML(title) {
+  const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const rows = DAYS.map((d, i) => {
+    let night;
     if (G.mode === "machine") {
-      L.push(`  proof: ${G.forgeProof[i] === true ? "held" : G.forgeProof[i] === false ? "failed" : "—"}`);
-      L.push(`  wire:  ${G.forgeLog[i] || "—"}`);
+      night = G.forgeLog[i] === "slip" ? "slipped the wire"
+            : G.forgeLog[i] === "flag" ? "flagged"
+            : "—";
     } else {
       const h = G.nightResults[i];
-      if (h !== undefined) L.push(`  night: ${h}/5 stamps correct`);
+      night = h === undefined ? "—" : `${h}/5 upheld`;
     }
-  });
-  L.push("");
-  L.push(`score ${G.score} · audits ${G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0}%`);
-  if (G.culprit) L.push(`the machine wore ${G.culprit}'s face`);
-  L.push("");
-  L.push("— the wire remembers —");
-  (G.wire || []).forEach((w) => L.push("  " + w));
-  return L.join("\n");
+    return `<tr><td>${esc(d.dayLabel)}</td><td>${esc(d.theme)}</td>
+      <td>${esc(G.dayResults[i] || "—")}</td><td>${esc(night)}</td></tr>`;
+  }).join("");
+  const wire = (G.wire || []).map((w) => `<li>${esc(w)}</li>`).join("");
+  return `<!doctype html><html><head><meta charset="utf-8"><title>NIGHT SHIFT — case file ${esc(SEED)}</title>
+<style>
+  body{font-family:Georgia,'Times New Roman',serif;background:#efe9dc;color:#241d12;
+       max-width:720px;margin:40px auto;padding:0 24px;line-height:1.55}
+  h1{font-size:22px;letter-spacing:.14em;border-bottom:3px double #241d12;padding-bottom:10px}
+  .meta{color:#6b5f48;font-size:13px;margin:6px 0 22px}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:14px 0}
+  td,th{border:1px solid #b9ad92;padding:6px 10px;text-align:left}
+  th{background:#e2d9c4;font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  .score{font-size:15px;margin:18px 0}
+  h2{font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:#6b5f48;
+     border-bottom:1px solid #b9ad92;margin-top:26px}
+  ul{font-size:13px;color:#4a4132;padding-left:20px}
+  li{margin:3px 0}
+  .stamp{display:inline-block;border:2px solid #8c2f22;color:#8c2f22;
+         padding:3px 12px;font-size:12px;letter-spacing:.2em;transform:rotate(-4deg);
+         margin:10px 0 0}
+  @media print{body{margin:0;max-width:none}}
+</style></head><body>
+<h1>NIGHT SHIFT — CASE FILE</h1>
+<div class="meta">seed ${esc(SEED)} · ${G.mode === "ot" ? "overtime" : G.mode === "machine" ? "the machine's shift" : "week"} · ${esc(title)}</div>
+<table><tr><th>shift</th><th>theme</th><th>day</th><th>night</th></tr>${rows}</table>
+<div class="score">SCORE ${G.score} · AUDITS ${G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0}% ACCURACY
+${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears a new one every docket` : ""}</div>
+<div class="stamp">${esc(title)}</div>
+<h2>the wire remembers</h2>
+<ul>${wire || "<li>—</li>"}</ul>
+</body></html>`;
 }
 $("caseFileBtn").addEventListener("click", () => {
   const title = $("endTitle").textContent || "SHIFT";
-  const blob = new Blob([caseFileText(title)], { type: "text/plain" });
+  const blob = new Blob([caseFileHTML(title)], { type: "text/html" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `night-shift-${SEED}.txt`;
+  a.download = `night-shift-${SEED}-casefile.html`;
   a.click();
   URL.revokeObjectURL(a.href);
 });
@@ -2992,6 +3046,7 @@ function persist() {
       cover: G.cover, forgeFlags: G.forgeFlags, forgeLog: G.forgeLog, forgeProof: G.forgeProof,
       forgeTiers: G.forgeTiers, forgeSent: G.forgeSent, wire: G.wire,
       tellHistory: G.tellHistory, forgeHistory: G.forgeHistory,
+      filedIds: G.filedIds, forgePatchCounts: G.forgePatchCounts, echoSaid: G.echoSaid,
       prediction: G.prediction, predictionHit: G.predictionHit,
       predictions: G.predictions, predHits: G.predHits, nightMemo: G.nightMemo,
       explained: [...G.explained],
@@ -3150,6 +3205,8 @@ function resumeGame(s) {
     forgeLog: s.forgeLog || [], forgeProof: s.forgeProof || [], forgeTiers: s.forgeTiers || [0, 0, 0, 0],
     forgeSent: !!s.forgeSent, wire: s.wire || [],
     tellHistory: s.tellHistory || [], forgeHistory: s.forgeHistory || [],
+    filedIds: s.filedIds || [], forgePatchCounts: s.forgePatchCounts || [0, 0, 0, 0],
+    echoSaid: !!s.echoSaid,
     prediction: s.prediction || null, predictionHit: s.predictionHit ?? null,
     predictions: s.predictions || 0, predHits: s.predHits || 0,
     nightMemo: s.nightMemo || "",
@@ -3235,7 +3292,8 @@ function startOvertime(seed) {
     filed: null, focusAttr: "all", finaleRows: null, finaleOpts: null,
     finaleChoice: null, coldOpen: false, coldTaught: false,
     nightSummarized: false, verdictDone: false, filing: false, wire: [],
-    tellHistory: [], forgeHistory: [],
+    tellHistory: [], forgeHistory: [], filedIds: [],
+    forgePatchCounts: [0, 0, 0, 0], echoSaid: false,
     prediction: null, predictionHit: null, predictions: 0, predHits: 0, nightMemo: "",
   });
   audio();
@@ -3271,7 +3329,8 @@ function startMachine(seed) {
     finaleChoice: null, coldOpen: false, coldTaught: false,
     nightSummarized: false, verdictDone: false, filing: false,
     cover: 0, forgeFlags: 0, forgeLog: [], forgeProof: [], forgeTiers: [0, 0, 0, 0], forgeSent: false,
-    forgeBusy: false, wire: [], tellHistory: [], forgeHistory: [],
+    forgeBusy: false, wire: [], tellHistory: [], forgeHistory: [], filedIds: [],
+    forgePatchCounts: [0, 0, 0, 0], echoSaid: false,
     prediction: null, predictionHit: null, predictions: 0, predHits: 0, nightMemo: "",
   });
   audio();

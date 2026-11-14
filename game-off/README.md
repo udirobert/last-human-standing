@@ -1,6 +1,7 @@
 # NIGHT SHIFT
 
-A five-day deduction thriller. **Game Off 2026** entry — theme: *SHIFT*.
+A five-day deduction thriller about performing humanity on paperwork.
+**Game Off 2026** entry — theme: *SHIFT*.
 Standalone spin-off of [Last Human Standing](https://lasthumanstanding.thisyearnofear.com) —
 same ARIA, same rulings, no account needed.
 
@@ -74,16 +75,29 @@ python3 -m http.server 8000
 - **Finale**: after night five you write the last rule yourself. One filer
   isn't human — and it isn't always the same filer. The ledger lists every
   filing as filed — postmarks and all. Choose the criterion that cuts the
-  machine — and only the machine.
+  machine — and only the machine. On some dockets the winning clause is
+  *stayed up late*: lateness is the one thing the machine can't fake.
 - **Overtime**: close a week (any ending) and the dawn screen offers
   **Overtime** — a fresh five-night run generated from the day's seed
   (`ot-<date>`), same verbs, new rules, a new face on the machine. It also
   appears on the title once unlocked. Resume-safe like the week.
+- **The Machine's Shift**: clear overtime and the title offers the
+  inversion — three generated nights where *you* file the proofs, playing
+  the thing the week was hunting. Filing still asks you to satisfy the
+  sealed rule, but then the night audit turns inside out: your own
+  postmark stub (latency, origin, relays, receipt) arrives fully
+  machine-flavored, and a scarce **cover** budget patches each field
+  through three tiers — machine, clean, lived-in. The wire judges
+  suspicion against a tightening tolerance, and two tripwires catch the
+  careless: a proof that fails the spec, and a stub polished *too* clean
+  (overrehearsed reads as fake). Bank cover across nights — the grant
+  shrinks while the tolerance tightens. Endings: **UNVERIFIED** (slipped
+  all three — the wire filed you as human), **REVIEWED**, or **CAUGHT**.
 - Still a player after day five (and the right finale) = LAST HUMAN
   STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
   the dossier lands — then it's jury duty.
-- Keys: `1`–`4` select · `Enter` file/continue · `←`/`→` stamp · `Shift`
-  focus loupe by day · `O` oath · `M` audio.
+- Keys: `1`–`4` select/patch · `Enter` file/continue/transmit · `←`/`→`
+  stamp · `Shift` focus loupe by day · `O` oath · `M` audio.
 
 ## Seeds & sharing
 
@@ -96,7 +110,7 @@ result**.
 ## Tech
 
 Vanilla JS + DOM + WebAudio, works from `file://`. Four plain scripts:
-`riddles.js` (a 40-card deck, days, secret rules), `logic.js` (pure
+`riddles.js` (a 49-card deck, days, secret rules), `logic.js` (pure
 rule-checking and deal/audit/day/finale generation — no DOM), `score.js`
 (the composed score — owns the AudioContext), `game.js` (screens, input,
 mute policy). `test-logic.mjs` hammers `logic.js` with 2,000 seeded deals,

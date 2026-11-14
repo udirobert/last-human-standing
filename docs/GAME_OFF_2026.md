@@ -317,3 +317,35 @@ Watch-items: quiet-wire nights can have lopsided pass/fail mixes (dealt for amen
 Judges wanted to see *deduction*, not just stamping. The attract reel is now a two-act ~35s cycle: **THE DAY** deals a real docket via `LOGIC.deal` headlessly (rulings stamp in staggered), the rule bar holds "SEALED" then unseals to the real rule text, a hand deals, the filed card lifts, and the verdict replays the real ceremony — `factRows()` output with the same `.pre` stagger, ending in SURVIVED or STRIKE (even cycles file passers, odd cycles failures — both stamps seen). **THE NIGHT** keeps the stamp/postmark vignettes incl. the VALE catch. Rotates through all five days, so each loop shows a different rule. Still zero writes to G/save/audio; input aborts; `calmMotion()` skips.
 
 Verified in jsdom: full cycle sampled — docket→unseal→hand→verdict→night vignettes→next day, dismiss on input, zero JS errors.
+
+## Differentiation pass 2 — the medium/high-cost leans (Nov 14, late)
+
+Completed the remaining priced items from `docs/DIFFERENTIATION.md`.
+
+- **The desk dreams (haunted paperwork, ambitious version)**: from night 3 on,
+  ~50% of nights the audit resurfaces a proof *you* filed earlier in the run —
+  same argument, someone else's name on it. `deskDream()` swaps a human filing's
+  card for a past `filedIds` entry (seeded via `stream("echo")`), recomputes
+  truth against that case's rule, and tags `echoDay`. Reveal is layered: a faint
+  `† your hand` marginal tag with tooltip pre-stamp, an aria beat on first
+  encounter ("The desk keeps copies — of everything."), and a wire cross-ref on
+  stamping. Verified across 10 seeds: fires ~30-50%, never on the culprit's slot.
+- **Ledger degradation**: `humanTel(rng, filed, day)` now drifts cleaner as the
+  week wears on — lower latency floor, fewer resends/delays, shorter relay
+  chains. Humans stay human (no tells), the whole wire just runs *too* clean.
+  `botTel`'s disguise inherits the same degraded distribution. Visually,
+  `body[data-wear]` thins the paper grain from .05 → .015 opacity across days —
+  the desk literally gets cleaner as it gets wrong.
+- **Wire memory deepened**: anomaly tells now escalate — second sighting says
+  "same tell as before," third+ says "N× this run, the wire keeps score."
+  Forge mode tracks `forgePatchCounts` per field; any field patched 2+ times
+  surfaces in the transmit wire line as `habit: RELAYS ×3 — the wire counts
+  patterns`. Both persist through save/resume.
+- **Case file → styled dossier**: the .txt export is now a self-contained HTML
+  dossier — serif ledger styling, per-shift table, stamped title, full wire log,
+  `@media print` rules so it prints to PDF as a physical case folder. Still one
+  click, still named `night-shift-<seed>-casefile.html`.
+
+Verified: `test-logic.mjs` ALL PASS · `deskDream` exercised across 10 seeds in
+real Chrome (correct slots, correct card ids, truth recomputed) · dossier HTML
+validated · wear dataset confirmed · zero console errors · browser session closed.

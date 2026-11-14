@@ -14,10 +14,13 @@ for whoever has the game open in a browser (record locally, upload to itch).
 
 ## Short description (itch "short description" field)
 
-ARIA runs a secret rule. Read her rulings, file the card she'd pass — then
-work the night shift, stamping everyone else's filings until one filer turns
-out not to be human at all. A five-day deduction game about day shifts,
-night shifts, and the shift in between.
+The bureau demands proof of humanity as paperwork — and the only
+admissible evidence is a life. ARIA runs a secret rule over every filing's
+four facts. By day you deduce it and file the card she'd pass; by night
+you stamp everyone else's filings until one filer turns out not to be human
+at all. And the saddest filing on the docket is the one trying to belong.
+A five-day deduction game about day shifts, night shifts, and the shift
+in between.
 
 ## Full description
 

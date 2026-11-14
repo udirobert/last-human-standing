@@ -2487,3 +2487,13 @@ button:focus-visible, tr[data-tip]:focus-visible {
 /* locked tease: visible, honest about the terms */
 #machineTitleBtn.locked { opacity: .55; border-style: dashed; }
 #machineTitleBtn.locked:hover { opacity: .8; }
+
+/* ---------- the week wears the desk down: ledger degradation ---------- */
+/* grain thins as the nights pass — the paperwork gets too clean */
+body[data-wear="1"]::before { opacity: .045; }
+body[data-wear="2"]::before { opacity: .035; }
+body[data-wear="3"]::before { opacity: .025; }
+body[data-wear="4"]::before { opacity: .015; }
+
+/* the dream filing: your own argument under someone else's name */
+.echo-tag { color: #8c2f22; font-style: normal; letter-spacing: .04em; }
