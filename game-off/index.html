@@ -193,8 +193,17 @@
         <span class="pc-slots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       </button>
       <button id="randomBtn" class="ghost">Random shift</button>
+      <button id="otTitleBtn" class="ghost hidden" title="A fresh five-night run, rules generated per docket">Overtime — a generated docket</button>
     </div>
-    <p class="hint">five nights, one story · fresh docket daily · audio recommended</p>
+    <div class="shift-ledger" aria-label="What shifts in this game">
+      <span class="sl-k">shift (v.)</span>
+      <span class="sl-i"><b>the facts</b> — the loupe narrows the desk to one column</span>
+      <span class="sl-i"><b>the rule</b> — head office amends mid-night</span>
+      <span class="sl-i"><b>the desk</b> — judged by day, judging by night</span>
+      <span class="sl-i"><b>the truth</b> — the machine shifts its tells, and its face</span>
+      <span class="sl-i"><b>who signs</b> — the last rule is yours to write</span>
+    </div>
+    <p class="hint">five nights, one machine in a new face each docket · overtime: rules generated daily · audio recommended</p>
     <p class="hint">A five-day deduction thriller · all proceedings fictional</p>
   </div>
 
@@ -403,9 +412,18 @@
       <pre id="shareBlock"></pre>
       <span class="closed-stamp" aria-hidden="true">CASE CLOSED</span>
     </div>
-    <p class="hint">the week is closed — the docket never is. Replay this seed, or clock in tomorrow.</p>
+    <p class="hint">the week is closed — the docket never is. Replay this seed, clock in tomorrow, or work overtime.</p>
     <button id="copyBtn" class="ghost">Copy result</button>
+    <button id="otBtn" class="ghost">Overtime — a fresh generated docket</button>
     <button id="againBtn">Work another week</button>
+    <div class="shift-ledger">
+      <span class="sl-k">shift (v.)</span>
+      <span class="sl-i"><b>the facts</b> — the loupe narrows the desk to one column</span>
+      <span class="sl-i"><b>the rule</b> — head office amends mid-night</span>
+      <span class="sl-i"><b>the desk</b> — judged by day, judging by night</span>
+      <span class="sl-i"><b>the truth</b> — the machine shifted its tells, and its face</span>
+      <span class="sl-i"><b>who signs</b> — you signed the last rule</span>
+    </div>
     <a class="live-link" href="https://lasthumanstanding.thisyearnofear.com" target="_blank" rel="noopener">
       the real desk runs daily — lasthumanstanding.thisyearnofear.com
     </a>
@@ -413,6 +431,7 @@
   </div>
 </div>  <script src="riddles.js"></script>
 <script src="logic.js"></script>
+<script src="score.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

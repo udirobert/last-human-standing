@@ -15,9 +15,13 @@
  * All gameplay randomness is seeded (logic.js makeRng) — a given docket
  * deals the same way every time. Vanilla JS, no deps, works from file://.
  */
-const { CARDS, DAYS, JURY_TITLES, ATTR_KEYS, ATTR_LABEL, ATTR_ICONS, ATTR_WORD, FINALE } =
-  window.NIGHT_SHIFT_DATA;
+const DATA = window.NIGHT_SHIFT_DATA;
+const { CARDS, JURY_TITLES, ATTR_KEYS, ATTR_LABEL, ATTR_ICONS, ATTR_WORD, FINALE } = DATA;
+let DAYS = DATA.DAYS;   // swapped for generated shifts in overtime mode
 const LOGIC = window.NIGHT_SHIFT_LOGIC;
+/* The machine wears a seeded face: any of the five filers can be it.
+ * VALE is only its default mask — a new docket deals a new suspect. */
+const ALL_FILERS = ["MARA", "OKO", "JUN", "TESS", "VALE"];
 
 const $ = (id) => document.getElementById(id);
 const titleEl = $("title"), gameEl = $("game"), dawnEl = $("dawn"), dossierEl = $("dossier");
@@ -41,13 +45,11 @@ function docketLabel() {
 const stream = (p) => LOGIC.makeRng(`${SEED}|${G.day}|${p}`);
 // ?seed= is the only supported URL override (daily docket vs custom docket).
 
-// ---------- tiny synth ----------
-let AC = null;
-function audio() {
-  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
-  if (AC.state === "suspended") AC.resume();
-  return AC;
-}
+// ---------- audio: one shared context (score.js) ----------
+/* score.js owns the AudioContext and the composed score — one chart played
+ * by code, no files, so file:// and the itch embed hear the same thing.
+ * game.js only calls it and reports mute policy. */
+const { audio, scoreSynth } = window.NIGHT_SHIFT_SCORE;
 function tone(freq, dur = 0.09, type = "square", vol = 0.04, when = 0) {
   try {
     const ac = audio();
@@ -271,13 +273,37 @@ function initAmbient() {
     valeFilter.connect(vGain);
     vGain.connect(master);
 
+    // vinyl crackle: sparse ticks over a 4s loop, highpassed so it reads
+    // as dust in the groove, not rain. Under everything, all night.
+    const crLen = ac.sampleRate * 4;
+    const crBuf = ac.createBuffer(1, crLen, ac.sampleRate);
+    const cr = crBuf.getChannelData(0);
+    for (let slot = 0; slot < crLen; slot += Math.floor(ac.sampleRate * 0.05)) {
+      if (Math.random() < 0.35) {
+        const at = slot + Math.floor(Math.random() * Math.floor(ac.sampleRate * 0.05) * 0.9);
+        const amp = 0.12 + Math.random() * 0.5;
+        const tickLen = Math.floor(ac.sampleRate * (0.0012 + Math.random() * 0.0028));
+        for (let i = 0; i < tickLen && at + i < crLen; i++) {
+          cr[at + i] = amp * (Math.random() * 2 - 1) * (1 - i / tickLen);
+        }
+      }
+    }
+    const crSrc = ac.createBufferSource();
+    crSrc.buffer = crBuf; crSrc.loop = true;
+    const crFilter = ac.createBiquadFilter();
+    crFilter.type = "highpass"; crFilter.frequency.value = 2200; crFilter.Q.value = 0.7;
+    const crGain = ac.createGain();
+    crGain.gain.value = 0.02;
+    crSrc.connect(crFilter); crFilter.connect(crGain); crGain.connect(master);
+    crSrc.start();
+
     osc1.start();
     osc2.start();
     lfo.start();
     noiseSrc.start();
     valeOsc.start();
 
-    AMBIENT = { master, osc1, osc2, lfo, noiseSrc, valeOsc };
+    AMBIENT = { master, osc1, osc2, lfo, noiseSrc, valeOsc, crSrc };
   } catch (e) {
     /* audio unavailable */
   }
@@ -337,227 +363,6 @@ function thunderRoll() {
   } catch { /* audio may be unavailable */ }
 }
 
-/* ---------- the composed score — one chart, played by code ----------
- * An eight-bar noir progression in D minor (76 bpm, swung): Dm9 · Gm9 ·
- * B♭maj7 · A7sus, twice around. Upright bass walks quarters, piano
- * comps the charleston, brushes keep time, a muted horn carries the
- * melody. The room chooses what plays: the title gets the full chart,
- * the day shift strips to piano (reading music), the night shift drops
- * the horn — the melody is the human voice, and it isn't at the desk —
- * and dawn gets a sustained reprise that resolves and rests.
- * Zero audio files: file:// and the itch embed hear the same score. */
-const SCORE = {
-  bpm: 76,
-  bars: [
-    { bass: [38, 45, 38, 42], voicing: [65, 72, 76], mel: [[0, 69, 2], [2, 72, 1], [3, 74, 1]] },  // Dm9
-    { bass: [43, 50, 43, 45], voicing: [70, 74, 77], mel: [[0, 74, 2], [2, 72, 1], [3, 70, 1]] },  // Gm9
-    { bass: [46, 53, 46, 44], voicing: [74, 77, 81], mel: [[0, 70, 1], [1, 69, 1], [2, 67, 2]] },  // B♭maj7
-    { bass: [45, 52, 45, 37], voicing: [67, 72, 74], mel: [[0, 69, 3], [3, 67, 1]] },              // A7sus
-    { bass: [38, 45, 38, 42], voicing: [65, 72, 76], mel: [[0, 69, 2], [2, 72, 1], [3, 76, 1]] },  // Dm9
-    { bass: [43, 50, 43, 38], voicing: [70, 74, 77], mel: [[0, 77, 2], [2, 79, 1], [3, 77, 1]] },  // Gm7
-    { bass: [39, 46, 39, 44], voicing: [67, 70, 74], mel: [[0, 75, 2], [2, 74, 1], [3, 72, 1]] },  // E♭maj7
-    { bass: [45, 52, 45, 37], voicing: [67, 72, 74], mel: [[1, 73, 1], [2, 74, 2]] },              // A7sus → Dm
-  ],
-  ARR: {
-    title: { bass: true, piano: true, drums: true, horn: true, loop: true },
-    day:   { bass: "roots", piano: true, drums: false, horn: false, loop: true },
-    night: { bass: true, piano: true, drums: true, horn: false, loop: true },
-    dawn:  { bass: "whole", piano: "whole", drums: false, horn: true, loop: false },
-  },
-};
-const midiHz = (m) => 440 * Math.pow(2, (m - 69) / 12);
-
-const scoreSynth = {
-  name: null, bus: null, timer: null, barIdx: 0, nextBar: 0, muted: false,
-  graph() {
-    if (!this.bus) {
-      try {
-        const g = audio().createGain();
-        g.gain.value = this.muted ? 0 : 0.5;
-        g.connect(audio().destination);
-        this.bus = g;
-      } catch { return null; }
-    }
-    return this.bus;
-  },
-  beat() { return 60 / SCORE.bpm; },
-  barDur() { return this.beat() * 4; },
-
-  /* --- the voices --- */
-  bassNote(m, t, dur) {
-    const ac = audio();
-    const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
-    o.type = "triangle"; o.frequency.value = midiHz(m);
-    f.type = "lowpass"; f.frequency.value = 320;
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.16, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.028, t + Math.min(dur, 0.5));
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(f); f.connect(g); g.connect(this.graph());
-    o.start(t); o.stop(t + dur + 0.05);
-  },
-  pianoNote(m, t, dur, vel = 0.05) {
-    const ac = audio();
-    const o = ac.createOscillator(), o2 = ac.createOscillator(), g = ac.createGain();
-    o.type = "sine"; o.frequency.value = midiHz(m);
-    o2.type = "sine"; o2.frequency.value = midiHz(m) * 2.001; // one shimmer partial
-    const g2 = ac.createGain(); g2.gain.value = 0.28;
-    o2.connect(g2); g2.connect(g);
-    o.connect(g);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(vel, t + 0.012);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    g.connect(this.graph());
-    o.start(t); o2.start(t);
-    o.stop(t + dur + 0.1); o2.stop(t + dur + 0.1);
-  },
-  hornNote(m, t, dur) {
-    const ac = audio();
-    const o = ac.createOscillator(), f = ac.createBiquadFilter(), g = ac.createGain();
-    o.type = "triangle"; o.frequency.value = midiHz(m);
-    f.type = "bandpass"; f.frequency.value = 900; f.Q.value = 1.2;
-    // the vibrato arrives after the attack, like breath
-    const lfo = ac.createOscillator(), lg = ac.createGain();
-    lfo.frequency.value = 5.4; lg.gain.setValueAtTime(0, t);
-    lg.gain.setValueAtTime(0.8, t);
-    lg.gain.linearRampToValueAtTime(4.5, t + Math.max(0.25, dur * 0.6));
-    lfo.connect(lg); lg.connect(o.frequency);
-    g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(0.075, t + 0.07);
-    g.gain.setValueAtTime(0.075, t + dur * 0.8);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur + 0.12);
-    o.connect(f); f.connect(g); g.connect(this.graph());
-    o.start(t); lfo.start(t);
-    o.stop(t + dur + 0.15); lfo.stop(t + dur + 0.15);
-  },
-  kick(t, vol = 0.05) {
-    const ac = audio();
-    const o = ac.createOscillator(), g = ac.createGain();
-    o.type = "sine";
-    o.frequency.setValueAtTime(78, t);
-    o.frequency.exponentialRampToValueAtTime(38, t + 0.12);
-    g.gain.setValueAtTime(vol, t);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
-    o.connect(g); g.connect(this.graph());
-    o.start(t); o.stop(t + 0.18);
-  },
-  brush(t, freq, vol = 0.02, dur = 0.06) {
-    try {
-      const ac = audio();
-      const len = Math.max(1, Math.floor(ac.sampleRate * dur));
-      const buf = ac.createBuffer(1, len, ac.sampleRate);
-      const ch = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len);
-      const s = ac.createBufferSource(); s.buffer = buf;
-      const f = ac.createBiquadFilter(); f.type = "bandpass"; f.frequency.value = freq; f.Q.value = 0.8;
-      const g = ac.createGain(); g.gain.value = vol;
-      s.connect(f); f.connect(g); g.connect(this.graph());
-      s.start(t);
-    } catch { /* no audio */ }
-  },
-
-  /* --- one bar of the chart, arranged for the room --- */
-  scheduleBar(bi, t) {
-    const bar = SCORE.bars[bi];
-    const arr = SCORE.ARR[this.name] || SCORE.ARR.night;
-    const beat = this.beat();
-    if (arr.bass === true) {
-      bar.bass.forEach((m, i) => this.bassNote(m, t + i * beat, beat * 0.95));
-    } else if (arr.bass === "roots" && bi % 2 === 0) {
-      this.bassNote(bar.bass[0], t, beat * 1.8);
-    } else if (arr.bass === "whole") {
-      this.bassNote(bar.bass[0], t, this.barDur() * 0.95);
-    }
-    if (arr.piano) {
-      const swing = 2 / 3; // offbeat 8ths swing
-      if (arr.piano === "whole") {
-        bar.voicing.forEach((m, i) => this.pianoNote(m, t + i * 0.03, this.barDur() * 0.9, 0.042));
-      } else {
-        bar.voicing.forEach((m) => this.pianoNote(m, t, beat * 0.85, 0.05));
-        bar.voicing.forEach((m) => this.pianoNote(m, t + beat * (2 + swing), beat * 0.6, 0.042));
-        if (bi % 2 === 1) bar.voicing.forEach((m) => this.pianoNote(m, t + beat * 3.5, beat * 0.5, 0.036));
-      }
-    }
-    if (arr.drums) {
-      this.kick(t, 0.045); this.kick(t + beat * 2, 0.04);
-      this.brush(t + beat, 3000, 0.02); this.brush(t + beat * 3, 3000, 0.02);
-      for (let i = 0; i < 4; i++) {
-        this.brush(t + i * beat, 7800, 0.008, 0.03);            // the ride ping
-        this.brush(t + (i + 2 / 3) * beat, 7800, 0.005, 0.03);   // swung upbeat
-      }
-    }
-    if (arr.horn) {
-      bar.mel.forEach(([b, m, d]) => this.hornNote(m, t + b * beat, d * beat * 0.92));
-    }
-  },
-
-  /* --- the transport --- */
-  play(name) {
-    if (!name || this.name === name) return;
-    this.name = name;
-    if (!this.graph()) return;
-    this.barIdx = 0;
-    this.nextBar = audio().currentTime + 0.12;
-    clearInterval(this.timer);
-    this.timer = setInterval(() => this.tick(), 120);
-    this.tick();
-  },
-  tick() {
-    if (!this.name) return;
-    const ac = audio();
-    while (this.nextBar < ac.currentTime + 0.4) {
-      this.scheduleBar(this.barIdx, this.nextBar);
-      this.nextBar += this.barDur();
-      this.barIdx++;
-      if (this.barIdx >= SCORE.bars.length) {
-        if (SCORE.ARR[this.name]?.loop) this.barIdx = 0;
-        else { this.resolve(); return; }
-      }
-    }
-  },
-  /* dawn passes once and resolves: the last chord held, then rest */
-  resolve() {
-    clearInterval(this.timer);
-    this.timer = null;
-    const t = this.nextBar;
-    [53, 62, 65, 69, 72].forEach((m, i) => this.pianoNote(m, t + i * 0.06, 5.5, 0.045));
-    this.bassNote(38, t, 5.2);
-    this.name = null;
-  },
-  stop() {
-    clearInterval(this.timer);
-    this.timer = null;
-    this.name = null;
-  },
-  duck(on) {
-    const bus = this.graph();
-    if (!bus) return;
-    try {
-      const ac = audio();
-      bus.gain.cancelScheduledValues(ac.currentTime);
-      bus.gain.linearRampToValueAtTime(this.muted ? 0 : (on ? 0.16 : 0.5), ac.currentTime + 0.4);
-    } catch { /* */ }
-  },
-  setMuted() {
-    const bus = this.graph();
-    if (!bus) { this.muted = audioMuted; return; }
-    this.muted = audioMuted;
-    try {
-      const ac = audio();
-      bus.gain.cancelScheduledValues(ac.currentTime);
-      bus.gain.setValueAtTime(audioMuted ? 0 : 0.5, ac.currentTime);
-    } catch { /* */ }
-  },
-  /* the catch sting: the horn answers the player's evidence */
-  sting() {
-    if (!this.graph() || audioMuted) return;
-    const ac = audio();
-    const t = ac.currentTime + 0.05;
-    this.hornNote(74, t, 0.22);
-    this.hornNote(79, t + 0.2, 0.5);
-    [65, 72, 76].forEach((m, i) => this.pianoNote(m, t + 0.34, 1.1, 0.05));
-  },
-};
 
 /* same call surface the game has always used — now every call is code */
 const score = {
@@ -567,7 +372,7 @@ const score = {
     this.cur = name;
     scoreSynth.play(name);
   },
-  setMuted() { scoreSynth.setMuted(); },
+  setMuted() { scoreSynth.mutedState = audioMuted; scoreSynth.setMuted(); },
 };
 function applyScore() {
   score.play({ day: "day", verdict: "day", audit: "night", finale: "night" }[G.phase]);
@@ -615,7 +420,7 @@ const INSTR = {
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
-  cold: "The outgoing clerk left a tray — stamp each filing, paper and postmark both. No strikes tonight. S: SUS · H: HUMAN.",
+  cold: "The night clerk cleared one filing — read his strip with him. The second is yours: stamp it. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -654,10 +459,10 @@ const ARIA = {
     "The ledger is watching tonight. Stamp cleanly.",
   ],
   coldOpen: [
-    "Two filings the last clerk couldn't clear. The desk is yours — so is the tray.",
+    "The tray he left: one cleared, one he couldn't. His cleared filing is your textbook — the other one is yours.",
   ],
   coldFirst: [
-    "Paper checked against the rule, postmark read against the claim. If nothing reads wrong, the filing is HUMAN.",
+    "He passed that one. Watch how it reads: paper against the rule, postmark against the claim. Nothing flagged, nothing circled — a clean HUMAN.",
   ],
   coldCompare: [
     "The card types its claim. The postmark prints the truth. They don't always agree.",
@@ -712,6 +517,8 @@ const newTag = (feature, debut) =>
 const G = {
   day: 0,
   status: "player",      // player | juror
+  mode: "week",          // week | ot — the fixed story week vs generated overtime
+  culprit: "VALE",       // who the machine is wearing this docket (seeded)
   strikes: 0,
   score: 0,
   daysSurvived: 0,
@@ -762,7 +569,9 @@ function hud() {
   $("hudShift").textContent =
     G.phase === "audit" ? "🌙 NIGHT SHIFT" : G.phase === "finale" ? "✒ LAST CALL" : "☀ DAY SHIFT";
   const dots = $("dayDots");
-  dots.innerHTML = `<span class="day-label">${G.coldOpen ? "NIGHT 0" : `DAY ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}`}</span>`;
+  dots.innerHTML = `<span class="day-label">${G.coldOpen ? "NIGHT 0"
+    : G.mode === "ot" ? `${(DAYS[G.day] || {}).dayLabel || `OT ${G.day + 1}`}/${DAYS.length}`
+    : `DAY ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}`}</span>`;
   DAYS.forEach((_, i) => {
     const s = document.createElement("span");
     s.className = "dot";
@@ -1359,7 +1168,8 @@ function paintVerdictEnd() {
 verdictPhase.addEventListener("click", () => { if (!G.verdictDone) finishVerdict(); });
 
 // ---------- NIGHT AUDIT ----------
-const FILERS = ["MARA", "OKO", "JUN", "TESS"];
+/* four human filers — everyone except whoever the machine is wearing tonight */
+const humans = () => ALL_FILERS.filter((f) => f !== G.culprit);
 function fmtFiled(mins) {
   const h = Math.floor(mins / 60), m = mins % 60;
   return `+${h}h${String(m).padStart(2, "0")}m`;
@@ -1395,10 +1205,10 @@ function humanTel(rng, filed) {
     tells: [],
   };
 }
-function valeTel(day, rng, filed) {
+function botTel(day, rng, filed) {
   // the disguise wears the human distribution exactly — a clean field on
-  // VALE's stub is indistinguishable from a real filing, so flagging one
-  // is a hunch, not a boundary case
+  // the machine's stub is indistinguishable from a real filing, so flagging
+  // one is a hunch, not a boundary case
   const human = humanTel(rng, filed);
   // how many fields betray it: two early, one later — and the rest wear
   // human values, so a flag pointed at a clean field is still a hunch
@@ -1438,9 +1248,10 @@ function startAudit(resume) {
     const { cases, amendAfter } = LOGIC.auditSet(CARDS, d, G.day, G.filed, stream("audit"));
     G.amendAfter = amendAfter;
     G.amendShown = false;
-    // filers: the bot case is VALE; the rest get the four humans shuffled
-    const humans = (function () {
-      const r = stream("filers"), a = [...FILERS];
+    // filers: the bot case wears the culprit's face; the rest get the four
+    // humans shuffled
+    const roster = (function () {
+      const r = stream("filers"), a = [...humans()];
       for (let i = a.length - 1; i > 0; i--) {
         const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]];
       }
@@ -1449,9 +1260,9 @@ function startAudit(resume) {
     const trng = stream("times");
     let hi = 0;
     G.auditSubs = cases.map((c) => {
-      const filer = c.bot ? "VALE" : humans[hi++];
+      const filer = c.bot ? G.culprit : roster[hi++];
       const filed = fmtFiled(40 + Math.floor(trng() * 500));
-      const tel = c.bot ? valeTel(G.day, trng, filed) : humanTel(trng, filed);
+      const tel = c.bot ? botTel(G.day, trng, filed) : humanTel(trng, filed);
       // every filer draws the same note pool — a remote filing is a red
       // herring, not a fingerprint. The postmark is the only testimony.
       const note = NOTES[Math.floor(trng() * NOTES.length)];
@@ -1490,7 +1301,7 @@ function startAudit(resume) {
  * Ninety seconds covering every verb the week uses: stamp, verdict,
  * postmark, flag, catch-or-miss. Then 06:00 and the day crew's docket. */
 const COLD_RULE = [{ key: "setting", allow: ["indoor"], text: "indoors" }];
-const COLD_VALE_CARD = {
+const COLD_BOT_CARD = {
   id: "cold-vale", name: "The overnight reading room", glyph: "🗄",
   argument: "Third floor, after close. The quiet was very thorough — I measured it.",
   tags: { place: "library", time: "night", people: "alone", setting: "indoor" },
@@ -1503,23 +1314,32 @@ function startColdOpen() {
   ariaSay([ARIA.coldOpen[0]]);
   renderRuleChips(COLD_RULE, false);
   const trng = stream("coldopen");
+  const roster = [...humans()];
   const mk = (card, filer, extra) => {
     const filed = fmtFiled(40 + Math.floor(trng() * 500));
-    const tel = filer === "VALE" ? valeTel(0, trng, filed) : humanTel(trng, filed);
+    const tel = filer === G.culprit ? botTel(0, trng, filed) : humanTel(trng, filed);
     return {
-      card, rule: COLD_RULE, amended: false, bot: filer === "VALE", filer,
+      card, rule: COLD_RULE, amended: false, bot: filer === G.culprit, filer,
       filed, tel, note: NOTES[Math.floor(trng() * NOTES.length)],
-      tilt: filer === "VALE" || trng() < 0.3 ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10,
-      cleanDrop: filer === "VALE" || trng() < 0.28,
+      tilt: filer === G.culprit || trng() < 0.3 ? 0 : Math.round((trng() * 3.2 - 1.6) * 10) / 10,
+      cleanDrop: filer === G.culprit || trng() < 0.28,
       stampRot: Math.round((trng() * 14 - 7) * 10) / 10,
       truth: LOGIC.passes(card, COLD_RULE), pick: null, correct: null,
       ...extra,
     };
   };
+  // the first filing arrives pre-stamped by the outgoing clerk: the player
+  // doesn't judge it, they read his strip against his stamp — the first
+  // active judgment of the night is the machine's, taught by the contrast
+  const first = mk(CARDS.find((c) => c.id === "library-regular"),
+    roster[Math.floor(trng() * roster.length)]);
+  first.preStamped = true;
+  first.pick = "HUMAN";
+  first.correct = true;
+  first.earned = 0;
   G.auditSubs = [
-    mk(CARDS.find((c) => c.id === "library-regular"),
-       FILERS[Math.floor(trng() * FILERS.length)]),
-    mk(COLD_VALE_CARD, "VALE", { arg: COLD_VALE_CARD.argument }),
+    first,
+    mk(COLD_BOT_CARD, G.culprit, { arg: COLD_BOT_CARD.argument }),
   ];
   G.auditIdx = 0;
   G.contestedIdx = -1;
@@ -1533,6 +1353,9 @@ function startColdOpen() {
   $("caseBtns").classList.remove("hidden");
   hud();
   renderCase();
+  // the pre-stamped filing waits for a tap, not a stamp — the desk is
+  // locked until it slides away
+  G.auditLocked = true;
   persist();
 }
 
@@ -1541,8 +1364,8 @@ function endColdOpen() {
   $("caseCard").innerHTML = "";
   const s = $("auditSummary");
   s.classList.remove("hidden");
-  const valeSub = G.auditSubs.find((x) => x.filer === "VALE");
-  const caught = valeSub && valeSub.pick === "SUS" && valeSub.correct;
+  const botSub = G.auditSubs.find((x) => x.filer === G.culprit);
+  const caught = botSub && botSub.pick === "SUS" && botSub.correct;
   s.innerHTML = `<p class="sum-line">TRAY CLEARED</p>
     <p class="sum-effect">${caught
       ? "⚡ anomaly quarantined on your first night — the desk noticed"
@@ -1575,7 +1398,7 @@ function flagField(k) {
   sub.pendingFlag = false;
   sub.flagTried = true;
   sub.flagKey = k || null;
-  const caught = sub.filer === "VALE" && !!k && sub.tel.tells.includes(k);
+  const caught = sub.filer === G.culprit && !!k && sub.tel.tells.includes(k);
   setValeDissonance(false);
   if (caught) {
     sub.correct = true;
@@ -1610,21 +1433,19 @@ function flagField(k) {
   later(() => { sub.correct ? sfx.human() : sfx.sus(); }, 200);
   // the evidence gets marked the way a desk marks it: a catch earns the
   // red grease circle; a hunch gets the field you named struck through
-  const rows = $("caseCard").querySelectorAll(".case-stub .tel-row");
-  const idx = TEL_KEYS.indexOf(sub.flagKey);
-  if (sub.correct && idx >= 0 && rows[idx]) {
+  const rowEl = sub.flagKey ? $("caseCard").querySelector(`[data-tel="${sub.flagKey}"]`) : null;
+  if (sub.correct && rowEl) {
     later(() => {
-      const row = rows[idx];
-      row.classList.add("ringed");
-      row.insertAdjacentHTML("beforeend",
+      rowEl.classList.add("ringed");
+      rowEl.insertAdjacentHTML("beforeend",
         `<svg class="ring" viewBox="0 0 100 34" preserveAspectRatio="none" aria-hidden="true">
            <ellipse cx="50" cy="17" rx="48" ry="13.5" pathLength="100"/></svg>`);
       sfx.ring();
     }, 380);
     later(nextCase, 1750);
   } else {
-    if (idx >= 0 && rows[idx]) {
-      later(() => { rows[idx].classList.add("struck"); sfx.strike(); }, 320);
+    if (rowEl) {
+      later(() => { rowEl.classList.add("struck"); sfx.strike(); }, 320);
     }
   }
 }
@@ -1637,15 +1458,17 @@ function flagField(k) {
 function coldCompareHTML(sub) {
   const prev = G.auditSubs[0];
   if (!prev || prev === sub) return "";
-  const row = (label, a, b) =>
-    `<div class="rcc-row"><span class="rcc-k">${label}</span><span class="rcc-a">${a}</span><span class="rcc-b">${b}</span></div>`;
+  // the right column IS this filing's postmark — the card's own stub stands
+  // down while the compare is up, so the desk reads one surface, not two
+  const row = (label, a, b, k) =>
+    `<div class="rcc-row"${k ? ` data-tel="${k}"` : ""}><span class="rcc-k">${label}</span><span class="rcc-a">${a}</span><span class="rcc-b tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${b}</span></div>`;
   return `<div class="rc-compare" aria-label="Postmark comparison">
     <div class="rcc-head"><span class="rcc-k"></span><span class="rcc-a">${prev.filer} — stamped</span><span class="rcc-b">${sub.filer} — on your desk</span></div>
     ${row("CLAIM", prev.filed, sub.filed)}
-    ${row(TEL_LABEL.latency, prev.tel.latency, sub.tel.latency)}
-    ${row(TEL_LABEL.origin, prev.tel.origin, sub.tel.origin)}
-    ${row(TEL_LABEL.hops, "×" + prev.tel.hops, "×" + sub.tel.hops)}
-    ${row(TEL_LABEL.receipt, prev.tel.receipt, sub.tel.receipt)}
+    ${row(TEL_LABEL.latency, prev.tel.latency, sub.tel.latency, "latency")}
+    ${row(TEL_LABEL.origin, prev.tel.origin, sub.tel.origin, "origin")}
+    ${row(TEL_LABEL.hops, "×" + prev.tel.hops, "×" + sub.tel.hops, "hops")}
+    ${row(TEL_LABEL.receipt, prev.tel.receipt, sub.tel.receipt, "receipt")}
     <p class="rcc-cap">the claim is typed on the card — the receipt is printed by the wire</p>
   </div>`;
 }
@@ -1656,8 +1479,8 @@ function renderCase() {
   const checked = sub.pick !== null;
   const contested = G.auditIdx === G.contestedIdx;
   const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
-  const arg = sub.filer === "VALE" ? (sub.arg || DAYS[G.day].valeLine) : sub.card.argument;
-  const isVale = sub.filer === "VALE";
+  const arg = sub.filer === G.culprit ? (sub.arg || DAYS[G.day].valeLine) : sub.card.argument;
+  const isBot = sub.filer === G.culprit;
   // cold open, second filing: align the receipts, teach the contrast once
   const compare = G.coldOpen && G.auditIdx === 1 ? coldCompareHTML(sub) : "";
   if (compare && !G.coldTaught) {
@@ -1669,7 +1492,7 @@ function renderCase() {
 
   let reason = "";
   if (sub.pick && !sub.pendingFlag) {
-    if (isVale) {
+    if (isBot) {
       if (sub.pick === "SUS" && sub.correct) {
         reason = `⚡ ANOMALY QUARANTINED — ${TEL_LABEL[sub.flagKey]} ${sub.tel[sub.flagKey]}. No human files that. +100 bounty`;
       } else if (sub.correct) {
@@ -1696,12 +1519,12 @@ function renderCase() {
     }
   }
 
-  setInstr("night");
+  setInstr(G.coldOpen ? "cold" : "night");
 
   el.innerHTML =
     `${compare}` +
     `<p class="case-num">CASE ${G.auditIdx + 1}/${G.auditSubs.length}${contested ? ' · <span class="contested-tag"><b>\u2696 CONTESTED BONUS</b></span>' : ""}</p>` +
-    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isVale && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
+    `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isBot && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
         <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i></span></div>
@@ -1712,15 +1535,17 @@ function renderCase() {
           onerror="this.classList.add('missing')" />
       </div>
       <div class="name">${sub.card.name}</div>
-      ${sub.pick && !sub.pendingFlag ? `<p class="case-verdict ${sub.correct ? "ok" : "bad"}">${sub.correct ? "RIGHT" : "WRONG"}</p>
-        <p class="case-reason">${reason}</p>` : ""}
+      ${sub.pick && !sub.pendingFlag ? `<p class="case-verdict ${sub.preStamped ? "prev" : sub.correct ? "ok" : "bad"}">${sub.preStamped ? "PREVIOUS SHIFT" : sub.correct ? "RIGHT" : "WRONG"}</p>
+        <p class="case-reason">${sub.preStamped
+          ? "the night clerk passed this one — read his strip against his stamp"
+          : reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
       <div class="case-note">✎ ${sub.note}</div>
       ${factRows(sub.card, verdicts)}
-      <div class="case-stub">
+      ${compare ? "" : `<div class="case-stub">
         ${TEL_KEYS.map((k, ti) =>
-          `<div class="tel-row" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
-      </div>
+          `<div class="tel-row" data-tel="${k}" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
+      </div>`}
       ${sub.pendingFlag ? `<div class="flag-row">
         <span class="flag-q">the paper passed — what flagged it?</span>
         ${TEL_KEYS.map((k) => `<button class="flag-f" type="button" data-k="${k}">${TEL_LABEL[k]}</button>`).join("")}
@@ -1729,13 +1554,12 @@ function renderCase() {
       ${sub.pick ? `<div class="case-stamp ${sub.pick.toLowerCase()}" style="transform:rotate(${sub.stampRot}deg)">${sub.pick}</div>` : ""}
       ${sub.pick && !sub.correct && !sub.pendingFlag ? `<p class="case-cont">tap or press any key to continue</p>` : ""}
     </div>`;
-  const telRows = el.querySelectorAll(".case-stub .tel-row");
   el.querySelectorAll(".flag-f").forEach((b) => {
     b.addEventListener("click", (e) => { e.stopPropagation(); flagField(b.dataset.k); });
-    // hovering an accusation points at the row it names
-    const idx = TEL_KEYS.indexOf(b.dataset.k);
-    if (idx < 0) return;
-    const row = telRows[idx];
+    // hovering an accusation points at the row it names — on whichever
+    // postmark surface is live (stub or cold-open compare)
+    const row = el.querySelector(`[data-tel="${b.dataset.k}"]`);
+    if (!row) return;
     ["mouseenter", "focus"].forEach((ev) => b.addEventListener(ev, () => row.classList.add("peek")));
     ["mouseleave", "blur"].forEach((ev) => b.addEventListener(ev, () => row.classList.remove("peek")));
   });
@@ -1757,7 +1581,7 @@ function stamp(pickVal) {
   if (!sub || sub.pick) return;
   G.auditLocked = true;
   sub.pick = pickVal;
-  const isVale = sub.filer === "VALE";
+  const isBot = sub.filer === G.culprit;
   const contested = G.auditIdx === G.contestedIdx;
 
   if (pickVal === "SUS" && sub.truth) {
@@ -1774,7 +1598,7 @@ function stamp(pickVal) {
     return;
   }
 
-  if (isVale) {
+  if (isBot) {
     // only HUMAN stamps reach here — SUS on clean paper asks for grounds.
     // The postmark is part of the judgment: a wave-through is a wrong
     // stamp, and the verdict names the evidence that sat on the card.
@@ -2030,7 +1854,7 @@ function paintAuditSummary() {
   $("caseCard").innerHTML = "";
   const s = $("auditSummary");
   s.classList.remove("hidden");
-  const valeSub = G.auditSubs.find((x) => x.filer === "VALE");
+  const botSub = G.auditSubs.find((x) => x.filer === G.culprit);
   const QUIET = [
     "five stamps, five sounds — one landed before it was swung",
     "one filing cleared faster than the ink could dry",
@@ -2038,10 +1862,10 @@ function paintAuditSummary() {
     "the night passed without incident — the counter disagrees",
     "a filing was already done before the lamp came up",
   ];
-  const valeLine = !valeSub ? ""
-    : (valeSub.pick === "SUS" && valeSub.correct)
+  const valeLine = !botSub ? ""
+    : (botSub.pick === "SUS" && botSub.correct)
       ? `<p class="sum-vale ok">⚡ anomaly quarantined — the machine was on tonight's docket</p>`
-      : (valeSub.pick === "SUS" && !valeSub.correct)
+      : (botSub.pick === "SUS" && !botSub.correct)
         ? ""   // a hunch earns no postscript
         : G.valeCaught > 0
           ? `<p class="sum-vale warn">⚠ you'd flagged that postmark — and stamped it through</p>`
@@ -2061,12 +1885,6 @@ function paintAuditSummary() {
 }
 
 // ---------- FINALE ----------
-const FINALE_RULES = [
-  { text: "with someone else", rule: [{ key: "people", allow: ["pair", "group"], text: "with someone else" }] },
-  { text: "outdoors", rule: [{ key: "setting", allow: ["outdoor"], text: "outdoors" }] },
-  { text: "not at night", rule: [{ key: "time", allow: ["dawn", "day", "dusk"], text: "not at night" }] },
-  { text: "at night", rule: [{ key: "time", allow: ["night"], text: "at night" }] },
-];
 
 function startFinale(resume) {
   showOnly("finale");
@@ -2074,22 +1892,16 @@ function startFinale(resume) {
   banner("LAST CALL — write the rule");
   if (!resume) {
     G.finaleChoice = null;
-    // seeded shuffle — same puzzle, but VALE isn't always the last row and
-    // the winning rule isn't always option d. Spoilers stay spoiled.
-    const frng = stream("finale");
-    const shuf = (a) => {
-      for (let i = a.length - 1; i > 0; i--) {
-        const j = Math.floor(frng() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
-    };
-    G.finaleRows = shuf([...FINALE]);
-    G.finaleOpts = shuf([...FINALE_RULES]);
+    // the finale is built around whoever the machine turned out to be this
+    // docket: five filings, seeded faces, and clauses generated so exactly
+    // one cuts the machine and only the machine
+    const built = LOGIC.buildFinale(stream("finale"), CARDS, G.culprit);
+    G.finaleRows = built.rows;
+    G.finaleOpts = built.opts;
     // every filer carries its packet stub onto the ledger
     const trng = stream("finale-tel");
     G.finaleRows.forEach((row) => {
-      row.tel = row.filer === "VALE" ? valeTel(4, trng, row.ts) : humanTel(trng, row.ts);
+      row.tel = row.filer === G.culprit ? botTel(4, trng, row.ts) : humanTel(trng, row.ts);
     });
     G.signing = false;
   }
@@ -2099,7 +1911,7 @@ function startFinale(resume) {
   if (!resume) {
     // the last line she says depends on whether you ever flagged the postmark
     if (G.valeCaught > 0) {
-      ariaSay(["You flagged her once on the postmark. Now write the clause only she can't file."], "smug");
+      ariaSay(["You flagged the machine once on the postmark. Now write the clause only it can't file."], "smug");
     } else {
       ariaSay(["My rules only check facts. Read the ledger the way it was filed — not the way it was argued."]);
     }
@@ -2176,23 +1988,23 @@ function signRule() {
   paintFinale();
   sfx.pen();
   later(() => sfx.stamp(), 560);
-  const cut = FINALE.filter((r) => !LOGIC.passes(r, G.finaleChoice.rule));
+  const cut = G.finaleRows.filter((r) => !LOGIC.passes(r, G.finaleChoice.rule));
   const cutNames = cut.map((r) => r.filer);
-  const valeCut = cutNames.includes("VALE");
-  const humanCut = cutNames.filter((n) => n !== "VALE");
+  const botCut = cutNames.includes(G.culprit);
+  const humanCut = cutNames.filter((n) => n !== G.culprit);
   let title, line;
-  if (valeCut && humanCut.length === 0) {
+  if (botCut && humanCut.length === 0) {
     title = G.status === "player" ? "LAST HUMAN STANDING" : "DAWN";
     line = G.valeCaught > 0
-      ? "You wrote the one rule she couldn't. You'd been reading postmarks all week — the docket is human again."
-      : "You wrote the one rule she couldn't. The packet said what the paper never could — the docket is human again.";
-  } else if (valeCut) {
+      ? `You wrote the one rule ${G.culprit} couldn't. You'd been reading postmarks all week — the docket is human again.`
+      : `You wrote the one rule ${G.culprit} couldn't. The packet said what the paper never could — the docket is human again.`;
+  } else if (botCut) {
     title = "COLLATERAL";
-    line = `VALE is gone. So are ${humanCut.join(", ")}. The rule didn't care who.`;
+    line = `${G.culprit} is gone. So are ${humanCut.join(", ")}. The rule didn't care who.`;
   } else {
     title = "THE DAY SHIFT IS AUTOMATED";
     line = `You cut ${joinNames(humanCut)} — every human on the docket.` +
-      " VALE filed at +0.003s, as always. Tomorrow it argues your case.";
+      ` ${G.culprit} filed at +0.003s, as always. Tomorrow it argues your case.`;
   }
   G.finaleTitle = title;
   G.finaleLine = line;
@@ -2202,7 +2014,7 @@ function signRule() {
 // ---------- flow ----------
 function nextDay() {
   G.day++;
-  if (G.day >= DAYS.length) return startFinale();
+  if (G.day >= DAYS.length) return G.mode === "ot" ? endGame() : startFinale();
   hud();
   if (G.status === "player") {
     startDay();
@@ -2220,7 +2032,7 @@ function shareText(title) {
     return h === 5 ? "🟩" : h >= 3 ? "🟨" : h === undefined ? "⬛" : "🟥";
   }).join("");
   const label = params.get("seed") ? SEED : `#${Math.floor((new Date(dailySeed + "T00:00") - new Date("2026-11-01T00:00")) / 864e5) + 1}`;
-  return `NIGHT SHIFT ${label} — ${title}\n☀️ ${dayRow}\n🌙 ${nightRow}\nscore ${G.score}`;
+  return `NIGHT SHIFT ${label}${G.mode === "ot" ? " · OVERTIME" : ""} — ${title}\n☀️ ${dayRow}\n🌙 ${nightRow}\nscore ${G.score}`;
 }
 
 function endGame() {
@@ -2234,7 +2046,9 @@ function endGame() {
   setShift("night");
   sfx.dawn();
 
-  const title = G.finaleTitle || (G.status === "player" ? "LAST HUMAN STANDING" : "DAWN");
+  const title = G.finaleTitle || (G.mode === "ot"
+    ? (G.status === "player" ? "OVERTIME CLEARED" : "DAWN")
+    : G.status === "player" ? "LAST HUMAN STANDING" : "DAWN");
   // the room answers the week's ending: gold dawn, or the blue automated office
   const cutEnd = title === "THE DAY SHIFT IS AUTOMATED" || title === "COLLATERAL";
   document.body.dataset.end = cutEnd ? "cut" : "earned";
@@ -2246,18 +2060,22 @@ function endGame() {
   $("endStats").textContent =
     `${G.daysSurvived}/${DAYS.length} days survived · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`;
   const lines = [];
-  if (G.finaleTitle) lines.push("VALE filed every proof 0.003 seconds after the riddle posted.");
+  if (G.finaleTitle) lines.push(`${G.culprit} filed every proof 0.003 seconds after the riddle posted.`);
   if (G.valeCaught) lines.push(
     `You flagged the machine on ${G.valeCaught} night${G.valeCaught > 1 ? "s" : ""} — the postmark never lies.`);
   if (G.valeEscapes) lines.push(
     `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} before tonight.`);
   if (G.finaleLine) lines.push(G.finaleLine);
-  else lines.push(title === "LAST HUMAN STANDING"
-    ? "Five rules. You read every one of them."
+  else lines.push(title === "LAST HUMAN STANDING" || title === "OVERTIME CLEARED"
+    ? (G.mode === "ot" ? "Five generated shifts. You read every one of them." : "Five rules. You read every one of them.")
     : `Cut on day ${G.elimDay || "?"} — the night shift made you: ${JURY_TITLES[titleIdx]}.`);
   if (G.status === "juror" && G.finaleTitle) lines.push(`Night-shift title: ${JURY_TITLES[titleIdx]}.`);
   $("endTitle2").innerHTML = lines.map((l) => `<span class="endline">${l}</span>`).join("");
   $("shareBlock").textContent = shareText(title);
+  if (G.mode === "week") {
+    try { localStorage.setItem("night-shift-ot-unlocked", "1"); } catch { /* no storage */ }
+  }
+  $("againBtn").textContent = G.mode === "ot" ? "Back to the day shift" : "Work another week";
   dawnEl.classList.remove("hidden");
 }
 
@@ -2352,7 +2170,7 @@ document.addEventListener("keydown", (e) => {
       const b = $("auditActions").querySelector("button"); if (b) b.click();
     }
   } else if (G.phase === "finale") {
-    const opts = G.finaleOpts || FINALE_RULES;
+    const opts = G.finaleOpts || [];
     const idx = "abcd".indexOf(e.key.toLowerCase());
     if (idx >= 0 && opts[idx] && !G.signing) {
       G.finaleChoice = opts[idx];
@@ -2395,7 +2213,7 @@ const PREF_KEY = "night-shift-prefs-v1";
 function persist() {
   try {
     const s = {
-      seed: SEED, phase: G.phase,
+      seed: SEED, phase: G.phase, mode: G.mode, culprit: G.culprit,
       day: G.day, status: G.status, strikes: G.strikes, score: G.score,
       daysSurvived: G.daysSurvived, auditHits: G.auditHits, auditTotal: G.auditTotal,
       flagAttempts: G.flagAttempts, flagHits: G.flagHits,
@@ -2427,7 +2245,7 @@ function persist() {
 
 function cardById(id) {
   if (!id) return null;
-  if (id === COLD_VALE_CARD.id) return COLD_VALE_CARD;
+  if (id === COLD_BOT_CARD.id) return COLD_BOT_CARD;
   return CARDS.find((c) => c.id === id) || null;
 }
 
@@ -2449,12 +2267,20 @@ function loadPrefs() {
     const p = JSON.parse(localStorage.getItem(PREF_KEY) || "null");
     if (p && p.muted) audioMuted = true;
   } catch { /* fresh ears */ }
+  // the score module doesn't own policy — report the restored mute state
+  // before its bus exists, so the first play() opens it silent
+  scoreSynth.mutedState = audioMuted;
+  scoreSynth.setMuted();
 }
 
 function resumeLabel(s) {
   const score = `SCORE ${s.score}`;
-  if (s.phase === "day") return `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length} · ${score}`;
-  if (s.phase === "verdict") return `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length} · VERDICT · ${score}`;
+  const ot = s.mode === "ot";
+  const dayLbl = ot
+    ? `OVERTIME ${Math.min(s.day + 1, 5)}/5`
+    : `DAY ${Math.min(s.day + 1, DAYS.length)}/${DAYS.length}`;
+  if (s.phase === "day") return `${dayLbl} · ${score}`;
+  if (s.phase === "verdict") return `${dayLbl} · VERDICT · ${score}`;
   if (s.phase === "finale") return `LAST CALL · ${score}`;
   return s.coldOpen
     ? "NIGHT 0 · THE TRAY"
@@ -2464,6 +2290,10 @@ function resumeLabel(s) {
 function resumeGame(s) {
   clearLater();
   SEED = s.seed;
+  G.mode = s.mode || "week";
+  // overtime regenerates its shifts from the saved seed; the week is static
+  DAYS = G.mode === "ot" ? LOGIC.genDays(LOGIC.makeRng(`${s.seed}|otdays`), CARDS) : DATA.DAYS;
+  setCulpritFromSeed(s.seed);
   Object.assign(G, {
     day: s.day, status: s.status, strikes: s.strikes, score: s.score,
     daysSurvived: s.daysSurvived, auditHits: s.auditHits, auditTotal: s.auditTotal,
@@ -2515,8 +2345,16 @@ function resumeGame(s) {
 }
 
 // ---------- boot ----------
+/* the machine's face is derived from the seed — a resumed run wears the
+ * same one, a fresh docket deals a fresh suspect */
+function setCulpritFromSeed(seed) {
+  G.culprit = LOGIC.pickCulprit(LOGIC.makeRng(`${seed}|culprit`), ALL_FILERS);
+}
 function startGame(seed) {
   SEED = seed;
+  G.mode = "week";
+  DAYS = DATA.DAYS;
+  setCulpritFromSeed(seed);
   clearSave(); // a fresh clock-in ends any unfinished shift
   audio();
   initAmbient();
@@ -2525,6 +2363,39 @@ function startGame(seed) {
   hud();
   if (G.status === "player") startColdOpen();
   else startAudit();
+}
+
+/* ---------- overtime: the desk after the week ----------
+ * The deduction loop keeps running after the story closes: a fresh
+ * five-night run whose rules are generated and validated per seed, with
+ * its own culprit wearing a new face. Daily docket = `ot-<date>` — a
+ * second daily ritual next to the week. */
+function startOvertime(seed) {
+  if (clockingIn) return;
+  clockingIn = true;
+  SEED = seed;
+  G.mode = "ot";
+  DAYS = LOGIC.genDays(LOGIC.makeRng(`${SEED}|otdays`), CARDS);
+  setCulpritFromSeed(SEED);
+  clearSave();
+  // a fresh run: reset everything the week left on the desk
+  Object.assign(G, {
+    day: 0, status: "player", strikes: 0, score: 0, daysSurvived: 0,
+    auditHits: 0, auditTotal: 0, flagAttempts: 0, flagHits: 0,
+    valeCaught: 0, valeEscapes: 0, oath: false, clueUsed: false, dayPay: 300,
+    flagged: null, lastMissKeys: null, elimDay: 0,
+    dayResults: [], nightResults: [], selected: null, hand: [], docket: [],
+    filed: null, focusAttr: "all", finaleRows: null, finaleOpts: null,
+    finaleChoice: null, coldOpen: false, coldTaught: false,
+    nightSummarized: false, verdictDone: false, filing: false,
+  });
+  audio();
+  initAmbient();
+  titleEl.classList.add("hidden");
+  gameEl.classList.remove("hidden");
+  hud();
+  banner("OVERTIME — the desk is yours");
+  startDay();
 }
 
 // ---------- clocking in: the card goes into the punch ----------
@@ -2553,6 +2424,18 @@ $("againBtn").addEventListener("click", () => location.reload());
 document.body.dataset.phase = "title";
 loadPrefs();
 const savedRun = loadSave();
+// overtime unlocks once a week is closed — a second daily ritual
+const otSeed = () => `ot-${params.get("seed") || dailySeed}`;
+(function () {
+  let unlocked = false;
+  try { unlocked = localStorage.getItem("night-shift-ot-unlocked") === "1"; } catch { /* no storage */ }
+  if (unlocked || (savedRun && savedRun.mode === "ot")) {
+    const b = $("otTitleBtn");
+    if (b) b.classList.remove("hidden");
+  }
+})();
+$("otBtn").addEventListener("click", () => startOvertime(otSeed()));
+$("otTitleBtn").addEventListener("click", () => startOvertime(otSeed()));
 if (savedRun) {
   const rBtn = document.createElement("button");
   rBtn.className = "resume-btn";

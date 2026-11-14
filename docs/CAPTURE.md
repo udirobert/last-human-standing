@@ -28,6 +28,13 @@ on the beat in edit).
 
 ## Cover GIF (2–4s loop)
 
+**Frame-1 rule (don't skip):** itch browse grids render the GIF's first
+frame as a static still until hover — frame 1 must be the painted poster
+(`game-off/cover-630x500.png`), never a transition still. Whatever the
+GIF source, run `bash scripts/rebuild-catch-gif.sh <your-export.gif>` to
+prepend the poster, pad to 630×500 with the poster's desk tone, and write
+`docs/itch-assets/catch.gif` in place.
+
 Best source: take 4, trimmed to banner-in → chips struck (loop point on
 the flash frames — motion masks the cut). Or take 2's stamp landing, or
 the `CUT` beat if you can end the loop on the dark hold.

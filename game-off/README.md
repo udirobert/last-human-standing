@@ -11,6 +11,12 @@ is in plain sight and you take the desk, stamping everyone else's filings. But
 something is wrong: one filer's packets don't read human. Catch the machine.
 Three strikes and you're cut to the night shift for good.
 
+The machine wears a **different face every docket** — any of the five filers
+could be it, seeded per run, and the finale ledger is built around whoever
+filed at +0.003s all week. And when the story week closes, the desk keeps
+running: **overtime** deals a fresh five-night run whose rules are generated
+and validated per docket — a new daily ritual next to the week.
+
 ## Run it
 
 No build step, no dependencies:
@@ -25,10 +31,11 @@ python3 -m http.server 8000
 ## How to play
 
 - **The tray**: clocking in lands you on the night desk, not the docket —
-  the outgoing clerk left two filings behind. Clear them: stamp each one,
-  read the postmark strip at the foot of the card, and if the paper passes
-  but the packet reads wrong, stamp **SUS** and name the field. Then the
-  day crew signs in and the week begins.
+  the outgoing clerk's first filing is already stamped HUMAN. Read his strip
+  against his stamp: that's your textbook. The second filing is yours —
+  stamp it, read the postmark strip at the foot of the card, and if the
+  paper passes but the packet reads wrong, stamp **SUS** and name the field.
+  Then the day crew signs in and the week begins.
 - **Day shift**: each morning opens with a **shift brief** — a memo card
   naming the day and typing out the riddle — then the desk deals in row by
   row. Study the docket: ARIA's already stamped two filings HUMAN and a
@@ -65,8 +72,13 @@ python3 -m http.server 8000
 - **Days 4–5**: one docket ruling is a **clerical error** — a SUS card
   stamped HUMAN. Tap the row you suspect (optional, +100 if right).
 - **Finale**: after night five you write the last rule yourself. One filer
-  isn't human. The ledger lists every filing as filed — postmarks and all.
-  Choose the criterion that cuts it — and only it.
+  isn't human — and it isn't always the same filer. The ledger lists every
+  filing as filed — postmarks and all. Choose the criterion that cuts the
+  machine — and only the machine.
+- **Overtime**: close a week (any ending) and the dawn screen offers
+  **Overtime** — a fresh five-night run generated from the day's seed
+  (`ot-<date>`), same verbs, new rules, a new face on the machine. It also
+  appears on the title once unlocked. Resume-safe like the week.
 - Still a player after day five (and the right finale) = LAST HUMAN
   STANDING. Three strikes = the counter goes dark, takes a red `CUT`, and
   the dossier lands — then it's jury duty.
@@ -83,11 +95,13 @@ result**.
 
 ## Tech
 
-Vanilla JS + DOM + WebAudio, works from `file://`. Three plain scripts:
-`riddles.js` (cards, days, secret rules), `logic.js` (pure rule-checking and
-deal/audit generation — no DOM), `game.js` (screens, input, sound).
-`test-logic.mjs` hammers `logic.js` with 2,000 seeded deals, audits and
-clues per day and asserts the invariants (determinism included) — run
+Vanilla JS + DOM + WebAudio, works from `file://`. Four plain scripts:
+`riddles.js` (a 40-card deck, days, secret rules), `logic.js` (pure
+rule-checking and deal/audit/day/finale generation — no DOM), `score.js`
+(the composed score — owns the AudioContext), `game.js` (screens, input,
+mute policy). `test-logic.mjs` hammers `logic.js` with 2,000 seeded deals,
+audits and clues per day plus 300 generated overtime weeks and 2,000
+finale seeds, asserting the invariants (determinism included) — run
 `node test-logic.mjs`. `audit-deduction.mjs` is the Golden Idol loop as
 code: for 300 seeded dockets per day it checks what a perfect logician
 could conclude — pinning rate, single-word harmful theories (wrong
@@ -103,20 +117,21 @@ swings and throws ink, the amendment is stapled on, the finale is a decree
 you fill in and sign — and `prefers-reduced-motion` skips every flight,
 leaving the state change visible and instant.
 The score is composed, not recorded: an eight-bar noir progression in D
-minor (76 bpm, swung — upright bass, charleston piano, brushes, a muted
-horn) scheduled live in WebAudio. The room chooses the arrangement — full
+minor (76 bpm, swung — a Karplus–Strong plucked upright, charleston piano,
+humanized brushes with swing drift and ghost strokes, a muted horn)
+scheduled live in WebAudio. The room chooses the arrangement — full
 chart on the title, piano only on the day shift, no melody at night, a
 sustained reprise at dawn — and a catch raises a horn sting. No audio
 files exist: `file://` and the itch page hear the same score. Under it runs
 a procedural weather layer: rain on the office window that gets wetter
-each night of the week, and the odd far-off thunder roll while the audit
-desk is lit. `M` toggles audio.
+each night of the week, the odd far-off thunder roll while the audit
+desk is lit, and a vinyl-crackle bed under everything. `M` toggles audio.
 
 ## Credits
 
 Painted key art generated with MiniMax H3 (fal.ai); the score, foley and
-sound design are composed WebAudio; the paper UI is inline SVG. All
-proceedings fictional.
+sound design are composed WebAudio (score.js); the paper UI is inline SVG.
+All proceedings fictional.
 
 ## Status
 

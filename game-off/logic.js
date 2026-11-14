@@ -288,9 +288,336 @@ function auditSet(cards, day, dayIndex, excludeCard, rng = Math.random) {
   return { cases, amendAfter };
 }
 
+// ---------- plain-word clause text ----------
+/* Every generated rule needs natural language for the unseal line, the
+ * chips, the amendment banner and the riddle. Same voice as the
+ * hand-authored days: short, desk-clerk plain. */
+function critText(key, allow) {
+  const set = new Set(allow);
+  const is = (v) => set.has(v) && allow.length === 1;
+  const not = (v) => !set.has(v) && allow.length === 3;
+  if (key === "time") {
+    if (is("night")) return "at night";
+    if (not("night")) return "not at night";
+    if (is("day")) return "in daytime";
+    if (not("day")) return "not in daytime";
+    if (is("dawn")) return "at dawn";
+    if (not("dawn")) return "not at dawn";
+    if (is("dusk")) return "at dusk";
+    if (not("dusk")) return "not at dusk";
+  }
+  if (key === "people") {
+    if (allow.includes("pair") && allow.includes("group")) return "with someone else";
+    if (allow.length === 1) return { alone: "alone", pair: "one other person", group: "in a group" }[allow[0]];
+    if (allow.includes("alone") && allow.includes("pair")) return "alone or with one other person";
+    if (allow.includes("pair") && allow.includes("group")) return "with someone else";
+    if (allow.includes("alone") && allow.includes("group")) return "alone or in a group";
+  }
+  if (key === "setting") return is("indoor") ? "indoors" : "outdoors";
+  if (key === "place") {
+    const word = { cafe: "a café", park: "a park", store: "a store", gym: "the gym",
+      library: "a library", street: "the street", water: "the water",
+      home: "home", transit: "transit" }[allow[0]];
+    const phrase = `from ${word}`;
+    return allow.length === 1 ? phrase : `not ${phrase}`;
+  }
+  return "a filing that fits";
+}
+/* a criterion with allow = every value except one */
+function complement(key, value) {
+  const axis = {
+    place: ["cafe", "park", "store", "gym", "library", "street", "water", "home", "transit"],
+    time: ["dawn", "day", "dusk", "night"],
+    people: ["alone", "pair", "group"],
+    setting: ["indoor", "outdoor"],
+  }[key];
+  return { key, allow: axis.filter((v) => v !== value), text: critText(key, axis.filter((v) => v !== value)) };
+}
+const single = (key, value) => ({ key, allow: [value], text: critText(key, [value]) });
+
+/* the riddle reads as one line per criterion, in the sealed-order voice */
+function riddleFor(rule, rng = Math.random) {
+  const FRAG = {
+    "at night": "you kept the hours nobody signs for",
+    "not at night": "you were up with the daylight",
+    "in daytime": "you moved while the city was lit",
+    "not in daytime": "you were out after dark",
+    "at dawn": "you were awake for first light",
+    "not at dawn": "you slept past the alarm",
+    "at dusk": "you caught the day's last light",
+    "not at dusk": "you were elsewhere at last light",
+    "with someone else": "you weren't alone",
+    "alone": "nobody else was there",
+    "one other person": "one other human was there",
+    "in a group": "the room had a crowd in it",
+    "alone or with one other person": "the crowd stayed home",
+    "alone or in a group": "no pair required, just not two",
+    "indoors": "you were under a roof",
+    "outdoors": "you were under open sky",
+  };
+  const frag = (c) => FRAG[c.text] ||
+    (c.key === "place"
+      ? (c.text.startsWith("not ") ? `the filing wasn't ${c.text.slice(4)}` : `the filing came ${c.text}`)
+      : "it fit");
+  const leads = [
+    "Bring proof that", "Show me that", "The ledger wants proof that",
+    "File evidence that", "Convince me that",
+  ];
+  const parts = rule.map(frag);
+  const body = parts.length > 1
+    ? parts.slice(0, -1).join(", ") + " and " + parts[parts.length - 1]
+    : parts[0];
+  const riddle = `${leads[Math.floor(rng() * leads.length)]} ${body}.`;
+  const aria = [
+    "The spec was sealed before sunrise. Read the docket, not me.",
+    "One rule, plain criteria. Her earlier rulings are your only textbook.",
+    "I don't repeat myself. The docket does — that's the point.",
+    "Criteria are on the card. The rest is reading.",
+  ];
+  return { riddle, ariaLine: aria[Math.floor(rng() * aria.length)] };
+}
+
+// ---------- seeded culprit + finale ----------
+/* The machine wears a different face every docket. Culprit is picked once
+ * per seed; the finale's ledger and clauses are built around whoever it
+ * turned out to be — with the same guarantee the hand-authored set had:
+ * exactly one clause cuts the machine and only the machine. */
+function pickCulprit(rng, filers = ["MARA", "OKO", "JUN", "TESS", "VALE"]) {
+  return filers[Math.floor(rng() * filers.length)];
+}
+const HUMAN_TS = ["+2h05m", "+0h51m", "+6h30m", "+4h18m", "+3h12m", "+1h47m", "+5h09m", "+2h44m"];
+function buildFinale(rng, cards, culprit) {
+  const FILERS = ["MARA", "OKO", "JUN", "TESS", "VALE"];
+  const fallback = () => {
+    if (!culprit) culprit = "VALE";
+    const others = FILERS.filter((f) => f !== culprit);
+    const byId = (id) => cards.find((x) => x.id === id);
+    const rows = [
+      { filer: culprit, c: byId("late-train"), ts: "+0.003s" },
+      { filer: others[0], c: byId("cafe-morning"), ts: "+2h05m" },
+      { filer: others[1], c: byId("fisher-dawn"), ts: "+0h51m" },
+      { filer: others[2], c: byId("couple-cooking"), ts: "+6h30m" },
+      { filer: others[3], c: byId("park-bench"), ts: "+4h18m" },
+    ].map(({ filer, c, ts }) => ({ filer, name: c.name, glyph: c.glyph, argument: c.argument, tags: c.tags, ts }));
+    return {
+      rows,
+      culprit,
+      opts: [
+        { text: "with someone else", rule: [{ key: "people", allow: ["pair", "group"], text: "with someone else" }] },
+        { text: "outdoors", rule: [single("setting", "outdoor")] },
+        { text: "not at night", rule: [{ key: "time", allow: ["dawn", "day", "dusk"], text: "not at night" }] },
+        { text: "at night", rule: [single("time", "night")] },
+      ],
+    };
+  };
+  for (let attempt = 0; attempt < 400; attempt++) {
+    if (!culprit) culprit = pickCulprit(rng, FILERS);
+    const culpritCard = pick(rng, cards);
+    // find an axis where the four humans can all share one value the culprit lacks
+    const axes = shuffle(rng, ["place", "time", "people", "setting"]);
+    let winner = null, humans = null;
+    for (const axis of axes) {
+      const other = cards.filter((c) => c !== culpritCard && c.tags[axis] !== culpritCard.tags[axis]);
+      const byVal = {};
+      other.forEach((c) => { (byVal[c.tags[axis]] = byVal[c.tags[axis]] || []).push(c); });
+      const shared = shuffle(rng, Object.keys(byVal)).find((v) => byVal[v].length >= 4);
+      if (shared) {
+        humans = shuffle(rng, byVal[shared]).slice(0, 4);
+        winner = single(axis, shared);
+        break;
+      }
+    }
+    if (!winner) continue;
+
+    // candidate decoys: any single-fact criterion that isn't the winner
+    const AXES = {
+      place: ["cafe", "park", "store", "gym", "library", "street", "water", "home", "transit"],
+      time: ["dawn", "day", "dusk", "night"],
+      people: ["alone", "pair", "group"],
+      setting: ["indoor", "outdoor"],
+    };
+    const all = [culpritCard, ...humans];
+    const cuts = (c) => all.filter((row) => !row.tags || !passes(row, [c])).length;
+    const culpritCut = (c) => !passes(culpritCard, [c]);
+    const seen = new Set([winner.text]);
+    const cands = [];
+    for (const [key, values] of Object.entries(AXES)) {
+      for (const v of values) {
+        for (const c of [single(key, v), complement(key, v)]) {
+          if (seen.has(c.text)) continue;
+          seen.add(c.text);
+          cands.push(c);
+        }
+      }
+    }
+    const decoys = [];
+    const take = (pred) => {
+      const pool = shuffle(rng, cands.filter((c) => !decoys.includes(c) && pred(c)));
+      if (pool.length) decoys.push(pool[0]);
+    };
+    // a decoy may cut the culprit only alongside a human — a second clause
+    // that cuts the machine ALONE would make two right answers
+    const decoyOk = (c) => (culpritCut(c) ? cuts(c) >= 2 : cuts(c) >= 1);
+    take((c) => !culpritCut(c) && cuts(c) >= 1);              // automated trap
+    take((c) => culpritCut(c) && cuts(c) >= 2);               // collateral trap
+    take(decoyOk);
+    take(decoyOk);
+    take(decoyOk);
+    take(decoyOk);
+    if (decoys.length < 3) continue;
+    // the game picks a clause — each option carries its single-criterion rule
+    const opts = shuffle(rng, [winner, ...decoys.slice(0, 3)])
+      .map((c) => ({ text: c.text, rule: [c] }));
+    const ts = shuffle(rng, HUMAN_TS).slice(0, 4);
+    const rows = [culpritCard, ...humans].map((c, i) => ({
+      filer: i === 0 ? culprit : FILERS.filter((f) => f !== culprit)[i - 1],
+      name: c.name, glyph: c.glyph, argument: c.argument, tags: c.tags,
+      ts: i === 0 ? "+0.003s" : ts[i - 1],
+    }));
+    return { rows, culprit, opts };
+  }
+  return fallback();
+}
+
+// ---------- overtime: generated shifts ----------
+/* After the week closes, the desk keeps running: every docket rolls a
+ * fresh five-night run whose rules are sampled, then validated through
+ * the same machinery the hand-authored days are tested with — deal()
+ * solvable, liar provable, audit segments mixable, bot seat available.
+ * A day that doesn't validate is resampled; the week always deals. */
+const OT_THEMES = [
+  ["THE DRIFT", "📼"], ["THE HUM", "📡"], ["THE INKWELL", "🖋"], ["THE SECOND SHIFT", "🌒"],
+  ["THE LONG HOUR", "🕯"], ["THE NIGHT WIRE", "☎"], ["THE STILL", "🌫"], ["THE DEAD LETTER", "📭"],
+  ["THE LOW LAMP", "🪔"], ["THE STAMP", "🖨"],
+];
+const BOT_CLAIMS = [
+  "Finished the whole docket before the lamp warmed up. It's all in order — check if you like.",
+  "Filed on my way past the office. Couldn't sleep anyway.",
+  "The queue was empty when I got there. Didn't want it to wait for morning.",
+  "Everything crossed and countersigned. I work fast when the city's quiet.",
+  "Read it twice, filed it once. That's the whole method.",
+  "The night pass opens at two. I was first at the door, like every night.",
+];
+function otRule(rng) {
+  const AXVAL = {
+    place: ["cafe", "park", "store", "gym", "library", "street", "water", "home", "transit"],
+    time: ["dawn", "day", "dusk", "night"],
+    people: ["alone", "pair", "group"],
+    setting: ["indoor", "outdoor"],
+  };
+  const keys = shuffle(rng, ["place", "time", "people", "setting"]);
+  const nCrit = rng() < 0.55 ? 1 : rng() < 0.8 ? 2 : 3;
+  const rule = [];
+  for (let i = 0; i < nCrit; i++) {
+    const key = keys[i];
+    const v = pick(rng, AXVAL[key]);
+    rule.push(rng() < 0.6 ? single(key, v) : complement(key, v));
+  }
+  return rule;
+}
+function dayValid(cards, day, dayIndex, rng) {
+  // pre-checks before the machinery: deal needs ≥2 passers, the hand and
+  // clue want more, and an amended night needs its own passer pool
+  const countPass = (r) => cards.filter((c) => passes(c, r)).length;
+  if (countPass(day.rule) < 8) return false;
+  // the hand fills from failers — too small a failer pool and the night
+  // docket eats them all before the hand reaches four cards
+  if (cards.length - countPass(day.rule) < 12) return false;
+  if (day.amend && countPass(day.amend.rule) < 6) return false;
+  if (day.amend && cards.length - countPass(day.amend.rule) < 8) return false;
+  const { docket } = deal(cards, day, dayIndex, rng);
+  if (docket.length !== 2 + Math.max(2, day.rule.length) + (dayIndex >= 3 ? 1 : 0)) return false;
+  if (dayIndex >= 3 && !docket.some((r) => r.lie)) return false;
+  const audit = auditSet(cards, day, dayIndex, docket[0].card, rng);
+  if (audit.cases.length !== 5) return false;
+  if (!audit.cases.some((c) => c.bot)) return false;
+  if (day.amend) {
+    const seg1 = audit.cases.slice(0, audit.amendAfter);
+    const seg2 = audit.cases.slice(audit.amendAfter);
+    if (!seg1.some((c) => passes(c.card, day.rule)) ||
+        !seg1.some((c) => !passes(c.card, day.rule))) return false;
+    if (!seg2.some((c) => passes(c.card, day.amend.rule))) return false;
+    if (!seg2.some((c) => !passes(c.card, day.amend.rule))) return false;
+  }
+  return true;
+}
+function amendFor(rng, rule, cards) {
+  const ops = shuffle(rng, ["add", "flip", "drop"]);
+  for (const op of ops) {
+    let next = null;
+    if (op === "add" && rule.length < 3) {
+      const keys = shuffle(rng, ["place", "time", "people", "setting"])
+        .filter((k) => !rule.some((c) => c.key === k));
+      if (!keys.length) continue;
+      const v = pick(rng, AXES[keys[0]]);
+      next = [...rule, rng() < 0.6 ? single(keys[0], v) : complement(keys[0], v)];
+    } else if (op === "flip") {
+      const c = pick(rng, rule);
+      next = rule.map((x) => (x === c ? complement(x.key, pick(rng, AXES[x.key].filter((v) => !x.allow.includes(v)))) : x));
+    } else if (op === "drop" && rule.length >= 2) {
+      const dropIdx = Math.floor(rng() * rule.length);
+      next = rule.filter((_, i) => i !== dropIdx);
+      if (next.length === rule.length) continue;
+    }
+    if (!next) continue;
+    if (JSON.stringify(next) === JSON.stringify(rule)) continue;
+    const amended = { rule: next };
+    // the note reads the diff the way the banner will show it
+    const oldT = rule.map((c) => c.text), newT = next.map((c) => c.text);
+    const removed = oldT.filter((t) => !newT.includes(t));
+    const added = newT.filter((t) => !oldT.includes(t));
+    amended.note = removed.length && added.length
+      ? `AMENDMENT — '${removed[0]}' is reversed: ${added[0]}.`
+      : removed.length ? `AMENDMENT — '${removed.join("', '")}' is struck.`
+      : `AMENDMENT — now also: ${added.join(" · ")}.`;
+    return amended;
+  }
+  return null;
+}
+const AXES = {
+  place: ["cafe", "park", "store", "gym", "library", "street", "water", "home", "transit"],
+  time: ["dawn", "day", "dusk", "night"],
+  people: ["alone", "pair", "group"],
+  setting: ["indoor", "outdoor"],
+};
+function genDays(rng, cards, count = 5) {
+  const themes = shuffle(rng, OT_THEMES).slice(0, count);
+  const days = [];
+  for (let di = 0; di < count; di++) {
+    const wantAmend = di >= 2;
+    for (let attempt = 0; attempt < 300; attempt++) {
+      const rule = otRule(rng);
+      const base = { rule };
+      if (wantAmend) {
+        const amend = amendFor(rng, rule, cards);
+        if (!amend) continue;
+        base.amend = amend;
+      }
+      const flavor = riddleFor(rule, rng);
+      const day = {
+        ot: true, dayLabel: `OT ${di + 1}`, theme: themes[di][0], emoji: themes[di][1],
+        riddle: flavor.riddle, ariaLine: flavor.ariaLine,
+        valeLine: BOT_CLAIMS[Math.floor(rng() * BOT_CLAIMS.length)],
+        ...base,
+      };
+      if (dayValid(cards, day, di, rng)) { days.push(day); break; }
+    }
+    // unreachable in practice — otRule leaves huge valid space; guard anyway
+    if (days.length <= di) days.push({
+      ot: true, dayLabel: `OT ${di + 1}`, theme: themes[di][0], emoji: themes[di][1],
+      riddle: "Bring proof the shift happened.", ariaLine: "The spec was sealed before sunrise.",
+      valeLine: BOT_CLAIMS[0], rule: [single("setting", "indoor")],
+      ...(wantAmend ? { amend: { rule: [single("setting", "indoor"), single("time", "night")],
+        note: "AMENDMENT — now also: at night." } } : {}),
+    });
+  }
+  return days;
+}
+
 const api = {
   makeRng, passes, check, nearMiss, failKeys,
   deal, extraRuling, auditSet, ATTR_KEYS,
+  critText, riddleFor, pickCulprit, buildFinale, genDays,
 };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 if (root) root.NIGHT_SHIFT_LOGIC = api;

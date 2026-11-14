@@ -21,15 +21,15 @@ let failures = 0;
 const assert = (cond, msg) => { if (!cond) { failures++; if (failures < 12) console.error("FAIL:", msg); } };
 const J = (o) => JSON.stringify(o, (k, v) => v); // stable enough: insertion order is deterministic
 
-for (let di = 0; di < DAYS.length; di++) {
-  const day = DAYS[di], rule = day.rule;
+function checkDay(day, di, verbose = true, n = N) {
+  const rule = day.rule;
   const wantPass = di === 0 ? 2 : 1;
   const nSus = Math.max(2, rule.length);
   const liarDay = di >= 3;
   const cov = Object.fromEntries(rule.map((c) => [c.key, 0]));
   let detDeals = 0, detAudits = 0, detClues = 0, traps = 0, trapChecked = 0;
 
-  for (let t = 0; t < N; t++) {
+  for (let t = 0; t < n; t++) {
     const rngD = () => LOGIC.makeRng(`s${t}|${di}|deal`);
     const d1 = LOGIC.deal(CARDS, day, di, rngD());
     const d2 = LOGIC.deal(CARDS, day, di, rngD());
@@ -116,12 +116,55 @@ for (let di = 0; di < DAYS.length; di++) {
   }
 
   console.log(
-    `${day.dayLabel} ${day.theme.padEnd(14)} — ${N} seeds OK` +
+    `${day.dayLabel} ${day.theme.padEnd(14)} — ${n} seeds OK` +
     ` · det ${detDeals}/${detAudits}/${detClues}` +
-    ` · SUS coverage: ` + rule.map((c) => `${c.key} ${(100 * cov[c.key] / N).toFixed(0)}%`).join(" ·") +
+    ` · SUS coverage: ` + rule.map((c) => `${c.key} ${(100 * cov[c.key] / n).toFixed(0)}%`).join(" ·") +
     (day.amend ? ` · trap ${(100 * traps / trapChecked).toFixed(0)}%` : "")
   );
 }
+for (let di = 0; di < DAYS.length; di++) checkDay(DAYS[di], di);
+
+// ---- overtime: generated shifts must satisfy every hand-day invariant ----
+const OT_N = 300;
+let otWeeks = 0, otDetFail = 0;
+for (let t = 0; t < OT_N; t++) {
+  const rng1 = LOGIC.makeRng(`ot${t}`);
+  const days = LOGIC.genDays(rng1, CARDS);
+  assert(days.length === 5, `ot${t}: ${days.length} days != 5`);
+  assert(J(days) === J(LOGIC.genDays(LOGIC.makeRng(`ot${t}`), CARDS)), `ot${t}: gen not deterministic`);
+  days.forEach((day, di) => {
+    assert(day.rule && day.rule.length >= 1 && day.rule.length <= 3, `ot${t} d${di}: bad rule`);
+    assert(day.riddle && day.ariaLine && day.theme, `ot${t} d${di}: missing flavor`);
+    assert(day.dayLabel === `OT ${di + 1}`, `ot${t} d${di}: label`);
+    const before = failures;
+    checkDay(day, di, false, 60);
+    if (failures > before) otDetFail++;
+  });
+  otWeeks++;
+}
+console.log(`overtime: ${otWeeks} generated weeks × 5 days OK` + (otDetFail ? ` · ${otDetFail} day-level failures` : ""));
+
+// ---- finale rotation: the machine wears a seeded face, exactly one clause cuts it alone ----
+const FILERS = ["MARA", "OKO", "JUN", "TESS", "VALE"];
+const FN = 2000;
+for (let t = 0; t < FN; t++) {
+  const rngF = LOGIC.makeRng(`fin${t}`);
+  const a = LOGIC.buildFinale(rngF, CARDS);
+  const b = LOGIC.buildFinale(LOGIC.makeRng(`fin${t}`), CARDS);
+  assert(J(a) === J(b), `fin${t}: buildFinale not deterministic`);
+  const { rows, culprit, opts } = a;
+  assert(FILERS.includes(culprit), `fin${t}: culprit ${culprit} not a filer`);
+  assert(rows.length === 5 && new Set(rows.map((r) => r.filer)).size === 5, `fin${t}: rows/filers`);
+  assert(new Set(rows.map((r) => r.name)).size === 5, `fin${t}: duplicate finale cards`);
+  const crow = rows.find((r) => r.filer === culprit);
+  assert(crow && crow.ts === "+0.003s", `fin${t}: culprit ts wrong`);
+  assert(rows.filter((r) => r !== crow).every((r) => r.ts !== "+0.003s"), `fin${t}: human carries machine ts`);
+  assert(opts.length === 4 && new Set(opts.map((o) => o.text)).size === 4, `fin${t}: clause count`);
+  const cutLists = opts.map((o) => rows.filter((row) => !LOGIC.passes(row, o.rule)).map((row) => row.filer));
+  const winners = cutLists.filter((c) => c.length === 1 && c[0] === culprit).length;
+  assert(winners === 1, `fin${t}: ${winners} clauses cut only ${culprit}`);
+}
+console.log(`finale rotation: ${FN} seeds OK · culprit assigned uniformly, one clause cuts it alone`);
 
 // finale: exactly one option cuts only VALE; option d spares only VALE
 const FOPT = [

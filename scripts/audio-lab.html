@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- NIGHT SHIFT audio lab — audition the composed score offline.
+     Not shipped in the itch zip; open from file:// to A/B the four room
+     arrangements and download the WAV renders.
+     Render runs through score.js renderWav(): every bar of the chart
+     scheduled into an OfflineAudioContext, encoded as 16-bit PCM. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>NIGHT SHIFT — audio lab</title>
+<style>
+  body { background: #14161c; color: #ece5d8; font: 14px ui-monospace, monospace;
+         max-width: 720px; margin: 40px auto; padding: 0 16px; }
+  h1 { font-size: 16px; letter-spacing: .3em; color: #e8b34b; }
+  .row { display: flex; gap: 10px; align-items: center; margin: 14px 0;
+         border: 1px solid #2e3240; border-radius: 6px; padding: 10px 14px; }
+  .row b { width: 70px; color: #e8b34b; letter-spacing: .1em; }
+  .row span { color: #8d8471; font-size: 11px; flex: 1; }
+  button { background: #e8b34b; color: #1a1408; border: 0; border-radius: 4px;
+           padding: 6px 14px; font: inherit; cursor: pointer; }
+  button.dl { background: none; color: #7fb069; border: 1px solid #2e3240; }
+  audio { width: 100%; margin-top: 6px; }
+</style>
+</head>
+<body>
+<h1>NIGHT SHIFT — AUDIO LAB</h1>
+<p>One chart, four rooms. Play a live arrangement, or render it offline and keep the WAV.</p>
+<div id="rows"></div>
+<script src="../game-off/score.js"></script>
+<script>
+const ROOMS = [
+  ["title", "full chart — bass, piano, brushes, horn"],
+  ["day",   "piano reading music — roots only, no drums"],
+  ["night", "the desk at night — horn dropped, the melody is the human voice"],
+  ["dawn",  "sustained reprise — resolves once, then rest"],
+];
+const rows = document.getElementById("rows");
+for (const [name, desc] of ROOMS) {
+  const div = document.createElement("div");
+  div.className = "row";
+  div.innerHTML = `<b>${name.toUpperCase()}</b><span>${desc}</span>`;
+  const play = document.createElement("button");
+  play.textContent = "play";
+  play.onclick = () => {
+    const { scoreSynth } = window.NIGHT_SHIFT_SCORE;
+    if (scoreSynth.name === name) { scoreSynth.stop(); scoreSynth.name = null; play.textContent = "play"; return; }
+    document.querySelectorAll(".row button").forEach((b) => { if (b !== play) { b.textContent = "play"; } });
+    scoreSynth.stop(); scoreSynth.name = null;
+    scoreSynth.play(name);
+    play.textContent = "stop";
+  };
+  const dl = document.createElement("button");
+  dl.className = "dl"; dl.textContent = "render wav";
+  dl.onclick = async () => {
+    dl.textContent = "rendering…"; dl.disabled = true;
+    const blob = await window.NIGHT_SHIFT_SCORE.renderWav(name, 2);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `night-shift-${name}.wav`;
+    a.click();
+    dl.textContent = "render wav"; dl.disabled = false;
+  };
+  div.append(play, dl);
+  rows.append(div);
+}
+</script>
+</body>
+</html>

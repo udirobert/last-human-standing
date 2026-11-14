@@ -23,6 +23,13 @@ record a manifest next to the files.
 
 - `semaphore-spike.mjs`, `semaphore-audit-spike.mjs`
 
+## Game Off jam build (NIGHT SHIFT)
+
+- `generate-art.mjs`, `art-manifest.mjs`, `smoke-art.mjs` — card vignettes / key art via fal.ai MiniMax H3 → `game-off/art/`, manifest + size/style audit
+- `package-game-off.sh` — builds `dist/night-shift-itch.zip` (file://-safe, < 8MB)
+- `rebuild-catch-gif.sh` — prepends the poster as frame 1 to a freshly captured catch GIF (itch browse grids render frame 1 as a static still)
+- `audio-lab.html` — dev-only audition/download page for the procedural score's WAV renders
+
 ## Media / vendors (vendor, never runtime dep)
 
 - `vendor-meshy.mjs` — Meshy AI assets → `docs/promo-assets/meshy/`, `public/assets/meshy-days/`

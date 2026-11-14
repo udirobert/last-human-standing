@@ -122,9 +122,12 @@ Assets in `docs/itch-assets/` — produced by scripted Chrome runs against
 - **Cover still:** `game-off/cover-630x500.png` — the desk, the anomaly
   packet, the red grease circle on `+0.003s`. Regenerate from the SVG:
   `rsvg-convert cover-630x500.svg -o cover-630x500.png`.
-- **Animated cover (preferred):** `catch.gif` (~190KB, ~3s) — the SUS
-  stamp, the accusation row, the grease circle drawing on the RCPT field,
-  TRAY CLEARED. The game's signature moment, no strobing.
+- **Animated cover (preferred):** `catch.gif` (~285KB, ~5s, 630×500) —
+  opens on the painted poster held ~1.5s (the browse grid shows frame 1
+  as a static still until hover, so frame 1 must be the strongest
+  read), then the SUS stamp, the accusation row, the grease circle
+  drawing on the RCPT field, TRAY CLEARED. The game's signature moment,
+  no strobing.
 - **Screenshots:** `tray.png` (the cold-open desk + postmark stub),
   `flag.png` (the accusation row open), `day.png` (the deduction docket),
   `verdict.png` (a strike with the needed criterion named),
@@ -149,9 +152,23 @@ Assets in `docs/itch-assets/` — produced by scripted Chrome runs against
 
 - [ ] Web build plays from the itch page with zero setup (test in a clean
       profile; the game runs from `file://`, so the browser build is safe)
-- [ ] Cover GIF uploaded, tagline in short description
+- [ ] Cover GIF uploaded — **frame 1 is the poster still** (browse grids
+      render the first frame until hover; check it at 315×250 too)
 - [ ] Trailer embedded at top of description
 - [ ] Controls section states mobile-tappable
 - [ ] Music credit present (composed WebAudio score in credits)
 - [ ] `?seed=` documented for replay/share threads
 - [ ] Play + rate other entries during voting (reciprocity drives ratings)
+
+## Platform + disclosure metadata (Quality Guidelines — delisting risk)
+
+- [ ] **AI Disclosure section filled:** key art / card vignettes are
+      generative (MiniMax H3 via fal.ai) — tag AI-assisted art. The
+      procedural WebAudio score is composed code, not AI music — exempt,
+      say so in the disclosure note.
+- [ ] **Platform metadata: Web/HTML5 only.** Don't check Windows/macOS/Linux
+      (the build targets the browser). Language: English. Tags limited to
+      the list above — no tag stuffing.
+- [ ] **Don't publish until the page is complete** — the "Most Recent"
+      browse boost is one-shot; thumbnail + screenshots + description all
+      finished before the page goes live.

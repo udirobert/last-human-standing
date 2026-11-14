@@ -20,6 +20,7 @@ zip -r "$ZIP_OUTPUT" \
   index.html \
   style.css \
   game.js \
+  score.js \
   logic.js \
   riddles.js \
   art \
