@@ -478,3 +478,32 @@ Verified: `test-logic.mjs` ALL PASS · real-Chrome smoke confirms dawn
 order (againBtn 5th), read-3 at .55 opacity, read-2 at .85, titlerise
 on phase children, fadein preserved on amendBanner · zero console
 errors · repackaged.
+
+## Ship-readiness pass — budget, license, hygiene (Nov 15)
+
+Closed the four pre-freeze items from the progress review:
+
+- **Zip budget restored (< 8MB)**: painted art was oversampled for its
+  display size (cards 960×720 shown at ~420px, portraits 832×1040 at
+  52–180px). All 63 assets downscaled in place via ffmpeg/libwebp q72
+  (cards → 640×480, portraits → 416×520, rooms → 1280, cover-base →
+  756) — art 5.1MB → 2.2MB, zip 9.8MB → 6.9MB. `smoke-art.mjs` PASS.
+  `scripts/package-game-off.sh` now hard-gates the 8MB budget (exit 1
+  over) so the drift can't recur. Licensed MP3s untouched at 128kbps.
+- **WeLoveIndies license verified + condition met**: the live FAQ
+  conditions free non-commercial use on showing the "WeLoveIndies-
+  Trailer" in the opening credits. Shipped `audio/wli-intro.mp4`
+  (official intro, recompressed 3.4MB → 140KB) as a skippable opening-
+  credits splash — first load per tab, any input skips, 9s cap,
+  muted-autoplay fallback, reduced-motion skips (static credit line
+  carries attribution). `LICENSE-CREDITS.txt` updated.
+- **Ship hygiene**: hierarchy-pass diffs committed (`f8d8aa9`);
+  `tray-test.tmp.mjs` gitignored (left on disk — not ours).
+- **Publish path**: standalone repo exported by the packager and
+  pushed to its own public GitHub repo (`udirobert/night-shift`), and
+  `origin/main` pushed — the jam's source requirement is now met.
+
+Verified: `test-logic.mjs` ALL PASS · `audit-deduction.mjs`
+ONE-WORD-HARMFUL 0% all five days · `smoke-art.mjs` PASS (2098KB) ·
+intro splash smoke (show → skip → remove) · `node --check` clean ·
+zip 6.9MB within the gated budget.

@@ -76,14 +76,21 @@ work, don't list as game feature), Reallusion (unless P3 happens).
 
 ## Status (2026-11-14)
 
-- **WeLoveIndies: DONE** — title.mp3 ("Manhattan Lounge") loops on
-  title/attract; dawn.mp3 ("Blue In Green") plays at endGame. F/demo
-  license covers non-commercial jam use. Deeper pass (2026-11-14):
-  licensed tracks now fade in over ~1.5s and fade out over ~0.9s on
-  phase change instead of hard-cutting; a `music · WeLoveIndies`
-  credit line sits on the title screen satisfying the license's
-  "include our intro" attribution ask. Intro-tag check still pending
-  a human listen (`afplay game-off/audio/title.mp3`).
+- **WeLoveIndies: DONE + license verified (2026-11-15)** — title.mp3
+  ("Manhattan Lounge") loops on title/attract; dawn.mp3 ("Blue In
+  Green") plays at endGame. F/demo license covers non-commercial jam
+  use. Deeper pass (2026-11-14): licensed tracks now fade in over ~1.5s
+  and fade out over ~0.9s on phase change instead of hard-cutting; a
+  `music · WeLoveIndies` credit line sits on the title screen.
+  **License verified against the live FAQ (2026-11-15)**: free use for
+  non-commercial releases is conditioned on showing the "WeLoveIndies-
+  Trailer" as part of the opening credits. Shipped: `audio/wli-intro.mp4`
+  (official `WLI_Intro.mp4`, recompressed 3.4MB → 140KB) plays as a
+  skippable opening-credits splash on first load per tab session — any
+  input skips, 9s hard cap, sound-first play with muted-autoplay
+  fallback, `prefers-reduced-motion` skips it (static credit line
+  remains). The itch.io page should also credit WeLoveIndies per the
+  license's submission-notes ask.
 - **Portraits: DONE (existing assets)** — mara/oko/jun/tess/vale.webp
   already existed; `faceImg()` now shows them at the dawn reveal and
   in the case-file HTML.

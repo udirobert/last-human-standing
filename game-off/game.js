@@ -3534,6 +3534,41 @@ $("againBtn").addEventListener("click", () => location.reload());
 // ---------- boot: the unfinished shift waits on the title ----------
 document.body.dataset.phase = "title";
 
+/* opening credits: the WeLoveIndies intro the FREE & DEMO license asks for
+ * on a non-commercial release. Films don't chain their credits to the
+ * audience — any input skips it, a 9s cap covers a stalled file, and
+ * prefers-reduced-motion skips it outright (the title's static music
+ * credit carries the attribution). Once per tab: a reload mid-week
+ * shouldn't replay the slate. */
+(function creditsIntro() {
+  const splash = $("creditsIntro");
+  const vid = $("creditsIntroVid");
+  if (!splash || !vid) return;
+  let seen = false;
+  try { seen = sessionStorage.getItem("credits-seen") === "1"; } catch { /* private mode */ }
+  const dismiss = () => {
+    if (!splash.parentNode || splash.classList.contains("gone")) return;
+    splash.classList.add("gone");
+    try { sessionStorage.setItem("credits-seen", "1"); } catch { /* private mode */ }
+    try { vid.pause(); } catch { /* no media element */ }
+    later(() => splash.remove(), 400);
+  };
+  if (seen || calmMotion()) { splash.remove(); return; }
+  // any input skips — the credits never hold the desk hostage
+  ["pointerdown", "keydown", "wheel", "touchstart"].forEach((ev) =>
+    splash.addEventListener(ev, (e) => { e.preventDefault(); dismiss(); }, { once: true }));
+  vid.addEventListener("ended", dismiss, { once: true });
+  setTimeout(dismiss, 9000);
+  // sound first (autoplay policy); if the browser blocks it, mute and play anyway
+  try {
+    const p = vid.play();
+    if (p && p.catch) p.catch(() => {
+      vid.muted = true;
+      try { const q = vid.play(); if (q && q.catch) q.catch(() => {}); } catch { /* no media */ }
+    });
+  } catch { /* no media element */ }
+})();
+
 /* the shift-ledger is a ticker, not a wall — one definition of "shift" at
  * a time, the desk turning the card. Ends on "who signs" and holds it —
  * the last rotation is the pitch's payoff before you clock in. */

@@ -8,7 +8,10 @@ Original submission for GitHub Game Off 2026 (theme: SHIFT).
 - Music: "Manhattan Lounge" and "Blue In Green" by WeLoveIndies
   (weloveindies.com), licensed under the WeLoveIndies FREE & DEMO
   license for this non-commercial jam release; attribution kept on the
-  title screen and here.
+  title screen and here. Per the license's non-commercial terms, the
+  WeLoveIndies intro (audio/wli-intro.mp4) plays as the game's opening
+  credits — skippable, and the static credit line remains for
+  reduced-motion players.
 - Brass seal render in art/rodin-stamp.webp generated with Hyper3D
   Rodin (Gen-2.5); source GLB archived outside the shipped package.
 - Runs standalone from file:// or any static web server; no network calls.

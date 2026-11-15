@@ -34,6 +34,16 @@ zip -r "$ZIP_OUTPUT" \
 
 echo "Created itch.io upload package: $ZIP_OUTPUT ($(du -h "$ZIP_OUTPUT" | cut -f1))"
 
+echo "=== 2b. Checking zip size budget (< 8MB) ==="
+ZIP_BYTES=$(stat -f%z "$ZIP_OUTPUT")
+ZIP_BUDGET=$((8 * 1024 * 1024))
+if [ "$ZIP_BYTES" -gt "$ZIP_BUDGET" ]; then
+  echo "FAIL — zip is $((ZIP_BYTES / 1024 / 1024))MB, over the 8MB budget (W6)."
+  echo "Trim audio bitrates or art sizes before shipping."
+  exit 1
+fi
+echo "OK — $((ZIP_BYTES / 1024 / 1024))MB ($ZIP_BYTES bytes), within budget."
+
 echo "=== 3. Exporting Standalone GitHub Repository ==="
 rm -rf "$STANDALONE_DIR"
 mkdir -p "$STANDALONE_DIR"

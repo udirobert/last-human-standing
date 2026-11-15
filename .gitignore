@@ -78,3 +78,6 @@ exhibition/photos/
 
 .codex/
 .gemini/
+
+# stray agent scratch files (not ours — leave on disk, keep out of the repo)
+tray-test.tmp.mjs

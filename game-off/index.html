@@ -7,6 +7,13 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body data-shift="night">
+<!-- opening credits: the WeLoveIndies intro the FREE & DEMO license asks for
+     on a non-commercial release. Any input skips it; the title screen's static
+     music credit remains for reduced-motion and posterity. -->
+<div id="creditsIntro" aria-hidden="true">
+  <video id="creditsIntroVid" playsinline preload="auto" src="audio/wli-intro.mp4"></video>
+  <p class="ci-skip">PRESS ANY KEY TO SKIP</p>
+</div>
 <div id="stage" aria-hidden="true">
   <div class="stage-day">
     <svg viewBox="0 0 1200 900" preserveAspectRatio="xMidYMid slice">
