@@ -487,7 +487,7 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
 /* ---------- instruction line ---------- */
 #instr {
   margin: 12px 0 2px; text-align: center;
-  font-size: 13px; letter-spacing: .02em; color: var(--ink);
+  font-size: 14.5px; letter-spacing: .02em; color: var(--ink);
   border: 1px solid var(--line); border-radius: 6px;
   background: var(--card); padding: 9px 14px;
   transition: background-color .5s, color .5s, border-color .5s;
@@ -528,29 +528,31 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
 }
 .aria-who i { font-style: normal; color: var(--accent); }
 #ariaText {
-  font-style: italic; font-size: 13.5px; color: var(--dim); line-height: 1.5;
+  font-style: italic; font-size: 14px; color: var(--dim); line-height: 1.5;
 }
 #ariaText::after {
   content: "▍"; color: var(--accent); font-style: normal;
   animation: blink 1.1s steps(1) infinite;
 }
 
-/* ---------- shared: fact rows ---------- */
+/* ---------- shared: fact rows ----------
+   Legibility floor (2026-11-15): judgment text never renders under 11px —
+   when content exceeds the budget, restructure, don't shrink type. */
 .facts { display: flex; flex-direction: column; gap: 3px; }
 .fact {
   display: flex; align-items: baseline; gap: 8px;
-  font-size: 12px; padding: 2px 0;
+  font-size: 13px; padding: 2px 0;
 }
 .fact .fk {
-  font-size: 9px; letter-spacing: .18em; color: var(--faint);
+  font-size: 11px; letter-spacing: .18em; color: var(--dim);
   min-width: 44px; text-align: right; flex-shrink: 0;
 }
 .fact .fv { white-space: nowrap; }
 .fact.pass .fv { color: var(--green); font-weight: 600; }
 .fact.fail .fv { color: var(--red); }
 .fact.dim .fv { color: var(--faint); }
-.fact .mk { font-size: 10px; margin-left: auto; padding-left: 8px; text-align: right; }
-.fact .mk.pass { color: var(--green); font-weight: 700; font-size: 10px; }
+.fact .mk { font-size: 11.5px; margin-left: auto; padding-left: 8px; text-align: right; }
+.fact .mk.pass { color: var(--green); font-weight: 700; font-size: 11.5px; }
 .fact .mk.fail { color: var(--red); }
 .fact .mk.dim { color: var(--faint); font-style: italic; }
 
@@ -844,7 +846,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 }
 #caseCard { min-height: 300px; }
 .case-num {
-  font-size: 10px; letter-spacing: .3em; color: var(--faint);
+  font-size: 11px; letter-spacing: .3em; color: var(--faint);
   margin-bottom: 8px; text-align: center;
 }
 .case-card {
@@ -908,13 +910,13 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   }
 }
 .case-card .e-head .glyph { font-size: 30px; }
-.case-card .name { font-size: 15px; margin: 6px 0 4px; }
-.case-card .arg { font-size: 12px; color: var(--dim); font-style: italic; margin-bottom: 10px; }
-/* the clerk's marginal note — texture, not testimony */
+.case-card .name { font-size: 16px; margin: 6px 0 4px; }
+.case-card .arg { font-size: 13px; color: var(--dim); font-style: italic; margin-bottom: 10px; }
+/* the clerk's marginal note — texture, not testimony (read-3 in markup) */
 .case-note {
-  font-family: ui-monospace, monospace; font-size: 9.5px;
-  letter-spacing: .05em; color: var(--faint);
-  margin: -4px 0 8px; font-style: italic; opacity: .8;
+  font-family: ui-monospace, monospace; font-size: 11px;
+  letter-spacing: .05em; color: var(--dim);
+  margin: -4px 0 8px; font-style: italic;
 }
 .case-card.stamped-human { border-color: var(--green); --inkc: var(--green); }
 .case-card.stamped-sus { border-color: var(--red); --inkc: var(--red); }
@@ -962,7 +964,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
  * clerk's strip, read in his ink */
 .case-verdict.prev { color: var(--dim); }
 .case-reason {
-  font-family: ui-monospace, monospace; font-size: 11.5px; letter-spacing: .05em;
+  font-family: ui-monospace, monospace; font-size: 12.5px; letter-spacing: .05em;
   color: var(--red); margin-top: 4px;
 }
 .case-cont {
@@ -1216,9 +1218,9 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   padding-top: 8px;
   border-top: 1px dashed var(--line, #3b4255);
   font-family: ui-monospace, monospace;
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: .05em;
-  color: #a3b0c4;
+  color: #c6d2e2;
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: 18px;
@@ -1314,9 +1316,9 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   border: 1px dashed var(--line, #3b4255);
   border-radius: 6px;
   font-family: ui-monospace, monospace;
-  font-size: 10.5px;
+  font-size: 12px;
   letter-spacing: .05em;
-  color: #a3b0c4;
+  color: #c6d2e2;
 }
 /* the receipt prints a row at a time, like the stub it replaces */
 .rc-compare > * { animation: rcfade .3s ease backwards; }
@@ -1339,18 +1341,18 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 }
 .rcc-row { position: relative; }
 .rcc-head {
-  color: #a3b0c4;
+  color: #c6d2e2;
   border-bottom: 1px dashed var(--line, #3b4255);
   padding-bottom: 3px;
   margin-bottom: 3px;
 }
 .rcc-b.tel-val { font-weight: 600; }
-.rcc-k { color: #5c6a80; }
+.rcc-k { color: #93a3ba; }
 .rcc-a, .rcc-b { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rcc-cap {
   margin: 7px 0 0;
   text-align: center;
-  color: #5c6a80;
+  color: #93a3ba;
   font-style: italic;
 }
 @media (max-width: 420px) {
@@ -1643,7 +1645,7 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
   font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .14em;
   color: var(--faint);
 }
-.case-card .filer i { font-style: normal; margin-left: 8px; color: var(--faint); }
+.case-card .filer i { font-style: normal; margin-left: 8px; color: var(--dim); }
 #streakTag {
   margin-left: 10px; color: var(--accent); letter-spacing: .15em;
 }

@@ -12,6 +12,9 @@ ZIP_OUTPUT="$ROOT_DIR/dist/night-shift-itch.zip"
 echo "=== 1. Verifying Game Logic & Determinism ==="
 node "$GAME_DIR/test-logic.mjs"
 
+echo "=== 1b. Verifying Cold-Open Onboarding Flow ==="
+node "$GAME_DIR/test-cold-open.mjs"
+
 echo "=== 2. Building itch.io HTML5 Zip Archive ==="
 mkdir -p "$ROOT_DIR/dist"
 cd "$GAME_DIR"

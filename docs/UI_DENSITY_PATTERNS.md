@@ -405,3 +405,42 @@ title-screen problem all over again.
 Ship order: read-tier classes → day-phase desk-tools consolidation →
 end-screen reorder → staged arrival sweep. The day phase is the game's
 most-visited screen, so that's where the win compounds.
+
+## 5. Onboarding load — teach one interaction before you show the desk
+
+The cold-open report ("no real context what the game is", "a lot to take
+in at one time") is two failures layered: an **onboarding** failure (the
+player was asked to make a judgment before knowing their role or the
+verb) and a **legibility** failure (the evidence they were meant to
+reason about rendered under 11px at 2.4:1). The density rules above say
+how to lay the desk out; they don't say how to hand it over.
+
+- **The minimum viable rule set, not the whole system.** FTUE literature
+  (Nasty Rodent's onboarding playbook, GDevelop's tutorial guide citing
+  Cognitive Load Theory) is unanimous: teach only the mechanics the
+  *first real decision* needs, one at a time. Our cold open showed every
+  chrome element the week owns — HUD, rule, tray, case, photo, argument,
+  facts, postmark, key hints — before the player knew they were a clerk.
+- **Pull beats push, but a push is fine if it's unhurried and skippable.**
+  NN/g: forced pop-ups get skipped and forgotten. The counter-case is a
+  single short memo the player reads at their own pace with the desk
+  dimmed behind it — which is exactly the shift-brief card we already had
+  for days. Reuse beats invention: the cold open now issues a brief too.
+- **One imperative at a time, tied to the verb's moment.** "Contextual
+  teaching" (GDevelop): introduce a mechanic exactly when it becomes
+  relevant. The instruction line switched from one long paragraph naming
+  every verb to two lines swapped per case — read his strip → now stamp.
+- **Cowan's 4 chunks beats Miller's 7.** Miller is the popular number;
+  Cowan's 2001 estimate (~4 chunks) is the one that survives replication.
+  A first screen with 25 competing elements fails either — chunk it to
+  what the current decision needs and let the rest arrive later.
+
+NIGHT SHIFT mapping (shipped in the FTUE pass): orientation memo before
+the tray; stepped `cold1`/`cold2` coaching; rule chips deduped to read-3
+against the rule label (duplicate information on the same surface,
+phenomenon #2); strikes/score stood down during a training tray; an
+explicit 11px legibility floor with contrast raised to ≥4.5:1 on the
+evidence surfaces (postmark stub, compare strip, fact rows).
+
+**Rule:** the first screen owes the player their role, their verb, and
+one readable outcome — in that order. Everything else is a later read.

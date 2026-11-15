@@ -427,7 +427,8 @@ const INSTR = {
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
-  cold: "The night clerk cleared one filing — read his strip with him. The second is yours: stamp it. S: SUS · H: HUMAN.",
+  cold1: "Read his strip: what the filer claims, and what the wire printed. Tap to hand it back.",
+  cold2: "Now you stamp. The paper can claim anything — the postmark can't. S: SUS · H: HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
   forge: "The proof is filed. Now forge the postmark — 1–4 patch a field, Enter transmits. Unspent cover banks overnight.",
 };
@@ -746,6 +747,10 @@ function hud() {
   }
   renderScore(G.score);
   prevStrikes = G.strikes;
+  // the tray is a training shift: strikes and score don't exist yet —
+  // zeroed counters compete for a first-timer's attention, so they stand down
+  $("hudStrikes").classList.toggle("read-3", !!G.coldOpen);
+  $("hudScore").classList.toggle("read-3", !!G.coldOpen);
 }
 
 /* the third strike is not a pip appearing — the room goes dark and the
@@ -895,7 +900,7 @@ function startDay(resume) {
 
 /* the shift brief: a memo card opens the day, the riddle types itself,
  * then the docket cascades onto the desk row by row. Any input skips it. */
-let briefOpen = false, briefTypeTimer = null;
+let briefOpen = false, briefTypeTimer = null, briefKind = "day";
 function stageDay(d) {
   $("briefDay").textContent = d.dayLabel;
   $("briefTheme").textContent = `${d.emoji} ${d.theme}`;
@@ -922,12 +927,43 @@ function stageDay(d) {
   score.play(G.day === 0 ? "title" : "day");
   later(endBrief, calmMotion() ? 1500 : 3400);
 }
+/* the orientation memo: before the tray's density lands, the player gets
+ * their role and the night's two interactions — read his judgment, make
+ * yours. Same memo card as the day brief; one teaching beat, skippable. */
+function stageCold() {
+  briefKind = "cold";
+  $("briefDay").textContent = "NIGHT 0 · 02:40";
+  $("briefTheme").textContent = "🌙 THE TRAY";
+  $("briefAria").textContent =
+    "His stamp is your textbook. Your stamp is your first judgment — the day crew signs in at six.";
+  const riddleEl = $("briefRiddle");
+  const full = "You're the new night clerk. Your predecessor cleared one filing — and left one he couldn't. Read his judgment. Then make yours.";
+  riddleEl.textContent = "";
+  $("shiftBrief").classList.remove("hidden");
+  document.body.classList.add("brief-up");
+  briefOpen = true;
+  clearInterval(briefTypeTimer);
+  if (calmMotion()) {
+    riddleEl.textContent = full;
+  } else {
+    let n = 0;
+    briefTypeTimer = setInterval(() => {
+      riddleEl.textContent = full.slice(0, ++n);
+      if (n % 3 === 0) sfx.tick();
+      if (n >= full.length) clearInterval(briefTypeTimer);
+    }, 28);
+  }
+  // no auto-dismiss: the player reads the night's terms at their own pace,
+  // then taps — push revelation only earns its keep when it's unhurried
+}
 function endBrief() {
   if (!briefOpen) return;
   briefOpen = false;
   clearInterval(briefTypeTimer);
   $("shiftBrief").classList.add("hidden");
   document.body.classList.remove("brief-up");
+  // the cold-open tray is already on the desk under the memo — nothing to deal
+  if (briefKind === "cold") { sfx.tick(); return; }
   dayPhase.classList.add("dealt");
   const rows = $("docketBody").children.length;
   // a stamp tick per row as the ink lands, then the hand riffles in
@@ -1702,7 +1738,7 @@ function deskDream() {
 function startAudit(resume) {
   banner("NIGHT SHIFT — you are the desk now");
   showOnly("audit");
-  setInstr(G.coldOpen ? "cold" : "night");
+  setInstr(G.coldOpen ? (G.auditIdx === 0 ? "cold1" : "cold2") : "night");
   const d = DAYS[G.day];
   if (!resume) {
     ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
@@ -1812,7 +1848,7 @@ function startColdOpen() {
   G.coldOpen = true;
   banner("02:40 — THE TRAY");
   showOnly("audit");
-  setInstr("cold");
+  setInstr("cold1");
   ariaSay([ARIA.coldOpen[0]]);
   renderRuleChips(COLD_RULE, false);
   const trng = stream("coldopen");
@@ -1859,6 +1895,9 @@ function startColdOpen() {
   // the pre-stamped filing waits for a tap, not a stamp — the desk is
   // locked until it slides away
   G.auditLocked = true;
+  // one orientation beat before the tray's density lands: role + the two
+  // interactions tonight asks for, then the first case is read alone
+  stageCold();
   persist();
 }
 
@@ -1886,9 +1925,11 @@ function endColdOpen() {
 }
 
 function renderRuleChips(rule, amended) {
+  // the label names the rule in words — the chips are the same words,
+  // second read. Never both at first-read volume (one datum, one voice).
   $("ruleChips").innerHTML =
     `<span class="rc-label">ARIA's rule: ${rule.map((c) => c.text).join(" · ")}${amended ? ' <b class="amended-tag">AMENDED</b>' : ""}</span>` +
-    rule.map((c) => `<span class="chip">${c.text}</span>`).join("") +
+    rule.map((c) => `<span class="chip read-3">${c.text}</span>`).join("") +
     (dayHasAmend() && G.day === 2 ? newTag("amend", 2) : "");
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
@@ -1997,7 +2038,7 @@ function coldCompareHTML(sub) {
     ${row(TEL_LABEL.origin, prev.tel.origin, sub.tel.origin, "origin")}
     ${row(TEL_LABEL.hops, "×" + prev.tel.hops, "×" + sub.tel.hops, "hops")}
     ${row(TEL_LABEL.receipt, prev.tel.receipt, sub.tel.receipt, "receipt")}
-    <p class="rcc-cap">the claim is typed on the card — the receipt is printed by the wire</p>
+    <p class="rcc-cap read-2">the claim is typed on the card — the receipt is printed by the wire</p>
   </div>`;
 }
 
@@ -2092,7 +2133,7 @@ function renderCase() {
     sub.echoWired = true;
     wire(`cross-ref — the desk already ruled on your DAY ${sub.echoDay} proof · SUS`);
   }
-  setInstr(G.coldOpen ? "cold" : "night");
+  setInstr(G.coldOpen ? (G.auditIdx === 0 ? "cold1" : "cold2") : "night");
 
   el.innerHTML =
     `${compare}` +
@@ -2100,7 +2141,7 @@ function renderCase() {
     `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isBot && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
-        <span class="filer">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i>${sub.echoDay ? ` <i class="echo-tag" data-tip="this argument appeared in your DAY ${sub.echoDay} filing — the desk keeps copies">† your hand</i>` : ""}</span></div>
+        <span class="filer read-2">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i>${sub.echoDay ? ` <i class="echo-tag" data-tip="this argument appeared in your DAY ${sub.echoDay} filing — the desk keeps copies">† your hand</i>` : ""}</span></div>
       <div class="case-photo" aria-hidden="true">
         <img class="case-vignette" src="art/card-${sub.card.id}.webp" alt="" loading="lazy"
           onerror="this.classList.add('missing')" />
@@ -2115,9 +2156,9 @@ function renderCase() {
           ? "the night clerk passed this one — read his strip against his stamp"
           : reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
-      <div class="case-note">✎ ${sub.note}</div>
+      <div class="case-note read-3">✎ ${sub.note}</div>
       ${factRows(sub.card, verdicts)}
-      ${compare ? "" : `<div class="case-stub">
+      ${compare ? "" : `<div class="case-stub read-2">
         ${TEL_KEYS.map((k, ti) =>
           `<div class="tel-row" data-tel="${k}" data-tip="${TEL_LABEL[k]} ${sub.tel[k]} — ${TEL_TIPS[k]}" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
       </div>`}

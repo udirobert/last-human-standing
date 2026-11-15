@@ -507,3 +507,47 @@ Verified: `test-logic.mjs` ALL PASS · `audit-deduction.mjs`
 ONE-WORD-HARMFUL 0% all five days · `smoke-art.mjs` PASS (2098KB) ·
 intro splash smoke (show → skip → remove) · `node --check` clean ·
 zip 6.9MB within the gated budget.
+
+## FTUE pass — teach before you tax (Nov 15)
+
+The player report was blunt: the cold open dumped the whole desk at once,
+type was under 11px at 2:1 contrast, and a fresh player had no idea who
+they were or what to do. Research pass (GDevelop/NN-g onboarding,
+Nasty Rodent FTUE playbook, Cowan's 4-chunk working memory, plus the
+existing UI_DENSITY_PATTERNS research) says the same four things:
+
+1. **Teach the minimum viable rule set, one interaction at a time** — not
+   the whole desk before the first decision.
+2. **Pull revelation beats push** — context the player can read at their
+   own pace, skippable, arriving when the verb becomes relevant.
+3. **A legible first win** — the first action's outcome must be readable
+   without decoding.
+4. **~4 chunks of working memory** — the cold open showed ~25 elements at
+   equal volume.
+
+What shipped (presentation + onboarding only; deduction untouched):
+
+- **Orientation memo.** The cold open now opens on the shift-brief memo
+  card: "You're the new night clerk. Your predecessor cleared one filing —
+  and left one he couldn't. Read his judgment. Then make yours." Role +
+  exactly two interactions, typed, skippable, no auto-dismiss (push
+  revelation only earns its keep unhurried). Then the tray lands.
+- **Stepped coaching.** The instruction line is one imperative at a time,
+  switched per case: case 1 = "Read his strip…" (read-only), case 2 =
+  "Now you stamp. S: SUS · H: HUMAN." The verb arrives with its moment,
+  not before.
+- **Density cuts.** Rule chips demoted to read-3 (the "ARIA's rule:" label
+  was printing the same words twice at first-read volume — one datum, one
+  voice); clerk note → read-3; filer + postmark stub → read-2; strikes and
+  score stand down to read-3 during the training tray (zeroed counters
+  competing for a first-timer's attention).
+- **Legibility floor (11px) + contrast.** Judgment text never renders
+  under 11px: postmark stub 10.5px/2.4:1 → 12px/6.5:1, compare strip
+  labels 2.4:1 → 4.7:1, fact labels 9px/2.3:1 → 11px/5.3:1, marks 10 →
+  11.5px, argument 12 → 13px, instruction line 13 → 14.5px.
+
+Verified: new `test-cold-open.mjs` (jsdom, seed-agnostic) — 23 checks cover
+memo shows/wait-for-tap/dismiss, stepped instr switching, read-tier
+application, rule-label dedupe, grounds flow, verdict naming, tray
+completion · stable across seed rotation · `test-logic.mjs` ALL PASS ·
+`node --check` clean.
