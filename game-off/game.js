@@ -172,8 +172,10 @@ function initAmbient() {
   try {
     const ac = audio();
     const master = ac.createGain();
-    // room tone under the chart: tape hiss, the drone, VALE's dissonance
-    master.gain.setValueAtTime(audioMuted ? 0 : 0.22, ac.currentTime);
+    // room tone under the chart: tape hiss, the drone, VALE's dissonance.
+    // Kept at whisper level — the chart leads; atmosphere supports. A 55Hz
+    // drone loud enough to notice is a hum, not a room (player report).
+    master.gain.setValueAtTime(audioMuted ? 0 : 0.11, ac.currentTime);
     master.connect(ac.destination);
     ambientGain = master;
 
@@ -197,7 +199,7 @@ function initAmbient() {
     lfo.connect(filter.frequency);
 
     const droneGain = ac.createGain();
-    droneGain.gain.value = 0.08;
+    droneGain.gain.value = 0.035;
 
     osc1.connect(filter);
     osc2.connect(filter);
@@ -224,7 +226,7 @@ function initAmbient() {
     noiseFilter.Q.value = 1.0;
 
     const noiseGain = ac.createGain();
-    noiseGain.gain.value = 0.016;
+    noiseGain.gain.value = 0.006;
 
     noiseSrc.connect(noiseFilter);
     noiseFilter.connect(noiseGain);
@@ -314,7 +316,7 @@ function musicDuck(on) {
     try {
       const ac = audio();
       ambientGain.gain.cancelScheduledValues(ac.currentTime);
-      ambientGain.gain.linearRampToValueAtTime(on ? 0.06 : 0.22, ac.currentTime + 0.4);
+      ambientGain.gain.linearRampToValueAtTime(on ? 0.05 : 0.11, ac.currentTime + 0.4);
     } catch { /* audio may be unavailable */ }
   }
   // the chart ducks too — the amendment lands on top of everything
@@ -326,7 +328,7 @@ function setValeDissonance(on) {
   try {
     const ac = audio();
     valeDissonanceGain.gain.cancelScheduledValues(ac.currentTime);
-    valeDissonanceGain.gain.linearRampToValueAtTime(on ? 0.045 : 0, ac.currentTime + 0.5);
+    valeDissonanceGain.gain.linearRampToValueAtTime(on ? 0.025 : 0, ac.currentTime + 0.5);
   } catch { /* audio may be unavailable */ }
 }
 
@@ -430,8 +432,8 @@ const INSTR = {
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
   night: "Stamp each filing — paper and postmark both.",
-  cold1: "His strip: the claim vs the wire. Tap to hand it back.",
-  cold2: "Now you stamp. The paper can claim anything — the postmark can't.",
+  cold1: "His judgment is on the filing below. Read it — tap anywhere to continue.",
+  cold2: "Compare the claim to the postmark. Then stamp SUS or HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
   forge: "The proof is filed. Now forge the postmark — 1–4 patch a field, Enter transmits. Unspent cover banks overnight.",
 };
@@ -750,10 +752,6 @@ function hud() {
   }
   renderScore(G.score);
   prevStrikes = G.strikes;
-  // the tray is a training shift: strikes and score don't exist yet —
-  // zeroed counters compete for a first-timer's attention, so they stand down
-  $("hudStrikes").classList.toggle("read-3", !!G.coldOpen);
-  $("hudScore").classList.toggle("read-3", !!G.coldOpen);
 }
 
 /* the third strike is not a pip appearing — the room goes dark and the
@@ -907,6 +905,7 @@ let briefOpen = false, briefTypeTimer = null, briefKind = "day";
 function stageDay(d) {
   $("briefDay").textContent = d.dayLabel;
   $("briefTheme").textContent = `${d.emoji} ${d.theme}`;
+  $("briefWho").textContent = "ARIA //";
   $("briefAria").textContent = d.ariaLine;
   const riddleEl = $("briefRiddle");
   riddleEl.textContent = "";
@@ -935,12 +934,13 @@ function stageDay(d) {
  * yours. Same memo card as the day brief; one teaching beat, skippable. */
 function stageCold() {
   briefKind = "cold";
-  $("briefDay").textContent = "NIGHT 0 · 02:40";
-  $("briefTheme").textContent = "🌙 THE TRAY";
+  $("briefDay").textContent = "NIGHT SHIFT · A DEDUCTION GAME";
+  $("briefTheme").textContent = "🌙 NIGHT 0 — THE TRAY";
+  $("briefWho").textContent = "THE DESK //";
   $("briefAria").textContent =
-    "His stamp is your textbook. Your stamp is your first judgment — the day crew signs in at six.";
+    "Read the claim. Read the postmark. Then stamp HUMAN or SUS — that is every night of this week.";
   const riddleEl = $("briefRiddle");
-  const full = "You're the new night clerk. Your predecessor cleared one filing — and left one he couldn't. Read his judgment. Then make yours.";
+  const full = "Five shifts. One machine, wearing a human face. Its filings read perfectly — only the postmark gives it away.";
   riddleEl.textContent = "";
   $("shiftBrief").classList.remove("hidden");
   document.body.classList.add("brief-up");
@@ -2927,7 +2927,7 @@ document.addEventListener("keydown", (e) => {
     if (ambientGain) {
       const ac = audio();
       ambientGain.gain.cancelScheduledValues(ac.currentTime);
-      ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.22, ac.currentTime);
+      ambientGain.gain.setValueAtTime(audioMuted ? 0 : 0.11, ac.currentTime);
     }
     score.setMuted();
     setLicensedMuted();

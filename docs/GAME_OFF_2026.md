@@ -654,3 +654,36 @@ the HUD labels/CASE counter carried faint ink instead of dim.
 Verified: `test-cold-open.mjs` 36 real checks (verb-row show/hide at each
 cold beat, note suppression, caption cut) — ALL PASS · `test-logic.mjs`
 ALL PASS · `node --check` clean.
+
+## Clarity pass — say what the game is, sound like the game (Nov 15)
+
+Player report round 3: the intro never says what the game *is* ("a super
+bad job of explaining what the user should expect to do"); the gameplay
+audio is "this weird hum… I preferred the jazz vibe of the title"; HUD
+counters still need "mini cards behind them"; case 1's instruction is
+jargon with no clear action.
+
+- **The memo names the game, not the lore.** The cold-open brief now
+  leads with the premise ("Five shifts. One machine, wearing a human
+  face. Its filings read perfectly — only the postmark gives it away.")
+  and the verb ("Read the claim. Read the postmark. Then stamp HUMAN or
+  SUS — that is every night of this week."). `briefWho` is parameterized
+  (`THE DESK //` vs `ARIA //`) — and `stageDay` resets it back.
+- **Audio: the hum was layers under the chart.** `initAmbient`'s 55Hz
+  sub-bass drone (0.08) + tape hiss (0.016) at master 0.22 muddied the
+  jazz chart every phase played. The bed is now a whisper (drone 0.035,
+  hiss 0.006, master 0.11), VALE's tritone dissonance halved (0.045→0.025),
+  and **night keeps the horn** (`night: {horn: true}` — the chart's
+  identity is the muted trumpet; the title's vibe follows the player in).
+- **HUD mini-cards.** `#dayDots`, `#hudStrikes`, `#hudScore` ride
+  `--card` plates with `--line` borders — dark ink needs a plate on the
+  dark desk. The cold-open read-3 dimming is gone (it was stacking
+  invisibility on faint ink). `#hudScore` faint→dim. `CASE n/m` gets the
+  same plate treatment.
+- **Concrete verbs.** cold1 = "His judgment is on the filing below. Read
+  it — tap anywhere to continue." cold2 = "Compare the claim to the
+  postmark. Then stamp SUS or HUMAN."
+
+Verified: `test-cold-open.mjs` 34 checks (memo says what the game is +
+what to do; updated instr assertions) — ALL PASS · `test-logic.mjs` ALL
+PASS · `node --check` clean on game.js + score.js.

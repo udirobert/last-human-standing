@@ -81,9 +81,9 @@ await sleep(900);
 const brief = $("#shiftBrief");
 await sleep(3800); // the memo types itself; give it the full line before asserting
 ok("orientation memo shows", !brief.classList.contains("hidden"));
-ok("memo names the role", /night clerk/.test($("#briefRiddle").textContent));
-ok("memo teaches 2 interactions", /Read his judgment\. Then make yours\./.test($("#briefRiddle").textContent));
-ok("memo theme = THE TRAY", /THE TRAY/.test($("#briefTheme").textContent));
+ok("memo says what the game is", /machine/.test($("#briefRiddle").textContent) && /postmark/.test($("#briefRiddle").textContent));
+ok("memo says what to do", /stamp HUMAN or SUS/i.test($("#briefAria").textContent));
+ok("memo theme = NIGHT 0 — THE TRAY", /THE TRAY/.test($("#briefTheme").textContent));
 ok("memo still up (waits for tap, no auto-dismiss)", !brief.classList.contains("hidden"));
 
 // dismiss the memo
@@ -93,14 +93,12 @@ ok("memo dismissed", brief.classList.contains("hidden"));
 
 // — case 1: read-only, one imperative
 ok("case 1 visible", !!$(".case-card"));
-ok("instr = cold1 read-the-strip", d.getElementById("instr").textContent.startsWith("His strip"));
+ok("instr = cold1 read-the-strip", d.getElementById("instr").textContent.startsWith("His judgment"));
 ok("rule label present", /ARIA's rule: indoors/.test($("#ruleChips").textContent));
 ok("rule chips demoted to read-3", $$("#ruleChips .chip").every((c) => c.classList.contains("read-3")));
 ok("rule printed once (chips suppressed outside amendments)", $$("#ruleChips .chip").length === 0 && !!$(".rule-seal"));
 ok("key hints printed once (on the buttons, not repeated below)", !$("#caseBtns .vb kbd") && !!$("#susBtn .stamp-ring"));
 ok("fact marks are form ink (✓/✗/·, no prose)", !/not checked|meets the rule/.test($(".facts").textContent));
-ok("hud strikes quiet during tray", $("#hudStrikes").className.includes("read-3"));
-ok("hud score quiet during tray", $("#hudScore").className.includes("read-3"));
 ok("clerk note suppressed in the cold open", !$(".case-note"));
 ok("verb row hidden while the case is read-only", $("#caseBtns").classList.contains("hidden"));
 ok("stub at read-2", !!$(".case-stub.read-2"));
@@ -110,7 +108,7 @@ ok("pre-stamped verdict visible", ($(".case-verdict") || {}).textContent === "PR
 // — case 2 is the machine's
 $("#caseCard").click();
 await sleep(600);
-ok("instr = cold2 now-you-stamp", d.getElementById("instr").textContent.startsWith("Now you stamp"));
+ok("instr = cold2 now-you-stamp", d.getElementById("instr").textContent.startsWith("Compare the claim"));
 ok("case 2 arrived", !!$(".case-card"));
 ok("compare strip on case 2", !!$(".rc-compare"));
 ok("compare caption cut (instr teaches instead)", !$(".rcc-cap"));

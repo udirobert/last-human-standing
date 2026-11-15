@@ -15,7 +15,8 @@
  *            chart breathes instead of loop
  *   horn   — muted trumpet with a late vibrato, melody only
  * The room chooses the arrangement: title gets the full chart, day is
- * piano reading music, night drops the horn, dawn resolves and rests.
+ * piano reading music, night keeps the horn too (the chart's identity —
+ * the player asked for the jazz, not a stripped bed), dawn resolves and rests.
  */
 (function (root) {
 
@@ -41,7 +42,7 @@ const SCORE = {
   ARR: {
     title: { bass: true, piano: true, drums: true, horn: true, loop: true },
     day:   { bass: "roots", piano: true, drums: false, horn: false, loop: true },
-    night: { bass: true, piano: true, drums: true, horn: false, loop: true },
+    night: { bass: true, piano: true, drums: true, horn: true, loop: true },
     dawn:  { bass: "whole", piano: "whole", drums: false, horn: true, loop: false },
   },
 };

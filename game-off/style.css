@@ -424,6 +424,14 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
 }
 #dayDots { display: flex; align-items: center; gap: 6px; }
 #dayDots .day-label { color: var(--dim); margin-right: 4px; }
+/* the HUD counters ride mini-cards — dark ink on the dark desk has no
+   presence without a plate under it (player report, twice) */
+#dayDots, #hudStrikes, #hudScore {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 3px 10px;
+}
 #dayDots .dot {
   width: 9px; height: 9px; border-radius: 50%;
   border: 1px solid var(--faint); background: transparent;
@@ -483,7 +491,7 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
 #hudStrikes.spent .pip { border-color: var(--red); }
 @media (max-width: 480px) { #hudStrikes.third { transform: scale(1.26); } }
 #hudScore {
-  margin-left: auto; color: var(--faint);
+  margin-left: auto; color: var(--dim);
   font-variant-numeric: tabular-nums;
 }
 #hudScore.rolling { color: var(--accent); }
@@ -857,7 +865,9 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 #caseCard { min-height: 300px; }
 .case-num {
   font-size: 11px; letter-spacing: .3em; color: var(--dim);
-  margin-bottom: 8px; text-align: center;
+  display: table; margin: 0 auto 8px;
+  background: var(--card); border: 1px solid var(--line);
+  border-radius: 4px; padding: 4px 12px;
 }
 .case-card {
   position: relative;
