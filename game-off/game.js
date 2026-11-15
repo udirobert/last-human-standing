@@ -3616,13 +3616,18 @@ document.body.dataset.phase = "title";
 (function ledgerTicker() {
   const items = [...document.querySelectorAll("#shiftLedger .sl-i")];
   if (items.length < 2) return;
+  // one definition visible at a time — the rest are hidden from screen
+  // readers too, so the ticker never reads as one run-on line
+  items.forEach((el, i) => el.setAttribute("aria-hidden", i ? "true" : "false"));
   let i = 0;
   setInterval(() => {
     if (document.body.dataset.phase !== "title") return;
     if (i >= items.length - 1) return; // hold on the last definition
     items[i].classList.remove("on");
+    items[i].setAttribute("aria-hidden", "true");
     i++;
     items[i].classList.add("on");
+    items[i].setAttribute("aria-hidden", "false");
   }, 4200);
 })();
 
@@ -3676,6 +3681,7 @@ if (savedRun) {
   rBtn.setAttribute("aria-label", "Resume your unfinished shift");
   rBtn.innerHTML = `<span class="r-line">⟲ RESUME SHIFT</span>` +
     `<span class="r-sub">${resumeLabel(savedRun)}</span>`;
+  rBtn.setAttribute("data-tip", "Saved on this device — pick up exactly where the shift stopped.");
   rBtn.addEventListener("click", () => {
     audio();
     initAmbient();

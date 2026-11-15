@@ -304,6 +304,8 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
   border: 1px solid #2e3240; border-radius: 999px; background: #191c22;
   padding: 8px 16px;
 }
+/* each step teaches its verb — the data-tip explains it on hover/focus */
+#title .step { cursor: help; }
 #title .step b {
   color: #e8b34b; margin: 0; font-size: 12px; letter-spacing: .18em;
   font-family: ui-monospace, monospace;
@@ -343,9 +345,11 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
   #title .resume-btn { animation: none; }
 }
 #title .title-btns {
-  display: flex; gap: 12px; align-items: center;
-  justify-content: center; flex-wrap: wrap;
+  display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+  width: min(340px, 86vw); margin: 0 auto;
 }
+/* the alternates are real buttons, just quieter — the primary is the card */
+#title .title-btns .ghost { width: 100%; text-align: center; }
 /* ---------- clock in: a time card, punched ---------- */
 #title .stamp-btn {
   position: relative; display: flex; flex-direction: column; align-items: stretch;

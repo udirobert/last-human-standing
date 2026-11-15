@@ -65,6 +65,15 @@ if (credits) credits.dispatchEvent(new window.KeyboardEvent("keydown", { bubbles
 await sleep(500);
 
 ok("title phase", d.body.dataset.phase === "title");
+
+// — title screen: one primary verb pair, self-explaining alternates
+ok("title tooltips wired (data-tip on the verb card)", $("#startBtn").dataset.tip.length > 10);
+ok("title tooltips reachable (uiTip outside hidden #game)", !$("#game #uiTip") && !!$("#uiTip"));
+ok("steps teach their verbs", /HUMAN or SUS/.test($(".steps").textContent) && $$(".steps .step").every((s) => (s.dataset.tip || "").length > 10));
+ok("alternates demoted to read-3", ["#randomBtn", "#machineTitleBtn"].every((s) => $(s).classList.contains("read-3")));
+ok("primary not demoted", !$("#startBtn").classList.contains("read-3"));
+ok("ticker items aria-hidden as they rotate", $$("#shiftLedger .sl-i").slice(1).every((el) => el.getAttribute("aria-hidden") === "true"));
+
 $("#startBtn").click();
 await sleep(900);
 

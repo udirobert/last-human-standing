@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css" />
 </head>
 <body data-shift="night">
+<div id="uiTip" class="hidden" role="tooltip"></div>
 <!-- opening credits: the WeLoveIndies intro the FREE & DEMO license asks for
      on a non-commercial release. Any input skips it; the title screen's static
      music credit remains for reduced-motion and posterity. -->
@@ -249,32 +250,32 @@
     </div>
     <p class="sub">Deduce by day. Enforce by night. Catch the machine.</p>
     <div class="steps">
-      <div class="step"><b>1 · READ</b><span>her rulings</span></div>
+      <div class="step" data-tip="ARIA rules a docket of filings each day. Her rule is sealed — deduce it from what passes and what fails."><b>1 · READ</b><span>her rulings</span></div>
       <div class="step-arrow" aria-hidden="true">→</div>
-      <div class="step"><b>2 · FILE</b><span>your card</span></div>
+      <div class="step" data-tip="Pick one of four evidence cards and file it against the rule you inferred. File wrong and it's a strike."><b>2 · FILE</b><span>your card</span></div>
       <div class="step-arrow" aria-hidden="true">→</div>
-      <div class="step"><b>3 · STAMP</b><span>the shift</span></div>
+      <div class="step" data-tip="At night, stamp everyone else's filings HUMAN or SUS. The paper and the postmark can disagree — that's where the machine slips."><b>3 · STAMP</b><span>HUMAN or SUS</span></div>
     </div>
-    <!-- first read: the verb. second: resume/career. third: theme ticker + details -->
+    <!-- first read: the verb pair. second: resume/career. third: alternates + ticker -->
+    <div class="resume-slot" id="resumeSlot"></div>
     <div class="title-btns">
-      <button id="startBtn" class="stamp-btn" aria-label="Clock in" title="Today's fresh docket — same for everyone, changes daily">
+      <button id="startBtn" class="stamp-btn" aria-label="Clock in" data-tip="Today's fresh docket — the same for everyone, changes daily">
         <span class="pc-top"><span class="pc-week">WEEK 12</span><span class="pc-no" id="pcDocket">DOCKET</span></span>
         <span class="pc-main">Clock in</span>
         <span class="pc-slots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
       </button>
-      <button id="randomBtn" class="ghost">Random shift</button>
-      <button id="otTitleBtn" class="ghost hidden" title="A fresh five-night run, rules generated per docket">Overtime — a generated docket</button>
-      <button id="machineTitleBtn" class="ghost locked" title="Locked — clear overtime, then become the thing you hunt">The Machine's Shift — file like you belong</button>
+      <button id="randomBtn" class="ghost read-3" data-tip="A shuffled docket, just for this run — not today's shared one">Random docket</button>
+      <button id="otTitleBtn" class="ghost read-3 hidden" data-tip="Endless mode: five more nights on generated rules, a fresh run every time">Overtime (endless)</button>
+      <button id="machineTitleBtn" class="ghost locked read-3" data-tip="File like you belong — fool the wire as the machine. Locked until you clear overtime.">🔒 The Machine's Shift</button>
     </div>
     <p class="legend">Three strikes and you're cut.</p>
-    <div class="resume-slot" id="resumeSlot"></div>
     <p class="career-line hidden" id="careerLine"></p>
     <div class="shift-ledger" id="shiftLedger" aria-label="What shifts in this game">
       <span class="sl-k">shift (v.)</span>
       <span class="sl-stage"><span class="sl-i on"><b>the facts</b> — the loupe narrows the desk to one column</span><span class="sl-i"><b>the rule</b> — head office amends mid-night</span><span class="sl-i"><b>the desk</b> — judged by day, judging by night</span><span class="sl-i"><b>the truth</b> — the machine shifts its tells, and its face</span><span class="sl-i"><b>who signs</b> — the last rule is yours to write</span></span>
     </div>
     <div class="title-foot">
-      <p class="hint">five nights, one machine in a new face each docket · overtime: rules generated daily · audio recommended · <kbd>?</kbd> handbook</p>
+      <p class="hint">Five shifts. One machine, wearing a new face every docket. Overtime generates fresh rules nightly. Sound recommended — <kbd>?</kbd> opens the handbook.</p>
       <p class="music-credit">music · <a href="https://weloveindies.com" rel="noopener">WeLoveIndies</a> (F/demo license)</p>
     </div>
     <!-- attract reel: after idle, the desk keeps working without you.
@@ -300,7 +301,6 @@
     <p id="instr"></p>
 
     <div id="fxLayer" aria-hidden="true"></div>
-    <div id="uiTip" class="hidden" role="tooltip"></div>
 
     <!-- ARIA's quip: flavour only, never the instruction. She has a face. -->
     <div id="ariaSay" class="hidden" data-mood="neutral">

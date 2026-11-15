@@ -551,3 +551,33 @@ memo shows/wait-for-tap/dismiss, stepped instr switching, read-tier
 application, rule-label dedupe, grounds flow, verdict naming, tray
 completion · stable across seed rotation · `test-logic.mjs` ALL PASS ·
 `node --check` clean.
+
+## Title-legibility pass — one verb pair, labeled buttons (Nov 15)
+
+Player report on the title: "it looks amazing but I have no idea what
+each of these buttons do." Four buttons at one volume with insider labels
+(Random shift, "STAMP the shift"), and — a real bug — the game's `data-tip`
+tooltips live inside `#game`, which is hidden on the title, so every
+title `title=` hint was native-browser (slow, invisible on mobile).
+Same three-reads + teach-by-labeling pass as the FTUE work:
+
+- **One verb pair first.** Resume (when a save exists) + the Clock-in
+  time card stack as a column; the alternates are demoted to `.read-3`
+  beneath. The first read is now one question: continue, or clock in.
+- **Labeled buttons, not lore.** `Random shift` → "Random docket" (tip:
+  shuffled, not today's shared one) · `Overtime — a generated docket` →
+  "Overtime (endless)" · `The Machine's Shift — file like you belong` →
+  "🔒 The Machine's Shift". Every button and every step carries a
+  `data-tip` sentence explaining what it does — and `#uiTip` moved from
+  inside `#game` to `<body>`, so the game's tooltip system now serves the
+  title too.
+- **Steps teach their verbs.** `3 · STAMP the shift` → `3 · STAMP
+  HUMAN or SUS`; each step chip explains its phase on hover/focus.
+- **Ticker accessibility.** Rotating `.sl-i` definitions now carry
+  `aria-hidden` in step with the rotation — screen readers read one
+  definition at a time, not five run-on lines.
+- Footer rewritten in full sentences.
+
+Verified: `test-cold-open.mjs` extended to 29 checks (title tooltips
+wired + reachable, steps teach, alternates demoted, ticker aria-hidden)
+— ALL PASS · `node --check` clean.
