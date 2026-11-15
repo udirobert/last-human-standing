@@ -427,11 +427,11 @@ function factRows(card, verdicts, pending) {
 
 // ---------- instruction lines ----------
 const INSTR = {
-  day: "Deduce ARIA's secret rule from her rulings. SHIFT narrows the desk to one column.",
+  day: "Read ARIA's rulings and file a card that holds. One filing on tonight's docket is a machine — the postmark gives it away.",
   day1: "What do ARIA's approvals share that her rejections lack? SHIFT narrows the desk to one column.",
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
-  night: "Stamp each filing — paper and postmark both.",
+  night: "Five filings, one is a machine. Read the postmark — stamp it SUS, and point at the field that gives it away.",
   cold1: "His judgment is on the filing below. Read it — tap anywhere to continue.",
   cold2: "Compare the claim to the postmark. Then stamp SUS or HUMAN.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
@@ -573,20 +573,20 @@ const ARIA = {
   eliminated: ["Three strikes. Cut — but not erased."],
   juror: ["You're on jury duty now."],
   auditOpen: [
-    "My rules only check facts. Whatever isn't a fact walks right through.",
-    "Night shift. The rule is pinned. Five cases tonight — stamp each one.",
-    "The night shift doesn't sleep. Check every detail.",
-    "Someone on this docket has never missed. Humans miss.",
-    "The ledger is watching tonight. Stamp cleanly.",
+    "Five filings tonight. One is a machine — the postmark gives it away.",
+    "The wire doesn't sleep. Humans file messy. A machine reads clean.",
+    "Someone on this docket has never missed. Humans miss. Machines don't.",
+    "The ledger is watching tonight. Point at the field that reads wrong.",
+    "One filing on this docket isn't human. Read the postmark, not the paper.",
   ],
   coldOpen: [
     "The tray he left: one cleared, one he couldn't. His cleared filing is your textbook — the other one is yours.",
   ],
   coldFirst: [
-    "He passed that one. Watch how it reads: paper against the rule, postmark against the claim. Nothing flagged, nothing circled — a clean HUMAN.",
+    "He cleared that one. Watch how it reads — a person's postmark: messy latency, a real gate, a receipt with human patience in it. That's your textbook.",
   ],
   coldCompare: [
-    "The card types its claim. The postmark prints the truth. They don't always agree.",
+    "Same desk, same night, two postmarks. One reads like a person. The other reads like it measured itself.",
     "A receipt is stamped by the wire, not written by the filer. Compare the two.",
   ],
   // she keeps the room alive between rulings — rare, dry, never instructional
@@ -727,19 +727,27 @@ function hud() {
   document.body.dataset.wear = String(Math.min(G.day, 4));
   $("hudShift").textContent =
     G.phase === "audit" ? "🌙 NIGHT SHIFT" : G.phase === "finale" ? "✒ LAST CALL"
-    : G.phase === "forge" ? "🌙 FORGERY" : "☀ DAY SHIFT";
+    : G.phase === "forge" ? "🌙 FORGERY" : G.phase === "day"
+      ? (G.mode === "machine" ? "🌙 FORGE BENCH" : "☀ DAY SHIFT") : "🌙 NIGHT SHIFT";
   const dots = $("dayDots");
   dots.innerHTML = `<span class="day-label">${G.coldOpen ? "NIGHT 0"
     : G.mode === "ot" ? `${(DAYS[G.day] || {}).dayLabel || `OT ${G.day + 1}`}/${DAYS.length}`
     : G.mode === "machine" ? `NIGHT ${Math.min(G.day + 1, DAYS.length)}`
+    : G.mode === "week" ? `NIGHT ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}`
     : `DAY ${Math.min(G.day + 1, DAYS.length)}/${DAYS.length}`}</span>`;
   DAYS.forEach((_, i) => {
     const s = document.createElement("span");
     s.className = "dot";
-    if (G.dayResults[i] === "survived") s.classList.add("done");
-    else if (G.dayResults[i] === "struck") s.classList.add("cut");
-    else if (G.dayResults[i] === "juror") s.classList.add("juror");
-    else if (i === G.day && G.day < DAYS.length) s.classList.add("now");
+    if (G.mode === "week") {
+      // night-only week: a dot closes when its night is worked
+      if (G.nightResults[i] !== undefined) s.classList.add("done");
+      else if (i === G.day && G.day < DAYS.length) s.classList.add("now");
+    } else {
+      if (G.dayResults[i] === "survived") s.classList.add("done");
+      else if (G.dayResults[i] === "struck") s.classList.add("cut");
+      else if (G.dayResults[i] === "juror") s.classList.add("juror");
+      else if (i === G.day && G.day < DAYS.length) s.classList.add("now");
+    }
     dots.appendChild(s);
   });
   const st = $("hudStrikes");
@@ -1739,22 +1747,25 @@ function deskDream() {
 }
 
 function startAudit(resume) {
+  // the tray is night zero — leaving it is a real night, and the flag
+  // must clear with it or every night re-ends on the tray
+  if (!resume) G.coldOpen = false;
   banner("NIGHT SHIFT — you are the desk now");
   showOnly("audit");
   setInstr(G.coldOpen ? (G.auditIdx === 0 ? "cold1" : "cold2") : "night");
   const d = DAYS[G.day];
+  // the desk deals under the standing rule: the night's judgment is the
+  // postmark, and the mid-shift amendment was the paper game's weather
+  G.amendAfter = null;
+  G.amendShown = true;
   if (!resume) {
     ariaSay([ARIA.auditOpen[Math.min(G.day, ARIA.auditOpen.length - 1)]]);
-    if (G.day === 2) explain("amend");
   }
-  // chips honor the amendment if it already landed this night
-  if (G.amendShown && d.amend) renderRuleChips(d.amend.rule, true);
-  else renderRuleChips(G.coldOpen ? COLD_RULE : d.rule, false);
+  renderRuleChips(G.coldOpen ? COLD_RULE : d.rule, false);
 
   if (!resume) {
-    const { cases, amendAfter } = LOGIC.auditSet(CARDS, d, G.day, G.filed, stream("audit"));
-    G.amendAfter = amendAfter;
-    G.amendShown = false;
+    const { cases } = LOGIC.auditSet(CARDS, d.amend ? { ...d, amend: null } : d,
+      G.day, G.filed, stream("audit"));
     // filers: the bot case wears the culprit's face; the rest get the four
     // humans shuffled
     const roster = (function () {
@@ -1786,30 +1797,13 @@ function startAudit(resume) {
     G.auditIdx = 0;
     // one filing a night is contested: right pays double bonus
     G.contestedIdx = Math.floor(stream("contested")() * G.auditSubs.length);
-    // head office memo: the same seed that deals the docket deals
-    // tonight's weather — announced on the wire, never hidden
+    // the wire listens on its own clock — a quiet memo, no rule weather
     G.nightMemo = "";
-    {
-      const roll = stream("memo")();
-      const hasAmend = G.amendAfter !== null && !!d.amend;
-      if (hasAmend && roll < 0.38) {
-        G.amendAfter = 1;
-        G.nightMemo = "head office audits early — the amendment lands after case one";
-      } else if (hasAmend && roll < 0.62) {
-        G.amendAfter = null;
-        for (const s of G.auditSubs) {
-          if (s.amended) {
-            s.rule = d.rule; s.amended = false;
-            s.truth = LOGIC.passes(s.card, d.rule);
-          }
-        }
-        G.nightMemo = "quiet wire tonight — no amendment is coming";
-      } else if (roll < (hasAmend ? 0.8 : 0.3)) {
-        G.contestedIdx = 0;
-        G.nightMemo = "the wire is listening — first filing contested tonight";
-      }
-      if (G.nightMemo) wire(`memo — ${G.nightMemo}`);
+    if (stream("memo")() < 0.3) {
+      G.contestedIdx = 0;
+      G.nightMemo = "the wire is listening — first filing contested tonight";
     }
+    if (G.nightMemo) wire(`memo — ${G.nightMemo}`);
     G.auditHitsToday = 0;
     G.nightPoints = 0;
     G.nightSummarized = false;
@@ -1916,12 +1910,12 @@ function endColdOpen() {
     <p class="sum-effect">${caught
       ? "⚡ anomaly quarantined on your first night — the desk noticed"
       : "one filing cleared faster than the ink could dry"}</p>
-    <p class="sum-vale quiet">· 06:00 — the day crew signs in. The docket is yours now.</p>`;
+    <p class="sum-vale quiet">· the wire clears the desk — the first real night is yours.</p>`;
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");
-  btn.textContent = "Day one →";
-  btn.addEventListener("click", () => startDay());
+  btn.textContent = "Night one →";
+  btn.addEventListener("click", () => startAudit());
   actions.appendChild(btn);
   btn.focus();
   persist();
@@ -1976,6 +1970,9 @@ function flagField(k) {
   } else {
     sub.correct = false;
     sub.earned = 0;
+    // a hunch aimed at a human is a wrong stamp — the desk keeps a count;
+    // a hunch aimed at the machine saw it but misnamed the field
+    if (sub.filer !== G.culprit && G.mode !== "machine" && G.status === "player" && G.strikes < 3) G.strikes++;
     wire(`flag on ${sub.filer} — the grounds didn't hold`);
   }
   G.auditTotal++;
@@ -2078,7 +2075,9 @@ function renderCase() {
   const el = $("caseCard");
   const checked = sub.pick !== null;
   const contested = G.auditIdx === G.contestedIdx;
-  const verdicts = checked ? LOGIC.check(sub.card, sub.rule) : null;
+  // the facts print plain — no rule marks on the night card. The paper is
+  // context; the only judgment is the postmark.
+  const verdicts = null;
   const arg = sub.filer === G.culprit
     ? (sub.arg || DAYS[G.day].valeLine + " " + (VALE_ARC[Math.min(G.day, VALE_ARC.length - 1)] || ""))
     : sub.card.argument;
@@ -2098,26 +2097,26 @@ function renderCase() {
       if (sub.pick === "SUS" && sub.correct) {
         reason = `⚡ ANOMALY QUARANTINED — ${TEL_LABEL[sub.flagKey]} ${sub.tel[sub.flagKey]}. No human files that. +100 bounty`;
       } else if (sub.correct) {
-        reason = `✔ Meets every criterion.`;
+        reason = `✔ human — the postmark reads like a person's`;
       } else if (sub.pick === "SUS") {
         // a hunch answers the accusation itself: the field you named read
-        // within the norm — clean paper, bad stamp
+        // within the norm — a bad stamp, not a bad filing
         reason = sub.flagKey
           ? `${TEL_LABEL[sub.flagKey]} ${sub.tel[sub.flagKey]} reads within the norm — no grounds`
-          : "no grounds — a clean-paper hunch";
+          : "no grounds — a hunch, not a catch";
       } else {
         // the loss names one field of evidence — enough to know the
         // postmark mattered, not enough to skip reading the next one
         reason = G.valeCaught > 0
           ? `✗ You'd flagged that postmark before — and you stamped it through.`
-          : `✗ the paper passed — the postmark didn't: ${TEL_LABEL[sub.tel.tells[0]]} ${sub.tel[sub.tel.tells[0]]}`;
+          : `✗ the postmark reads wrong: ${TEL_LABEL[sub.tel.tells[0]]} ${sub.tel[sub.tel.tells[0]]}`;
       }
     } else {
       reason = sub.correct
         ? `+${sub.earned} pts${contested ? " · contested ×2" : ""}`
-        : (sub.truth ? "passes: meets every criterion"
-                     : "fails: needed " + LOGIC.failKeys(sub.card, sub.rule)
-                         .map((k) => sub.rule.find((x) => x.key === k).text).join(", "));
+        : sub.flagKey
+          ? `✗ ${TEL_LABEL[sub.flagKey]} ${sub.tel[sub.flagKey]} reads human — you accused a person`
+          : `✗ no grounds — ${sub.filer} is human`;
     }
   }
 
@@ -2166,7 +2165,7 @@ function renderCase() {
           `<div class="tel-row" data-tel="${k}" data-tip="${TEL_LABEL[k]} ${sub.tel[k]} — ${TEL_TIPS[k]}" style="--i:${ti}"><span>${TEL_LABEL[k]}</span><span class="tel-val${sub.flagKey === k && sub.correct ? " hit" : ""}">${sub.tel[k]}</span></div>`).join("")}
       </div>`}
       ${sub.pendingFlag ? `<div class="flag-row">
-        <span class="flag-q">the paper passed — what flagged it?</span>
+        <span class="flag-q">you stamped SUS — which field reads wrong?</span>
         ${TEL_KEYS.map((k, i) => {
           const prevS = G.auditIdx > 0 ? G.auditSubs[G.auditIdx - 1] : null;
           const same = prevS && prevS.tel[k] === sub.tel[k];
@@ -2217,24 +2216,26 @@ function stamp(pickVal) {
   const isBot = sub.filer === G.culprit;
   const contested = G.auditIdx === G.contestedIdx;
 
-  if (pickVal === "SUS" && sub.truth) {
-    // the paper passed — a SUS stamp needs grounds. The flag row asks
-    // which packet field read wrong; flagField() resolves the stamp.
+  if (pickVal === "SUS") {
+    // SUS is an accusation — it never resolves on its own. Every SUS stamps
+    // and then asks for grounds; the flag row resolves it in flagField().
+    // The grounds row appears identically for human and machine, so it
+    // carries no tell: only the postmark can hold an accusation.
     sub.pendingFlag = true;
     G.flagAttempts++;
     sfx.slide();
-    sfx.lensHum(); // the desk leans in — on every clean-paper SUS, not just hers
+    sfx.lensHum(); // the desk leans in — on every SUS
     renderCase();
     stampSwing($("caseCard").querySelector(".case-stamp"));
     later(() => sfx.stamp(), 200);
     persist();
     return;
   }
-
+  // HUMAN. The only judgment is the postmark — and the paper is context,
+  // not a verdict.
   if (isBot) {
-    // only HUMAN stamps reach here — SUS on clean paper asks for grounds.
-    // The postmark is part of the judgment: a wave-through is a wrong
-    // stamp, and the verdict names the evidence that sat on the card.
+    // a wave-through is a wrong stamp, and the verdict names the evidence
+    // that sat on the card
     sub.correct = false;
     sub.earned = 0;
     G.valeEscapes++;
@@ -2246,16 +2247,13 @@ function stamp(pickVal) {
       ], "alarm");
     }
   } else {
-    sub.correct = (pickVal === "HUMAN") === sub.truth;
-    if (sub.correct) {
-      G.auditHitsToday++;
-      G.auditHits++;
-      sub.earned = contested ? 100 : 50;
-      G.nightPoints += sub.earned;
-      G.score += sub.earned;
-    } else {
-      sub.earned = 0;
-    }
+    // a human is a person, full stop
+    sub.correct = true;
+    G.auditHitsToday++;
+    G.auditHits++;
+    sub.earned = contested ? 100 : 50;
+    G.nightPoints += sub.earned;
+    G.score += sub.earned;
   }
   wire(`${pickVal} on ${sub.filer} — ${sub.correct ? `upheld · +${sub.earned}` : "wrong"}`);
   if (sub.echoDay) wire(`cross-ref — that argument is yours · filed DAY ${sub.echoDay} · the desk keeps copies`);
@@ -2498,6 +2496,11 @@ function auditSummary() {
   const botSub0 = G.auditSubs.find((x) => x.filer === G.culprit);
   if (botSub0 && botSub0.pick === "SUS" && botSub0.correct) wire("you read the postmark — the wire wonders what else you see");
   else if (botSub0 && botSub0.pick === "HUMAN") wire("an escape went unremarked — the wire counts those too");
+  // the third mark lands at the close of the shift — the desk cuts then
+  if (G.strikes >= 3 && G.status === "player") {
+    G.elimDay = G.day + 1;
+    wire("three marks on your file — the desk is closing it");
+  }
   hud();
   paintAuditSummary();
   persist();
@@ -2536,14 +2539,30 @@ function paintAuditSummary() {
   s.classList.toggle("flawless", hits === 5);
   paintTray();
   if (hits === 5) later(() => thunderRoll(0.16), 700); // the storm answers a clear night
+  const cut = G.strikes >= 3 && G.status === "player";
   s.innerHTML = `<p class="sum-line">${hits}/5 CASES EVALUATED</p>
     <p class="sum-effect">${effect}</p>${flagLine}${valeLine}` +
-    (hits === 5 ? `<span class="night-seal" aria-hidden="true">NIGHT CLEAR</span>` : "");
+    (cut ? `<p class="sum-vale warn">⚖ three marks — the desk closes your file</p>` : "") +
+    (hits === 5 && !cut ? `<span class="night-seal" aria-hidden="true">NIGHT CLEAR</span>` : "");
+  if (cut) strikeOut(); // the counter has the room — the dark before the news
   const actions = $("auditActions");
   actions.innerHTML = "";
   const btn = document.createElement("button");
-  btn.textContent = G.day >= DAYS.length - 1 ? "Last call →" : "Next day →";
-  btn.addEventListener("click", nextDay);
+  if (cut) {
+    btn.textContent = "Take the night shift anyway →";
+    btn.addEventListener("click", () => {
+      G.status = "juror";
+      ariaSay(ARIA.juror);
+      sfx.gearShift();
+      G.strikes = 3; // the marks are yours now — the desk counts them out
+      hud();
+      persist();
+      nextDay();
+    });
+  } else {
+    btn.textContent = G.day >= DAYS.length - 1 ? "Last call →" : "Next night →";
+    btn.addEventListener("click", nextDay);
+  }
   actions.appendChild(btn);
   btn.focus();
 }
@@ -2681,8 +2700,12 @@ function nextDay() {
   G.day++;
   if (G.day >= DAYS.length) return G.mode === "week" ? startFinale() : endGame();
   hud();
-  if (G.mode === "machine" || G.status === "player") {
+  // the week is night-only: the desk never wakes to a day docket. The
+  // forge bench (the machine's shift) and overtime keep their own days.
+  if (G.mode === "machine") {
     startDay();
+  } else if (G.status === "player") {
+    startAudit();
   } else {
     G.dayResults[G.day] = "juror";
     startAudit();
@@ -2690,21 +2713,29 @@ function nextDay() {
 }
 
 function shareText(title) {
-  // the machine's shift reads two axes: ☀️ did the proof hold the spec,
-  // 🌙 did the stub survive the wire — three nights, two blank squares
+  // the week reads one axis: 🌙 did you read the night — caught the
+  // machine, or let it through? The machine's shift keeps its two axes:
+  // ☀️ did the proof hold the spec, 🌙 did the stub survive the wire.
   const cell = (ok) => ok === true ? "🟩" : ok === false ? "🟥" : "⬛";
   const dayRow = G.mode === "machine"
     ? [0, 1, 2, 3, 4].map((i) => cell(G.forgeProof[i])).join("")
-    : DAYS.map((_, i) =>
-        G.dayResults[i] === "survived" ? "🟩" : G.dayResults[i] === "struck" ? "🟥" : "⬛").join("");
+    : G.mode === "ot"
+      ? DAYS.map((_, i) =>
+          G.dayResults[i] === "survived" ? "🟩" : G.dayResults[i] === "struck" ? "🟥" : "⬛").join("")
+      : null;
   const nightRow = G.mode === "machine"
     ? [0, 1, 2, 3, 4].map((i) => cell(G.forgeLog[i] === "slip" ? true : G.forgeLog[i] === "flag" ? false : undefined)).join("")
-    : DAYS.map((_, i) => {
-        const h = G.nightResults[i];
-        return h === 5 ? "🟩" : h >= 3 ? "🟨" : h === undefined ? "⬛" : "🟥";
-      }).join("");
+    : G.mode === "week"
+      ? DAYS.map((_, i) => {
+          const h = G.nightResults[i];
+          return h === 5 ? "🟩" : h >= 3 ? "🟨" : h === undefined ? "⬛" : "🟥";
+        }).join("")
+      : DAYS.map((_, i) => {
+          const h = G.nightResults[i];
+          return h === 5 ? "🟩" : h >= 3 ? "🟨" : h === undefined ? "⬛" : "🟥";
+        }).join("");
   const label = params.get("seed") ? SEED : `#${Math.floor((new Date(dailySeed + "T00:00") - new Date("2026-11-01T00:00")) / 864e5) + 1}`;
-  const costume = G.mode !== "machine" && G.culprit ? `today's machine wore ${G.culprit}'s face\n` : "";
+  const costume = G.mode !== "machine" && G.culprit ? `the machine wore ${G.culprit}'s face\n` : "";
   // the record is already filed by the time the share block renders —
   // endGame calls fileRecord() before shareText()
   const rec = loadRecord();
@@ -2712,9 +2743,14 @@ function shareText(title) {
   const career = rec && (rec.weeks + rec.shifts) > 0
     ? `\ncareer ${rank || "FILE CLERK"} — ${rec.catches} caught · ${rec.predHits}/${rec.predTotal || "—"} calls held`
     : "";
-  return `NIGHT SHIFT ${label}${G.mode === "ot" ? " · OVERTIME" : G.mode === "machine" ? " · THE MACHINE" : ""} — ${title}\n${costume}☀️ ${dayRow}\n🌙 ${nightRow}\nscore ${G.score}${career}\n${G.mode === "machine"
+  const rows = G.mode === "week"
+    ? `🌙 ${nightRow}`
+    : `☀️ ${dayRow}\n🌙 ${nightRow}`;
+  return `NIGHT SHIFT ${label}${G.mode === "ot" ? " · OVERTIME" : G.mode === "machine" ? " · THE MACHINE" : ""} — ${title}\n${costume}${rows}\nscore ${G.score}${career}\n${G.mode === "machine"
     ? (G.forgeFlags === 0 ? "I fooled the wire. All three nights." : "I almost fooled the wire. You?")
-    : "I out-read the machine. You?"}`;
+    : G.mode === "week"
+      ? "I read the postmark. The machine slipped. You?"
+      : "I out-read the machine. You?"}`;
 }
 
 function endGame() {
@@ -2755,8 +2791,11 @@ function endGame() {
   const titleIdx = Math.min(JURY_TITLES.length - 1, Math.floor((acc / 100) * JURY_TITLES.length));
 
   $("endTitle").textContent = title;
+  const survived = G.mode === "week" ? `${DAYS.length}/${DAYS.length}` : `${G.daysSurvived}/${DAYS.length}`;
   $("endStats").textContent =
-    `${G.daysSurvived}/${DAYS.length} days survived · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`;
+    G.mode === "week"
+      ? `${DAYS.length} nights worked · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`
+      : `${survived} days survived · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`;
   const lines = [];
   if (G.finaleTitle) lines.push(`${G.culprit} filed every proof 0.003 seconds after the riddle posted.`);
   if (G.valeCaught) lines.push(
@@ -2769,8 +2808,10 @@ function endGame() {
     ? "Three nights of forged postmarks. The wire filed you as human — the best kind of nobody."
     : `${G.forgeFlags} of 3 nights flagged — the wire kept a copy of every stub.`);
   else lines.push(title === "LAST HUMAN STANDING" || title === "OVERTIME CLEARED"
-    ? (G.mode === "ot" ? "Five generated shifts. You read every one of them." : "Five rules. You read every one of them.")
-    : `Cut on day ${G.elimDay || "?"} — the night shift made you: ${JURY_TITLES[titleIdx]}.`);
+    ? (G.mode === "ot" ? "Five generated shifts. You read every one of them."
+       : G.mode === "week" ? "Five nights. You read every postmark."
+       : "Five rules. You read every one of them.")
+    : `Cut on night ${G.elimDay || "?"} — the desk made you: ${JURY_TITLES[titleIdx]}.`);
   if (G.status === "juror" && G.finaleTitle) lines.push(`Night-shift title: ${JURY_TITLES[titleIdx]}.`);
   // the permanent record files itself — the ledger outlives the shift
   const rankBefore = clerkRank(loadRecord());
@@ -2840,6 +2881,9 @@ $("signBtn").addEventListener("click", signRule);
    Styled HTML so it prints to PDF as a physical case folder. */
 function caseFileHTML(title, seal = "", portrait = "") {
   const esc = (t) => String(t).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  // the week is night-only: one column for the shift. Overtime and the
+  // forge bench keep the day/night split.
+  const weekMode = G.mode === "week";
   const rows = DAYS.map((d, i) => {
     let night;
     if (G.mode === "machine") {
@@ -2850,8 +2894,8 @@ function caseFileHTML(title, seal = "", portrait = "") {
       const h = G.nightResults[i];
       night = h === undefined ? "—" : `${h}/5 upheld`;
     }
-    return `<tr><td>${esc(d.dayLabel)}</td><td>${esc(d.theme)}</td>
-      <td>${esc(G.dayResults[i] || "—")}</td><td>${esc(night)}</td></tr>`;
+    const day = weekMode ? "" : `<td>${esc(G.dayResults[i] || "—")}</td>`;
+    return `<tr><td>${esc(d.dayLabel)}</td><td>${esc(d.theme)}</td>${day}<td>${esc(night)}</td></tr>`;
   }).join("");
   const wire = (G.wire || []).map((w) => `<li>${esc(w)}</li>`).join("");
   return `<!doctype html><html><head><meta charset="utf-8"><title>NIGHT SHIFT — case file ${esc(SEED)}</title>
@@ -2878,7 +2922,7 @@ function caseFileHTML(title, seal = "", portrait = "") {
 <h1>NIGHT SHIFT — CASE FILE</h1>
 ${seal ? `<img class="seal" src="${seal}" alt="" />` : ""}
 <div class="meta">seed ${esc(SEED)} · ${G.mode === "ot" ? "overtime" : G.mode === "machine" ? "the machine's shift" : "week"} · ${esc(title)}</div>
-<table><tr><th>shift</th><th>theme</th><th>day</th><th>night</th></tr>${rows}</table>
+<table><tr><th>shift</th><th>theme</th>${weekMode ? "" : "<th>day</th>"}<th>night</th></tr>${rows}</table>
 <div class="score">SCORE ${G.score} · AUDITS ${G.auditTotal ? Math.round((G.auditHits / G.auditTotal) * 100) : 0}% ACCURACY
 ${G.culprit ? `<br>the machine wore <b>${esc(G.culprit)}</b>'s face — it wears a new one every docket${portrait ? ` <img class="face-portrait" src="${portrait}" alt="" />` : ""}` : ""}</div>
 <div class="stamp">${esc(title)}</div>
@@ -3027,7 +3071,12 @@ function toggleHandbook(force) {
   const hb = $("handbook");
   const show = force === undefined ? hb.classList.contains("hidden") : force;
   hb.classList.toggle("hidden", !show);
-  if (show) sfx.click();
+  if (show) {
+    sfx.click();
+    // the day section only exists in modes that have a day (overtime,
+    // the forge bench) — the week is five nights, nothing else
+    $("hbDay").classList.toggle("hidden", G.mode === "week");
+  }
 }
 $("hbClose").addEventListener("click", () => toggleHandbook(false));
 addEventListener("keydown", (e) => {
@@ -3089,11 +3138,13 @@ function attractNightStep() {
     <div class="at-wire">N1·${v.pick === "SUS" ? "anomaly quarantined · +100" : "stamp upheld · +50"}</div>
   </div>`;
 }
+/* THE NIGHT act, looping: the spine IS the game, so the reel never shows
+ * a day docket — it stamps postmarks, catches the machine, all night. */
 function attractNightAct() {
   attractIdx = 0;
   attractNightStep();
   for (let i = 1; i <= ATTRACT.length; i++) atDelay(attractNightStep, i * 4300);
-  atDelay(() => attractDayAct(), (ATTRACT.length + 1) * 4300 + 600);
+  atDelay(attractNightAct, (ATTRACT.length + 1) * 4300 + 600);
 }
 /* THE DAY act — the deduction itself, performed with real dealt content */
 function attractDayAct() {
@@ -3387,7 +3438,8 @@ function resumeGame(s) {
     : G.mode === "machine"
       ? LOGIC.genDays(LOGIC.makeRng(`${s.seed}|machinedays`), CARDS, 3)
       : DATA.DAYS;
-  if (G.mode === "machine") DAYS.forEach((d, i) => { d.dayLabel = `NIGHT ${i + 1}`; });
+  if (G.mode === "machine" || G.mode === "week")
+    DAYS.forEach((d, i) => { d.dayLabel = `NIGHT ${i + 1}`; });
   setCulpritFromSeed(s.seed);
   Object.assign(G, {
     day: s.day, status: s.status, strikes: s.strikes, score: s.score,
@@ -3464,6 +3516,7 @@ function startGame(seed) {
   SEED = seed;
   G.mode = "week";
   DAYS = DATA.DAYS;
+  DAYS.forEach((d, i) => { d.dayLabel = `NIGHT ${i + 1}`; }); // the week is night-only
   setCulpritFromSeed(seed);
   clearSave(); // a fresh clock-in ends any unfinished shift
   audio();

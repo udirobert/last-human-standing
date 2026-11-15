@@ -31,7 +31,7 @@ class FakeAC {
   createPeriodicWave() { return {}; }
 }
 
-const dom = await JSDOM.fromFile("/Users/udingethe/Dev/last-human-standing/game-off/index.html", {
+const dom = await JSDOM.fromFile(new URL("index.html", import.meta.url).pathname, {
   runScripts: "dangerously",
   resources: "usable",
   pretendToBeVisual: true,

@@ -147,22 +147,23 @@
   <div class="hb-card">
     <div class="hb-head"><b>CLERK'S HANDBOOK</b><button id="hbClose" aria-label="Close handbook">✕</button></div>
     <div class="hb-cols">
-      <section><h4>THE DAY</h4>
+      <section id="hbDay" class="hb-day"><h4>THE DAY</h4>
         <p>Read ARIA's docket — ruled HUMAN or SUS. Deduce the sealed rule from what passes and what fails.</p>
         <p><kbd>1–4</kbd> pick a proof · <kbd>Shift</kbd> cycles the loupe · <kbd>Enter</kbd> files it.</p>
         <p>Call the rule first — <b>WHERE / WHEN / WHO / IN·OUT</b> — the desk scores your read when the seal comes off.</p>
         <p>File a card that fails the rule and it's a <b class="hb-red">STRIKE</b>. Three strikes and you're cut to jury duty.</p>
       </section>
-      <section><h4>THE NIGHT</h4>
-        <p>Stamp each filing <b>HUMAN</b> or <b class="hb-red">SUS</b> — the paper AND the postmark both count.</p>
-        <p><kbd>S</kbd>/<kbd>←</kbd> SUS · <kbd>H</kbd>/<kbd>→</kbd> HUMAN. Stamping SUS on clean paper asks for grounds — point at the field that read wrong.</p>
-        <p>Five cases a night. One is contested — right pays double. A flawless night earns <b>NIGHT CLEAR</b>.</p>
+      <section><h4>THE NIGHT — SPOT THE MACHINE</h4>
+        <p>Five filings a night. One is a machine. Stamp each <b>HUMAN</b> or <b class="hb-red">SUS</b> — the only question is: is this filer the machine?</p>
+        <p><kbd>S</kbd>/<kbd>←</kbd> SUS · <kbd>H</kbd>/<kbd>→</kbd> HUMAN. Stamp SUS and name the postmark field that reads wrong — point at a real tell and the catch is yours (<b>+100</b>). Name a human's and it's a <b class="hb-red">STRIKE</b>.</p>
+        <p>One filing is contested — right pays double. A flawless night earns <b>NIGHT CLEAR</b>.</p>
       </section>
-      <section><h4>THE POSTMARK</h4>
+      <section><h4>THE POSTMARK — THE ONLY TESTIMONY</h4>
         <p class="hb-mono">LATENCY — round-trip time. Machines answer before the lamp warms.</p>
-        <p class="hb-mono">ORIGIN — where the packet was sent from.</p>
+        <p class="hb-mono">ORIGIN — where the packet was sent from. A gate named zero is not a person's door.</p>
         <p class="hb-mono">RELAYS — hops the filing crossed. Humans route; machines don't.</p>
-        <p class="hb-mono">RECEIPT — delay between post and receipt. Lateness is human.</p>
+        <p class="hb-mono">RECEIPT — delay between post and receipt. Lateness is human. A receipt before its post is not.</p>
+        <p>The tell is one sentence: <b>it reads too clean to be a person.</b></p>
       </section>
       <section><h4>THE DESK</h4>
         <p><kbd>?</kbd> this card · <kbd>M</kbd> mute · tap a stamped case to continue.</p>
@@ -248,13 +249,13 @@
       <rect x="0" y="0" width="640" height="300" filter="url(#paperGrain)" opacity=".06"/>
     </svg>
     </div>
-    <p class="sub">Deduce by day. Enforce by night. Catch the machine.</p>
+    <p class="sub">Five filings a night. One of them is a machine. The postmark gives it away.</p>
     <div class="steps">
-      <div class="step" data-tip="ARIA rules a docket of filings each day. Her rule is sealed — deduce it from what passes and what fails."><b>1 · READ</b><span>her rulings</span></div>
+      <div class="step" data-tip="Every filing carries a postmark: LATENCY · ORIGIN · RELAYS · RECEIPT. Humans file messy — a machine reads clean."><b>1 · READ</b><span>the postmark</span></div>
       <div class="step-arrow" aria-hidden="true">→</div>
-      <div class="step" data-tip="Pick one of four evidence cards and file it against the rule you inferred. File wrong and it's a strike."><b>2 · FILE</b><span>your card</span></div>
+      <div class="step" data-tip="Stamp each filing HUMAN or SUS. Suspect the machine — but the postmark has to hold it."><b>2 · STAMP</b><span>HUMAN or SUS</span></div>
       <div class="step-arrow" aria-hidden="true">→</div>
-      <div class="step" data-tip="At night, stamp everyone else's filings HUMAN or SUS. The paper and the postmark can disagree — that's where the machine slips."><b>3 · STAMP</b><span>HUMAN or SUS</span></div>
+      <div class="step" data-tip="Point at the field that reads wrong. Name a real tell and the catch is yours (+100). Name a human's and it's a strike."><b>3 · FLAG</b><span>the tell</span></div>
     </div>
     <!-- first read: the verb pair. second: resume/career. third: alternates + ticker -->
     <div class="resume-slot" id="resumeSlot"></div>
@@ -272,10 +273,10 @@
     <p class="career-line hidden" id="careerLine"></p>
     <div class="shift-ledger" id="shiftLedger" aria-label="What shifts in this game">
       <span class="sl-k">shift (v.)</span>
-      <span class="sl-stage"><span class="sl-i on"><b>the facts</b> — the loupe narrows the desk to one column</span><span class="sl-i"><b>the rule</b> — head office amends mid-night</span><span class="sl-i"><b>the desk</b> — judged by day, judging by night</span><span class="sl-i"><b>the truth</b> — the machine shifts its tells, and its face</span><span class="sl-i"><b>who signs</b> — the last rule is yours to write</span></span>
+      <span class="sl-stage"><span class="sl-i on"><b>the postmark</b> — the only testimony on the desk</span><span class="sl-i"><b>the machine</b> — its tells and face shift every night</span><span class="sl-i"><b>the desk</b> — five nights, and the strike count</span><span class="sl-i"><b>the wire</b> — it remembers every stamp you make</span><span class="sl-i"><b>who signs</b> — the last rule is yours to write</span></span>
     </div>
     <div class="title-foot">
-      <p class="hint">Five shifts. One machine, wearing a new face every docket. Overtime generates fresh rules nightly. Sound recommended — <kbd>?</kbd> opens the handbook.</p>
+      <p class="hint">Five nights. One machine, wearing a new face every night. The postmark is the only testimony. Overtime runs a fresh docket; the Machine's Shift flips the desk. Sound recommended — <kbd>?</kbd> opens the handbook.</p>
       <p class="music-credit">music · <a href="https://weloveindies.com" rel="noopener">WeLoveIndies</a> (F/demo license)</p>
     </div>
     <!-- attract reel: after idle, the desk keeps working without you.
@@ -409,8 +410,8 @@
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span><span class="amend-ack">— press or tap to acknowledge —</span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
-        <button id="susBtn" class="vb s shift-paddle-left" data-tip="Stamp SUS — the paper is wrong somewhere. Clean paper? Name the postmark field that flagged it. (S or ←)"><span class="stamp-ring s" aria-hidden="true">S</span> SUS</button>
-        <button id="humanBtn" class="vb h shift-paddle-right" data-tip="Stamp HUMAN — the filing goes through. (H or →)">HUMAN <span class="stamp-ring h" aria-hidden="true">H</span></button>
+        <button id="susBtn" class="vb s shift-paddle-left" data-tip="Stamp SUS — you think this filing is the machine. Then name the postmark field that gives it away. (S or ←)"><span class="stamp-ring s" aria-hidden="true">S</span> SUS</button>
+        <button id="humanBtn" class="vb h shift-paddle-right" data-tip="Stamp HUMAN — this filer is a person. Three wrong stamps and the desk cuts you. (H or →)">HUMAN <span class="stamp-ring h" aria-hidden="true">H</span></button>
         <div id="auditKeyHint" class="keyhint hidden">← SUS · → HUMAN · ↵</div>
       </div>
       <div id="auditSummary" class="hidden"></div>
@@ -536,10 +537,10 @@
     </div>
     <div class="shift-ledger read-3">
       <span class="sl-k">shift (v.)</span>
-      <span class="sl-i"><b>the facts</b> — the loupe narrows the desk to one column</span>
-      <span class="sl-i"><b>the rule</b> — head office amends mid-night</span>
-      <span class="sl-i"><b>the desk</b> — judged by day, judging by night</span>
-      <span class="sl-i"><b>the truth</b> — the machine shifted its tells, and its face</span>
+      <span class="sl-i"><b>the postmark</b> — the only testimony on the desk</span>
+      <span class="sl-i"><b>the machine</b> — its tells and face shifted every night</span>
+      <span class="sl-i"><b>the desk</b> — five nights, and the strike count</span>
+      <span class="sl-i"><b>the wire</b> — it remembered every stamp you made</span>
       <span class="sl-i"><b>who signs</b> — you signed the last rule</span>
     </div>
     <a class="live-link" href="https://lasthumanstanding.thisyearnofear.com" target="_blank" rel="noopener">
