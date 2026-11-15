@@ -1229,11 +1229,17 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 /* the wire monitor — a quiet desk prop, not a third stamp */
 .finale-bar {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
 }
 .finale-bar .sec-head { margin-bottom: 0; }
+.finale-lead {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--dim);
+  max-width: 64ch;
+}
 /* The packet stub — a postmark strip printed at the foot of every filing.
    Always on the card; the same muted columns for every filer. */
 /* the postmark is evidence — it gets a legible voice, not a whisper */

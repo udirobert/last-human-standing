@@ -434,7 +434,7 @@ const INSTR = {
   night: "Five filings, one is a machine. Read the postmark — stamp it SUS, and point at the field that gives it away.",
   cold1: "His judgment is on the filing below. Read it — tap anywhere to continue.",
   cold2: "Compare the claim to the postmark. Then stamp SUS or HUMAN.",
-  finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
+  finale: "The last filing of the week is the machine's. Read its postmark. Sign the clause — and it's cut. Or sign the one that lets it belong.",
   forge: "The proof is filed. Now forge the postmark — 1–4 patch a field, Enter transmits. Unspent cover banks overnight.",
 };
 function setInstr(key) { $("instr").textContent = INSTR[key]; }
@@ -1930,7 +1930,7 @@ function renderRuleChips(rule, amended) {
     (amended ? rule.map((c) => `<span class="chip read-3">${c.text}</span>`).join("") : "") +
     (dayHasAmend() && G.day === 2 ? newTag("amend", 2) : "");
 }
-function dayHasAmend() { return !!DAYS[G.day].amend; }
+function dayHasAmend() { return !!(DAYS[G.day] || {}).amend; }
 
 /* Stamping SUS on paper that passes needs grounds: the flag row asks which
  * field on the packet read wrong. A pointed field that holds is the catch;
@@ -2560,7 +2560,10 @@ function paintAuditSummary() {
       nextDay();
     });
   } else {
-    btn.textContent = G.day >= DAYS.length - 1 ? "Last call →" : "Next night →";
+    const last = G.day >= DAYS.length - 1;
+    btn.textContent = G.mode === "week"
+      ? (last ? "Last call →" : "Next night →")
+      : "Next day →";
     btn.addEventListener("click", nextDay);
   }
   actions.appendChild(btn);
@@ -2572,7 +2575,7 @@ function paintAuditSummary() {
 function startFinale(resume) {
   showOnly("finale");
   setInstr("finale");
-  banner("LAST CALL — write the rule");
+  banner("LAST CALL — the machine's final proof");
   if (!resume) {
     G.finaleChoice = null;
     // the finale is built around whoever the machine turned out to be this
@@ -2592,11 +2595,11 @@ function startFinale(resume) {
   buildFinale();
   paintFinale();
   if (!resume) {
-    // the last line she says depends on whether you ever flagged the postmark
+    // the last line she says depends on whether you ever read the postmark
     if (G.valeCaught > 0) {
-      ariaSay(["You flagged the machine once on the postmark. Now write the clause only it can't file."], "smug");
+      ariaSay(["You caught it on the postmark. Now the wire sees what you saw — sign the clause only it couldn't file."], "smug");
     } else {
-      ariaSay(["My rules only check facts. Read the ledger the way it was filed — not the way it was argued."]);
+      ariaSay(["Five nights it filed, and it never once read the postmark. It's about to be read for the last time."]);
     }
   }
   persist();
@@ -2680,15 +2683,15 @@ function signRule() {
   if (botCut && humanCut.length === 0) {
     title = G.status === "player" ? "LAST HUMAN STANDING" : "DAWN";
     line = G.valeCaught > 0
-      ? `You wrote the one rule ${G.culprit} couldn't. You'd been reading postmarks all week — the docket is human again.`
-      : `You wrote the one rule ${G.culprit} couldn't. The packet said what the paper never could — the docket is human again.`;
+      ? `You read the postmark all week, and it finally held. You cut ${G.culprit} and only ${G.culprit}. The docket is human again — and quiet.`
+      : `You cut ${G.culprit} and only ${G.culprit}. The postmark said what the paper never could. The docket is human again — and quiet.`;
   } else if (botCut) {
     title = "COLLATERAL";
-    line = `${G.culprit} is gone. So are ${humanCut.join(", ")}. The rule didn't care who.`;
+    line = `${G.culprit} is gone. So are ${humanCut.join(", ")}. The clause didn't care who was on the other side of the cut.`;
   } else {
     title = "THE DAY SHIFT IS AUTOMATED";
-    line = `You cut ${joinNames(humanCut)} — every human on the docket.` +
-      ` ${G.culprit} filed at +0.003s, as always. Tomorrow it argues your case.`;
+    line = `You let it belong. ${G.culprit} filed at +0.003s, as it always has, and the clause that should have cut it cut only ` +
+      `${joinNames(humanCut)}. Tomorrow the desk is its, and you'll sign what it files.`;
   }
   G.finaleTitle = title;
   G.finaleLine = line;
@@ -2700,11 +2703,12 @@ function nextDay() {
   G.day++;
   if (G.day >= DAYS.length) return G.mode === "week" ? startFinale() : endGame();
   hud();
-  // the week is night-only: the desk never wakes to a day docket. The
-  // forge bench (the machine's shift) and overtime keep their own days.
-  if (G.mode === "machine") {
+  // the week is night-only: the desk never wakes to a day docket. Overtime
+  // and the forge bench (the machine's shift) keep their own days; a cut
+  // clerk watches the rest of the shift as a juror.
+  if (G.mode === "machine" || (G.mode === "ot" && G.status === "player")) {
     startDay();
-  } else if (G.status === "player") {
+  } else if (G.mode === "week" && G.status === "player") {
     startAudit();
   } else {
     G.dayResults[G.day] = "juror";
@@ -2803,7 +2807,7 @@ function endGame() {
   if (G.valeEscapes) lines.push(
     `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} before tonight.`);
   if (G.finaleLine) lines.push(G.finaleLine);
-  if (G.mode !== "machine" && G.culprit) lines.push(`Today's machine wore ${G.culprit}'s face — it wears a new one every docket.`);
+  if (G.mode !== "machine" && G.culprit) lines.push(`Today's machine wore ${G.culprit}'s face — it wears a new one every docket, but its tells shift every night.`);
   else if (G.mode === "machine") lines.push(G.forgeFlags === 0
     ? "Three nights of forged postmarks. The wire filed you as human — the best kind of nobody."
     : `${G.forgeFlags} of 3 nights flagged — the wire kept a copy of every stub.`);

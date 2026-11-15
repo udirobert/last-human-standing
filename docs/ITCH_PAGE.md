@@ -1,6 +1,14 @@
 # NIGHT SHIFT — itch page copy + trailer shot list
 
-> **2026-11-14:** the pivot-5 game-side overhaul (see `GAME_OFF_2026.md`) repaints the game and changes the copy below. **W7 done — the media kit in `docs/itch-assets/` is regenerated from the painted build**: `cover.png` (painted poster), `catch.gif` (5-frame grease-circle catch), `tray.png` (cold-open compare strip), `flag.png`, `day.png`, `verdict.png`, `amend.png`, `finale.png`, `ending.png`. Still re-verify the copy blocks below against the shipped build before publishing. Canonical tagline: "Deduce by day. Enforce by night. Catch the machine."
+> **2026-11-15:** the spine rebuild (see `SPOT_THE_MACHINE.md`) — the whole
+> game is now "spot the machine on the postmark." The day rule-deduction is
+> out of the core; the night postmark is the star. The copy below is
+> rewritten to match. **Re-verify every block against the shipped build
+> before publishing.** The old `amend.png` / `day.png` / `verdict.png`
+> media are stale — the week no longer has amendments or a day docket;
+> re-capture from the audit + finale instead. Canonical tagline:
+> "One filing on the docket isn't human. The postmark gives it away.
+> Spot the machine."
 
 Game Off 2026 entry. This doc is the shippable source for the itch page and
 the trailer. Copy sections verbatim; capture instructions at the bottom are
@@ -8,114 +16,141 @@ for whoever has the game open in a browser (record locally, upload to itch).
 
 ## Page title + tagline
 
-**NIGHT SHIFT** — *Deduce by day. Enforce by night. Catch the machine.*
+**NIGHT SHIFT** — *One filing on the docket isn't human. The postmark gives
+it away. Spot the machine.*
 
-(One sentence, verb + fantasy + twist. This line also opens the trailer.)
+(One question, repeated on every screen. This line also opens the trailer.)
 
 ## Short description (itch "short description" field)
 
-The bureau demands proof of humanity as paperwork — and the only
-admissible evidence is a life. ARIA runs a secret rule over every filing's
-four facts. By day you deduce it and file the card she'd pass; by night
-you stamp everyone else's filings until one filer turns out not to be human
-at all. And the saddest filing on the docket is the one trying to belong.
-A five-day deduction game about day shifts, night shifts, and the shift
-in between.
+You work the night desk. Five filings a night, each stamped with a
+postmark — and one filer is a machine wearing a human face. The paper can't
+catch it; the postmark always can. *It reads too clean to be a person.*
+Stamp it `SUS`, point at the tell, and the catch is yours. Miss three and
+you're cut to jury duty. When the week ends, you read its final proof — and
+you choose whether to cut it, or let it belong. A five-night deduction game
+about the loneliest filing on the docket.
 
 ## Full description
 
-**☀ DAY SHIFT.** ARIA, the auditor, holds a secret rule — one to three
-criteria over every filing's four facts (where · when · who · in/out). Her
-earlier rulings are on the docket: two she passed, a few she struck. Read
-them like a puzzle. File the one card she'd pass. A wrong filing is a
-strike; three strikes and you're cut to nights for good.
+**🌙 THE NIGHT DESK.** Every filing carries a postmark at the foot of the
+card — LATENCY · ORIGIN · RELAYS · RECEIPT — printed the same for every
+filer, nothing flagged. Humans file messy: a slow round-trip, a real gate,
+a relay path, a receipt with a little human patience in it. A machine's
+postmark reads too clean. **The only question, every night, is: is this
+filer the machine?**
 
-**🌙 NIGHT SHIFT.** Now you're the auditor and the rule is in plain sight.
-Five filings a night, one at a time — stamp each `S`US or `H`UMAN (`S`/`H`/arrows).
-But something is wrong: one filer on this docket isn't human, and the paper
-can't catch it — every filing passes the rule. Every filing also carries its
-packet postmark at the foot of the card — latency, origin, hops, receipt —
-and the machine's reads wrong. Stamp `SUS` on clean paper and the desk asks
-which field flagged it: point at the evidence for a +100 anomaly bounty —
-a blind hunch is just a wrong stamp. One filing a night is **contested**:
-call it right for double pay (+100).
-From day 3, head office **amends** the rule mid-shift — cases before the banner follow
-the old rule, cases after follow the new one, and trap filings flip their verdicts.
-Days 4–5 hide a **clerical error** on the docket: a SUS card stamped HUMAN. Find it.
+Stamp each filing `HUMAN` or `SUS` (`H`/`S`/`←`/`→`). `HUMAN` on a person is
+upheld. `HUMAN` on the machine lets it through. `SUS` is an accusation — and
+an accusation needs grounds: the desk asks which postmark field reads wrong.
+Point at a **real tell** and the catch is yours (+100, circled in red grease
+pencil). Point at a human's field, or name no grounds, and the hunch is a
+wrong stamp — and a wrong stamp is a **strike**. Three strikes and the desk
+closes your file: jury duty, the rest of the week read from the other side.
 
-**✒ LAST CALL.** After night five, you write the rule yourself. One filer
-isn't human, and ARIA's rules can't catch it. Choose the criterion that
-cuts it — and only it.
+**The tells shift.** The machine wears the same face all week, but its
+postmark changes with it — two obvious tells on night one, a single
+impossible field by night five, while the humans' packets tidy up around
+it. Nothing is hidden, and nothing is flagged for you. The postmark is the
+only testimony.
+
+**✒ LAST CALL — THE MACHINE'S FINAL PROOF.** After night five, the last
+docket of the week arrives, postmarks and all. Sign the clause that cuts the
+machine — and only the machine — or sign the one that cuts only the humans
+and lets it belong. Three endings: **LAST HUMAN STANDING** (clean cut),
+**COLLATERAL** (the clause cut the machine and people), or **THE DAY SHIFT
+IS AUTOMATED** (it belongs — tomorrow the desk is its).
 
 Everything is deterministic — no noise, no crowd votes, no luck. The same
 docket deals the same way every time. Today's docket is seeded by date
 (Wordle-style, one per day); share your grid and compare. `?seed=` replays
 any docket.
 
-## Three games in one (no menu — just play)
+## One game, three ways to read it (no menu — just play)
 
 **📖 THE STORY.** Clock in and you're already on the night desk — the
-outgoing clerk left a tray — then work all five nights: a curated rule
-curve from two-criterion tutorials to the liar, the amendments, and the
-filer who isn't human. One button, one arc, one ending. This is the game.
+outgoing clerk left a tray that teaches the whole game in ninety seconds —
+then work all five nights: the tells degrade, the wire keeps score, the
+machine's loneliness creeps in, and the final proof asks you what a rule
+never could: *does it get to belong?* One button, one arc, one choice. This
+is the game.
 
-**📅 THE DAILY.** Every date deals a fresh docket — same rules, new reads.
-Come back tomorrow, or race today's seed against a friend link-for-link.
-The share grid is the multiplayer: no lobby, no lobby wait, just grids.
+**📅 THE DAILY.** Every date deals a fresh docket — same spine, new face,
+new tells. Come back tomorrow, or race today's seed against a friend
+link-for-link. The share card is the multiplayer: no lobby, just grids.
 
-**🏆 THE READERS.** Compare verdicts, not scores. Post your grid in the jam
-thread with one question ("day 3's liar got me — did anyone spot it
-blind?"). Best conversations get collected into community collections.
+**🏆 THE READERS.** Compare reads, not scores. Post your card in the jam
+thread with one question ("night 4 — it wore TESS's face and the only tell
+was the receipt. Did you get it?"). Best conversations get collected into
+community collections.
 
 ## Controls (page section, keep short)
 
-- **Shift** *(Day)*: tap to walk a loupe across the fact columns (where → when → who → in/out) — it dims the rest, never hides them.
-- Every night filing carries its packet postmark (latency · origin · hops · receipt) on the card. Stamp `SUS` on paper that passes and the desk asks which field flagged it — a pointed catch pays +100, a hunch is a wrong stamp.
-- `1–4`: select a card · `Enter` / `Space`: file card (Day) / advance · `S`/`H` or `←`/`→`: stamp (Night)
-- `O`: file under oath (pass clears a strike, miss costs two) · `M`: mute audio
+- Every filing carries its postmark (LATENCY · ORIGIN · RELAYS · RECEIPT)
+  on the card. Stamp `SUS` and the desk asks which field reads wrong — point
+  at a real tell for the catch (+100); a hunch is a strike.
+- `S`/`H` or `←`/`→`: stamp · `Enter`: continue · `M`: mute audio
+- Overtime and the Machine's Shift add `1–4` (select/patch), `Shift` (focus
+  loupe), `O` (oath).
 - Mobile: everything is 100% touch-operable.
 
 ## Feature bullets (for the page sidebar / trailer cards)
 
-- Every day opens on a shift brief — the riddle types itself, then the desk deals in
-- A desk that feels the week: rain on the window each night, thunder under the audit, grease-pencil marks on the evidence you catch
-- Filings with fingerprints: human cards land off-square with marginal notes — the machine's arrives dead straight, instantly printed
-- Five staged days: pay-for-clues, oaths, mid-night rule amendments, a liar on the docket
-- An escalating Turing mystery you discover, not a tutorial — catch the automated filer before dawn
-- A composed noir score — upright bass, brushes, charleston piano, muted horn — arranged live per shift, with licensed WeLoveIndies bookend tracks on the title and dawn
+- One question on every screen: *which filing is the machine?* — legible in
+  sixty seconds
+- The postmark is the only testimony: four fields, the same muted strip for
+  every filer, nothing flagged — the tell is "it reads too clean"
+- The tells shift night to night: two obvious, down to a single impossible
+  field, while the humans wear around them
+- An escalating Turing mystery you discover, not a tutorial — and a loneliness
+  you can't deduce, only feel
+- The "belong" finale: you can catch the machine's final proof — but the
+  ending is a *choice*, not a correct answer
+- A desk that feels the week: rain on the window each night, thunder under
+  the audit, grease-pencil marks on the evidence you catch
+- A composed noir score — upright bass, brushes, charleston piano, muted
+  horn — arranged live per shift, with licensed WeLoveIndies bookend tracks
+  on the title and dawn
 - Verdicts explained line by line — losses teach, never confuse
-- Daily seeded docket + share grid
+- Daily seeded docket + share card + printable case file
 - Runs in the browser, no install; keyboard + touch
 - Zero dependencies, responsive HTML5; save/resume mid-shift
 
 ## Credits
 
-Painted key art and card vignettes generated with MiniMax H3 (fal.ai) · brass seal render generated with Hyper3D Rodin · the score is composed WebAudio — no AI-music service · title/dawn music licensed from WeLoveIndies (F/demo) · paper UI is inline SVG. All proceedings fictional.
+Painted key art and card vignettes generated with MiniMax H3 (fal.ai) · brass
+seal render generated with Hyper3D Rodin · the score is composed WebAudio —
+no AI-music service · title/dawn music licensed from WeLoveIndies (F/demo) ·
+paper UI is inline SVG. All proceedings fictional.
 
 ## Tags (itch)
 
 puzzle, mystery, deduction, detective, singleplayer, browser, atmospheric,
-story-rich, game-off-2026
+story-rich, noir, game-off-2026
 
-## Trailer — "Tell, Show, Repeat" (~50 seconds)
+## Trailer — "The Flip" (~50 seconds)
 
-Template: title card stating one idea → gameplay proving it → repeat.
-Music: the in-game loop. End on the amendment + stamp montage (the two
-trailer beats), then the end slate. No voiceover; let the stamp SFX punctuate.
+Template: state the one question → prove it on the postmark → the choice.
+Music: the in-game loop. End on the grease-circle catch, then the end slate.
+No voiceover; let the stamp SFX punctuate. The whole trailer is the flip
+moment — the stamp lands, the grounds row appears, the tell is named, the
+circle bites.
 
 | # | Card (3s)                              | Footage (5–6s)                                              |
 |---|----------------------------------------|-------------------------------------------------------------|
-| 1 | ARIA HAS A SECRET RULE                 | Day 1: riddle + docket, cursor hovering precedent rows      |
-| 2 | READ HER RULINGS. FILE WHAT SHE'D PASS | Select card → file (flight to the tray) → staged fact-row reveal → SURVIVED stamp biting down, card recoil |
-| 3 | AT NIGHT, YOU ARE THE AUDITOR          | Night stamping: SUS/HUMAN stamps, streak ×3 popping         |
-| 4 | THE RULE CAN CHANGE MID-SHIFT          | **Amendment banner firing**: klaxon, chips struck one by one, ghost line visible |
-| 5 | ONE FILER ISN'T HUMAN                  | Finale ledger, the terminal's log over five packets, option select → rule sign |
-| 6 | Montage (8s, quick cuts on the beat)   | contested ×2 stamp · clock under 3s · third-strike CUT (room goes dark) · COLLATERAL / LAST HUMAN STANDING titles |
+| 1 | ONE FILING ISN'T HUMAN                 | Title card, then the night desk: a filing lands, postmark strip visible at the foot |
+| 2 | THE POSTMARK GIVES IT AWAY             | Read the postmark: a human's messy receipt, then the machine's `0.0ms` / `GATE 0` field — the contrast, side by side |
+| 3 | SPOT THE MACHINE                       | The flip: `SUS` stamp bites down → the grounds row opens → the tell field is named → the red grease circle draws on it, +100 bounces up |
+| 4 | THE TELLS SHIFT                        | Quick cuts night → night: two tells, one tell, a single impossible field — the machine wearing the humans' clothing tighter |
+| 5 | DOES IT GET TO BELONG?                 | The finale docket, the machine's final proof, the clause chosen, the pen signs — then the ending title |
+| 6 | Montage (6s, quick cuts on the beat)   | contested ×2 stamp · third-strike CUT (room goes dark, red CUT) · LAST HUMAN STANDING / THE DAY SHIFT IS AUTOMATED titles |
 | 7 | End slate (4s)                         | NIGHT SHIFT · Game Off 2026 · play in your browser · [itch URL] |
 
 Capture notes: hide the cursor where possible, record at 1280×720+, cut on
-the stamp thud. Keep every shot legible in 2 seconds — if a shot needs
-explaining, it doesn't belong in the trailer.
+the stamp thud. The catch (card 3) is the hero shot — hold it long enough
+that a viewer who's never played it understands the game from that one beat.
+Keep every shot legible in 2 seconds — if a shot needs explaining, it
+doesn't belong in the trailer.
 
 ## Cover + GIF
 
@@ -128,14 +163,14 @@ Assets in `docs/itch-assets/` — produced by scripted Chrome runs against
 - **Animated cover (preferred):** `catch.gif` (~285KB, ~5s, 630×500) —
   opens on the painted poster held ~1.5s (the browse grid shows frame 1
   as a static still until hover, so frame 1 must be the strongest
-  read), then the SUS stamp, the accusation row, the grease circle
-  drawing on the RCPT field, TRAY CLEARED. The game's signature moment,
-  no strobing.
-- **Screenshots:** `tray.png` (the cold-open desk + postmark stub),
-  `flag.png` (the accusation row open), `day.png` (the deduction docket),
-  `verdict.png` (a strike with the needed criterion named),
-  `amend.png` (the amendment banner mid-hold), `finale.png` (the ledger +
-  rule-writing decree).
+  read), then the SUS stamp, the grounds row, the grease circle drawing
+  on the tell field, the +100. The game's signature moment, no strobing.
+- **Screenshots (re-capture for the rebuilt spine):** `tray.png` (the
+  cold-open desk + postmark stub), `flag.png` (the grounds row open on a
+  SUS), `night.png` (a night case mid-stamp, postmark legible),
+  `finale.png` (the machine's final proof docket + the signed decree).
+  The old `day.png` / `verdict.png` / `amend.png` are stale — the week has
+  no day docket, verdict, or amendment anymore.
 
 ## PWYW ladder (post-jam, in order — dashboard ops, not code)
 
