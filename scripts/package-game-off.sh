@@ -21,6 +21,12 @@ node "$GAME_DIR/test-night.mjs"
 echo "=== 1d. Verifying the Rebuilt Week (tray → 5 nights → finale) ==="
 node "$GAME_DIR/test-week.mjs"
 
+echo "=== 1e. Verifying the Belong Finale (3 endings, 12 seeds) ==="
+node "$GAME_DIR/test-finale.mjs"
+
+echo "=== 1f. Verifying Overtime Still Runs Its Days (spine trim) ==="
+node "$GAME_DIR/test-overtime.mjs"
+
 echo "=== 2. Building itch.io HTML5 Zip Archive ==="
 mkdir -p "$ROOT_DIR/dist"
 cd "$GAME_DIR"
