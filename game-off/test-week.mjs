@@ -123,6 +123,23 @@ ok("the machine was caught at least once this week", caughtAny);
 ok("week ends at the finale", G().phase === "finale");
 ok("five nights were worked", G().nightResults.length === 5);
 
+/* — through the choice and onto the dawn screen (the last screen a judge sees) — */
+const rows = G().finaleRows, culprit = G().culprit, opts = G().finaleOpts;
+const LOGIC = () => window.eval("LOGIC");
+const good = opts.find((o) => rows.filter((r) => !LOGIC().passes(r, o.rule)).map((r) => r.filer).filter((f) => f === culprit).length === 1
+  && rows.filter((r) => !LOGIC().passes(r, o.rule)).length === 1);
+ok("a clause that cuts only the machine exists", !!good);
+G().finaleChoice = good;
+window.signRule();
+await sleep(1400); // the seal lands, then dawn
+ok("the week ends at dawn (endGame ran clean)", d.body.dataset.phase === "dawn");
+const endTitle = d.querySelector("#endTitle").textContent;
+ok("the ending title is set (" + endTitle + ")", typeof endTitle === "string" && endTitle.length > 2);
+const stats = d.querySelector("#endStats").textContent;
+ok("the end stats read night-only (" + stats + ")", /nights worked/.test(stats));
+const share = d.querySelector("#shareBlock").textContent;
+ok("the share card reads one night axis", /🌙/.test(share) && !/☀️/.test(share));
+
 console.log(fail ? `WEEK FAIL — ${fail} broken, ${pass} ok` : `WEEK PASS — ${pass} checks`);
 console.log("JS errors:", errors.length ? errors : "none");
 process.exit(fail ? 1 : 0);
