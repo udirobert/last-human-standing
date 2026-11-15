@@ -1240,6 +1240,17 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   color: var(--dim);
   max-width: 64ch;
 }
+/* the machine's last words — set alone under the docket, its voice at
+   the peak of the week. The one line a player should read slowly. */
+.vale-final {
+  margin: 14px 2px 0;
+  font-size: 15px;
+  font-style: italic;
+  line-height: 1.55;
+  color: var(--ink);
+  max-width: 62ch;
+}
+.vale-final:empty { display: none; }
 /* The packet stub — a postmark strip printed at the foot of every filing.
    Always on the card; the same muted columns for every filer. */
 /* the postmark is evidence — it gets a legible voice, not a whisper */

@@ -155,7 +155,7 @@
       </section>
       <section><h4>THE NIGHT — SPOT THE MACHINE</h4>
         <p>Five filings a night. One is a machine. Stamp each <b>HUMAN</b> or <b class="hb-red">SUS</b> — the only question is: is this filer the machine?</p>
-        <p><kbd>S</kbd>/<kbd>←</kbd> SUS · <kbd>H</kbd>/<kbd>→</kbd> HUMAN. Stamp SUS and name the postmark field that reads wrong — point at a real tell and the catch is yours (<b>+100</b>). Name a human's and it's a <b class="hb-red">STRIKE</b>.</p>
+        <p><kbd>S</kbd>/<kbd>←</kbd> SUS · <kbd>H</kbd>/<kbd>→</kbd> HUMAN. Stamp SUS and name the postmark field that reads wrong — point at a real tell and the catch is yours (<b>+100</b>). The stakes are symmetric: <b>a wrong stamp is a strike, either direction</b> — wave the machine through, accuse a person on thin grounds, and the mark is yours. Three strikes and you're cut.</p>
         <p>One filing is contested — right pays double. A flawless night earns <b>NIGHT CLEAR</b>.</p>
       </section>
       <section><h4>THE POSTMARK — THE ONLY TESTIMONY</h4>
@@ -269,14 +269,14 @@
       <button id="otTitleBtn" class="ghost read-3 hidden" data-tip="Endless mode: five more nights on generated rules, a fresh run every time">Overtime (endless)</button>
       <button id="machineTitleBtn" class="ghost locked read-3" data-tip="File like you belong — fool the wire as the machine. Locked until you clear overtime.">🔒 The Machine's Shift</button>
     </div>
-    <p class="legend">Three strikes and you're cut.</p>
+    <p class="legend">Three wrong stamps — either direction — and you're cut.</p>
     <p class="career-line hidden" id="careerLine"></p>
     <div class="shift-ledger" id="shiftLedger" aria-label="What shifts in this game">
       <span class="sl-k">shift (v.)</span>
       <span class="sl-stage"><span class="sl-i on"><b>the postmark</b> — the only testimony on the desk</span><span class="sl-i"><b>the machine</b> — same face all week, its tells shift every night</span><span class="sl-i"><b>the desk</b> — five nights, and the strike count</span><span class="sl-i"><b>the wire</b> — it remembers every stamp you make</span><span class="sl-i"><b>who signs</b> — the last rule is yours to write</span></span>
     </div>
     <div class="title-foot">
-      <p class="hint">Five nights. One machine, same face all week — its tells shift, and only the postmark gives it away. Overtime runs a fresh docket with a new face; the Machine's Shift flips the desk. Sound recommended — <kbd>?</kbd> opens the handbook.</p>
+      <p class="hint">Five nights. One machine, same face all week — its tells shift, and only the postmark gives it away. A wrong stamp is a strike, either direction; three and you're cut. Overtime runs a fresh docket with a new face; the Machine's Shift flips the desk. Sound recommended — <kbd>?</kbd> opens the handbook.</p>
       <p class="music-credit">music · <a href="https://weloveindies.com" rel="noopener">WeLoveIndies</a> (F/demo license)</p>
     </div>
     <!-- attract reel: after idle, the desk keeps working without you.
@@ -411,7 +411,7 @@
       <div id="caseCard"></div>
       <div id="caseBtns">
         <button id="susBtn" class="vb s shift-paddle-left" data-tip="Stamp SUS — you think this filing is the machine. Then name the postmark field that gives it away. (S or ←)"><span class="stamp-ring s" aria-hidden="true">S</span> SUS</button>
-        <button id="humanBtn" class="vb h shift-paddle-right" data-tip="Stamp HUMAN — this filer is a person. Three wrong stamps and the desk cuts you. (H or →)">HUMAN <span class="stamp-ring h" aria-hidden="true">H</span></button>
+        <button id="humanBtn" class="vb h shift-paddle-right" data-tip="Stamp HUMAN — this filer is a person. Wave the machine through and it costs a strike too. Three wrong stamps, either direction, and the desk cuts you. (H or →)">HUMAN <span class="stamp-ring h" aria-hidden="true">H</span></button>
         <div id="auditKeyHint" class="keyhint hidden">← SUS · → HUMAN · ↵</div>
       </div>
       <div id="auditSummary" class="hidden"></div>
@@ -431,6 +431,7 @@
           </tr></thead>
           <tbody id="finaleBody"></tbody>
         </table>
+        <p class="vale-final read-2" id="valeFinal"></p>
       </div>
       <div id="decree">
         <div class="decree-head">

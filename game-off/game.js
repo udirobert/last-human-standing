@@ -1803,6 +1803,15 @@ function startAudit(resume) {
       G.contestedIdx = 0;
       G.nightMemo = "the wire is listening — first filing contested tonight";
     }
+    // the tells degrade on the machine's own clock — say it when the first
+    // single-tell night lands, so the difficulty shift reads as design,
+    // not arbitrary
+    const botSub0 = G.auditSubs.find((x) => x.filer === G.culprit);
+    if (botSub0 && botSub0.tel.tells.length === 1) {
+      G.nightMemo = G.nightMemo
+        ? `${G.nightMemo} · tonight it leaks one field — read for the impossible, not the suspicious`
+        : "tonight it leaks one field — read for the impossible, not the suspicious";
+    }
     if (G.nightMemo) wire(`memo — ${G.nightMemo}`);
     G.auditHitsToday = 0;
     G.nightPoints = 0;
@@ -2106,10 +2115,11 @@ function renderCase() {
           : "no grounds — a hunch, not a catch";
       } else {
         // the loss names one field of evidence — enough to know the
-        // postmark mattered, not enough to skip reading the next one
+        // postmark mattered, not enough to skip reading the next one.
+        // It cost you: a wave-through is a strike, same as a hunch.
         reason = G.valeCaught > 0
-          ? `✗ You'd flagged that postmark before — and you stamped it through.`
-          : `✗ the postmark reads wrong: ${TEL_LABEL[sub.tel.tells[0]]} ${sub.tel[sub.tel.tells[0]]}`;
+          ? `✗ You'd flagged that postmark before — and you stamped it through. STRIKE`
+          : `✗ the postmark reads wrong: ${TEL_LABEL[sub.tel.tells[0]]} ${sub.tel[sub.tel.tells[0]]}. STRIKE`;
       }
     } else {
       reason = sub.correct
@@ -2234,12 +2244,14 @@ function stamp(pickVal) {
   // HUMAN. The only judgment is the postmark — and the paper is context,
   // not a verdict.
   if (isBot) {
-    // a wave-through is a wrong stamp, and the verdict names the evidence
-    // that sat on the card
+    // a wave-through is a wrong stamp — the stakes are symmetric: a
+    // wrong stamp is a strike, either direction. Letting it through
+    // costs; only reading the postmark is free.
     sub.correct = false;
     sub.earned = 0;
     G.valeEscapes++;
-    wire(`machine walked through — ${sub.filer} stamped HUMAN`);
+    if (G.mode !== "machine" && G.status === "player" && G.strikes < 3) G.strikes++;
+    wire(`machine walked through — ${sub.filer} stamped HUMAN · strike`);
     if (G.valeCaught > 0) {
       ariaSay([
         "You'd seen that postmark before — and you stamped it through.",
@@ -2495,7 +2507,7 @@ function auditSummary() {
   if (G.strikes === 2 && G.status === "player") wire("two marks on your file — the desk is teaching you");
   const botSub0 = G.auditSubs.find((x) => x.filer === G.culprit);
   if (botSub0 && botSub0.pick === "SUS" && botSub0.correct) wire("you read the postmark — the wire wonders what else you see");
-  else if (botSub0 && botSub0.pick === "HUMAN") wire("an escape went unremarked — the wire counts those too");
+  else if (botSub0 && botSub0.pick === "HUMAN") wire("an escape — it walked through, and it cost a mark");
   // the third mark lands at the close of the shift — the desk cuts then
   if (G.strikes >= 3 && G.status === "player") {
     G.elimDay = G.day + 1;
@@ -2531,8 +2543,8 @@ function paintAuditSummary() {
       : (botSub.pick === "SUS" && !botSub.correct)
         ? ""   // a hunch earns no postscript
         : G.valeCaught > 0
-          ? `<p class="sum-vale warn">⚠ you'd flagged that postmark — and stamped it through</p>`
-          : `<p class="sum-vale quiet">· ${QUIET[G.day % QUIET.length]}</p>`;
+          ? `<p class="sum-vale warn">⚠ you'd flagged that postmark — and stamped it through · a mark on your counter</p>`
+          : `<p class="sum-vale warn">⚠ it walked through — and the mark is on your counter, not its file</p>`;
   const flags = G.auditSubs.filter((x) => x.flagTried).length;
   const flagLine = flags
     ? `<p class="sum-wire">flags raised ${flags} · ${flags && G.auditSubs.some((x) => x.flagTried && x.correct) ? "bounty held" : "nothing held"}</p>` : "";
@@ -2589,6 +2601,11 @@ function startFinale(resume) {
     G.finaleRows.forEach((row) => {
       row.tel = row.filer === G.culprit ? botTel(4, trng, row.ts) : humanTel(trng, row.ts);
     });
+    // the machine's voice peaks here: the final proof carries the last line
+    // of its week — the one that is almost asking for something. The choice
+    // is only a choice if you heard it.
+    const crow = G.finaleRows.find((r) => r.filer === G.culprit);
+    if (crow) crow.arg = VALE_ARC[VALE_ARC.length - 1];
     G.signing = false;
   }
   $("decree").classList.toggle("signed", !!G.signing);
@@ -2597,9 +2614,9 @@ function startFinale(resume) {
   if (!resume) {
     // the last line she says depends on whether you ever read the postmark
     if (G.valeCaught > 0) {
-      ariaSay(["You caught it on the postmark. Now the wire sees what you saw — sign the clause only it couldn't file."], "smug");
+      ariaSay(["You caught it on the postmark, all week. It's asking you something now — read its final proof, then sign. What you sign is up to you."], "smug");
     } else {
-      ariaSay(["Five nights it filed, and it never once read the postmark. It's about to be read for the last time."]);
+      ariaSay(["It filed five nights. Read its final proof — and then decide what the wire does with what it's asking for."]);
     }
   }
   persist();
@@ -2620,6 +2637,12 @@ function buildFinale() {
       `<td class="c-cut"></td>`;
     tb.appendChild(tr);
   }
+  // the machine's voice peaks here — its final proof, in its own words,
+  // set alone under the docket. The choice is only a choice if you heard it.
+  const crow2 = G.finaleRows.find((r) => r.filer === G.culprit);
+  $("valeFinal").textContent = crow2
+    ? `“${crow2.arg}” — ${G.culprit}`
+    : "";
   const box = $("ruleChoices");
   box.innerHTML = "";
   G.finaleOpts.forEach((opt, i) => {
@@ -2801,11 +2824,11 @@ function endGame() {
       ? `${DAYS.length} nights worked · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`
       : `${survived} days survived · ${G.strikes} strikes · score ${G.score} · audits ${acc}%`;
   const lines = [];
-  if (G.finaleTitle) lines.push(`${G.culprit} filed every proof 0.003 seconds after the riddle posted.`);
+  if (G.finaleTitle) lines.push(`${G.culprit} filed the last proof ${G.finaleRows.find((r) => r.filer === G.culprit)?.ts || "+0.003s"} after the docket posted.`);
   if (G.valeCaught) lines.push(
     `You flagged the machine on ${G.valeCaught} night${G.valeCaught > 1 ? "s" : ""} — the postmark never lies.`);
   if (G.valeEscapes) lines.push(
-    `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} before tonight.`);
+    `It walked through your stamp ${G.valeEscapes} time${G.valeEscapes > 1 ? "s" : ""} — and the marks landed on your counter, not its file.`);
   if (G.finaleLine) lines.push(G.finaleLine);
   if (G.mode !== "machine" && G.culprit) lines.push(`Today's machine wore ${G.culprit}'s face — it wears a new one every docket, but its tells shift every night.`);
   else if (G.mode === "machine") lines.push(G.forgeFlags === 0
@@ -3650,12 +3673,27 @@ document.body.dataset.phase = "title";
   if (!splash || !vid) return;
   let seen = false;
   try { seen = sessionStorage.getItem("credits-seen") === "1"; } catch { /* private mode */ }
+  let fading = false;
+  const fadeOut = () => {
+    if (fading) return;
+    fading = true;
+    try {
+      const t0 = vid.volume;
+      let step = 0;
+      const iv = setInterval(() => {
+        vid.volume = Math.max(0, t0 * (1 - ++step / 9));
+        if (step >= 9) { clearInterval(iv); try { vid.pause(); } catch { /* no media */ } }
+      }, 50);
+    } catch { /* no media element */ }
+  };
   const dismiss = () => {
     if (!splash.parentNode || splash.classList.contains("gone")) return;
     splash.classList.add("gone");
     try { sessionStorage.setItem("credits-seen", "1"); } catch { /* private mode */ }
-    try { vid.pause(); } catch { /* no media element */ }
-    later(() => splash.remove(), 400);
+    // the title loop rides the same first gesture — fade the credits'
+    // audio out under it instead of hard-cutting both sounds at once
+    fadeOut();
+    later(() => splash.remove(), 500);
   };
   if (seen || calmMotion()) { splash.remove(); return; }
   // any input skips — the credits never hold the desk hostage

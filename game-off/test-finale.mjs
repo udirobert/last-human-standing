@@ -84,6 +84,13 @@ for (let t = 0; t < 12; t++) {
   ok(`seed ${t}: exactly one clause cuts only the machine`, good.length === 1);
   if (good.length !== 1) goodClauseAlwaysUnique = false;
 
+  // the machine's voice at the peak: its final proof carries the last
+  // line of its week, set alone under the docket
+  const VALE_ARC = window.eval("VALE_ARC");
+  const valeLine = d.querySelector("#valeFinal").textContent;
+  ok(`seed ${t}: the finale carries the machine's last words`,
+    VALE_ARC.length > 0 && valeLine.includes(VALE_ARC[VALE_ARC.length - 1]) && valeLine.includes(culprit));
+
   // the machine wears a seeded face; on the finale night (night 4) it
   // carries exactly ONE residual tell — the field is seeded, so the test
   // must find it, not assume which one. The tell is an impossible value:

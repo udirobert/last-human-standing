@@ -41,11 +41,13 @@ postmark reads too clean. **The only question, every night, is: is this
 filer the machine?**
 
 Stamp each filing `HUMAN` or `SUS` (`H`/`S`/`←`/`→`). `HUMAN` on a person is
-upheld. `HUMAN` on the machine lets it through. `SUS` is an accusation — and
-an accusation needs grounds: the desk asks which postmark field reads wrong.
-Point at a **real tell** and the catch is yours (+100, circled in red grease
-pencil). Point at a human's field, or name no grounds, and the hunch is a
-wrong stamp — and a wrong stamp is a **strike**. Three strikes and the desk
+upheld. `HUMAN` on the machine lets it through — and the mark lands on
+*your* counter, not its file. `SUS` is an accusation — and an accusation
+needs grounds: the desk asks which postmark field reads wrong. Point at a
+**real tell** and the catch is yours (+100, circled in red grease pencil).
+Point at a human's field, or name no grounds, and the hunch is a wrong
+stamp. **The stakes are symmetric: a wrong stamp is a strike, either
+direction** — only reading the postmark is free. Three strikes and the desk
 closes your file: jury duty, the rest of the week read from the other side.
 
 **The tells shift.** The machine wears the same face all week, but its

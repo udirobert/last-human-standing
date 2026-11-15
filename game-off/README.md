@@ -43,8 +43,9 @@ python3 -m http.server 8000
   **HUMAN** or **SUS** (`H` / `S` / `←` / `→` / buttons).
   - **HUMAN** on a person: upheld, +50. One filing a night is
     **contested** — call it right for double pay.
-  - **HUMAN** on the machine: it walks through. The postmark that gave it
-    away sat on the card the whole time.
+  - **HUMAN** on the machine: it walks through — and the mark is on your
+    counter, not its file. The stakes are **symmetric**: a wrong stamp is
+    a strike, either direction. Only reading the postmark is free.
   - **SUS** is an accusation, and an accusation needs grounds: the desk
     asks which postmark field reads wrong. Point at a **real tell** and
     the catch is yours (+100 bounty, circled in red grease pencil). Point
@@ -63,10 +64,12 @@ python3 -m http.server 8000
   Everything else on the card is texture: the clerk's marginal note, the
   off-square drop, the quiet landing — every filer draws from the same
   pool, so none of it is a signature. The postmark is the only testimony.
-- **Strikes**: a failed accusation on a human is a strike. Three strikes
-  cut you to jury duty at the close of the shift — the room goes dark,
-  the counter takes a red `CUT`, and the rest of the week is yours to
-  read from the other side. A flawless 5/5 night clears a strike.
+- **Strikes**: the stakes are symmetric — a wrong stamp is a strike,
+  either direction: wave the machine through (HUMAN) or accuse a person
+  on grounds that fail (SUS). Three strikes cut you to jury duty at the
+  close of the shift — the room goes dark, the counter takes a red
+  `CUT`, and the rest of the week is yours to read from the other side.
+  A flawless 5/5 night clears a strike.
 - **Finale — the machine's final proof**: after night five, the last
   docket of the week arrives, postmarks and all. Sign the clause that
   cuts the machine — and only the machine — or sign the one that cuts

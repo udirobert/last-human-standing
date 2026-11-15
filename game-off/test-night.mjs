@@ -101,7 +101,8 @@ await sleep(1700); // the bite, then auto-advance
 ok("HUMAN on a human upheld (+50/×2)", G().score > pay0);
 ok("no strike for a right stamp", G().strikes === strikes0 + 1);
 
-/* 3 — the machine: HUMAN lets it through (escape — no pay, no strike) */
+/* 3 — the machine: HUMAN lets it through (escape — no pay, but a strike:
+ * the stakes are symmetric, a wrong stamp costs either direction) */
 window.eval(`G.auditIdx = ${botIdx}; G.auditLocked = false;`);
 window.renderCase();
 await sleep(200);
@@ -110,6 +111,7 @@ window.stamp("HUMAN");
 await sleep(300);
 ok("HUMAN on the machine escapes", G().valeEscapes === esc0 + 1);
 ok("escape earns nothing", G().score === pay1);
+ok("escape is a strike (+1) — symmetric stakes", G().strikes === strikes0 + 2);
 clickCard();
 await sleep(500);
 
@@ -127,7 +129,7 @@ await sleep(2800); // the catch auto-advances
 const catchSub = G().auditSubs[botIdx];
 ok("catch upheld (+100 bounty)", catchSub.correct === true && catchSub.earned === 100);
 ok("vale caught logged", G().valeCaught === 1);
-ok("no strike for the catch", G().strikes === strikes0 + 1);
+ok("no strike for the catch", G().strikes === strikes0 + 2);
 
 /* 5 — a hunch aimed at the machine (wrong field) is no strike */
 window.eval(`G.auditIdx = ${botIdx}; G.auditLocked = false;`);
