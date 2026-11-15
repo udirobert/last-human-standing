@@ -248,11 +248,7 @@
       <div class="step-arrow" aria-hidden="true">→</div>
       <div class="step"><b>3 · STAMP</b><span>the shift</span></div>
     </div>
-    <p class="legend">Three strikes and you're cut.</p>
-    <div class="resume-slot" id="resumeSlot"></div>
-    <p class="career-line hidden" id="careerLine"></p>
-    <p class="music-credit">music · <a href="https://weloveindies.com" rel="noopener">WeLoveIndies</a> (F/demo license)</p>
-    <p class="title-hint">press ? for the clerk's handbook</p>
+    <!-- first read: the verb. second: resume/career. third: theme ticker + details -->
     <div class="title-btns">
       <button id="startBtn" class="stamp-btn" aria-label="Clock in" title="Today's fresh docket — same for everyone, changes daily">
         <span class="pc-top"><span class="pc-week">WEEK 12</span><span class="pc-no" id="pcDocket">DOCKET</span></span>
@@ -263,16 +259,17 @@
       <button id="otTitleBtn" class="ghost hidden" title="A fresh five-night run, rules generated per docket">Overtime — a generated docket</button>
       <button id="machineTitleBtn" class="ghost locked" title="Locked — clear overtime, then become the thing you hunt">The Machine's Shift — file like you belong</button>
     </div>
-    <div class="shift-ledger" aria-label="What shifts in this game">
+    <p class="legend">Three strikes and you're cut.</p>
+    <div class="resume-slot" id="resumeSlot"></div>
+    <p class="career-line hidden" id="careerLine"></p>
+    <div class="shift-ledger" id="shiftLedger" aria-label="What shifts in this game">
       <span class="sl-k">shift (v.)</span>
-      <span class="sl-i"><b>the facts</b> — the loupe narrows the desk to one column</span>
-      <span class="sl-i"><b>the rule</b> — head office amends mid-night</span>
-      <span class="sl-i"><b>the desk</b> — judged by day, judging by night</span>
-      <span class="sl-i"><b>the truth</b> — the machine shifts its tells, and its face</span>
-      <span class="sl-i"><b>who signs</b> — the last rule is yours to write</span>
+      <span class="sl-stage"><span class="sl-i on"><b>the facts</b> — the loupe narrows the desk to one column</span><span class="sl-i"><b>the rule</b> — head office amends mid-night</span><span class="sl-i"><b>the desk</b> — judged by day, judging by night</span><span class="sl-i"><b>the truth</b> — the machine shifts its tells, and its face</span><span class="sl-i"><b>who signs</b> — the last rule is yours to write</span></span>
     </div>
-    <p class="hint">five nights, one machine in a new face each docket · overtime: rules generated daily · audio recommended</p>
-    <p class="hint">A five-day deduction thriller · all proceedings fictional · <kbd>?</kbd> handbook</p>
+    <div class="title-foot">
+      <p class="hint">five nights, one machine in a new face each docket · overtime: rules generated daily · audio recommended · <kbd>?</kbd> handbook</p>
+      <p class="music-credit">music · <a href="https://weloveindies.com" rel="noopener">WeLoveIndies</a> (F/demo license)</p>
+    </div>
     <!-- attract reel: after idle, the desk keeps working without you.
          Any input dismisses it. Decorative — real cards, real stamps. -->
     <div id="attractDesk" class="hidden" aria-hidden="true"></div>
@@ -329,9 +326,9 @@
       <div id="docketWrap">
         <div class="sec-head">
           <span id="docketHead">Already ruled today</span>
-          <button id="clueBtn" class="clue hidden">+ Request another ruling — today's pay 100 → 60</button>
+          <button id="clueBtn" class="clue read-3 hidden">+ Request another ruling — today's pay 100 → 60</button>
         </div>
-        <div id="attrShiftRail" class="attr-shift-rail">
+        <div id="attrShiftRail" class="attr-shift-rail read-3">
           <span class="rail-label">SHIFT FOCUS:</span>
           <button class="rail-btn active" data-attr="all">ALL</button>
           <button class="rail-btn" data-attr="place">WHERE</button>
@@ -351,8 +348,8 @@
         <h3 class="sec-head">Your evidence</h3>
         <div id="hand"></div>
       </div>
-      <p id="oathNote" class="hidden">pass: clears a strike (or +200 if you have none) · miss: 2 strikes</p>
-      <div id="predictRow" class="hidden">
+      <p id="oathNote" class="read-3 hidden">pass: clears a strike (or +200 if you have none) · miss: 2 strikes</p>
+      <div id="predictRow" class="read-3 hidden">
         <span class="pr-label">call the rule:</span>
         <button class="pr-btn" data-attr="place" data-tip="you think ARIA's rule keys on WHERE">WHERE</button>
         <button class="pr-btn" data-attr="time" data-tip="you think ARIA's rule keys on WHEN">WHEN</button>
@@ -401,7 +398,7 @@
         <span class="tray-arrow">→</span>
         <span class="tray-filed" id="trayFiled"></span>
       </div>
-      <p id="nightMemo" class="hidden"></p>
+      <p id="nightMemo" class="read-2 hidden"></p>
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span><span class="amend-ack">— press or tap to acknowledge —</span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
@@ -509,8 +506,8 @@
     </div>
     <p class="kicker">05:59 — last shift ends</p>
     <h1 id="endTitle">DAWN</h1>
-    <p class="sub" id="endStats"></p>
     <p class="sub" id="endTitle2"></p>
+    <button id="againBtn">Work another week</button>
     <div class="end-mug hidden" id="endMug">
       <img id="endMugImg" alt="">
       <div class="mug-meta">
@@ -522,13 +519,15 @@
       <pre id="shareBlock"></pre>
       <span class="closed-stamp" aria-hidden="true">CASE CLOSED</span>
     </div>
-    <p class="hint">the week is closed — the docket never is. Replay this seed, clock in tomorrow, or work overtime.</p>
-    <button id="copyBtn" class="ghost">Copy result</button>
-    <button id="caseFileBtn" class="ghost" data-tip="download the full shift dossier — every stamp, postmark and wire entry">Case file</button>
-    <button id="otBtn" class="ghost">Overtime — a fresh generated docket</button>
-    <button id="machineEndBtn" class="ghost hidden">The Machine's Shift — become the thing you hunt</button>
-    <button id="againBtn">Work another week</button>
-    <div class="shift-ledger">
+    <p class="sub read-2" id="endStats"></p>
+    <p class="hint read-3">the week is closed — the docket never is. Replay this seed, clock in tomorrow, or work overtime.</p>
+    <div class="end-secondary read-3">
+      <button id="copyBtn" class="ghost">Copy result</button>
+      <button id="caseFileBtn" class="ghost" data-tip="download the full shift dossier — every stamp, postmark and wire entry">Case file</button>
+      <button id="otBtn" class="ghost">Overtime — a fresh generated docket</button>
+      <button id="machineEndBtn" class="ghost hidden">The Machine's Shift — become the thing you hunt</button>
+    </div>
+    <div class="shift-ledger read-3">
       <span class="sl-k">shift (v.)</span>
       <span class="sl-i"><b>the facts</b> — the loupe narrows the desk to one column</span>
       <span class="sl-i"><b>the rule</b> — head office amends mid-night</span>

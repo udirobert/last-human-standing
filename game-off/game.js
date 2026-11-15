@@ -3533,6 +3533,23 @@ $("againBtn").addEventListener("click", () => location.reload());
 
 // ---------- boot: the unfinished shift waits on the title ----------
 document.body.dataset.phase = "title";
+
+/* the shift-ledger is a ticker, not a wall — one definition of "shift" at
+ * a time, the desk turning the card. Ends on "who signs" and holds it —
+ * the last rotation is the pitch's payoff before you clock in. */
+(function ledgerTicker() {
+  const items = [...document.querySelectorAll("#shiftLedger .sl-i")];
+  if (items.length < 2) return;
+  let i = 0;
+  setInterval(() => {
+    if (document.body.dataset.phase !== "title") return;
+    if (i >= items.length - 1) return; // hold on the last definition
+    items[i].classList.remove("on");
+    i++;
+    items[i].classList.add("on");
+  }, 4200);
+})();
+
 loadPrefs();
 const savedRun = loadSave();
 // the clerk's record greets every returning shift — the ledger outlives

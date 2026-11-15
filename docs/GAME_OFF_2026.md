@@ -449,3 +449,32 @@ storytelling, ambient motion, and intuitiveness.
 Verified: real-Chrome smoke — roster line, arc tail, lamp flicker on bot
 case, teletype mid-type state, strike pulse ::after, prestamped echo at
 index 0 advancing on tap, ghost hint visible. `test-logic.mjs` ALL PASS.
+
+## Hierarchy pass — the three reads, game-wide (Nov 15)
+
+Applied the title-screen research as a system, not a patch (full writeup:
+`UI_DENSITY_PATTERNS.md`, "Hierarchy pass"). Zach Gage's three reads —
+first read = one verb, second = context, third = recessed tools —
+now applies to every screen:
+
+- **Declared weight tiers**: `.read-2` (~85% presence) and `.read-3`
+  (~55%, lifts on hover/focus). Tertiary is a class, not a negotiated
+  color. Applied to the loupe rail, clue button, prediction row, oath
+  note, night memo, end-screen stats, dossier/OT buttons, ledger.
+- **End screen reordered**: DAWN → verdict line → WORK ANOTHER WEEK →
+  mugshot → share artifact → stats → secondary actions → ledger. The
+  verb is fifth in DOM order, not eleventh. Secondary buttons grouped
+  in `.end-secondary` at read-3.
+- **Staged arrival within every phase**: `titlerise` (the title's own
+  grammar) staggers each phase's children ~100ms apart — context lands
+  first, the verb lands last. Day/verdict/audit/forge phases and the
+  dawn screen all assemble instead of dumping.
+- **Exclusions respected**: `#amendBanner` keeps its slam animation,
+  `.dawn-scene` keeps sunup, `prefers-reduced-motion` disables all of it.
+- Audit and forge untouched beyond arrival timing — they already
+  conform to the model.
+
+Verified: `test-logic.mjs` ALL PASS · real-Chrome smoke confirms dawn
+order (againBtn 5th), read-3 at .55 opacity, read-2 at .85, titlerise
+on phase children, fadein preserved on amendBanner · zero console
+errors · repackaged.

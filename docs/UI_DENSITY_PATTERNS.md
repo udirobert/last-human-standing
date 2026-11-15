@@ -331,3 +331,77 @@ remaining "static title, amnesiac run" gaps.
     backed by real behavioral changes (early amend, suppressed amend,
     contested-first). Same seed = same memo = the daily challenge is
     legible *before* you play, not discovered after.
+
+## Hierarchy pass — the three reads, applied everywhere (Nov 15)
+
+Fourth research pass, triggered by the title-screen audit ("it's really
+well designed but perhaps a bit much to show the user at one time").
+Source: Zach Gage's "three reads" framework (via rymdkraftverk's lobby
+devlog), corroborated by itch/indie title-screen guidance — a ~5-second
+first-impression window, BIG TITLE + BIG PLAY button with secondary items
+grouped away, something alive on the menu, and menus as recurring
+narrative surfaces.
+
+### The model
+
+Every screen gets exactly:
+
+- **First read** — one verb. Breathing, dominant. Never two primaries.
+- **Second read** — identity and context: the riddle, the rule, the
+  stakes. Readable, not loud.
+- **Third read** — tools and lore: recessed (~60% weight), progressively
+  disclosed, or opt-in.
+- **Arrival order** — context first, verb last. The screen *assembles*;
+  it never dumps its contents at once.
+
+The failure mode this prevents is "equal volume" — NIGHT SHIFT's default
+sin, because it ships dense authored copy and every piece of it is good.
+Good copy isn't the problem; simultaneity is.
+
+### Per-screen audit
+
+| Screen | First read (verb) | Second read | Third read |
+|---|---|---|---|
+| Title | CLOCK IN | scene, tagline, steps, stakes | ledger ticker, credits, modes |
+| Day | FILE (after the riddle) | riddle, docket, your hand | loupe rail, clue, call, oath note |
+| Verdict | CONTINUE | unsealed rule, fact check | ledger/prediction lines |
+| Audit | SUS / HUMAN | the case, pinned rule chips | tray, memo, key hints |
+| Forge | TRANSMIT | the fields, tolerance | meta line, habits |
+| Finale | SIGN | the filer rows, clause picks | flavor |
+| End | PLAY AGAIN | verdict title, mugshot, share | stats, dossier, career |
+
+Audit phase and forge phase already conform — they're the pattern the
+rest should match. Day phase was the worst offender: ~9 elements
+competing at second-read volume before the verb. End screen had the
+title-screen problem all over again.
+
+### The system, not per-screen patches
+
+23. **Visual weight as a declared class, not a fiddled color.** `.read-2`
+    (~85% presence) and `.read-3` (~60%, smaller, quieter) so "tertiary"
+    is a decision you make in markup, not a hex you negotiate each time.
+    If an element needs its own bespoke dimming, that's a smell — pick
+    a tier.
+24. **Progressive disclosure for power tools.** Already the pattern for
+    machine mode / clue / oath — formalized: the loupe rail, clue button
+    and rule call live in one recessed "desk tools" affordance. Advanced
+    verbs *arrive*; they don't compete. The first read is never a row of
+    five equal chips.
+25. **Staged arrival within every phase.** The title's `titlerise`
+    grammar generalized: context lands first, the verb lands last
+    (~120ms steps), so the eye is led to the action everywhere, not just
+    on the menu. Same grammar, reused — consistency is what makes it
+    read as direction rather than decoration.
+
+### What deliberately does NOT change
+
+- The audit and forge phases are left as-is (they already pass).
+- No copy deleted — three-reads is about *order and weight*, never about
+  throwing away the writing. The ledger became a ticker on the title;
+  day-phase tools recede rather than vanish.
+- The verb stays physical (stamp, file, transmit, sign) — hierarchy
+  points at the fiction's actions, not at UI conventions.
+
+Ship order: read-tier classes → day-phase desk-tools consolidation →
+end-screen reorder → staged arrival sweep. The day phase is the game's
+most-visited screen, so that's where the win compounds.

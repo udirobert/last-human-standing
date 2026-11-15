@@ -254,19 +254,28 @@ button:disabled { opacity: .45; cursor: default; }
 #title { gap: 12px; }
 /* the SHIFT ledger — the theme, as five verbs on a card */
 .shift-ledger {
-  display: flex; flex-direction: column; gap: 4px; align-items: center;
-  max-width: 560px; padding: 10px 18px;
+  display: flex; gap: 10px; align-items: center; justify-content: center;
+  max-width: 560px; padding: 9px 18px;
   border: 1px solid #2e3240; border-radius: 6px; background: rgba(25, 28, 34, .72);
   transform: rotate(-.4deg);
 }
 .shift-ledger .sl-k {
   font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .3em;
-  color: #5c5546; margin-bottom: 2px;
+  color: #5c5546; flex-shrink: 0;
+}
+/* the ledger is a ticker: one definition at a time, the desk keeps
+   turning the card — theme as motion, not a wall of text */
+.shift-ledger .sl-stage {
+  position: relative; flex: 1; min-height: 1.4em; text-align: left;
 }
 .shift-ledger .sl-i {
+  position: absolute; inset: 0; white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; opacity: 0; transform: translateY(5px);
+  transition: opacity .5s ease, transform .5s ease;
   font-family: "Iowan Old Style", Palatino, Georgia, serif; font-size: 12.5px;
-  color: #a89f8d; letter-spacing: .02em;
+  color: #a89f8d; letter-spacing: .02em; pointer-events: none;
 }
+.shift-ledger .sl-i.on { opacity: 1; transform: none; }
 .shift-ledger .sl-i b {
   font-family: ui-monospace, monospace; font-weight: 600; font-size: 10.5px;
   letter-spacing: .14em; color: #e8b34b;
@@ -2611,4 +2620,92 @@ body.strikepulse #frame::after {
   .wire-line:last-child::after { animation: none; }
   .keyhint { animation: none; }
   .echo-tag { animation: none; }
+}
+
+
+/* ---------- three-read title hierarchy ---------- */
+/* first read = the verb (stamp-btn, already dominant); second = scene,
+   tagline, steps; third = everything else — recessive until looked at */
+#title .legend { margin: 10px 0 0; }
+#title .title-foot { margin-top: 14px; text-align: center; }
+#title .title-foot .hint { opacity: .6; margin: 0 0 4px; }
+#title .music-credit { font-size: 10px; opacity: .45; margin: 0; }
+/* the ticker holds the theme in one row */
+#title .shift-ledger { margin-top: 14px; width: min(480px, 90vw); }
+
+/* staged arrival: the screen assembles instead of arriving as a wall */
+#title .sub            { animation: titlerise .6s ease .25s backwards; }
+#title .steps          { animation: titlerise .6s ease .45s backwards; }
+#title .title-btns     { animation: titlerise .6s ease .65s backwards; }
+#title .legend         { animation: titlerise .5s ease .8s backwards; }
+#title .resume-slot    { animation: titlerise .5s ease .85s backwards; }
+#title .shift-ledger   { animation: titlerise .6s ease 1.0s backwards; }
+#title .title-foot     { animation: titlerise .6s ease 1.15s backwards; }
+@keyframes titlerise { from { opacity: 0; transform: translateY(7px); } }
+
+@media (prefers-reduced-motion: reduce) {
+  #title .sub, #title .steps, #title .title-btns, #title .legend,
+  #title .resume-slot, #title .shift-ledger, #title .title-foot { animation: none; }
+  .shift-ledger .sl-i { transition: none; }
+}
+
+/* ---------- three-reads hierarchy: declared weight tiers ---------- */
+/* .read-2 = context (~85% presence); .read-3 = tools/lore (~55%, lifts on
+   approach). "Tertiary" is a class you declare, not a color you fiddle. */
+.read-2 { opacity: .85; }
+.read-3 { opacity: .55; transition: opacity .2s ease; }
+.read-3:hover, .read-3:focus-within { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .read-3 { transition: none; } }
+
+/* end screen: verdict + verb first, the rest recessed behind it */
+.end-secondary { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+
+/* staged arrival within phases — same grammar as the title's titlerise:
+   context lands first, the verb lands last. The screen assembles. */
+#dayPhase > *, #verdictPhase > *, #forgePhase > *,
+#auditPhase > *:not(#amendBanner) {
+  animation: titlerise .45s ease backwards;
+}
+#dayPhase > :nth-child(1) { animation-delay: .02s; }
+#dayPhase > :nth-child(2) { animation-delay: .12s; }
+#dayPhase > :nth-child(3) { animation-delay: .22s; }
+#dayPhase > :nth-child(4) { animation-delay: .3s; }
+#dayPhase > :nth-child(5) { animation-delay: .36s; }
+#dayPhase > :nth-child(6) { animation-delay: .44s; }  /* fileBar — the verb, last */
+#verdictPhase > :nth-child(1), #forgePhase > :nth-child(1),
+#auditPhase > :nth-child(1):not(#amendBanner) { animation-delay: .02s; }
+#verdictPhase > :nth-child(2), #forgePhase > :nth-child(2),
+#auditPhase > :nth-child(2):not(#amendBanner) { animation-delay: .1s; }
+#verdictPhase > :nth-child(3), #forgePhase > :nth-child(3),
+#auditPhase > :nth-child(3):not(#amendBanner) { animation-delay: .18s; }
+#verdictPhase > :nth-child(4), #forgePhase > :nth-child(4),
+#auditPhase > :nth-child(4):not(#amendBanner) { animation-delay: .26s; }
+#verdictPhase > :nth-child(5), #forgePhase > :nth-child(5),
+#auditPhase > :nth-child(5):not(#amendBanner) { animation-delay: .34s; }
+#verdictPhase > :nth-child(6), #forgePhase > :nth-child(6),
+#auditPhase > :nth-child(6):not(#amendBanner) { animation-delay: .4s; }
+#verdictPhase > :nth-child(7), #forgePhase > :nth-child(7),
+#auditPhase > :nth-child(7):not(#amendBanner) { animation-delay: .46s; }
+#verdictPhase > :nth-child(8), #forgePhase > :nth-child(8),
+#auditPhase > :nth-child(8):not(#amendBanner) { animation-delay: .52s; }
+#verdictPhase > :nth-child(9), #auditPhase > :nth-child(9):not(#amendBanner) { animation-delay: .56s; }
+#verdictPhase > :nth-child(10), #auditPhase > :nth-child(10):not(#amendBanner) { animation-delay: .6s; }
+
+/* the end screen assembles too — verdict first, verb, then the reveal */
+#dawn > *:not(.dawn-scene) { animation: titlerise .5s ease backwards; }
+#dawn > :nth-child(2) { animation-delay: .08s; }
+#dawn > :nth-child(3) { animation-delay: .16s; }
+#dawn > :nth-child(4) { animation-delay: .24s; }
+#dawn > :nth-child(5) { animation-delay: .32s; }
+#dawn > :nth-child(6) { animation-delay: .42s; }
+#dawn > :nth-child(7) { animation-delay: .5s; }
+#dawn > :nth-child(8) { animation-delay: .58s; }
+#dawn > :nth-child(9) { animation-delay: .66s; }
+#dawn > :nth-child(10) { animation-delay: .72s; }
+#dawn > :nth-child(11) { animation-delay: .78s; }
+#dawn > :nth-child(12) { animation-delay: .84s; }
+
+@media (prefers-reduced-motion: reduce) {
+  #dayPhase > *, #verdictPhase > *, #auditPhase > *:not(#amendBanner),
+  #forgePhase > *, #dawn > *:not(.dawn-scene) { animation: none; }
 }
