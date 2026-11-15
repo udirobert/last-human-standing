@@ -48,6 +48,13 @@ fi
 echo "OK — $((ZIP_BYTES / 1024 / 1024))MB ($ZIP_BYTES bytes), within budget."
 
 echo "=== 3. Exporting Standalone GitHub Repository ==="
+# preserve .git across re-exports — a fresh `git init` every run would
+# sever the remote and make every push a forced overwrite
+GIT_KEEP=""
+if [ -d "$STANDALONE_DIR/.git" ]; then
+  GIT_KEEP="$(mktemp -d)"
+  mv "$STANDALONE_DIR/.git" "$GIT_KEEP/git"
+fi
 rm -rf "$STANDALONE_DIR"
 mkdir -p "$STANDALONE_DIR"
 
@@ -83,10 +90,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 EOF
 
-cd "$STANDALONE_DIR"
-git init -b main
-git add .
-git commit -m "NIGHT SHIFT — GitHub Game Off 2026 submission"
+if [ -n "$GIT_KEEP" ]; then
+  mv "$GIT_KEEP/git" "$STANDALONE_DIR/.git"
+  rm -rf "$GIT_KEEP"
+  cd "$STANDALONE_DIR"
+  git add -A
+  if ! git diff --cached --quiet; then
+    git commit -m "NIGHT SHIFT — GitHub Game Off 2026 submission"
+  else
+    echo "Standalone repo already up to date."
+  fi
+else
+  cd "$STANDALONE_DIR"
+  git init -b main
+  git add .
+  git commit -m "NIGHT SHIFT — GitHub Game Off 2026 submission"
+fi
 
 echo ""
 echo "============================================================"
