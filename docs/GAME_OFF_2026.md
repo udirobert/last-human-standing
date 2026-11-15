@@ -581,3 +581,48 @@ Same three-reads + teach-by-labeling pass as the FTUE work:
 Verified: `test-cold-open.mjs` extended to 29 checks (title tooltips
 wired + reachable, steps teach, alternates demoted, ticker aria-hidden)
 — ALL PASS · `node --check` clean.
+
+## Motif pass — the paperwork teaches itself (Nov 15)
+
+Player report on the audit card: "30% too verbose… use more imagery,
+illustration, motifs" + remaining readability issues. Diagnosis: the
+screen said in sentences what forms say in ink. Cuts and motifs
+(presentation only; deduction untouched):
+
+**Words cut (~30% of the screen's prose):**
+- Fact marks are form language again: `✓` (checked, passed), `✗ indoors`
+  (checked, failed — the miss is the mark; the row already shows what the
+  card had), `·` (outside the rule). Kills "✓ meets the rule" ×1,
+  "— not checked" ×3, "✗ needed:" ×1.
+- The rule prints **once**, in the label. The duplicate chips were NN/g's
+  duplicate-surface rule violated again — chips now render only during
+  amendments, where they exist to be struck one by one.
+- Key hints print once: `S / ←` → a circular stamp-head glyph beside the
+  label (the letter the stamp writes), keys in the tooltip, the ghost
+  hint terse (`← SUS · → HUMAN · ↵`).
+- Instr lines lose their duplicated key legends (the buttons say them);
+  the clerk's verdict line and tel values (`rcpt delayed 34s` → `delayed
+  34s`) tightened.
+
+**Motifs (the form teaches itself):**
+- **Rule seal** — `§` in a stamped circle at the rule label's margin;
+  turns red-struck during the amendment slam. A seal says "law" with no
+  words.
+- **Stamp-head buttons** — each verb wears a rotated ring with the letter
+  it presses into the case (`[S] SUS · HUMAN [H]`), replacing `⇦/⇨`
+  arrows and inline kbd text.
+- **Receipt perforation** — `.case-stub` gains a torn tape edge (radial
+  dot pattern, `stubprint` already staggered it like a receipt).
+- **Form leaders** — dotted ink lines between each fact entry and its
+  mark, the line a clerk rules in.
+- Rule text prints in with the postmark's `stubprint` grammar.
+
+**Readability floor extended (the 11px rule now holds everywhere):**
+rc-label 10→11.5px @5.5:1, filer 9→11px @5.3:1, case-cont and keyhint
+10→11px, evidence key badge 10→11px, mobile mk 9→11px (the override was
+shooting the floor), compare label column widened 4.4em→5.8em so
+"LATENCY" fits its column.
+
+Verified: `test-cold-open.mjs` 32 checks — added rule-printed-once,
+key-hints-once, form-ink assertions alongside the existing flow checks —
+ALL PASS · `test-logic.mjs` ALL PASS · `node --check` clean.

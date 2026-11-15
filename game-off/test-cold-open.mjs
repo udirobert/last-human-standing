@@ -93,9 +93,12 @@ ok("memo dismissed", brief.classList.contains("hidden"));
 
 // — case 1: read-only, one imperative
 ok("case 1 visible", !!$(".case-card"));
-ok("instr = cold1 read-the-strip", d.getElementById("instr").textContent.startsWith("Read his strip"));
+ok("instr = cold1 read-the-strip", d.getElementById("instr").textContent.startsWith("His strip"));
 ok("rule label present", /ARIA's rule: indoors/.test($("#ruleChips").textContent));
 ok("rule chips demoted to read-3", $$("#ruleChips .chip").every((c) => c.classList.contains("read-3")));
+ok("rule printed once (chips suppressed outside amendments)", $$("#ruleChips .chip").length === 0 && !!$(".rule-seal"));
+ok("key hints printed once (on the buttons, not repeated below)", !$("#caseBtns .vb kbd") && !!$("#susBtn .stamp-ring"));
+ok("fact marks are form ink (✓/✗/·, no prose)", !/not checked|meets the rule/.test($(".facts").textContent));
 ok("hud strikes quiet during tray", $("#hudStrikes").className.includes("read-3"));
 ok("hud score quiet during tray", $("#hudScore").className.includes("read-3"));
 ok("clerk note demoted", !!$(".case-note.read-3"));

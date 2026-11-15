@@ -551,7 +551,13 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
   font-size: 11px; letter-spacing: .18em; color: var(--dim);
   min-width: 44px; text-align: right; flex-shrink: 0;
 }
-.fact .fv { white-space: nowrap; }
+.fact .fv { flex: 1; display: flex; align-items: baseline; min-width: 0; white-space: nowrap; }
+/* form leaders: the line a clerk rules in ink between entry and mark */
+.fact .fv::after {
+  content: ""; flex: 1 1 14px;
+  border-bottom: 1px dotted var(--line);
+  margin: 0 2px 3px 10px;
+}
 .fact.pass .fv { color: var(--green); font-weight: 600; }
 .fact.fail .fv { color: var(--red); }
 .fact.dim .fv { color: var(--faint); }
@@ -713,7 +719,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 }
 .evidence.selected .e-head .glyph { border-color: var(--accent-dim); border-style: solid; }
 .evidence .e-head .key {
-  font-family: ui-monospace, monospace; font-size: 10px; color: var(--faint);
+  font-family: ui-monospace, monospace; font-size: 11px; color: var(--dim);
   border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px;
 }
 .evidence .name {
@@ -843,7 +849,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   border-bottom: 1px dashed var(--line); padding-bottom: 10px;
 }
-#ruleChips .rc-label { font-size: 10px; letter-spacing: .15em; color: var(--faint); margin-right: 4px; }
+#ruleChips .rc-label { font-size: 11.5px; letter-spacing: .12em; color: var(--dim); margin-right: 6px; }
 #ruleChips .chip {
   font-size: 11px; letter-spacing: .05em; color: var(--accent);
   border: 1px solid var(--accent-dim); border-radius: 999px; padding: 4px 12px;
@@ -972,7 +978,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   color: var(--red); margin-top: 4px;
 }
 .case-cont {
-  font-family: ui-monospace, monospace; font-size: 10px; letter-spacing: .12em;
+  font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .12em;
   color: var(--faint); margin-top: 12px; text-align: center; font-style: italic;
 }
 #caseBtns { display: flex; gap: 12px; justify-content: center; }
@@ -1220,7 +1226,6 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 .case-stub {
   margin-top: 12px;
   padding-top: 8px;
-  border-top: 1px dashed var(--line, #3b4255);
   font-family: ui-monospace, monospace;
   font-size: 12px;
   letter-spacing: .05em;
@@ -1339,7 +1344,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 [data-tel].ringed .rcc-k { color: #a8b6ca; }
 .rcc-row, .rcc-head {
   display: grid;
-  grid-template-columns: 4.4em 1fr 1fr;
+  grid-template-columns: 5.8em 1fr 1fr;
   gap: 0 8px;
   line-height: 1.55;
 }
@@ -1361,7 +1366,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 }
 @media (max-width: 420px) {
   .rc-compare { padding: 8px 9px 6px; }
-  .rcc-row, .rcc-head { grid-template-columns: 3.9em 1fr 1fr; gap: 0 6px; }
+  .rcc-row, .rcc-head { grid-template-columns: 5.2em 1fr 1fr; gap: 0 6px; }
 }
 
 /* grounds — the desk asks which packet field flagged a clean-paper SUS */
@@ -1479,8 +1484,8 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   #docket td.c-stamp { padding-right: 2px; }
   #caseBtns .vb { flex: 1; min-width: 0; }
   #fileBtn { min-width: 0; width: 100%; }
-  #hud { font-size: 10px; gap: 10px; }
-  .fact .mk { font-size: 9px; }
+  #hud { font-size: 11px; gap: 10px; }
+  .fact .mk { font-size: 11px; }
 }
 
 /* ---------- enrichment pass ---------- */
@@ -1646,8 +1651,8 @@ body[data-shift="night"] #oathBtn.on { background: rgba(232,179,75,.12); }
 
 /* case filer + streak */
 .case-card .filer {
-  font-family: ui-monospace, monospace; font-size: 9px; letter-spacing: .14em;
-  color: var(--faint);
+  font-family: ui-monospace, monospace; font-size: 11px; letter-spacing: .14em;
+  color: var(--dim);
 }
 .case-card .filer i { font-style: normal; margin-left: 8px; color: var(--dim); }
 #streakTag {
@@ -2599,7 +2604,7 @@ body[data-wear="4"] .case-card::after { opacity: 1.4; }
 
 /* ghost key hint — gone for good once you've stamped one */
 .keyhint {
-  font-size: 10px; letter-spacing: .1em; color: var(--dim, #8a7d63);
+  font-size: 11px; letter-spacing: .1em; color: var(--dim, #8a7d63);
   text-transform: uppercase; margin-top: 8px; text-align: center;
   animation: hintpulse 2.4s ease-in-out infinite;
 }
@@ -2715,6 +2720,41 @@ body.strikepulse #frame::after {
   #dayPhase > *, #verdictPhase > *, #auditPhase > *:not(#amendBanner),
   #forgePhase > *, #dawn > *:not(.dawn-scene) { animation: none; }
 }
+
+/* ---------- form motifs: the paperwork teaches itself (Nov 15) ---------- */
+/* the rule is a seal in the margin; an amendment strikes it */
+.rule-seal {
+  display: inline-grid; place-items: center; width: 22px; height: 22px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--accent-dim); border-radius: 50%;
+  color: var(--accent); font-family: Georgia, serif; font-size: 13px;
+  transform: rotate(-8deg);
+}
+.rule-seal.struck { color: var(--red); border-color: var(--red); }
+
+/* the verb is a stamp head — the letter it writes into the case */
+.stamp-ring {
+  display: inline-grid; place-items: center; width: 30px; height: 30px;
+  flex-shrink: 0;
+  border: 2px solid currentColor; border-radius: 50%;
+  font-family: ui-monospace, monospace; font-size: 14px; font-weight: 800;
+  transform: rotate(-8deg);
+}
+#caseBtns .vb.h .stamp-ring { transform: rotate(6deg); }
+#caseBtns .vb { gap: 10px; }
+
+/* the postmark prints on receipt tape — a torn perforation edge */
+.case-stub { position: relative; }
+.case-stub::before {
+  content: ""; position: absolute; top: -4px; left: 0; right: 0; height: 4px;
+  background: radial-gradient(circle at 3px 2px,
+    transparent 0 1.8px, var(--line, #3b4255) 2px 2.6px, transparent 2.8px) 0 0 / 9px 4px repeat-x;
+  opacity: .75;
+}
+
+/* the rule text prints in like the postmark does */
+#ruleChips .rc-label, #ruleChips .chip { animation: stubprint .3s ease-out backwards; }
+#ruleChips .chip { animation-delay: .15s; }
 
 /* ---------- opening credits (WeLoveIndies trailer) ----------
  * A film's opening credits: full screen, over before the desk appears,

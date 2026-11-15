@@ -409,9 +409,9 @@
       <div id="amendBanner" class="hidden"><div class="amend-panel"><b>⚠ AMENDMENT</b><span id="amendNote"></span><span id="amendGhost" class="hidden"></span><span class="amend-ack">— press or tap to acknowledge —</span></div></div>
       <div id="caseCard"></div>
       <div id="caseBtns">
-        <button id="susBtn" class="vb s shift-paddle-left" title="Stamp Suspicious (S or Left Arrow)"><span class="shift-arrow">⇦</span> SUS <kbd>S / ←</kbd></button>
-        <button id="humanBtn" class="vb h shift-paddle-right" title="Stamp Human (H or Right Arrow)">HUMAN <span class="shift-arrow">⇨</span> <kbd>H / →</kbd></button>
-        <div id="auditKeyHint" class="keyhint hidden">← stamp SUS · → stamp HUMAN · Enter to continue</div>
+        <button id="susBtn" class="vb s shift-paddle-left" data-tip="Stamp SUS — the paper is wrong somewhere. Clean paper? Name the postmark field that flagged it. (S or ←)"><span class="stamp-ring s" aria-hidden="true">S</span> SUS</button>
+        <button id="humanBtn" class="vb h shift-paddle-right" data-tip="Stamp HUMAN — the filing goes through. (H or →)">HUMAN <span class="stamp-ring h" aria-hidden="true">H</span></button>
+        <div id="auditKeyHint" class="keyhint hidden">← SUS · → HUMAN · ↵</div>
       </div>
       <div id="auditSummary" class="hidden"></div>
       <div id="auditActions"></div>

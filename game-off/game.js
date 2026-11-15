@@ -408,10 +408,13 @@ function factRows(card, verdicts, pending) {
   return `<div class="facts">${ATTR_KEYS.map((k) => {
     const v = verdicts ? verdicts[k] : null;
     let cls = "", mark = "";
-    if (v && v.status === "pass") { cls = " pass"; mark = `<span class="mk pass">✓ meets the rule</span>`; }
+    // the marks are form language, not sentences: ✓ = checked & passed,
+    // ✗ = checked & failed (the miss is the mark — the row already shows
+    // what the card had), · = outside the rule entirely (the quiet ink)
+    if (v && v.status === "pass") { cls = " pass"; mark = `<span class="mk pass">✓</span>`; }
     else if (v && v.status === "fail") {
-      cls = " fail"; mark = `<span class="mk fail">✗ needed: ${v.needed}</span>`;
-    } else if (v) { cls = " dim"; mark = `<span class="mk dim">— not checked</span>`; }
+      cls = " fail"; mark = `<span class="mk fail">✗ ${v.needed}</span>`;
+    } else if (v) { cls = " dim"; mark = `<span class="mk dim">·</span>`; }
     if (pending) cls += " pre";
     return `<div class="fact${cls}" data-key="${k}">
       <span class="fk">${ATTR_LABEL[k]}</span>
@@ -426,9 +429,9 @@ const INSTR = {
   day1: "What do ARIA's approvals share that her rejections lack? SHIFT narrows the desk to one column.",
   dayLiar: "Deduce ARIA's secret rule. SHIFT cycles the column. ⚠ One ruling below is a clerical error — tap it for +100.",
   verdict: "The rule is unsealed. Here's how your card did.",
-  night: "Stamp each filing — paper and postmark both. S: SUS · H: HUMAN.",
-  cold1: "Read his strip: what the filer claims, and what the wire printed. Tap to hand it back.",
-  cold2: "Now you stamp. The paper can claim anything — the postmark can't. S: SUS · H: HUMAN.",
+  night: "Stamp each filing — paper and postmark both.",
+  cold1: "His strip: the claim vs the wire. Tap to hand it back.",
+  cold2: "Now you stamp. The paper can claim anything — the postmark can't.",
   finale: "One filer isn't human, and ARIA's rules can't catch it. Tonight you write the rule.",
   forge: "The proof is filed. Now forge the postmark — 1–4 patch a field, Enter transmits. Unspent cover banks overnight.",
 };
@@ -1677,7 +1680,7 @@ function humanTel(rng, filed, day = 0) {
     latency: `${Math.max(110, 150 - day * 12) + Math.floor(rng() * Math.max(180, 350 - day * 30))}ms`,
     origin: `EXT GATE ${1 + Math.floor(rng() * Math.max(3, 6 - day))}`,
     hops: `${2 + Math.floor(rng() * hopsN)}`,
-    receipt: n < resendP ? "resent ×2" : n < resendP + delayP ? `rcpt delayed ${20 + Math.floor(rng() * 50)}s` : `queued ${filed}`,
+    receipt: n < resendP ? "resent ×2" : n < resendP + delayP ? `delayed ${20 + Math.floor(rng() * 50)}s` : `queued ${filed}`,
     tells: [],
   };
 }
@@ -1925,11 +1928,12 @@ function endColdOpen() {
 }
 
 function renderRuleChips(rule, amended) {
-  // the label names the rule in words — the chips are the same words,
-  // second read. Never both at first-read volume (one datum, one voice).
+  // the rule is a seal in the margin — struck when amended. The words print
+  // once, in the label; the chips exist only for the amend slam to strike
+  // (one datum, one voice — duplicates cost working memory, NN/g).
   $("ruleChips").innerHTML =
-    `<span class="rc-label">ARIA's rule: ${rule.map((c) => c.text).join(" · ")}${amended ? ' <b class="amended-tag">AMENDED</b>' : ""}</span>` +
-    rule.map((c) => `<span class="chip read-3">${c.text}</span>`).join("") +
+    `<span class="rule-seal" aria-hidden="true">§</span><span class="rc-label">ARIA's rule: ${rule.map((c) => c.text).join(" · ")}${amended ? ' <b class="amended-tag">AMENDED</b>' : ""}</span>` +
+    (amended ? rule.map((c) => `<span class="chip read-3">${c.text}</span>`).join("") : "") +
     (dayHasAmend() && G.day === 2 ? newTag("amend", 2) : "");
 }
 function dayHasAmend() { return !!DAYS[G.day].amend; }
@@ -2153,7 +2157,7 @@ function renderCase() {
         <p class="case-reason">${sub.preStamped === "echo"
           ? "the desk already ruled on this one — your argument, its verdict"
           : sub.preStamped
-          ? "the night clerk passed this one — read his strip against his stamp"
+          ? "read his strip against his stamp"
           : reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
       <div class="case-note read-3">✎ ${sub.note}</div>
@@ -2428,7 +2432,7 @@ function showAmendment() {
   const removed = oldTexts.filter((t) => !newTexts.includes(t));
   const added = newTexts.filter((t) => !oldTexts.includes(t));
   $("ruleChips").innerHTML =
-    `<span class="rc-label">${ruleText(d)}</span>` +
+    `<span class="rule-seal struck" aria-hidden="true">§</span><span class="rc-label">AMENDED</span>` +
     oldTexts.map((t) =>
       `<span class="chip${removed.includes(t) ? " doomed" : ""}">${t}</span>`).join("");
   let t = AMEND_CONTACT + 180;
@@ -2444,7 +2448,7 @@ function showAmendment() {
     later(() => {
       const rc = $("ruleChips");
       const s = document.createElement("span");
-      s.className = "chip flash";
+      s.className = "chip flash read-3";
       s.textContent = txt;
       rc.appendChild(s);
       sfx.rise(2);
