@@ -2042,7 +2042,6 @@ function coldCompareHTML(sub) {
     ${row(TEL_LABEL.origin, prev.tel.origin, sub.tel.origin, "origin")}
     ${row(TEL_LABEL.hops, "×" + prev.tel.hops, "×" + sub.tel.hops, "hops")}
     ${row(TEL_LABEL.receipt, prev.tel.receipt, sub.tel.receipt, "receipt")}
-    <p class="rcc-cap read-2">the claim is typed on the card — the receipt is printed by the wire</p>
   </div>`;
 }
 
@@ -2145,7 +2144,7 @@ function renderCase() {
     `<div class="case-card ${sub.pick ? "stamped-" + sub.pick.toLowerCase() : "fresh"}${checked && isBot && sub.pick === "SUS" && sub.correct ? " anomaly" : ""}${contested && !checked ? " contested" : ""}${sub.pendingFlag ? " flagging" : ""}${sub.cleanDrop ? " clean-drop" : ""}"
       style="--tilt:${sub.tilt}deg; --stamprot:${sub.stampRot}deg">
       <div class="e-head"><span class="glyph">${sub.card.glyph}</span>
-        <span class="filer read-2">FILER · <b>${sub.filer}</b> <i>filed ${sub.filed}</i>${sub.echoDay ? ` <i class="echo-tag" data-tip="this argument appeared in your DAY ${sub.echoDay} filing — the desk keeps copies">† your hand</i>` : ""}</span></div>
+        <span class="filer read-2"><b>${sub.filer}</b> · ${sub.filed}${sub.echoDay ? ` <i class="echo-tag" data-tip="this argument appeared in your DAY ${sub.echoDay} filing — the desk keeps copies">† your hand</i>` : ""}</span></div>
       <div class="case-photo" aria-hidden="true">
         <img class="case-vignette" src="art/card-${sub.card.id}.webp" alt="" loading="lazy"
           onerror="this.classList.add('missing')" />
@@ -2160,7 +2159,7 @@ function renderCase() {
           ? "read his strip against his stamp"
           : reason}</p>` : ""}
       <p class="arg">“${arg}”</p>
-      <div class="case-note read-3">✎ ${sub.note}</div>
+      ${G.coldOpen ? "" : `<div class="case-note read-3">✎ ${sub.note}</div>`}
       ${factRows(sub.card, verdicts)}
       ${compare ? "" : `<div class="case-stub read-2">
         ${TEL_KEYS.map((k, ti) =>
@@ -2180,6 +2179,9 @@ function renderCase() {
     </div>`;
   const kh = $("auditKeyHint");
   if (kh) kh.classList.toggle("hidden", G.auditTotal > 0 || G.coldOpen);
+  // the verb arrives with its decision: case 1 is read-only, and a stamped
+  // case's verb is the tap-to-continue — dead buttons never sit on the desk
+  $("caseBtns").classList.toggle("hidden", !!sub.pick);
   el.querySelectorAll(".flag-f").forEach((b) => {
     b.addEventListener("click", (e) => { e.stopPropagation(); flagField(b.dataset.k); });
     // hovering an accusation points at the row it names — on whichever

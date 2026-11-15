@@ -101,7 +101,8 @@ ok("key hints printed once (on the buttons, not repeated below)", !$("#caseBtns 
 ok("fact marks are form ink (✓/✗/·, no prose)", !/not checked|meets the rule/.test($(".facts").textContent));
 ok("hud strikes quiet during tray", $("#hudStrikes").className.includes("read-3"));
 ok("hud score quiet during tray", $("#hudScore").className.includes("read-3"));
-ok("clerk note demoted", !!$(".case-note.read-3"));
+ok("clerk note suppressed in the cold open", !$(".case-note"));
+ok("verb row hidden while the case is read-only", $("#caseBtns").classList.contains("hidden"));
 ok("stub at read-2", !!$(".case-stub.read-2"));
 ok("filer at read-2", !!$(".filer.read-2"));
 ok("pre-stamped verdict visible", ($(".case-verdict") || {}).textContent === "PREVIOUS SHIFT");
@@ -112,6 +113,8 @@ await sleep(600);
 ok("instr = cold2 now-you-stamp", d.getElementById("instr").textContent.startsWith("Now you stamp"));
 ok("case 2 arrived", !!$(".case-card"));
 ok("compare strip on case 2", !!$(".rc-compare"));
+ok("compare caption cut (instr teaches instead)", !$(".rcc-cap"));
+ok("verb row up when the decision is live", !$("#caseBtns").classList.contains("hidden"));
 
 // — stamp SUS (the catch) with grounds. The seeded tell rotates with the
 // daily seed, so accept either outcome — the flow must complete regardless.
@@ -119,6 +122,7 @@ $("#susBtn").click();
 await sleep(400);
 const flagRow = $(".flag-row");
 ok("grounds asked after SUS", !!flagRow);
+ok("verb row steps aside for the grounds row", $("#caseBtns").classList.contains("hidden"));
 const fb = $('.flag-f[data-k="latency"]');
 if (fb) fb.click();
 await sleep(2600);

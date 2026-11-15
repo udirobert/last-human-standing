@@ -626,3 +626,31 @@ shooting the floor), compare label column widened 4.4em→5.8em so
 Verified: `test-cold-open.mjs` 32 checks — added rule-printed-once,
 key-hints-once, form-ink assertions alongside the existing flow checks —
 ALL PASS · `test-logic.mjs` ALL PASS · `node --check` clean.
+
+## Presence pass — stop hiding the desk (Nov 15)
+
+Player report: "I can barely see NIGHT 0 / STRIKES / SCORE 0 / CASE 1/2 /
+the SUS vs HUMAN buttons" + case 2 still too verbose. Root causes: the
+read-3 tier was .55 opacity stacked over `--faint` ink (#5c5546 ≈ 2.1:1
+on the night card) — invisible ink at invisible opacity; the verb
+buttons were transparent outlines with no plate on the dark desk; and
+the HUD labels/CASE counter carried faint ink instead of dim.
+
+- **Tier floor fixed**: read-2 .85→.92, read-3 .55→.72 (lifts to 1 on
+  hover/focus as before). Tiers separate the reads without hiding
+  anything — the legibility floor (11px/4.5:1) now holds regardless.
+- **Ink audit**: strikes-label and CASE counter faint→dim; verb buttons
+  gain a tinted plate (red/green 13%, hover 22%) — a rubber stamp on a
+  desk, not a wireframe.
+- **Verb arrival**: `#caseBtns` hides whenever the case is read-only or
+  already stamped (its verb is the tap-to-continue) and steps aside for
+  the flag row. Dead buttons never sit on the desk; the verb appears
+  exactly when the decision is live.
+- **Case-2 verbosity cut**: compare caption deleted (the instruction
+  line already teaches the claim/receipt contrast); `FILER · TESS filed
+  +4h20m` → `TESS · +4h20m`; the clerk's marginal note suppressed in the
+  cold open (the tray is about the evidence).
+
+Verified: `test-cold-open.mjs` 36 real checks (verb-row show/hide at each
+cold beat, note suppression, caption cut) — ALL PASS · `test-logic.mjs`
+ALL PASS · `node --check` clean.

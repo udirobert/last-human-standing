@@ -445,7 +445,7 @@ body[data-shift="day"] .shift-ledger .sl-i b { color: var(--accent); }
   transition: box-shadow .3s ease, transform .34s cubic-bezier(.2,1.1,.35,1), outline-color .3s ease;
   outline: 1.5px solid rgba(176,48,40,0); outline-offset: 5px;
 }
-#hudStrikes .strikes-label { color: var(--faint); }
+#hudStrikes .strikes-label { color: var(--dim); }
 #hudStrikes .pip {
   width: 9px; height: 9px; border-radius: 2px;
   border: 1px solid var(--faint);
@@ -856,7 +856,7 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 }
 #caseCard { min-height: 300px; }
 .case-num {
-  font-size: 11px; letter-spacing: .3em; color: var(--faint);
+  font-size: 11px; letter-spacing: .3em; color: var(--dim);
   margin-bottom: 8px; text-align: center;
 }
 .case-card {
@@ -985,8 +985,12 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 #caseBtns .vb {
   font-family: ui-monospace, monospace; font-size: 14px; font-weight: 700;
   letter-spacing: .15em; min-width: 150px; min-height: 52px;
-  border: 2px solid currentColor; background: transparent; box-shadow: none;
+  border: 2px solid currentColor; box-shadow: none;
+  /* the verb is a rubber stamp on a plate — a transparent outline on the
+     dark desk has no presence at all */
+  background: rgba(217, 106, 90, .13);
 }
+#caseBtns .vb.h { background: rgba(127, 176, 105, .13); }
 #caseBtns .vb kbd { font-size: 11px; opacity: .7; font-family: inherit; }
 #caseBtns .vb.s { color: var(--red); }
 #caseBtns .vb.h { color: var(--green); }
@@ -1005,8 +1009,8 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
   100% { transform: none; }
 }
 #caseBtns .vb:disabled { opacity: .28; transition: opacity .25s ease .18s; }
-#caseBtns .vb.s:hover:not(:disabled) { background: rgba(217,106,90,.12); }
-#caseBtns .vb.h:hover:not(:disabled) { background: rgba(127,176,105,.12); }
+#caseBtns .vb.s:hover:not(:disabled) { background: rgba(217,106,90,.22); }
+#caseBtns .vb.h:hover:not(:disabled) { background: rgba(127,176,105,.22); }
 
 #caseBtns .shift-paddle-left, #caseBtns .shift-paddle-right {
   display: inline-flex; align-items: center; justify-content: center;
@@ -1358,12 +1362,6 @@ body[data-shift="night"] #docket td.c-stamp.sus { box-shadow: inset 0 0 0 999px 
 .rcc-b.tel-val { font-weight: 600; }
 .rcc-k { color: #93a3ba; }
 .rcc-a, .rcc-b { text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rcc-cap {
-  margin: 7px 0 0;
-  text-align: center;
-  color: #93a3ba;
-  font-style: italic;
-}
 @media (max-width: 420px) {
   .rc-compare { padding: 8px 9px 6px; }
   .rcc-row, .rcc-head { grid-template-columns: 5.2em 1fr 1fr; gap: 0 6px; }
@@ -2661,10 +2659,11 @@ body.strikepulse #frame::after {
 }
 
 /* ---------- three-reads hierarchy: declared weight tiers ---------- */
-/* .read-2 = context (~85% presence); .read-3 = tools/lore (~55%, lifts on
-   approach). "Tertiary" is a class you declare, not a color you fiddle. */
-.read-2 { opacity: .85; }
-.read-3 { opacity: .55; transition: opacity .2s ease; }
+/* .read-2 = context (~92% presence); .read-3 = tools/lore (~72%, lifts on
+   approach). "Tertiary" is a class you declare, not a color you fiddle.
+   Both stay legible: the floor is 11px/4.5:1 regardless of tier. */
+.read-2 { opacity: .92; }
+.read-3 { opacity: .72; transition: opacity .2s ease; }
 .read-3:hover, .read-3:focus-within { opacity: 1; }
 @media (prefers-reduced-motion: reduce) { .read-3 { transition: none; } }
 
